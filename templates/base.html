@@ -164,7 +164,6 @@
 {% if user %}
         {%- set _r = user.role if user.role else ('admin' if user.is_admin else 'readonly') -%}
         {%- set _sa = user.is_admin -%}
-        {%- set _is_logistics = _r == 'logistics' -%}
 
 <nav>
     <div class="nav-container">
@@ -174,21 +173,12 @@
         </a>
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <ul class="nav-menu" id="navMenu">
-            {% if not _is_logistics %}
             <li><a href="/" onclick="closeMenu()">대시보드</a></li>
             <li><a href="/schedules" onclick="closeMenu()">생산 스케줄</a></li>
             <li><a href="/production" onclick="closeMenu()">생산 관리</a></li>
             <li><a href="/products" onclick="closeMenu()">상품 관리</a></li>
-            {% endif %}
             <li><a href="/raw-materials" onclick="closeMenu()">원초 관리</a></li>
             <li><a href="/materials" onclick="closeMenu()">부자재 관리</a></li>
-            {% if not _is_logistics %}
-            <li><a href="/purchase-orders" onclick="closeMenu()">발주관리</a></li>
-            {% endif %}
-            {% if _is_logistics %}
-            <li><a href="/logistics-materials" onclick="closeMenu()">부자재 수불 관리</a></li>
-            <li><a href="/logistics-ledger" onclick="closeMenu()">원 부자재 수불대장</a></li>
-            {% endif %}
             {% if _sa %}
             <li><a href="/integrated-management" onclick="closeMenu()" style="color:#f39c12;font-weight:600;">🔧 통합 관리</a></li>
             <li><a href="/users" class="admin-btn" onclick="closeMenu()">👥 사용자</a></li>
@@ -208,8 +198,6 @@
             <span class="role-tag">
                 {% if _r == 'admin' %}👑
                 {% elif _r == 'production' %}🏭
-                {% elif _r == 'purchase' %}📦
-                {% elif _r == 'logistics' %}🚚
                 {% elif _r == 'rawmat' %}🌿
                 {% else %}👁️{% endif %}
             </span>

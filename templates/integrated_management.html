@@ -355,7 +355,7 @@
             {% endif %}
             {% if tab == 'materials' %}
             <button type="button" id="materialBulkAssignToggleBtn" class="btn btn-small" style="background:#2563eb;" onclick="toggleMaterialBulkAssignMode()">작업장 일괄 변경</button>
-            <form method="POST" action="/integrated-management/materials/reset-stock" style="margin-left:auto;" onsubmit="return confirm('부자재 재고를 모두 0으로 초기화할까요?\\n(로트 현재수량, 물류 재고, 위치별 잔량, 수불 이력, 발주 데이터까지 함께 초기화됩니다.)');">
+            <form method="POST" action="/integrated-management/materials/reset-stock" style="margin-left:auto;" onsubmit="return confirm('부자재 재고를 모두 0으로 초기화할까요?\\n(로트 현재수량, 위치별 잔량, 수불 이력, 발주 데이터까지 함께 초기화됩니다.)');">
                 <input type="hidden" name="wp" value="{{ wp_filter }}">
                 <input type="hidden" name="q" value="{{ q }}">
                 <input type="hidden" name="product_id" value="{{ selected_product_id }}">
@@ -1046,7 +1046,6 @@
                     <th>2동 신관 1층</th>
                     <th>2동 신관 2층</th>
                     <th>기타</th>
-                    <th>물류</th>
                     <th>총수량</th>
                     <th>로트수</th>
                     {% elif tab == 'productions' %}
@@ -1154,7 +1153,6 @@
                     <td>{{ "%.1f"|format(item.stock_by_workplace.get('2동 신관 1층', 0) if item.stock_by_workplace else 0) }}</td>
                     <td>{{ "%.1f"|format(item.stock_by_workplace.get('2동 신관 2층', 0) if item.stock_by_workplace else 0) }}</td>
                     <td>{{ "%.1f"|format(item.stock_by_workplace.get('기타', 0) if item.stock_by_workplace else 0) }}</td>
-                    <td>{{ "%.1f"|format(item.logistics_stock or 0) }}</td>
                     <td><strong>{{ "%.1f"|format(item.total_stock if item.total_stock is not none else 0) }}</strong></td>
                     <td>{{ item.lot_count or 0 }}</td>
                     
@@ -1242,8 +1240,7 @@
                                 data-category="{{ item.category|e }}"
                                 data-unit="{{ item.unit|e }}"
                                 data-supplier_id="{{ item.supplier_id or '' }}"
-                                data-logistics_stock="{{ item.logistics_stock or 0 }}"
-                                data-total_stock="{{ (item.logistics_stock or 0) + (item.lot_total_quantity if item.lot_total_quantity is not none else item.current_stock or 0) }}"
+                                data-total_stock="{{ item.total_stock if item.total_stock is not none else (item.lot_total_quantity if item.lot_total_quantity is not none else item.current_stock or 0) }}"
                                 data-current_stock="{{ item.lot_total_quantity if item.lot_total_quantity is not none else item.current_stock }}"
                                 data-min_stock="{{ item.min_stock }}"
                                 data-moq="{{ item.moq if item.moq is not none else 0 }}">수정</button>
@@ -1420,7 +1417,6 @@
                     {% for wp in workplaces %}
                     <option value="{{ wp }}">{{ wp }}</option>
                     {% endfor %}
-                    <option value="물류">물류</option>
                 </select>
             </div>
             <div class="form-group"><label>부자재명 *</label><input type="text" name="name" id="edit_mat_name" required></div>
@@ -1457,7 +1453,6 @@
                 </select>
             </div>
             <div class="form-group"><label>작업장 재고</label><input type="number" name="current_stock" id="edit_mat_current_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
-            <div class="form-group"><label>물류 재고</label><input type="number" id="edit_mat_logistics_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
             <div class="form-group"><label>총재고</label><input type="number" id="edit_mat_total_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
             <div class="form-group"><label>최소 재고</label><input type="number" name="min_stock" id="edit_mat_min_stock" step="0.01"></div>
             <div class="form-group"><label>MOQ</label><input type="number" name="moq" id="edit_mat_moq" step="0.01" min="0"></div>
@@ -1785,10 +1780,8 @@ function openEditModal(btn){
         document.getElementById('edit_mat_unit').value = btn.dataset.unit || '개';
         document.getElementById('edit_mat_supplier_id').value = btn.dataset.supplier_id || '';
         const curStock = parseFloat(btn.dataset.current_stock || 0);
-        const logisticsStock = parseFloat(btn.dataset.logistics_stock || 0);
-        const totalStock = parseFloat(btn.dataset.total_stock || (curStock + logisticsStock));
+        const totalStock = parseFloat(btn.dataset.total_stock || curStock);
         document.getElementById('edit_mat_current_stock').value = Number.isFinite(curStock) ? curStock.toFixed(1) : 0;
-        document.getElementById('edit_mat_logistics_stock').value = Number.isFinite(logisticsStock) ? logisticsStock.toFixed(1) : 0;
         document.getElementById('edit_mat_total_stock').value = Number.isFinite(totalStock) ? totalStock.toFixed(1) : 0;
         document.getElementById('edit_mat_min_stock').value = btn.dataset.min_stock || 0;
         document.getElementById('edit_mat_moq').value = btn.dataset.moq || 0;

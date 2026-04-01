@@ -716,8 +716,6 @@ def has_role(*roles):
     role = user.get('role', 'readonly')
     if role == 'admin':
         return True
-    if role == 'logistics' and session.get('workplace') == LOGISTICS_WORKPLACE:
-        return True
     return role in roles
 
 
@@ -730,8 +728,7 @@ def login_required(f):
         user_workplaces = user.get('workplaces') or []
         role = (user.get('role') or '').strip()
         if (
-            role != 'logistics'
-            and len(user_workplaces) > 1
+            len(user_workplaces) > 1
             and not session.get('workplace')
             and request.endpoint not in {'main.select_workplace', 'main.set_workplace', 'auth.logout'}
         ):
@@ -766,9 +763,6 @@ def role_required(*roles):
             user_role = session['user'].get('role', 'readonly')
             # admin은 모든 권한 통과
             if user_role == 'admin':
-                return f(*args, **kwargs)
-            # 물류 작업장 + 물류관리 권한은 모든 기능 허용
-            if user_role == 'logistics' and session.get('workplace') == LOGISTICS_WORKPLACE:
                 return f(*args, **kwargs)
             # 허용된 role이면 통과
             if user_role in roles:

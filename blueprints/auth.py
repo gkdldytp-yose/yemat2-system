@@ -6,7 +6,6 @@ from core import (
     get_db,
     get_usernames_for_notification,
     WORKPLACES,
-    LOGISTICS_WORKPLACE,
 )
 
 bp = Blueprint('auth', __name__)
@@ -49,11 +48,6 @@ def login():
             'role': role,
             'workplaces': workplaces
         }
-
-        # 물류관리 권한은 물류 작업장으로 고정
-        if role == 'logistics':
-            session['workplace'] = LOGISTICS_WORKPLACE
-            return redirect(url_for('materials.logistics_materials'))
 
         # 작업장이 여러 개면 선택 페이지로
         if len(workplaces) > 1:

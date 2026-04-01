@@ -159,11 +159,9 @@
 {% endblock %}
 {% block content %}
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
-{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
-{%- set can_manage_material_master = (user is defined and user.is_admin) or (user is defined and user.role == 'logistics') -%}
-{%- set can_register_purchase = can_purch -%}
-{%- set can_manage_lots = is_logistics -%}
-{%- set is_logistics_role = _r == 'logistics' -%}
+{%- set can_manage_material_master = (user is defined and user.is_admin) or (user is defined and user.role != 'readonly') -%}
+{%- set can_manage_lots = can_manage_material_master -%}
+{%- set is_logistics_role = false -%}
 
 <h1>🧰 부자재 관리</h1>
 {% set MAT_CATS = ['기름','소금','내포','외포','실리카','트레이','박스','뚜껑','각대','기타'] %}
@@ -257,7 +255,6 @@
                 <div class="form-group"><label>단위</label><input type="text" name="unit" id="edit_unit"></div>
                 <div class="form-group"><label>MOQ</label><input type="number" name="moq" id="edit_moq" step="0.01" min="0"></div>
                 <div class="form-group"><label>작업장 재고</label><input type="number" name="current_stock" id="edit_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
-                <div class="form-group"><label>물류 재고</label><input type="number" id="edit_logistics_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
                 <div class="form-group"><label>총재고</label><input type="number" id="edit_total_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
                 <div class="form-group"><label>최소 재고</label><input type="number" name="min_stock" id="edit_min" step="0.01"></div>
                 
@@ -342,9 +339,6 @@
         <h2 style="margin:0;">부자재 목록</h2>
 
         <div class="mat-actions" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-            {% if can_register_purchase %}
-            <button type="button" class="btn btn-small" id="togglePurchaseRegisterBtn" style="background:#f59e0b;">발주 등록</button>
-            {% endif %}
             {% if can_manage_material_master %}
             <button class="btn btn-small" onclick="document.getElementById('addForm').style.display='block'">+ 추가</button>
             {% endif %}
@@ -400,57 +394,23 @@
         </form>
     </div>
     {% if materials %}
-    <form method="POST" action="{{ url_for('materials.bulk_add_purchase_requests_from_materials') }}" id="bulkPurchaseForm">
-    <div id="bulkPurchasePanel" style="display:none;margin-bottom:0.9rem;padding:0.9rem 1rem;border:1px solid #fde68a;border-radius:14px;background:linear-gradient(135deg,#fff9db 0%, #fff7ed 100%);">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.8rem;flex-wrap:wrap;">
-            <div>
-                <div style="font-weight:700;color:#92400e;margin-bottom:0.2rem;">발주 등록 모드</div>
-                <div style="font-size:0.82rem;color:#9a3412;">부자재를 체크하고 발주 수량을 입력한 뒤 등록하면 발주관리 &gt; 발주 현황에서 바로 확인할 수 있습니다.</div>
-            </div>
-            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                <button type="submit" class="btn btn-small" style="background:#d97706;">발주 등록</button>
-                <button type="button" class="btn btn-small btn-secondary" id="cancelPurchaseRegisterBtn">취소</button>
-            </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.75rem;margin-top:0.9rem;">
-            <div style="display:flex;flex-direction:column;gap:0.35rem;">
-                <label for="bulkPurchaseExpectedDate" style="font-size:0.82rem;color:#78350f;font-weight:600;">입고 예정일</label>
-                <input id="bulkPurchaseExpectedDate" type="date" name="expected_delivery_date" required style="padding:0.5rem 0.6rem;border:1px solid #fcd34d;border-radius:10px;background:#fff;">
-            </div>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;">
-                <label for="bulkPurchaseNote" style="font-size:0.82rem;color:#78350f;font-weight:600;">메모</label>
-                <input id="bulkPurchaseNote" type="text" name="note" placeholder="발주 메모 입력" style="padding:0.5rem 0.6rem;border:1px solid #fcd34d;border-radius:10px;background:#fff;">
-            </div>
-        </div>
-    </div>
     <div class="table-container">
     <table id="materialsTable">
         <thead>
             <tr>
-                <th class="purchase-col" style="display:none;width:72px;text-align:center;">
-                    <label style="display:flex;align-items:center;justify-content:center;gap:0.35rem;font-size:0.76rem;color:#475569;">
-                        <input type="checkbox" id="purchaseSelectAll">
-                        전체
-                    </label>
-                </th>
                 <th>코드</th>
                 <th>부자재명</th>
                 <th>업체</th>
                 <th>단위</th>
                 <th>{{ current_workplace }} 재고</th>
-                <th>물류 재고</th>
                 <th>총재고</th>
                 <th>최소</th>
-                <th class="purchase-col" style="display:none;min-width:120px;">발주 수량</th>
                 <th>관리</th>
             </tr>
         </thead>
         <tbody>
         {% for m in materials %}
         <tr>
-            <td class="purchase-col" style="display:none;text-align:center;">
-                <input type="checkbox" name="material_ids" value="{{ m.id }}" class="purchase-select-checkbox" data-material-id="{{ m.id }}">
-            </td>
             <td>{{ m.code or '-' }}</td>
             <td>
                 <a href="#" class="mat-name-link" style="font-size:0.85rem;" onclick="openMaterialDetailModal({{ m.id }}); return false;">{{ m.name }}</a>
@@ -461,12 +421,8 @@
             <td>{{ m.supplier_name or '-' }}</td>
             <td>{{ m.unit or '-' }}</td>
             <td><strong style="color:{% if m.min_stock > 0 and m.workplace_stock < m.min_stock %}#e74c3c{% else %}#27ae60{% endif %}">{{ "%.1f"|format(m.workplace_stock) }} {{ m.unit or '' }}</strong></td>
-            <td>{{ "%.1f"|format(m.logistics_stock) }} {{ m.unit or '' }}</td>
             <td>{{ "%.1f"|format(m.total_stock) }} {{ m.unit or '' }}</td>
             <td>{{ "%.1f"|format(m.min_stock) }} {{ m.unit or '' }}</td>
-            <td class="purchase-col" style="display:none;">
-                <input type="number" min="0" step="0.1" name="qty_{{ m.id }}" class="purchase-qty-input" data-material-id="{{ m.id }}" placeholder="수량 입력" style="width:100%;padding:0.45rem 0.5rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
-            </td>
             <td style="white-space:nowrap;">
             <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="openMaterialDetailModal({{ m.id }});">상세</button>
             {% if can_manage_material_master %}
@@ -479,7 +435,6 @@
                 data-category="{{ m.category or '' }}"
                 data-unit="{{ m.unit or '' }}"
                 data-workplace-stock="{{ m.workplace_stock }}"
-                data-logistics-stock="{{ m.logistics_stock }}"
                 data-total-stock="{{ m.total_stock }}"
                 data-min-stock="{{ m.min_stock }}"
                 data-supplier-id="{{ m.supplier_id or 0 }}"
@@ -498,7 +453,6 @@
         </tbody>
     </table>
     </div>
-    </form>
     {% else %}
     <p style="text-align:center;color:#999;padding:2rem;font-size:0.85rem;">
         {% if selected_category %}[{{ selected_category }}] 부자재 없음{% else %}등록된 부자재 없음{% endif %}
@@ -581,7 +535,7 @@
             <div class="issue-status-head">
                 <div>
                     <div class="issue-status-title">불출 요청 중</div>
-                    <div class="issue-status-caption">현재 처리 대기 중인 불출 요청입니다.</div>
+                    <div class="issue-status-caption">요청자가 실제 입고 수량을 확인하고 완료 처리할 수 있는 불출 요청입니다.</div>
                 </div>
                 {% if not is_logistics_role and issue_requests_pending %}
                 <form method="POST" action="/issue-requests/delete-all-pending" onsubmit="return confirm('현재 작업장의 불출 요청 중 항목을 모두 삭제하시겠습니까?');">
@@ -591,7 +545,7 @@
             </div>
         <div class="table-container">
             <table class="issue-status-table">
-                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>지급수량</th><th>상태</th><th>비고</th><th>{% if is_logistics_role %}처리{% else %}관리{% endif %}</th></tr></thead>
+                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>실입고수량</th><th>상태</th><th>비고</th><th>처리</th></tr></thead>
                 <tbody>
                 {% if issue_requests_pending %}
                     {% for r in issue_requests_pending %}
@@ -608,17 +562,11 @@
                         <td><span class="issue-note-box">{{ (r.note or '-')|e }}</span></td>
                         <td>
                             <div class="issue-manage-stack">
-                            {% if is_logistics_role and r.status == '요청' %}
-                            <form method="POST" action="/issue-requests/{{ r.id }}/complete">
-                                <input type="number" name="approved_quantity" value="{{ r.requested_quantity }}" step="0.01" min="0.01">
-                                <input type="text" name="process_note" placeholder="메모">
-                                <button type="submit" class="btn btn-small" style="background:#0ea5e9;">완료</button>
-                            </form>
-                            {% elif not is_logistics_role and r.status == '요청' %}
-                            <form method="POST" action="/issue-requests/{{ r.id }}/update">
-                                <input type="number" name="requested_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
-                                <input type="text" name="note" value="{{ (r.note or '')|e }}" placeholder="비고">
-                                <button type="submit" class="btn btn-small" style="background:#2563eb;">수정</button>
+                            {% if r.status == '요청' %}
+                            <form method="POST" action="/issue-requests/{{ r.id }}/complete" onsubmit="return confirm('실제 받은 수량으로 불출 완료 처리하시겠습니까?');">
+                                <input type="number" name="actual_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
+                                <input type="text" name="process_note" placeholder="실입고 메모">
+                                <button type="submit" class="btn btn-small" style="background:#0ea5e9;">입고 완료</button>
                             </form>
                             <form method="POST" action="/issue-requests/{{ r.id }}/delete" onsubmit="return confirm('해당 불출 요청을 삭제하시겠습니까?');">
                                 <button type="submit" class="btn btn-small btn-danger">삭제</button>
@@ -643,7 +591,7 @@
             <div class="issue-status-head">
                 <div>
                     <div class="issue-status-title">불출 완료</div>
-                    <div class="issue-status-caption">실제 지급이 끝난 불출 이력입니다.</div>
+                    <div class="issue-status-caption">요청자가 실제 받은 수량으로 입고 완료 처리한 이력입니다.</div>
                 </div>
             </div>
         {% if issue_completed_groups %}
@@ -667,7 +615,7 @@
                             <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
                             <td class="issue-name-cell">{{ r.material_name }}</td>
                             <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
-                            <td><span class="issue-qty-main">{{ "%.1f"|format(r.approved_quantity or 0) }} {{ r.unit or '' }}</span><span class="issue-qty-sub">실지급</span></td>
+                            <td><span class="issue-qty-main">{{ "%.1f"|format(r.approved_quantity or 0) }} {{ r.unit or '' }}</span><span class="issue-qty-sub">실입고</span></td>
                             <td class="issue-meta-cell"><div class="issue-date">{{ r.processed_at[:16] if r.processed_at else '-' }}</div><div class="issue-subtext">처리 완료</div></td>
                             <td><span class="issue-note-box">{{ (r.process_note or r.note or '-')|e }}</span></td>
                         </tr>
@@ -691,7 +639,7 @@
             <div class="issue-status-head">
                 <div>
                     <div class="issue-status-title">불출 반려</div>
-                    <div class="issue-status-caption">물류 확인 후 반려된 요청입니다.</div>
+                    <div class="issue-status-caption">최종 완료 전에 반려된 요청입니다.</div>
                 </div>
             </div>
         <div class="table-container">
@@ -729,7 +677,7 @@
                 <div class="request-builder-head">
                     <div>
                         <h3 class="request-builder-title">반출 자재 검색/추가</h3>
-                        <p class="request-builder-caption">작업장에서 물류로 되돌릴 자재와 로트를 선택해 반출 요청을 구성합니다.</p>
+                        <p class="request-builder-caption">작업장에서 실제 반출할 자재와 로트를 선택해 반출 요청을 구성합니다.</p>
                     </div>
                 </div>
                 <div class="form-group">
@@ -814,12 +762,12 @@
             <div class="issue-status-head">
                 <div>
                     <div class="issue-status-title">반출 요청 중</div>
-                    <div class="issue-status-caption">현재 처리 대기 중인 반출 요청입니다.</div>
+                    <div class="issue-status-caption">요청자가 실제 반출 수량을 확인하고 완료 처리할 수 있는 반출 요청입니다.</div>
                 </div>
             </div>
         <div class="table-container">
             <table class="issue-status-table">
-                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>상태</th><th>사유</th><th>메모</th></tr></thead>
+                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>상태</th><th>사유</th><th>메모</th><th>처리</th></tr></thead>
                 <tbody>
                 {% if export_requests_pending %}
                     {% for r in export_requests_pending %}
@@ -835,10 +783,19 @@
                         <td><span class="issue-state-badge pending">{{ r.status }}</span></td>
                         <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
                         <td><span class="issue-note-box">{{ (r.note or '-')|e }}</span></td>
+                        <td>
+                            <div class="issue-manage-stack">
+                                <form method="POST" action="/export-requests/{{ r.id }}/complete" onsubmit="return confirm('실제 반출 수량으로 완료 처리하시겠습니까?');">
+                                    <input type="number" name="actual_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
+                                    <input type="text" name="process_note" placeholder="반출 메모">
+                                    <button type="submit" class="btn btn-small" style="background:#f97316;">반출 완료</button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="8" class="issue-empty">반출 요청 내역이 없습니다.</td></tr>
+                    <tr><td colspan="9" class="issue-empty">반출 요청 내역이 없습니다.</td></tr>
                 {% endif %}
                 </tbody>
             </table>
@@ -850,7 +807,7 @@
             <div class="issue-status-head">
                 <div>
                     <div class="issue-status-title">반출 완료</div>
-                    <div class="issue-status-caption">물류 승인 후 반출이 완료된 이력입니다.</div>
+                    <div class="issue-status-caption">요청자가 실제 반출 수량으로 완료 처리한 이력입니다.</div>
                 </div>
             </div>
         {% if export_completed_groups %}
@@ -899,7 +856,7 @@
             <div class="issue-status-head">
                 <div>
                     <div class="issue-status-title">반출 반려</div>
-                    <div class="issue-status-caption">물류 확인 후 반려된 반출 요청입니다.</div>
+                    <div class="issue-status-caption">최종 완료 전에 반려된 반출 요청입니다.</div>
                 </div>
             </div>
         <div class="table-container">
@@ -947,7 +904,6 @@ function openEdit(id, code, name, category, unit, workplaceStock, logisticsStock
     document.getElementById('edit_unit').value = unit;
     document.getElementById('edit_moq').value = Number.isFinite(moq) ? moq : 0;
     document.getElementById('edit_stock').value = Number.isFinite(workplaceStock) ? workplaceStock.toFixed(1) : '0.0';
-    document.getElementById('edit_logistics_stock').value = Number.isFinite(logisticsStock) ? logisticsStock.toFixed(1) : '0.0';
     document.getElementById('edit_total_stock').value = Number.isFinite(totalStock) ? totalStock.toFixed(1) : '0.0';
     document.getElementById('edit_min').value = min;
 
@@ -976,7 +932,6 @@ document.querySelectorAll('.js-open-edit').forEach((btn) => {
             btn.dataset.category || '',
             btn.dataset.unit || '',
             toNum(btn.dataset.workplaceStock),
-            toNum(btn.dataset.logisticsStock),
             toNum(btn.dataset.totalStock),
             toNum(btn.dataset.minStock),
             toNum(btn.dataset.supplierId),
@@ -988,8 +943,6 @@ document.querySelectorAll('.js-open-edit').forEach((btn) => {
 </script>
 {% endif %}
 <script>
-const CAN_PURCH = {{ 'true' if can_purch else 'false' }};
-const CAN_REGISTER_PURCHASE = {{ 'true' if can_register_purchase else 'false' }};
 const CAN_LOT_MANAGE = {{ 'true' if can_manage_lots else 'false' }};
 const MATERIAL_LOTS_BY_MATERIAL = {{ material_lots_by_material_json|safe }};
 let currentReqTab = {{ req_tab|tojson }};
@@ -1004,7 +957,6 @@ let currentMaterialId = null;
 const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
 let ISSUE_MATERIAL_SOURCE = [];
 let EXPORT_MATERIAL_SOURCE = [];
-let purchaseRegisterMode = false;
 
 function setRequestPanelExpanded(expanded){
     reqExpanded = Boolean(expanded);
@@ -1350,98 +1302,6 @@ if(exportBulkForm){
         if(rows.length === 0){
             e.preventDefault();
             alert('반출 요청할 항목을 추가해주세요.');
-        }
-    });
-}
-
-function setPurchaseRegisterMode(enabled){
-    purchaseRegisterMode = Boolean(enabled);
-    const panel = document.getElementById('bulkPurchasePanel');
-    const toggleBtn = document.getElementById('togglePurchaseRegisterBtn');
-    const purchaseCols = document.querySelectorAll('.purchase-col');
-    if(panel) panel.style.display = purchaseRegisterMode ? 'block' : 'none';
-    purchaseCols.forEach((el) => {
-        el.style.display = purchaseRegisterMode ? '' : 'none';
-    });
-    if(toggleBtn){
-        toggleBtn.textContent = purchaseRegisterMode ? '발주 등록 모드 사용 중' : '발주 등록';
-        toggleBtn.style.background = purchaseRegisterMode ? '#b45309' : '#f59e0b';
-    }
-    if(purchaseSelectAll){
-        purchaseSelectAll.checked = false;
-        purchaseSelectAll.indeterminate = false;
-    }
-    if(!purchaseRegisterMode){
-        document.querySelectorAll('.purchase-select-checkbox').forEach((el) => { el.checked = false; });
-        document.querySelectorAll('.purchase-qty-input').forEach((el) => { el.value = ''; });
-    }
-}
-
-const togglePurchaseRegisterBtn = document.getElementById('togglePurchaseRegisterBtn');
-if(CAN_REGISTER_PURCHASE && togglePurchaseRegisterBtn){
-    togglePurchaseRegisterBtn.addEventListener('click', () => setPurchaseRegisterMode(true));
-}
-
-const cancelPurchaseRegisterBtn = document.getElementById('cancelPurchaseRegisterBtn');
-if(cancelPurchaseRegisterBtn){
-    cancelPurchaseRegisterBtn.addEventListener('click', () => setPurchaseRegisterMode(false));
-}
-
-const purchaseSelectAll = document.getElementById('purchaseSelectAll');
-if(purchaseSelectAll){
-    purchaseSelectAll.addEventListener('change', function(){
-        if(!purchaseRegisterMode) return;
-        document.querySelectorAll('.purchase-select-checkbox').forEach((checkbox) => {
-            checkbox.checked = this.checked;
-        });
-    });
-}
-
-document.querySelectorAll('.purchase-select-checkbox').forEach((checkbox) => {
-    checkbox.addEventListener('change', () => {
-        if(!purchaseSelectAll) return;
-        const all = Array.from(document.querySelectorAll('.purchase-select-checkbox'));
-        const checked = all.filter((el) => el.checked);
-        purchaseSelectAll.checked = all.length > 0 && checked.length === all.length;
-        purchaseSelectAll.indeterminate = checked.length > 0 && checked.length < all.length;
-    });
-});
-
-document.querySelectorAll('.purchase-qty-input').forEach((input) => {
-    input.addEventListener('keydown', (e) => {
-        if(e.key !== 'Tab') return;
-        const visibleInputs = Array.from(document.querySelectorAll('.purchase-qty-input'))
-            .filter((el) => purchaseRegisterMode && el.offsetParent !== null);
-        const currentIndex = visibleInputs.indexOf(input);
-        if(currentIndex === -1) return;
-        const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1;
-        if(nextIndex < 0 || nextIndex >= visibleInputs.length) return;
-        e.preventDefault();
-        visibleInputs[nextIndex].focus();
-        visibleInputs[nextIndex].select();
-    });
-});
-
-const bulkPurchaseForm = document.getElementById('bulkPurchaseForm');
-if(bulkPurchaseForm){
-    bulkPurchaseForm.addEventListener('submit', function(e){
-        if(!purchaseRegisterMode){
-            e.preventDefault();
-            return;
-        }
-        const selected = Array.from(document.querySelectorAll('.purchase-select-checkbox:checked'));
-        if(selected.length === 0){
-            e.preventDefault();
-            alert('발주 등록할 부자재를 선택해 주세요.');
-            return;
-        }
-        const invalid = selected.some((checkbox) => {
-            const qtyInput = document.querySelector(`.purchase-qty-input[data-material-id="${checkbox.dataset.materialId}"]`);
-            return !qtyInput || Number(qtyInput.value || 0) <= 0;
-        });
-        if(invalid){
-            e.preventDefault();
-            alert('선택한 부자재의 발주 수량을 입력해 주세요.');
         }
     });
 }
