@@ -1616,7 +1616,6 @@ def integrated_management():
         rows = [dict(row) for row in cursor.fetchall()]
         material_ids = [int(row['id']) for row in rows if row.get('id')]
         workplace_stock_maps = {wp: _get_material_stock_map_for_location(cursor, material_ids, wp) for wp in workplaces}
-        logistics_stock_map = _get_material_stock_map_for_location(cursor, material_ids, LOGISTICS_WORKPLACE)
         data = []
         for item in rows:
             material_id = int(item.get('id') or 0)
@@ -1626,11 +1625,10 @@ def integrated_management():
                 qty = round(float(workplace_stock_maps.get(wp_name, {}).get(material_id, 0) or 0), 1)
                 stock_by_workplace[wp_name] = qty
                 workplace_total += qty
-            logistics_stock = round(float(logistics_stock_map.get(material_id, 0) or 0), 1)
             item['stock_by_workplace'] = stock_by_workplace
             item['workplace_total_stock'] = round(workplace_total, 1)
-            item['logistics_stock'] = logistics_stock
-            item['total_stock'] = round(workplace_total + logistics_stock, 1)
+            item['logistics_stock'] = 0.0
+            item['total_stock'] = round(workplace_total, 1)
             item['lot_total_quantity'] = item['total_stock']
             data.append(item)
         data.sort(key=_material_row_sort_key)
@@ -1772,7 +1770,7 @@ def integrated_inventory_audit_export():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['\uc791\uc5c5\uc7a5', '\uce74\ud14c\uace0\ub9ac', '\ucf54\ub4dc', '\ud488\uba85', '\uc790\ud638', '\uc785\uace0\uc77c', '\uc791\uc5c5\uc7a5 \uc7ac\uace0', '\ubb3c\ub958 \uc7ac\uace0', '\ucd1d\uc7ac\uace0', '\uc2e4\uc7ac\uace0(\uc791\uc5c5\uc7a5)'])
+    writer.writerow(['\uc791\uc5c5\uc7a5', '\uce74\ud14c\uace0\ub9ac', '\ucf54\ub4dc', '\ud488\uba85', '\uc790\ud638', '\uc785\uace0\uc77c', '\uc791\uc5c5\uc7a5 \uc7ac\uace0', '\ucd1d\uc7ac\uace0', '\uc2e4\uc7ac\uace0(\uc791\uc5c5\uc7a5)'])
     for row in rows:
         writer.writerow(
             [
@@ -1783,7 +1781,6 @@ def integrated_inventory_audit_export():
                 row['car_number'] or '',
                 row['receiving_date'] or '',
                 f"{float(row['workplace_stock'] or 0):.1f}",
-                f"{float(row['logistics_stock'] or 0):.1f}",
                 f"{float(row['total_stock'] or 0):.1f}",
                 '',
             ]

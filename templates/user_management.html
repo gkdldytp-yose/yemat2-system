@@ -5,8 +5,6 @@
 .role-select{padding:0.4rem 0.6rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;}
 .role-admin{border-color:#e74c3c;color:#e74c3c;background:#fff5f5;}
 .role-production{border-color:#27ae60;color:#27ae60;background:#f0fff4;}
-.role-purchase{border-color:#3498db;color:#3498db;background:#f0f8ff;}
-.role-logistics{border-color:#0ea5e9;color:#0369a1;background:#ecfeff;}
 .role-rawmat{border-color:#e67e22;color:#e67e22;background:#fffbf0;}
 .role-readonly{border-color:#95a5a6;color:#666;background:#f8f9fa;}
 .perm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;}
@@ -28,7 +26,6 @@
 {% block content %}
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
 {%- set can_prod  = _r in ['admin','production'] -%}
-{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
 {%- set can_raw   = _r in ['admin','rawmat'] -%}
 {%- set is_admin  = _r == 'admin' -%}
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
@@ -54,8 +51,6 @@
                 <select name="role" class="role-select">
                     <option value="readonly">👁️ 읽기전용</option>
                     <option value="production">🏭 생산관리</option>
-                    <option value="purchase">📦 발주관리</option>
-                    <option value="logistics">🚚 물류관리</option>
                     <option value="rawmat">🌿 원초관리</option>
                     <option value="admin">👑 관리자</option>
                 </select>
@@ -100,24 +95,6 @@
                 <li>상품 관리</li>
             </ul>
         </div>
-        <div class="perm-card" style="border-color:#3498db;background:#f0f8ff;">
-            <h4 style="color:#3498db;">📦 발주관리</h4>
-            <ul style="color:#555;">
-                <li>읽기 전용 포함</li>
-                <li>부자재 관리</li>
-                <li>발주 관리</li>
-                <li>업체 관리</li>
-            </ul>
-        </div>
-        <div class="perm-card" style="border-color:#0ea5e9;background:#ecfeff;">
-            <h4 style="color:#0369a1;">🚚 물류관리</h4>
-            <ul style="color:#555;">
-                <li>물류 작업장 기반 전체 권한</li>
-                <li>전 작업장 재고/불출/발주 관리</li>
-                <li>불출 확정 및 입출고 처리</li>
-                <li>원초/부자재 조회 및 관리</li>
-            </ul>
-        </div>
         <div class="perm-card" style="border-color:#e67e22;background:#fffbf0;">
             <h4 style="color:#e67e22;">🌿 원초관리</h4>
             <ul style="color:#555;">
@@ -150,8 +127,6 @@
         <div class="avatar" style="background:
             {% if urole == 'admin' %}#e74c3c
             {% elif urole == 'production' %}#27ae60
-            {% elif urole == 'purchase' %}#3498db
-            {% elif urole == 'logistics' %}#0369a1
             {% elif urole == 'rawmat' %}#e67e22
             {% else %}#95a5a6{% endif %}">
             {{ (u.name or u.username)[0]|upper }}
@@ -169,8 +144,6 @@
             <span class="role-select role-{{ urole }}" style="display:inline-block;padding:0.3rem 0.8rem;">
                 {% if urole == 'admin' %}👑 관리자
                 {% elif urole == 'production' %}🏭 생산관리
-                {% elif urole == 'purchase' %}📦 발주관리
-                {% elif urole == 'logistics' %}🚚 물류관리
                 {% elif urole == 'rawmat' %}🌿 원초관리
                 {% else %}👁️ 읽기전용{% endif %}
             </span>
@@ -189,8 +162,6 @@
                         onchange="this.className='role-select role-'+this.value">
                     <option value="readonly" {% if urole == 'readonly' %}selected{% endif %}>👁️ 읽기전용</option>
                     <option value="production" {% if urole == 'production' %}selected{% endif %}>🏭 생산관리</option>
-                    <option value="purchase" {% if urole == 'purchase' %}selected{% endif %}>📦 발주관리</option>
-                    <option value="logistics" {% if urole == 'logistics' %}selected{% endif %}>🚚 물류관리</option>
                     <option value="rawmat" {% if urole == 'rawmat' %}selected{% endif %}>🌿 원초관리</option>
                     <option value="admin" {% if urole == 'admin' %}selected{% endif %}>👑 관리자</option>
                 </select>

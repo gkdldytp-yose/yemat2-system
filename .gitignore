@@ -2,6 +2,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.DS_Store
+__MACOSX/
+venv/
+tmp_xlsx_edit/
 
 # DB / local data
 yemat.db
