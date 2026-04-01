@@ -1,0 +1,168 @@
+﻿{% extends "base.html" %}
+{% block title %}임포트 미리보기 - 예맛 생산관리{% endblock %}
+{% block extra_css %}
+<style>
+.import-summary{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:0.75rem;margin-bottom:1rem;}
+.import-stat{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:0.9rem 1rem;box-shadow:0 8px 24px rgba(15,23,42,.06);}
+.import-stat .label{display:block;font-size:.78rem;color:#64748b;margin-bottom:.25rem;font-weight:700;}
+.import-stat .value{font-size:1.5rem;font-weight:900;color:#0f172a;}
+.mapping-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:0.8rem 0.9rem;margin-bottom:0.75rem;}
+.filter-tabs{display:flex;gap:.55rem;flex-wrap:wrap;margin-bottom:1rem;}
+.filter-tab{display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1rem;border-radius:999px;border:1px solid #d7e1f0;background:#fff;color:#0f172a;font-weight:800;text-decoration:none;box-shadow:0 8px 18px rgba(15,23,42,.04);}
+.filter-tab.active{background:linear-gradient(135deg,#1d4ed8,#0f172a);color:#fff;border-color:transparent;}
+.filter-tab .count{display:inline-flex;min-width:1.45rem;height:1.45rem;padding:0 .35rem;align-items:center;justify-content:center;border-radius:999px;background:rgba(148,163,184,.18);font-size:.78rem;}
+.filter-tab.active .count{background:rgba(255,255,255,.18);}
+.row-card{border:1px solid #e5e7eb;border-radius:14px;background:#fff;padding:0.9rem;margin-bottom:0.85rem;box-shadow:0 8px 20px rgba(15,23,42,.04);}
+.row-card.ok{border-left:5px solid #10b981;}
+.row-card.warning{border-left:5px solid #f59e0b;}
+.row-card.error{border-left:5px solid #ef4444;}
+.row-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:0.6rem;}
+.row-field small{display:block;color:#64748b;margin-bottom:0.15rem;font-weight:700;}
+.row-field strong{display:block;color:#0f172a;word-break:break-word;}
+@media (max-width: 900px){.import-summary,.row-grid{grid-template-columns:1fr 1fr;}}
+</style>
+{% endblock %}
+{% block content %}
+<h1>임포트 미리보기</h1>
+<div class="card">
+    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+        <div>
+            <h2 style="margin-bottom:.35rem;">배치 #{{ batch.id }} / {{ import_type_labels.get(batch.import_type, batch.import_type) }}</h2>
+            <div style="color:#64748b;">{{ batch.file_name }} · 상태 {{ batch.status }}</div>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <a href="/imports" class="btn btn-secondary">새 업로드</a>
+            <a href="/imports/history" class="btn btn-secondary">이력</a>
+            <a href="/imports/{{ batch.id }}/failed.csv" class="btn btn-warning">실패 CSV</a>
+        </div>
+    </div>
+    <div class="import-summary">
+        <div class="import-stat"><span class="label">전체 행</span><span class="value">{{ batch.total_rows or 0 }}</span></div>
+        <div class="import-stat"><span class="label">OK</span><span class="value">{{ batch.ok_rows or 0 }}</span></div>
+        <div class="import-stat"><span class="label">WARNING</span><span class="value">{{ batch.warning_rows or 0 }}</span></div>
+        <div class="import-stat"><span class="label">ERROR</span><span class="value">{{ batch.error_rows or 0 }}</span></div>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-bottom:1rem;">
+        <form method="POST" action="/imports/{{ batch.id }}/revalidate">
+            <button type="submit" class="btn btn-secondary">전체 재검증</button>
+        </form>
+        <form method="POST" action="/imports/{{ batch.id }}/apply" onsubmit="return confirm('검증 통과 행만 최종 반영할까요?');">
+            {% if batch.import_type == 'material_stock' %}
+            <label style="display:inline-flex;align-items:center;gap:.35rem;margin-right:.5rem;color:#475569;">
+                <input type="checkbox" name="create_missing_materials" value="1"> 미매핑 부자재 자동 생성
+            </label>
+            {% endif %}
+            <button type="submit" class="btn">최종 반영</button>
+        </form>
+    </div>
+    <h2>자동 컬럼 매핑</h2>
+    {% for item in mapping_summary %}
+    <div class="mapping-box">
+        <div style="font-weight:800;margin-bottom:.4rem;">시트: {{ item.sheet_name }}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.45rem;">
+            {% for key, value in item.mapping.items() %}
+            <span class="badge badge-info">{{ key }} ← {{ value }}</span>
+            {% endfor %}
+            {% if not item.mapping %}<span style="color:#94a3b8;">자동 매핑된 컬럼이 없습니다.</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<div class="card">
+    <h2>행별 검증 결과</h2>
+    <div class="filter-tabs">
+        {% for tab in workplace_tabs %}
+        <a
+            href="{% if tab.label == '전체' %}{{ url_for('imports.batch_preview', batch_id=batch.id) }}{% else %}{{ url_for('imports.batch_preview', batch_id=batch.id, workplace=tab.label) }}{% endif %}"
+            class="filter-tab {% if workplace_filter == tab.label %}active{% endif %}"
+        >
+            <span>{{ tab.label }}</span>
+            <span class="count">{{ tab.count }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    <div style="color:#64748b;margin-bottom:1rem;">
+        {% if workplace_filter == '전체' %}
+        전체 행 기준으로 검증 결과를 표시합니다.
+        {% else %}
+        <strong>{{ workplace_filter }}</strong> 작업장 기준 검증 결과만 표시합니다.
+        {% endif %}
+    </div>
+    {% for row in rows %}
+    <div class="row-card {{ row.status|lower }}">
+        <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem;">
+            <div style="font-weight:800;">{{ row.sheet_name }} / 행 {{ row.row_no }} / {{ row.target_type }}</div>
+            <div>
+                <span class="badge {% if row.status == 'OK' %}badge-success{% elif row.status == 'WARNING' %}badge-warning{% else %}badge-danger{% endif %}">{{ row.status }}</span>
+            </div>
+        </div>
+        <div class="row-grid">
+            <div class="row-field"><small>코드</small><strong>{{ row.code or '-' }}</strong></div>
+            <div class="row-field"><small>이름</small><strong>{{ row.name or '-' }}</strong></div>
+            <div class="row-field"><small>작업장</small><strong>{{ row.workplace or '-' }}</strong></div>
+            <div class="row-field"><small>수량</small><strong>{{ '%.1f'|format(row.current_quantity or 0) }}</strong></div>
+            <div class="row-field"><small>LOT</small><strong>{{ row.lot or '-' }}</strong></div>
+        </div>
+        {% if row.error_message %}<div class="alert alert-danger" style="margin-top:.75rem;">{{ row.error_message }}</div>{% endif %}
+        {% if row.warning_message %}<div class="alert alert-warning" style="margin-top:.75rem;">{{ row.warning_message }}</div>{% endif %}
+        <form method="POST" action="/imports/{{ batch.id }}/rows/{{ row.id }}/remap" style="margin-top:.8rem;">
+            <div class="grid grid-4">
+                {% if row.target_type == 'material' %}
+                <div class="form-group">
+                    <label>부자재 매핑</label>
+                    <select name="matched_material_id">
+                        <option value="">선택</option>
+                        {% for opt in material_options %}
+                        <option value="{{ opt.id }}" {% if row.matched_material_id == opt.id %}selected{% endif %}>[{{ opt.code or '-' }}] {{ opt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>공급처</label>
+                    <select name="supplier_id">
+                        <option value="">선택</option>
+                        {% for supplier in suppliers %}
+                        <option value="{{ supplier.id }}" {% if row.supplier_id == supplier.id %}selected{% endif %}>{{ supplier.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group"><label>코드</label><input name="code" value="{{ row.code or '' }}"></div>
+                <div class="form-group"><label>이름</label><input name="name" value="{{ row.name or '' }}"></div>
+                <div class="form-group"><label>분류</label><input name="category" value="{{ row.category or '' }}"></div>
+                <div class="form-group"><label>단위</label><input name="unit" value="{{ row.unit or '' }}"></div>
+                <div class="form-group"><label>현재수량</label><input name="current_quantity" value="{{ '%.1f'|format(row.current_quantity or 0) }}"></div>
+                <div class="form-group"><label>입고수량</label><input name="received_quantity" value="{{ '%.1f'|format(row.received_quantity or 0) }}"></div>
+                <div class="form-group"><label>입고일</label><input type="date" name="received_date" value="{{ row.received_date or '' }}"></div>
+                <div class="form-group"><label>제조일(권장)</label><input type="date" name="manufacture_date" value="{{ row.manufacture_date or '' }}"></div>
+                <div class="form-group"><label>소비기한(기름/소금 권장)</label><input type="date" name="expiry_date" value="{{ row.expiry_date or '' }}"></div>
+                <div class="form-group"><label>LOT</label><input name="lot" value="{{ row.lot or '' }}"></div>
+                <div class="form-group"><label>작업장</label><select name="workplace">{% for wp in material_workplaces %}<option value="{{ wp }}" {% if row.workplace == wp %}selected{% endif %}>{{ wp }}</option>{% endfor %}</select></div>
+                {% else %}
+                <div class="form-group">
+                    <label>원초 매핑</label>
+                    <select name="matched_raw_material_id">
+                        <option value="">선택</option>
+                        {% for opt in raw_material_options %}
+                        <option value="{{ opt.id }}" {% if row.matched_raw_material_id == opt.id %}selected{% endif %}>[{{ opt.code or '-' }}] {{ opt.name }} / {{ opt.lot or '-' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group"><label>코드</label><input name="code" value="{{ row.code or '' }}"></div>
+                <div class="form-group"><label>이름</label><input name="name" value="{{ row.name or '' }}"></div>
+                <div class="form-group"><label>현재수량</label><input name="current_quantity" value="{{ '%.1f'|format(row.current_quantity or 0) }}"></div>
+                <div class="form-group"><label>입고일</label><input type="date" name="received_date" value="{{ row.received_date or '' }}"></div>
+                <div class="form-group"><label>LOT</label><input name="lot" value="{{ row.lot or '' }}"></div>
+                <div class="form-group"><label>자호</label><input name="ja_ho" value="{{ row.ja_ho or '' }}"></div>
+                <div class="form-group"><label>속수</label><input name="sheets_per_sok" value="{{ row.sheets_per_sok or '' }}"></div>
+                <div class="form-group"><label>차량번호</label><input name="car_number" value="{{ row.car_number or '' }}"></div>
+                <div class="form-group"><label>작업장</label><select name="workplace">{% for wp in raw_workplaces %}<option value="{{ wp }}" {% if row.workplace == wp %}selected{% endif %}>{{ wp }}</option>{% endfor %}</select></div>
+                {% endif %}
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:.75rem;"><button type="submit" class="btn btn-small">매핑 저장 후 재검증</button></div>
+        </form>
+    </div>
+    {% else %}
+    <div style="text-align:center;color:#94a3b8;">표시할 행이 없습니다.</div>
+    {% endfor %}
+</div>
+{% endblock %}

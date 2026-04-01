@@ -1,0 +1,37 @@
+﻿{% extends "base.html" %}
+{% block title %}임포트 반영 결과 - 예맛 생산관리{% endblock %}
+{% block content %}
+<h1>임포트 반영 결과</h1>
+<div class="card">
+    <h2>배치 #{{ batch.id }} / {{ import_type_labels.get(batch.import_type, batch.import_type) }}</h2>
+    <div class="grid grid-3">
+        <div class="alert alert-success">반영 행수: {{ result_summary.applied_rows or 0 }}</div>
+        <div class="alert alert-warning">스킵 행수: {{ result_summary.skipped_rows or 0 }}</div>
+        <div class="alert alert-info">배치 상태: {{ batch.status }}</div>
+        <div class="alert alert-info">생성된 materials: {{ result_summary.materials_created or 0 }}</div>
+        <div class="alert alert-info">생성된 material_lots: {{ result_summary.material_lots_created or 0 }}</div>
+        <div class="alert alert-info">갱신된 material_lots: {{ result_summary.material_lots_updated or 0 }}</div>
+        <div class="alert alert-info">생성된 부자재 트랜잭션: {{ result_summary.material_txns_created or 0 }}</div>
+        <div class="alert alert-info">생성된 raw_materials: {{ result_summary.raw_materials_created or 0 }}</div>
+        <div class="alert alert-info">갱신된 raw_materials: {{ result_summary.raw_materials_updated or 0 }}</div>
+        <div class="alert alert-info">생성된 raw_material_logs: {{ result_summary.raw_logs_created or 0 }}</div>
+    </div>
+    {% if result_summary.failures %}
+    <h2>실패 행</h2>
+    <div class="table-container">
+        <table>
+            <thead><tr><th>시트</th><th>행</th><th>이름</th><th>메시지</th></tr></thead>
+            <tbody>
+            {% for item in result_summary.failures %}
+            <tr><td>{{ item.sheet_name }}</td><td>{{ item.row_no }}</td><td>{{ item.name or '-' }}</td><td>{{ item.message }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;">
+        <a href="/imports/{{ batch.id }}" class="btn btn-secondary">배치 상세</a>
+        <a href="/imports/history" class="btn">이력으로 이동</a>
+    </div>
+</div>
+{% endblock %}

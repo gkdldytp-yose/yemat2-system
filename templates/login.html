@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>로그인 - 예맛</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+             background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+             min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
+        .login-box{background:white;border-radius:16px;padding:2rem;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+        .logo{text-align:center;font-size:2.5rem;margin-bottom:0.5rem;}
+        .title{text-align:center;font-size:1.5rem;font-weight:700;color:#2c3e50;margin-bottom:0.25rem;}
+        .subtitle{text-align:center;color:#7f8c8d;font-size:0.9rem;margin-bottom:2rem;}
+        .form-group{margin-bottom:1.25rem;}
+        .form-group label{display:block;font-weight:600;margin-bottom:0.5rem;color:#495057;font-size:0.9rem;}
+        .form-group input{width:100%;padding:0.75rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.95rem;transition:border 0.2s;}
+        .form-group input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1);}
+        .btn{width:100%;padding:0.85rem;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;
+             border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;}
+        .btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(102,126,234,0.3);}
+        .error{background:#ffebee;color:#c62828;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:0.85rem;border-left:4px solid #c62828;}
+        .register-link{text-align:center;margin-top:1.5rem;font-size:0.85rem;color:#7f8c8d;}
+        .register-link a{color:#667eea;text-decoration:none;font-weight:600;}
+        .register-link a:hover{text-decoration:underline;}
+        @media (max-width: 768px) {
+            .login-box{padding:1.5rem;border-radius:12px;}
+            .logo{font-size:2rem;}
+            .title{font-size:1.25rem;}
+            .subtitle{font-size:0.85rem;}
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo"><img src="/static/img/yemat_logo.svg" alt="예맛" style="height:72px;max-width:100%;"></div>
+        <h1 class="title">예맛 시스템<h1>
+        <p class="subtitle">로그인하여 시작하세요</p>
+        
+        {% if error %}
+        <div class="error">❌ {{ error }}</div>
+        {% endif %}
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>아이디</label>
+                <input type="text" name="username" required autofocus placeholder="아이디를 입력하세요">
+            </div>
+            <div class="form-group">
+                <label>비밀번호</label>
+                <input type="password" name="password" required placeholder="비밀번호를 입력하세요">
+            </div>
+            <button type="submit" class="btn">로그인</button>
+        </form>
+        
+        <div class="register-link">
+            계정이 없으신가요? <a href="/register">회원가입</a>
+        </div>
+    </div>
+</body>
+</html>
+

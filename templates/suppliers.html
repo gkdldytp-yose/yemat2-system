@@ -1,0 +1,134 @@
+﻿{% extends "base.html" %}
+
+{% block title %}업체 관리 - 예맛 생산관리{% endblock %}
+
+{% block extra_css %}
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+}
+.close {
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #aaa;
+}
+.close:hover {
+    color: #000;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem; color: #2c3e50;">🏢 업체 관리</h1>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>업체 목록 (총 {{ suppliers|length }}개)</h2>
+        {% if user.is_admin %}
+        <button class="btn btn-small" onclick="openAddModal()">+ 업체 추가</button>
+        {% endif %}
+    </div>
+    
+    {% if suppliers %}
+    <table>
+        <thead>
+            <tr>
+                <th>업체 코드</th>
+                <th>업체명</th>
+                <th>연락처</th>
+                <th>주소</th>
+                <th>등록 부자재 수</th>
+                <th>등록일</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for supplier in suppliers %}
+            <tr>
+                <td><code>{{ supplier.code }}</code></td>
+                <td><strong>{{ supplier.name }}</strong></td>
+                <td>{{ supplier.contact or '-' }}</td>
+                <td>{{ supplier.address or '-' }}</td>
+                <td>{{ supplier.material_count }}개</td>
+                <td>{{ supplier.created_at[:10] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #7f8c8d; padding: 1rem;">등록된 업체가 없습니다.</p>
+    {% endif %}
+</div>
+
+<!-- 업체 추가 모달 -->
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeAddModal()">&times;</span>
+        <h2 style="margin-bottom: 1.5rem;">업체 추가</h2>
+        
+        <form method="POST" action="/suppliers/add">
+            <div class="form-group">
+                <label>업체명 *</label>
+                <input type="text" name="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label>연락처</label>
+                <input type="text" name="contact" placeholder="예: 02-1234-5678">
+            </div>
+            
+            <div class="form-group">
+                <label>주소</label>
+                <input type="text" name="address" placeholder="업체 주소">
+            </div>
+            
+            <div class="form-group">
+                <label>비고</label>
+                <textarea name="note" rows="3" placeholder="특이사항"></textarea>
+            </div>
+            
+            <div style="text-align: right; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeAddModal()">취소</button>
+                <button type="submit" class="btn">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openAddModal() {
+    document.getElementById('addModal').style.display = 'block';
+}
+
+function closeAddModal() {
+    document.getElementById('addModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('addModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
+

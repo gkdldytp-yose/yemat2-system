@@ -1,0 +1,290 @@
+﻿{% extends "base.html" %}
+
+{% block title %}BOM 관리 - {{ product.name }} - 예맛 생산관리{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<h1 style="margin-bottom: 2rem; color: #2c3e50;">
+    📦 {{ product.name }} - BOM 관리
+</h1>
+
+<!-- 상품 기본 정보 -->
+<div class="card" style="margin-bottom: 2rem;">
+    <h2>상품 정보</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+        <div>
+            <label style="font-weight: 600; color: #666; font-size: 0.9rem;">상품명</label>
+            <p style="font-size: 1.1rem; margin: 0.25rem 0;"><strong>{{ product.name }}</strong></p>
+        </div>
+        <div>
+            <label style="font-weight: 600; color: #666; font-size: 0.9rem;">상품 코드</label>
+            <p style="font-size: 1.1rem; margin: 0.25rem 0;">{{ product.code or '-' }}</p>
+        </div>
+        <div>
+            <label style="font-weight: 600; color: #666; font-size: 0.9rem;">박스당 낱봉 개수</label>
+            <p style="font-size: 1.1rem; margin: 0.25rem 0;">{{ product.box_quantity }}개</p>
+        </div>
+        <div>
+            <label style="font-weight: 600; color: #666; font-size: 0.9rem;">매수 / 절단</label>
+            <p style="font-size: 1.1rem; margin: 0.25rem 0;">
+                {{ product.sheets_per_pack or 24 }}매 / {{ product.cuts_per_sheet or 9 }}절단
+            </p>
+        </div>
+    </div>
+    
+    {% if can_prod %}
+    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6;">
+        <button class="btn btn-small" onclick="document.getElementById('editInfoForm').style.display='block'">
+            ✏️ 상품 정보 수정
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 상품 정보 수정 폼 (숨김) -->
+{% if can_prod %}
+<div id="editInfoForm" class="card" style="display: none; margin-bottom: 2rem; border: 2px solid #667eea;">
+    <h3>상품 정보 수정</h3>
+    <form method="POST" action="/products/{{ product.id }}/update-info">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+            <div class="form-group">
+                <label>박스당 낱봉 개수 *</label>
+                <input type="number" name="box_quantity" value="{{ product.box_quantity }}" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>매수 *</label>
+                <input type="number" name="sheets_per_pack" value="{{ product.sheets_per_pack or 24 }}" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>절단 *</label>
+                <input type="number" name="cuts_per_sheet" value="{{ product.cuts_per_sheet or 9 }}" min="1" required>
+            </div>
+        </div>
+        <div style="text-align: right; margin-top: 1rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('editInfoForm').style.display='none'">취소</button>
+            <button type="submit" class="btn">저장</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<!-- BOM 구성 -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>부자재 구성 (BOM)</h2>
+        {% if can_prod %}
+        <button class="btn btn-small" onclick="document.getElementById('addForm').style.display='block'">
+            + 부자재 추가
+        </button>
+        {% endif %}
+    </div>
+    
+    {% if bom_items %}
+    <table>
+        <thead>
+            <tr>
+                <th>카테고리</th>
+                <th>부자재명</th>
+                <th>1박스당 필요량</th>
+                <th>단위</th>
+                <th>비고</th>
+                {% if can_prod %}
+                <th>관리</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in bom_items %}
+            <tr>
+                <td>
+                    <span class="badge badge-info">{{ item.category }}</span>
+                </td>
+                <td>
+                    <strong>
+                        {% if item.raw_material_name %}
+                            {{ item.raw_material_name }} <small style="color: #999;">(직접입력)</small>
+                        {% else %}
+                            {{ item.material_name }}
+                        {% endif %}
+                    </strong>
+                </td>
+                <td style="text-align: center;">
+                    <strong style="color: #667eea;">{{ item.quantity_per_box }}</strong>
+                </td>
+                <td style="text-align: center;">{{ item.unit or '-' }}</td>
+                <td style="font-size: 0.85rem; color: #666;">
+                    {% if item.quantity_per_box == 0 %}
+                        <span style="color: #999;">사용 안 함</span>
+                    {% endif %}
+                </td>
+                {% if can_prod %}
+                <td>
+                    <form method="POST" action="/bom/{{ item.id }}/delete" style="display: inline;"
+                          onsubmit="return confirm('삭제하시겠습니까?');">
+                        <button type="submit" class="btn btn-small btn-danger">삭제</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <strong>📊 예시 계산 (100박스 생산 시)</strong>
+        <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+            {% for item in bom_items %}
+            {% if item.quantity_per_box > 0 %}
+            <div style="padding: 0.25rem 0;">
+                • {{ item.raw_material_name or item.material_name }}: 
+                <strong>{{ "%.2f"|format(item.quantity_per_box * 100) }}{{ item.unit or '' }}</strong>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #7f8c8d;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+        <p>등록된 부자재가 없습니다.</p>
+        <p style="font-size: 0.9rem;">위의 "+ 부자재 추가" 버튼을 눌러 BOM을 등록하세요.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 부자재 추가 폼 -->
+{% if can_prod %}
+<div id="addForm" class="card" style="display: none; margin-top: 2rem; border: 2px solid #667eea;">
+    <h2>부자재 추가</h2>
+    
+    <div style="margin-bottom: 1.5rem; padding: 1rem; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+        <strong>💡 사용법:</strong>
+        <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+            <li><strong>원초</strong>는 "원초 직접입력" 선택 후 아래에 이름 입력</li>
+            <li>나머지 부자재는 목록에서 선택</li>
+            <li>사용하지 않는 부자재는 수량을 <strong>0</strong>으로 입력</li>
+        </ul>
+    </div>
+    
+    <form method="POST" action="/products/{{ product.id }}/bom/add">
+        <!-- 부자재 선택 또는 원초 직접입력 -->
+        <div class="form-group">
+            <label>부자재 선택 *</label>
+            <select name="material_id" id="materialSelect" onchange="toggleRawMaterialInput()">
+                <option value="">-- 선택하세요 --</option>
+                <option value="raw_material">🌿 원초 (직접입력)</option>
+                <optgroup label="기름">
+                    {% for material in materials %}
+                    {% if material.category == '기름' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="소금">
+                    {% for material in materials %}
+                    {% if material.category == '소금' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="실리카">
+                    {% for material in materials %}
+                    {% if material.category == '실리카' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="트레이">
+                    {% for material in materials %}
+                    {% if material.category == '트레이' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="포장재">
+                    {% for material in materials %}
+                    {% if material.category == '포장재' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="박스">
+                    {% for material in materials %}
+                    {% if material.category == '박스' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="뚜껑">
+                    {% for material in materials %}
+                    {% if material.category == '뚜껑' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="각대">
+                    {% for material in materials %}
+                    {% if material.category == '각대' %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="기타">
+                    {% for material in materials %}
+                    {% if material.category not in ['기름', '소금', '실리카', '트레이', '포장재', '박스', '뚜껑', '각대'] %}
+                    <option value="{{ material.id }}">[{{ material.category }}] {{ material.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+            </select>
+        </div>
+        
+        <!-- 원초 직접입력 필드 (숨김 상태로 시작) -->
+        <div class="form-group" id="rawMaterialInputGroup" style="display: none;">
+            <label>원초 이름 입력 * (예: 곱창돌김, 재래김 등)</label>
+            <input type="text" name="raw_material_name" id="rawMaterialName" 
+                   placeholder="예: 곱창돌김">
+        </div>
+        
+        <div class="form-group">
+            <label>1박스당 필요량 * <small style="color: #666;">(사용 안 함: 0 입력)</small></label>
+            <input type="number" name="quantity_per_box" step="0.01" required placeholder="예: 266.7 또는 0">
+        </div>
+        
+        <div style="text-align: right; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary" 
+                    onclick="document.getElementById('addForm').style.display='none'">취소</button>
+            <button type="submit" class="btn">추가</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div style="margin-top: 2rem;">
+    <a href="/products" class="btn btn-secondary">← 상품 목록으로</a>
+</div>
+
+<script>
+function toggleRawMaterialInput() {
+    const select = document.getElementById('materialSelect');
+    const rawInputGroup = document.getElementById('rawMaterialInputGroup');
+    const rawNameInput = document.getElementById('rawMaterialName');
+    
+    if (select.value === 'raw_material') {
+        rawInputGroup.style.display = 'block';
+        rawNameInput.required = true;
+    } else {
+        rawInputGroup.style.display = 'none';
+        rawNameInput.required = false;
+        rawNameInput.value = '';
+    }
+}
+</script>
+
+{% endblock %}
+

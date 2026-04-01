@@ -1,0 +1,749 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ year }}년 {{ month }}월 근무일 관리{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<div class="container">
+    {% set prev_year = year - 1 if month == 1 else year %}
+    {% set prev_month = 12 if month == 1 else month - 1 %}
+    {% set next_year = year + 1 if month == 12 else year %}
+    {% set next_month = 1 if month == 12 else month + 1 %}
+    <div class="page-header">
+        <div>
+            <h1>📅 {{ year }}년 {{ month }}월 근무일 관리</h1>
+            <p style="color: #7f8c8d; margin-top: 0.5rem;">근무일, 휴일, 특근, 잔업을 관리합니다</p>
+        </div>
+        <a href="{{ url_for('production.schedules', year=year, month=month) }}" class="btn-secondary">← 스케줄로</a>
+    </div>
+
+    <div class="month-nav-card">
+        <a class="month-nav-btn" href="{{ url_for('production.work_days', year=prev_year, month=prev_month) }}">◀ 이전달</a>
+        <a class="month-nav-btn" href="{{ url_for('production.work_days', year=next_year, month=next_month) }}">다음달 ▶</a>
+        <a class="month-nav-btn month-nav-today" href="{{ url_for('production.work_days') }}">이번달</a>
+        <input type="month" id="workDaysMonthPicker" class="month-nav-picker" value="{{ '%04d-%02d'|format(year, month) }}" onchange="goToWorkDaysMonth(this.value)">
+    </div>
+
+    <!-- 범례 및 컨트롤 -->
+    <div class="legend-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3>📌 범례</h3>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="toggleSelectMode()" id="selectModeBtn" class="btn-select">
+                    📅 여러 날짜 선택
+                </button>
+                <button onclick="openBatchModal()" id="batchRegisterBtn" class="btn-primary" style="display: none;">
+                    ✓ 선택한 날짜 일괄 등록
+                </button>
+                <button onclick="clearSelection()" id="clearSelectionBtn" class="btn-secondary" style="display: none;">
+                    ✕ 선택 취소
+                </button>
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 20px; height: 20px; background: #e8f5e9; border: 2px solid #4caf50; border-radius: 4px;"></div>
+                <span>근무일</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 20px; height: 20px; background: #ffebee; border: 2px solid #f44336; border-radius: 4px;"></div>
+                <span>휴일</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 20px; height: 20px; background: #fff3e0; border: 2px solid #ff9800; border-radius: 4px;"></div>
+                <span>특근</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 20px; height: 20px; background: #e3f2fd; border: 2px solid #2196f3; border-radius: 4px;"></div>
+                <span>잔업</span>
+            </div>
+        </div>
+        <div id="selectedDatesInfo" style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border-radius: 6px; display: none;">
+            <strong>선택된 날짜:</strong> <span id="selectedDatesList"></span>
+        </div>
+    </div>
+
+    <!-- 캘린더 -->
+    <div class="card">
+        <div class="calendar-grid">
+            <div class="calendar-header">일</div>
+            <div class="calendar-header">월</div>
+            <div class="calendar-header">화</div>
+            <div class="calendar-header">수</div>
+            <div class="calendar-header">목</div>
+            <div class="calendar-header">금</div>
+            <div class="calendar-header">토</div>
+
+            {% for day in calendar_days %}
+            <div class="calendar-day {% if day.type %}day-{{ day.type }}{% endif %} {% if not day.current_month %}other-month{% endif %}"
+                 data-date="{{ day.date }}"
+                 data-current-month="{{ 'true' if day.current_month else 'false' }}"
+                 onclick="handleDayClick('{{ day.date }}', {{ 'true' if day.current_month else 'false' }}, '{{ day.type or '' }}', {{ day.overtime_hours or 0 }}, '{{ day.note or '' }}')"
+                 style="cursor: pointer;">
+                <div class="day-number">{{ day.day }}</div>
+                {% if day.type %}
+                <div class="day-badge">
+                    {% if day.type == 'work' %}
+                        ✓ 근무
+                    {% elif day.type == 'holiday' %}
+                        ✕ 휴일
+                    {% elif day.type == 'extra' %}
+                        🔥 특근
+                    {% elif day.type == 'overtime' %}
+                        ⏰ 잔업 {{ day.overtime_hours }}h
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 통계 -->
+    <div class="stats-grid">
+        <div class="stat-card" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
+            <div class="stat-label">근무일</div>
+            <div class="stat-value">{{ stats.work }}일</div>
+        </div>
+        <div class="stat-card" style="background: #ffebee; border-left: 4px solid #f44336;">
+            <div class="stat-label">휴일</div>
+            <div class="stat-value">{{ stats.holiday }}일</div>
+        </div>
+        <div class="stat-card" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
+            <div class="stat-label">특근</div>
+            <div class="stat-value">{{ stats.extra }}일</div>
+        </div>
+        <div class="stat-card" style="background: #fff3e0; border-left: 4px solid #ff9800;">
+            <div class="stat-label">잔업</div>
+            <div class="stat-value">{{ stats.overtime }}건</div>
+        </div>
+    </div>
+</div>
+
+<!-- 단일 날짜 모달 -->
+<div id="workDayModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">날짜 설정</h2>
+            <button onclick="closeSingleModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('production.manage_work_day') }}">
+            <input type="hidden" name="date" id="modalDate">
+            
+            <div class="form-group">
+                <label>구분 *</label>
+                <select name="type" id="modalType" required onchange="toggleOvertimeInput()"
+                        style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+                    <option value="work">근무일</option>
+                    <option value="holiday">휴일</option>
+                    <option value="extra">특근</option>
+                    <option value="overtime">잔업</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="overtimeHoursGroup" style="display: none;">
+                <label>잔업 시간 (시간)</label>
+                <input type="number" name="overtime_hours" id="modalOvertimeHours" min="0" step="0.5" placeholder="예: 2.5"
+                       style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+            </div>
+            
+            <div class="form-group">
+                <label>메모</label>
+                <textarea name="note" id="modalNote" rows="3" placeholder="특이사항을 입력하세요"
+                          style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary" style="flex: 1;">저장</button>
+                <button type="button" onclick="deleteWorkDay()" class="btn-danger" id="deleteBtn">삭제</button>
+                <button type="button" onclick="closeSingleModal()" class="btn-secondary">취소</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 일괄 등록 모달 -->
+<div id="batchModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>선택한 날짜 일괄 등록</h2>
+            <button onclick="closeBatchModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('production.manage_work_day') }}" id="batchForm">
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                <strong>선택된 날짜 (<span id="batchDateCount">0</span>개):</strong>
+                <div id="batchDatesList" style="margin-top: 0.5rem; max-height: 150px; overflow-y: auto; font-size: 0.9rem;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>구분 *</label>
+                <select name="type" id="batchType" required onchange="toggleBatchOvertimeInput()"
+                        style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+                    <option value="work">근무일</option>
+                    <option value="holiday">휴일</option>
+                    <option value="extra">특근</option>
+                    <option value="overtime">잔업</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="batchOvertimeHoursGroup" style="display: none;">
+                <label>잔업 시간 (시간)</label>
+                <input type="number" name="overtime_hours" id="batchOvertimeHours" min="0" step="0.5" placeholder="예: 2.5"
+                       style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+            </div>
+            
+            <div class="form-group">
+                <label>메모</label>
+                <textarea name="note" id="batchNote" rows="3" placeholder="모든 날짜에 동일하게 적용됩니다"
+                          style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button type="button" onclick="submitBatchForm()" class="btn-primary" style="flex: 1;">일괄 저장</button>
+                <button type="button" onclick="closeBatchModal()" class="btn-secondary">취소</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+}
+
+.legend-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.month-nav-card {
+    background: white;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.month-nav-btn {
+    background: #f8fafc;
+    color: #0f172a;
+    border: 1px solid #dbe3f0;
+    border-radius: 8px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.month-nav-btn:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.month-nav-today {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+
+.month-nav-picker {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.38rem 0.5rem;
+    font-size: 0.86rem;
+    margin-left: auto;
+}
+
+.card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-header {
+    text-align: center;
+    padding: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.calendar-day {
+    min-height: 100px;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+    transition: all 0.2s;
+}
+
+.calendar-day:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.calendar-day.other-month {
+    opacity: 0.3;
+}
+
+.calendar-day.day-work {
+    background: #e8f5e9;
+    border-color: #4caf50;
+}
+
+.calendar-day.day-holiday {
+    background: #ffebee;
+    border-color: #f44336;
+}
+
+.calendar-day.day-overtime {
+    background: #fff3e0;
+    border-color: #ff9800;
+}
+
+.calendar-day.day-extra {
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.day-number {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.day-badge {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary:hover {
+    background: #5568d3;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+.btn-select {
+    background: #3498db;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-select:hover {
+    background: #2980b9;
+}
+
+.calendar-day.selected {
+    border: 3px solid #f39c12 !important;
+    box-shadow: 0 0 10px rgba(243, 156, 18, 0.5) !important;
+}
+
+.calendar-day.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #f39c12;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.calendar-day {
+    position: relative;
+}
+</style>
+
+<script>
+// 선택 모드 상태
+let isSelectMode = false;
+let selectedDates = new Set();
+
+function goToWorkDaysMonth(monthValue) {
+    if (!monthValue) return;
+    const parts = monthValue.split('-');
+    if (parts.length !== 2) return;
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return;
+    window.location.href = `{{ url_for('production.work_days') }}?year=${y}&month=${m}`;
+}
+
+// 선택 모드 토글
+function toggleSelectMode() {
+    isSelectMode = !isSelectMode;
+    const btn = document.getElementById('selectModeBtn');
+    const batchBtn = document.getElementById('batchRegisterBtn');
+    const clearBtn = document.getElementById('clearSelectionBtn');
+    
+    if (isSelectMode) {
+        btn.textContent = '✓ 선택 모드';
+        btn.style.background = '#27ae60';
+        batchBtn.style.display = 'inline-block';
+        clearBtn.style.display = 'inline-block';
+    } else {
+        btn.textContent = '📅 여러 날짜 선택';
+        btn.style.background = '#3498db';
+        batchBtn.style.display = 'none';
+        clearBtn.style.display = 'none';
+        clearSelection();
+    }
+}
+
+// 날짜 클릭 핸들러
+function handleDayClick(date, isCurrentMonth, type, overtimeHours, note) {
+    if (isCurrentMonth === 'false' || isCurrentMonth === false) {
+        return; // 다른 달 날짜는 클릭 불가
+    }
+    
+    if (isSelectMode) {
+        // 선택 모드: 날짜 선택/해제
+        toggleDateSelection(date);
+    } else {
+        // 일반 모드: 단일 날짜 모달 열기
+        openSingleModal(date, type, overtimeHours, note);
+    }
+}
+
+// 날짜 선택/해제
+function toggleDateSelection(date) {
+    const dayElement = document.querySelector(`[data-date="${date}"]`);
+    
+    if (selectedDates.has(date)) {
+        selectedDates.delete(date);
+        dayElement.classList.remove('selected');
+    } else {
+        selectedDates.add(date);
+        dayElement.classList.add('selected');
+    }
+    
+    updateSelectedDatesDisplay();
+}
+
+// 선택된 날짜 표시 업데이트
+function updateSelectedDatesDisplay() {
+    const info = document.getElementById('selectedDatesInfo');
+    const list = document.getElementById('selectedDatesList');
+    
+    if (selectedDates.size > 0) {
+        info.style.display = 'block';
+        const dates = Array.from(selectedDates).sort();
+        list.textContent = `${dates.join(', ')} (총 ${dates.length}개)`;
+    } else {
+        info.style.display = 'none';
+    }
+}
+
+// 선택 취소
+function clearSelection() {
+    selectedDates.forEach(date => {
+        const dayElement = document.querySelector(`[data-date="${date}"]`);
+        if (dayElement) {
+            dayElement.classList.remove('selected');
+        }
+    });
+    selectedDates.clear();
+    updateSelectedDatesDisplay();
+}
+
+// 단일 날짜 모달 열기
+function openSingleModal(date, type, overtimeHours, note) {
+    document.getElementById('modalDate').value = date;
+    document.getElementById('modalTitle').textContent = date + ' 근무일 설정';
+    document.getElementById('modalType').value = type || 'work';
+    document.getElementById('modalOvertimeHours').value = overtimeHours || '';
+    document.getElementById('modalNote').value = note || '';
+    
+    toggleOvertimeInput();
+    
+    const deleteBtn = document.getElementById('deleteBtn');
+    if (type) {
+        deleteBtn.style.display = 'block';
+    } else {
+        deleteBtn.style.display = 'none';
+    }
+    
+    document.getElementById('workDayModal').style.display = 'flex';
+}
+
+function closeSingleModal() {
+    document.getElementById('workDayModal').style.display = 'none';
+}
+
+function toggleOvertimeInput() {
+    const type = document.getElementById('modalType').value;
+    const overtimeGroup = document.getElementById('overtimeHoursGroup');
+    
+    if (type === 'overtime') {
+        overtimeGroup.style.display = 'block';
+        document.getElementById('modalOvertimeHours').required = true;
+    } else {
+        overtimeGroup.style.display = 'none';
+        document.getElementById('modalOvertimeHours').required = false;
+    }
+}
+
+// 일괄 등록 모달 열기
+function openBatchModal() {
+    if (selectedDates.size === 0) {
+        alert('먼저 날짜를 선택해주세요.');
+        return;
+    }
+    
+    const dates = Array.from(selectedDates).sort();
+    document.getElementById('batchDateCount').textContent = dates.length;
+    
+    const listDiv = document.getElementById('batchDatesList');
+    listDiv.innerHTML = dates.map(d => `<div style="padding: 0.25rem 0;">• ${d}</div>`).join('');
+    
+    document.getElementById('batchModal').style.display = 'flex';
+}
+
+function closeBatchModal() {
+    document.getElementById('batchModal').style.display = 'none';
+}
+
+function toggleBatchOvertimeInput() {
+    const type = document.getElementById('batchType').value;
+    const overtimeGroup = document.getElementById('batchOvertimeHoursGroup');
+    
+    if (type === 'overtime') {
+        overtimeGroup.style.display = 'block';
+        document.getElementById('batchOvertimeHours').required = true;
+    } else {
+        overtimeGroup.style.display = 'none';
+        document.getElementById('batchOvertimeHours').required = false;
+    }
+}
+
+// 일괄 저장
+function submitBatchForm() {
+    if (selectedDates.size === 0) {
+        alert('선택된 날짜가 없습니다.');
+        return;
+    }
+    
+    const type = document.getElementById('batchType').value;
+    const overtimeHours = document.getElementById('batchOvertimeHours').value || 0;
+    const note = document.getElementById('batchNote').value;
+    
+    // 각 날짜에 대해 폼 제출
+    const dates = Array.from(selectedDates);
+    let completed = 0;
+    
+    dates.forEach((date, index) => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("production.manage_work_day") }}';
+        form.style.display = 'none';
+        
+        const fields = {
+            'date': date,
+            'type': type,
+            'overtime_hours': overtimeHours,
+            'note': note
+        };
+        
+        Object.keys(fields).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = fields[key];
+            form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        
+        // 마지막 폼만 제출 (페이지 리로드)
+        if (index === dates.length - 1) {
+            form.submit();
+        } else {
+            // AJAX로 제출 (페이지 리로드 없이)
+            fetch('{{ url_for("production.manage_work_day") }}', {
+                method: 'POST',
+                body: new FormData(form)
+            });
+        }
+    });
+}
+
+// 단일 날짜 삭제
+function deleteWorkDay() {
+    if (confirm('정말 삭제하시겠습니까?')) {
+        const date = document.getElementById('modalDate').value;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("production.delete_work_day") }}';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'date';
+        input.value = date;
+        form.appendChild(input);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// 모달 외부 클릭 시 닫기
+window.onclick = function(event) {
+    const singleModal = document.getElementById('workDayModal');
+    const batchModal = document.getElementById('batchModal');
+    
+    if (event.target == singleModal) {
+        closeSingleModal();
+    }
+    if (event.target == batchModal) {
+        closeBatchModal();
+    }
+}
+</script>
+{% endblock %}
+

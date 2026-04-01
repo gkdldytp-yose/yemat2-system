@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+{% block title %}원부자재 수불대장{% endblock %}
+{% block extra_css %}
+<style>
+.ledger-shell{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+}
+.ledger-hero{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:1rem;
+    padding:1.25rem 1.4rem;
+    border-radius:22px;
+    background:linear-gradient(135deg,#f8fbff 0%,#eef6ff 48%,#f7fbf7 100%);
+    border:1px solid #d7e7fb;
+    box-shadow:0 18px 38px rgba(15,23,42,0.07);
+}
+.ledger-title-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:0.35rem;
+}
+.ledger-title{
+    margin:0;
+    font-size:1.6rem;
+    font-weight:900;
+    color:#0f172a;
+    letter-spacing:-0.02em;
+}
+.ledger-subtitle{
+    margin:0;
+    color:#526277;
+    font-size:0.94rem;
+    line-height:1.55;
+}
+.ledger-summary{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.65rem;
+    justify-content:flex-end;
+}
+.ledger-summary-card{
+    min-width:132px;
+    padding:0.85rem 0.95rem;
+    border-radius:18px;
+    background:rgba(255,255,255,0.85);
+    border:1px solid #d9e7f6;
+    box-shadow:0 8px 22px rgba(37,99,235,0.08);
+}
+.ledger-summary-card .k{
+    display:block;
+    color:#64748b;
+    font-size:0.76rem;
+    font-weight:800;
+    margin-bottom:0.3rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+}
+.ledger-summary-card .v{
+    display:block;
+    color:#0f172a;
+    font-size:1.15rem;
+    font-weight:900;
+}
+.ledger-filter-card{
+    padding:1.15rem 1.2rem 1.2rem;
+    border-radius:22px;
+    background:#fff;
+    border:1px solid #dde7f3;
+    box-shadow:0 14px 30px rgba(15,23,42,0.06);
+}
+.ledger-filter-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    margin-bottom:0.9rem;
+}
+.ledger-filter-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:900;
+    color:#0f172a;
+}
+.ledger-filter-help{
+    color:#64748b;
+    font-size:0.84rem;
+    font-weight:700;
+}
+.ledger-table{
+    border-collapse:separate;
+    border-spacing:0;
+    width:100%;
+    font-size:0.9rem;
+}
+.ledger-table th,
+.ledger-table td{
+    border-right:1px solid #dbe3ee;
+    border-bottom:1px solid #dbe3ee;
+    padding:0.7rem 0.65rem;
+    background:#fff;
+}
+.ledger-table th:first-child,
+.ledger-table td:first-child{border-left:1px solid #dbe3ee;}
+.ledger-table thead th{
+    position:sticky;
+    top:0;
+    z-index:1;
+    background:#eef4fb;
+    color:#0f172a;
+    font-weight:800;
+}
+.ledger-table tbody tr:nth-child(even) td{background:#fbfdff;}
+.ledger-table tbody tr:hover td{background:#eef6ff;}
+.sortable{cursor:pointer;user-select:none;white-space:nowrap;}
+.sort-ind{font-size:0.72rem;color:#64748b;margin-left:0.25rem;}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+.ledger-filter-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.8rem;align-items:end;}
+.ledger-filter-grid .field{display:flex;flex-direction:column;gap:0.35rem;}
+.ledger-filter-grid label{font-size:0.78rem;color:#475569;font-weight:800;}
+.ledger-filter-grid input,
+.ledger-filter-grid select{
+    height:44px;
+    border-radius:14px;
+    border:1px solid #d2deec;
+    background:#f9fbff;
+    padding:0 0.9rem;
+    color:#0f172a;
+    font-weight:700;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);
+}
+.ledger-filter-grid input:focus,
+.ledger-filter-grid select:focus{
+    outline:none;
+    border-color:#60a5fa;
+    box-shadow:0 0 0 4px rgba(96,165,250,0.18);
+    background:#fff;
+}
+.ledger-field-span-2{grid-column:span 2;}
+.ledger-field-span-3{grid-column:span 3;}
+.ledger-field-span-4{grid-column:span 4;}
+.ledger-field-span-6{grid-column:span 6;}
+.ledger-filter-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.55rem;
+    align-items:flex-end;
+}
+.ledger-btn{
+    min-width:90px;
+    height:44px;
+    border-radius:14px;
+    font-weight:800;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 1rem;
+}
+.ledger-table-card{
+    padding:0.95rem;
+    border-radius:24px;
+    background:#fff;
+    border:1px solid #dde7f3;
+    box-shadow:0 16px 34px rgba(15,23,42,0.06);
+}
+.ledger-table-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    padding:0.25rem 0.3rem 0.95rem;
+}
+.ledger-table-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:900;
+    color:#0f172a;
+}
+.ledger-table-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.55rem;
+}
+.ledger-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:0.35rem;
+    padding:0.45rem 0.7rem;
+    border-radius:999px;
+    background:#f8fbff;
+    border:1px solid #d7e6f8;
+    color:#33547d;
+    font-size:0.78rem;
+    font-weight:800;
+}
+.ledger-code{
+    font-weight:900;
+    color:#1d4ed8;
+}
+.ledger-name{
+    display:flex;
+    flex-direction:column;
+    gap:0.18rem;
+}
+.ledger-name-main{
+    font-weight:900;
+    color:#0f172a;
+}
+.ledger-name-sub{
+    color:#64748b;
+    font-size:0.77rem;
+    font-weight:700;
+}
+@media (max-width: 960px){
+    .ledger-hero{
+        flex-direction:column;
+    }
+    .ledger-summary{
+        justify-content:flex-start;
+    }
+    .ledger-table-head{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+    .ledger-filter-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .ledger-field-span-2,
+    .ledger-field-span-3,
+    .ledger-field-span-4,
+    .ledger-field-span-6{
+        grid-column:span 2;
+    }
+}
+@media (max-width: 640px){
+    .ledger-filter-grid{
+        grid-template-columns:1fr;
+    }
+    .ledger-field-span-2,
+    .ledger-field-span-3,
+    .ledger-field-span-4,
+    .ledger-field-span-6{
+        grid-column:span 1;
+    }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="ledger-shell">
+<section class="ledger-hero">
+    <div class="ledger-title-wrap">
+        <h1 class="ledger-title">원부자재 수불대장</h1>
+        <p class="ledger-subtitle">
+            물류 재고와 작업장별 보유 수량을 한 화면에서 비교하고,
+            카테고리와 BOM 기준으로 필요한 항목만 빠르게 좁혀볼 수 있습니다.
+        </p>
+    </div>
+    <div class="ledger-summary">
+        <div class="ledger-summary-card">
+            <span class="k">조회 건수</span>
+            <span class="v">{{ rows|length }}</span>
+        </div>
+        <div class="ledger-summary-card">
+            <span class="k">작업장 열</span>
+            <span class="v">{{ workplaces|length }}</span>
+        </div>
+        <div class="ledger-summary-card">
+            <span class="k">현재 구분</span>
+            <span class="v">{{ item_type_q or '전체' }}</span>
+        </div>
+    </div>
+</section>
+
+<section class="ledger-filter-card">
+    <div class="ledger-filter-top">
+        <h2 class="ledger-filter-title">필터 검색</h2>
+        <div class="ledger-filter-help">대분류, 세부 분류, 작업장, 상품 BOM, 키워드를 조합해서 조회할 수 있습니다.</div>
+    </div>
+    <form method="GET" action="/logistics-ledger" class="ledger-filter-grid">
+        <div class="field ledger-field-span-2">
+            <label>대분류</label>
+            <select name="item_type">
+                <option value="">전체</option>
+                <option value="부자재" {% if item_type_q == '부자재' %}selected{% endif %}>부자재</option>
+                <option value="원초" {% if item_type_q == '원초' %}selected{% endif %}>원초</option>
+            </select>
+        </div>
+        <div class="field ledger-field-span-2">
+            <label>세부 분류</label>
+            <select name="category">
+                <option value="">전체 분류</option>
+                {% for category in category_options or [] %}
+                <option value="{{ category }}" {% if category_q == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field ledger-field-span-2">
+            <label>작업장</label>
+            <select name="workplace" id="ledgerWorkplaceSelect">
+                <option value="">전체 작업장</option>
+                {% for wp in workplace_options or [] %}
+                <option value="{{ wp }}" {% if workplace_q == wp %}selected{% endif %}>{{ wp }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field ledger-field-span-2">
+            <label>상품 선택(BOM)</label>
+            <select name="product_id" id="ledgerProductSelect">
+                <option value="">전체 상품</option>
+                {% for product in product_options or [] %}
+                <option value="{{ product.id }}" data-workplace="{{ product.workplace or '' }}" {% if product_id_q == (product.id|string) %}selected{% endif %}>
+                    {{ product.name }}{% if product.code %} ({{ product.code }}){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field ledger-field-span-2">
+            <label>검색 기준</label>
+            <select name="search_field">
+                <option value="all" {% if search_field == 'all' %}selected{% endif %}>전체</option>
+                <option value="code" {% if search_field == 'code' %}selected{% endif %}>코드</option>
+                <option value="name" {% if search_field == 'name' %}selected{% endif %}>품명</option>
+                <option value="supplier" {% if search_field == 'supplier' %}selected{% endif %}>거래처</option>
+                <option value="category" {% if search_field == 'category' %}selected{% endif %}>분류</option>
+                <option value="item_type" {% if search_field == 'item_type' %}selected{% endif %}>구분</option>
+            </select>
+        </div>
+        <div class="field ledger-field-span-2">
+            <label>키워드 검색</label>
+            <input type="text" name="q" value="{{ q or '' }}" placeholder="예: 박스 / 유기 / P03A008 / 영진물산">
+        </div>
+        <div class="field ledger-field-span-3">
+            <label>실행</label>
+            <div class="ledger-filter-actions">
+                <button type="submit" class="btn btn-small ledger-btn">검색</button>
+                <a href="/logistics-ledger" class="btn btn-small btn-secondary ledger-btn">초기화</a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<section class="ledger-table-card">
+    <div class="ledger-table-head">
+        <h2 class="ledger-table-title">조회 결과</h2>
+        <div class="ledger-table-meta">
+            <span class="ledger-badge">대분류: {{ item_type_q or '전체' }}</span>
+            <span class="ledger-badge">세부 분류: {{ category_q or '전체' }}</span>
+            <span class="ledger-badge">작업장: {{ workplace_q or '전체' }}</span>
+            <span class="ledger-badge">상품 BOM: {% if product_id_q %}선택됨{% else %}전체{% endif %}</span>
+        </div>
+    </div>
+    <div class="table-container">
+        <table class="ledger-table" id="ledgerTable">
+            <thead>
+                <tr>
+                    <th class="sortable" data-sort-key="code" data-sort-type="text">코드<span class="sort-ind">↕</span></th>
+                    <th class="sortable" data-sort-key="name" data-sort-type="text">품명<span class="sort-ind">↕</span></th>
+                    <th class="sortable" data-sort-key="category" data-sort-type="text">분류<span class="sort-ind">↕</span></th>
+                    <th class="sortable" data-sort-key="supplier" data-sort-type="text">거래처명<span class="sort-ind">↕</span></th>
+                    <th class="sortable" data-sort-key="unit" data-sort-type="text">관리단위<span class="sort-ind">↕</span></th>
+                    <th class="sortable num" data-sort-key="unit_price" data-sort-type="num">단가<span class="sort-ind">↕</span></th>
+                    {% for wp in workplaces %}
+                    <th class="sortable num" data-sort-key="wp_{{ loop.index0 }}" data-sort-type="num">{{ wp }}<span class="sort-ind">↕</span></th>
+                    {% endfor %}
+                    <th class="sortable num" data-sort-key="logistics_qty" data-sort-type="num">물류 보유<span class="sort-ind">↕</span></th>
+                    <th class="sortable num" data-sort-key="total_qty" data-sort-type="num">총재고<span class="sort-ind">↕</span></th>
+                </tr>
+            </thead>
+            <tbody id="ledgerBody">
+                {% for r in rows %}
+                <tr
+                    data-code="{{ r.code }}"
+                    data-name="{{ r.name }}"
+                    data-category="{{ r.category or '-' }}"
+                    data-supplier="{{ r.supplier_name or '-' }}"
+                    data-unit="{{ r.unit }}"
+                    data-unit_price="{{ (r.unit_price or 0)|float }}"
+                    data-logistics_qty="{{ (r.logistics_qty or 0)|float }}"
+                    data-total_qty="{{ (r.total_qty or 0)|float }}"
+                    {% for wp in workplaces %}
+                    data-wp_{{ loop.index0 }}="{{ (r.by_wp.get(wp, 0) or 0)|float }}"
+                    {% endfor %}
+                >
+                    <td><span class="ledger-code">{{ r.code }}</span></td>
+                    <td>
+                        <div class="ledger-name">
+                            <span class="ledger-name-main">{{ r.name }}</span>
+                            <span class="ledger-name-sub">{{ r.item_type }} · {{ r.category or '-' }}</span>
+                        </div>
+                    </td>
+                    <td>{{ r.category or '-' }}</td>
+                    <td>{{ r.supplier_name or '-' }}</td>
+                    <td>{{ r.unit }}</td>
+                    <td class="num">{{ "{:,.0f}".format((r.unit_price or 0)|float) }}</td>
+                    {% for wp in workplaces %}
+                    <td class="num">{{ "{:.1f}".format((r.by_wp.get(wp, 0) or 0)|float) }}</td>
+                    {% endfor %}
+                    <td class="num">{{ "{:.1f}".format((r.logistics_qty or 0)|float) }}</td>
+                    <td class="num"><strong>{{ "{:.1f}".format((r.total_qty or 0)|float) }}</strong></td>
+                </tr>
+                {% endfor %}
+                {% if not rows %}
+                <tr>
+                    <td colspan="{{ 8 + workplaces|length }}" style="text-align:center;color:#777;">표시할 데이터가 없습니다.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</section>
+</div>
+<script>
+(() => {
+    const table = document.getElementById('ledgerTable');
+    const body = document.getElementById('ledgerBody');
+    const workplaceSelect = document.getElementById('ledgerWorkplaceSelect');
+    const productSelect = document.getElementById('ledgerProductSelect');
+    if (!table || !body) return;
+
+    const parseValue = (row, key, type) => {
+        const raw = row.dataset[key] || '';
+        if (type === 'num') return parseFloat(raw || '0') || 0;
+        return raw.toLowerCase();
+    };
+
+    table.querySelectorAll('th.sortable').forEach((th) => {
+        th.addEventListener('click', () => {
+            const key = th.dataset.sortKey;
+            const type = th.dataset.sortType;
+            const asc = !th.classList.contains('sorted-asc');
+            table.querySelectorAll('th.sortable').forEach((el) => {
+                el.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+            const rows = Array.from(body.querySelectorAll('tr')).filter((tr) => tr.dataset.code);
+            rows.sort((a, b) => {
+                const av = parseValue(a, key, type);
+                const bv = parseValue(b, key, type);
+                if (type === 'num') return asc ? av - bv : bv - av;
+                return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+            });
+            rows.forEach((row) => body.appendChild(row));
+        });
+    });
+
+    const filterProductsByWorkplace = () => {
+        if (!workplaceSelect || !productSelect) return;
+        const selectedWorkplace = workplaceSelect.value || '';
+        const currentValue = productSelect.value;
+        let hasVisibleSelected = false;
+        Array.from(productSelect.options).forEach((option, index) => {
+            if (index === 0) {
+                option.hidden = false;
+                option.disabled = false;
+                return;
+            }
+            const optionWorkplace = option.dataset.workplace || '';
+            const visible = !selectedWorkplace || optionWorkplace === selectedWorkplace;
+            option.hidden = !visible;
+            option.disabled = !visible;
+            if (visible && option.value === currentValue) {
+                hasVisibleSelected = true;
+            }
+        });
+        if (currentValue && !hasVisibleSelected) {
+            productSelect.value = '';
+        }
+    };
+
+    if (workplaceSelect && productSelect) {
+        workplaceSelect.addEventListener('change', filterProductsByWorkplace);
+        filterProductsByWorkplace();
+    }
+})();
+</script>
+{% endblock %}

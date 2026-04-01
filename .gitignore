@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# DB / local data
+yemat.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+backups/
+
+# SQLite temp files
+*.db-shm
+*.db-wal
+uploads/

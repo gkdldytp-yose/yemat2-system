@@ -1,0 +1,3587 @@
+﻿{% extends "base.html" %}
+{% block title %}통합 관리 - 예맛 생산관리{% endblock %}
+
+{% block extra_css %}
+<style>
+.card-header{display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1rem;}
+.header-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;}
+.search-input{padding:0.45rem 0.7rem;border:1px solid #e5e7eb;border-radius:8px;min-width:220px;background:#fff;box-shadow:inset 0 1px 2px rgba(0,0,0,0.04);}
+.code-col{width:90px;white-space:nowrap;}
+.wp-col{width:130px;white-space:nowrap;}
+.title-wrap{display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;}
+.tabs-right{margin-left:auto;display:flex;justify-content:center;}
+.card-tabs{display:flex;gap:0.35rem;flex-wrap:wrap;background:#f8fafc;border:1px solid #e5e7eb;border-radius:999px;padding:0.25rem;}
+.card-tab-btn{padding:0.55rem 1.4rem;border:1px solid transparent;border-radius:999px;background:transparent;color:#475569;font-size:0.92rem;font-weight:800;cursor:pointer;transition:all 0.2s;letter-spacing:-0.1px;line-height:1.1;}
+.title-wrap h2{padding:0.35rem 0;}
+.tabs-center{margin:0 auto;}
+.card-tab-btn.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 6px 14px rgba(15,23,42,0.2);}
+.card-tab-btn:hover{color:#0f172a;}
+.workplace-badge{display:inline-block;padding:0.2rem 0.6rem;border-radius:6px;font-size:0.75rem;font-weight:600;margin-right:0.5rem;}
+.wp-1jomi{background:#e3f2fd;color:#1565c0;}
+.wp-1jaban{background:#e8f5e9;color:#2e7d32;}
+.wp-2-1f{background:#fff3cd;color:#856404;}
+.wp-2-2f{background:#fce4ec;color:#c62828;}
+.wp-shared{background:#ede7f6;color:#512da8;}
+.wp-unassigned{background:#f1f5f9;color:#475569;}
+.wp-etc{background:#fff7ed;color:#9a3412;}
+.wp-logistics{background:#e0f2fe;color:#0369a1;}
+.cat-badge{display:inline-block;padding:0.15rem 0.45rem;border-radius:6px;font-size:0.75rem;font-weight:700;}
+.cat-etc{background:#e2e8f0;color:#334155;}
+.inventory-audit-shell{display:flex;flex-direction:column;gap:0.9rem;}
+.inventory-audit-table-card{border:1px solid #dbe7f3;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 12px 28px rgba(15,23,42,0.05);overflow:hidden;}
+.inventory-audit-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;padding:1rem 1.1rem 0.8rem;border-bottom:1px solid #e5edf5;}
+.inventory-audit-head h3{margin:0;font-size:1rem;color:#0f172a;}
+.inventory-audit-head p{margin:0.25rem 0 0;color:#64748b;font-size:0.88rem;}
+.inventory-audit-summary{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.inventory-audit-actions{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
+.inventory-audit-chip{display:inline-flex;align-items:center;gap:0.35rem;padding:0.38rem 0.7rem;border-radius:999px;background:#eef4ff;color:#1d4ed8;font-size:0.78rem;font-weight:800;border:1px solid #dbeafe;}
+.inventory-wp-badge{display:inline-flex;align-items:center;padding:0.28rem 0.65rem;border-radius:999px;font-size:0.76rem;font-weight:800;border:1px solid transparent;}
+.inventory-cat-badge{display:inline-flex;align-items:center;padding:0.24rem 0.55rem;border-radius:999px;font-size:0.74rem;font-weight:800;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;}
+.inventory-cat-badge.raw{background:#ecfccb;color:#3f6212;border-color:#d9f99d;}
+.inventory-cat-badge.inner{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+.inventory-cat-badge.outer{background:#ffedd5;color:#c2410c;border-color:#fed7aa;}
+.inventory-cat-badge.box{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.inventory-cat-badge.silica{background:#f3e8ff;color:#7e22ce;border-color:#e9d5ff;}
+.inventory-cat-badge.tray{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+.inventory-cat-badge.oil{background:#ffe4e6;color:#be123c;border-color:#fecdd3;}
+.inventory-cat-badge.salt{background:#f1f5f9;color:#0f172a;border-color:#cbd5e1;}
+.inventory-item-main{display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;}
+.inventory-item-name{font-weight:800;color:#0f172a;}
+.inventory-item-sub{font-size:0.76rem;color:#64748b;}
+.inventory-code{display:inline-block;min-width:64px;font-family:Consolas,Monaco,monospace;font-size:0.78rem;padding:0.18rem 0.42rem;border-radius:8px;background:#eff6ff;border:1px solid #dbeafe;color:#1d4ed8;}
+.inventory-stock{font-weight:800;color:#0f172a;white-space:nowrap;}
+.inventory-audit-table-card table{margin:0;}
+.inventory-audit-table-card thead th{background:#f8fafc;color:#475569;font-size:0.79rem;border-bottom:1px solid #e5edf5;}
+.inventory-audit-table-card tbody td{vertical-align:middle;border-bottom:1px solid #eef2f7;}
+.inventory-audit-table-card tbody tr:nth-child(even){background:#fbfdff;}
+.inventory-audit-table-card tbody tr:hover{background:#f4f9ff;}
+.inventory-sort-btn{display:inline-flex;align-items:center;gap:0.28rem;background:none;border:none;padding:0;color:inherit;font:inherit;font-weight:inherit;cursor:pointer;}
+.inventory-sort-btn:hover{color:#1d4ed8;}
+.inventory-sort-indicator{font-size:0.72rem;color:#94a3b8;min-width:0.9rem;text-align:center;}
+.inventory-actual-input{width:126px;padding:0.45rem 0.55rem;border:1px solid #cbd5e1;border-radius:10px;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.04);}
+.inventory-actual-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.15);}
+.inventory-empty{padding:1.8rem 1rem;text-align:center;color:#64748b;}
+.inventory-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0.8rem;}
+.inventory-filter-grid > div{min-width:0;}
+.inventory-filter-grid .search-input{width:100%;min-width:0;box-sizing:border-box;}
+.inventory-filter-actions{display:flex;justify-content:flex-end;gap:0.55rem;flex-wrap:wrap;margin-top:0.9rem;}
+.inventory-print-title{font-size:18px;font-weight:800;color:#0f172a;margin:0 0 0.35rem;}
+.inventory-print-subtitle{font-size:12px;color:#475569;margin:0 0 0.8rem;}
+.inventory-print-meta{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.8rem;}
+.inventory-print-chip{display:inline-flex;align-items:center;padding:0.22rem 0.55rem;border:1px solid #cbd5e1;border-radius:999px;font-size:11px;color:#334155;background:#fff;}
+.modal-box .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem 1rem;}
+.modal-box .form-group{margin-bottom:0;}
+.modal-box .modal-title{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:1rem;}
+.modal-box{background:white;border-radius:12px;padding:1.5rem;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;}
+.material-modal{max-width:1100px;padding:1.25rem;background:#f8fafc;border:1px solid #dbe5f0;}
+.material-modal-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;padding-bottom:0.6rem;border-bottom:1px solid #e2e8f0;}
+.material-header-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0.55rem;margin:0.75rem 0 1rem;}
+.material-header-item{background:#ffffff;border:1px solid #dbe5f0;border-radius:10px;padding:0.6rem 0.7rem;box-shadow:0 1px 2px rgba(15,23,42,0.04);}
+.material-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
+.material-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
+.material-detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.75rem;}
+.material-detail-tab{padding:0.46rem 0.95rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-weight:800;cursor:pointer;}
+.material-detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,0.2);}
+.material-panel{display:none;}
+.material-panel.active{display:block;}
+.material-panel table{font-size:0.88rem;background:#fff;border-radius:8px;overflow:hidden;}
+.material-panel thead th{position:sticky;top:0;background:#eef3f9;z-index:1;}
+.material-panel tbody tr:nth-child(even){background:#f8fafc;}
+.lot-actions{display:flex;gap:0.3rem;white-space:nowrap;}
+.lot-code{display:inline-block;font-family:Consolas,Monaco,monospace;font-size:0.78rem;background:#eef3f9;border:1px solid #d6e0ec;border-radius:6px;padding:0.2rem 0.35rem;color:#0f172a;}
+.lot-inline-form{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:0.55rem;
+  align-items:end;
+  margin:0.6rem 0 0.85rem;
+  padding:0.9rem;
+  border:1px solid #dbe5f0;
+  border-radius:12px;
+  background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+  box-shadow:0 6px 18px rgba(15,23,42,0.06);
+}
+.lot-field label{display:block;font-size:0.74rem;font-weight:700;color:#475569;margin-bottom:0.22rem;}
+.lot-field{min-width:0;}
+.lot-inline-form input{
+  width:100%;
+  height:36px;
+  border:1px solid #cfd8e3;
+  border-radius:8px;
+  padding:0 0.5rem;
+  background:#fff;
+  box-sizing:border-box;
+}
+.lot-inline-form input:focus{
+  outline:none;
+  border-color:#3b82f6;
+  box-shadow:0 0 0 3px rgba(59,130,246,0.14);
+}
+.lot-inline-form .btn{white-space:nowrap;}
+.lot-inline-form .lot-submit{grid-column:1 / -1;justify-self:end;min-width:108px;}
+.material-name-link{
+  color:inherit;
+  text-decoration:none;
+  font-weight:700;
+}
+.material-name-link:hover{
+  color:#0f172a;
+  text-decoration:none;
+}
+.material-name-link:visited{
+  color:inherit;
+}
+.material-name-cell{
+  cursor:pointer;
+}
+.material-section-title{font-size:0.86rem;font-weight:800;color:#1e293b;margin:0 0 0.45rem;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:0.8rem;margin-bottom:1rem;}
+.stats-card{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border:1px solid #dbe7f3;border-radius:16px;padding:0.95rem 1rem;box-shadow:0 10px 24px rgba(15,23,42,0.06);}
+.stats-card .label{display:block;font-size:0.78rem;color:#64748b;margin-bottom:0.35rem;font-weight:700;}
+.stats-card .value{display:block;font-size:1.5rem;color:#0f172a;font-weight:800;letter-spacing:-0.03em;}
+.stats-toolbar{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;}
+.stats-subtabs{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:1rem;}
+.stats-subtab-btn{padding:0.5rem 1rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#475569;font-weight:800;cursor:pointer;}
+.stats-subtab-btn.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 6px 14px rgba(15,23,42,0.18);}
+.stats-panels{display:grid;grid-template-columns:repeat(2,minmax(320px,1fr));gap:1rem;}
+.stats-panel{background:#fff;border:1px solid #dbe7f3;border-radius:18px;padding:1rem;box-shadow:0 12px 28px rgba(15,23,42,0.05);}
+.stats-panel h3{margin:0 0 0.9rem;font-size:1rem;color:#0f172a;}
+.stats-chart{display:flex;flex-direction:column;gap:0.55rem;}
+.stats-bar-row{display:grid;grid-template-columns:58px 1fr 70px;gap:0.6rem;align-items:center;}
+.stats-bar-label{font-size:0.76rem;color:#64748b;font-weight:700;}
+.stats-bar-track{height:12px;background:#eef2f7;border-radius:999px;overflow:hidden;}
+.stats-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2563eb 0%,#38bdf8 100%);}
+.stats-bar-fill.material{background:linear-gradient(90deg,#16a34a 0%,#4ade80 100%);}
+.stats-bar-fill.raw{background:linear-gradient(90deg,#f59e0b 0%,#fbbf24 100%);}
+.stats-bar-value{text-align:right;font-size:0.8rem;color:#0f172a;font-weight:700;}
+.stats-list{display:flex;flex-direction:column;gap:0.55rem;}
+.stats-list-item{display:grid;grid-template-columns:1fr auto;gap:0.5rem;padding:0.65rem 0.75rem;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;}
+.stats-list-name{font-size:0.88rem;color:#0f172a;font-weight:700;}
+.stats-list-value{font-size:0.84rem;color:#475569;font-weight:700;}
+.stats-table-wrap{display:grid;grid-template-columns:1fr;gap:1rem;}
+.stats-table-card{background:#fff;border:1px solid #dbe7f3;border-radius:18px;padding:1rem;box-shadow:0 12px 28px rgba(15,23,42,0.05);}
+.stats-table-card h3{margin:0 0 0.8rem;font-size:1rem;color:#0f172a;}
+.stats-table-card table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+.stats-table-card th,.stats-table-card td{padding:0.62rem 0.55rem;border-bottom:1px solid #e5edf5;text-align:left;}
+.stats-table-card th{background:#f8fafc;color:#475569;font-size:0.8rem;}
+.stats-table-card tr:last-child td{border-bottom:none;}
+.reqcalc-result-tabs{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.9rem;}
+.reqcalc-result-tab{padding:0.5rem 1rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#475569;font-weight:800;cursor:pointer;}
+.reqcalc-result-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 6px 14px rgba(15,23,42,0.18);}
+.reqcalc-print-header{display:none;}
+.reqcalc-result-panel{display:none;}
+.reqcalc-result-panel.active{display:block;}
+.reqcalc-product-card{border:1px solid #e2e8f0;border-radius:16px;padding:1rem;margin-bottom:1rem;background:#fff;}
+.reqcalc-table{width:100%;table-layout:fixed;}
+.reqcalc-table th:nth-child(1), .reqcalc-table td:nth-child(1){width:110px;}
+.reqcalc-table th:nth-child(2), .reqcalc-table td:nth-child(2){width:auto;}
+.reqcalc-table th:nth-child(3), .reqcalc-table td:nth-child(3),
+.reqcalc-table th:nth-child(4), .reqcalc-table td:nth-child(4),
+.reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5){width:170px;}
+.reqcalc-table th:nth-child(3), .reqcalc-table td:nth-child(3),
+.reqcalc-table th:nth-child(4), .reqcalc-table td:nth-child(4),
+.reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5){text-align:right;white-space:nowrap;}
+.reqcalc-table .reqcalc-num{text-align:right;white-space:nowrap;}
+.reqcalc-saved-tab{display:inline-flex;align-items:center;gap:0.45rem;}
+.reqcalc-saved-tab .close{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(15,23,42,0.12);font-size:12px;line-height:1;border:none;cursor:pointer;color:inherit;padding:0;}
+.reqcalc-saved-tab .close:hover{background:rgba(15,23,42,0.2);}
+.reqcalc-usage-input{width:110px;padding:0.35rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;text-align:right;}
+.reqcalc-post-actions{display:none;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;padding-top:1rem;border-top:1px solid #e5e7eb;}
+.reqcalc-post-actions.active{display:flex;}
+@media (max-width: 900px){
+  .stats-grid{grid-template-columns:repeat(2,minmax(140px,1fr));}
+  .stats-panels{grid-template-columns:1fr;}
+}
+@media (max-width: 900px){
+  .material-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
+  .lot-inline-form{grid-template-columns:1fr 1fr;}
+  .lot-inline-form .btn{width:100%;}
+}
+@media print{
+  body.printing-req-summary > *:not(.container),
+  body.printing-req-products > *:not(.container){display:none !important;}
+  body.printing-req-summary .container > *:not(.card),
+  body.printing-req-products .container > *:not(.card){display:none !important;}
+  body.printing-req-summary .card:not(.reqcalc-print-scope),
+  body.printing-req-products .card:not(.reqcalc-print-scope){display:none !important;}
+  body.printing-req-summary .card.reqcalc-print-scope .card-header,
+  body.printing-req-products .card.reqcalc-print-scope .card-header{display:none !important;}
+  body.printing-req-summary .reqcalc-hide-print,
+  body.printing-req-products .reqcalc-hide-print{display:none !important;}
+  body.printing-req-summary .reqcalc-print-header,
+  body.printing-req-products .reqcalc-print-header{display:block !important;margin-bottom:0.75rem;}
+  body.printing-req-summary #reqCalcProductsPanel,
+  body.printing-req-products #reqCalcSummaryPanel{display:none !important;}
+  body.printing-req-summary #reqCalcSummaryPanel,
+  body.printing-req-products #reqCalcProductsPanel{display:block !important;}
+  body.printing-req-summary .stats-table-card,
+  body.printing-req-products .stats-table-card{box-shadow:none;border:none;padding:0;}
+  body.printing-req-summary .table-container,
+  body.printing-req-products .table-container{overflow:visible !important;}
+  body.printing-req-summary table,
+  body.printing-req-products table{font-size:11px;}
+  body.printing-req-summary th, body.printing-req-summary td,
+  body.printing-req-products th, body.printing-req-products td{padding:6px 5px;}
+  body.printing-req-summary .reqcalc-usage-input,
+  body.printing-req-products .reqcalc-usage-input{width:68px !important;min-width:68px !important;padding:2px 4px !important;font-size:11px !important;}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom:1rem;">🧭 통합 관리 모드</h1>
+<p style="color:#666;margin-bottom:1.5rem;">전체 작업장의 데이터를 한 곳에서 조회하고 관리합니다</p>
+
+<!-- 탭 메뉴 -->
+<div class="tabs">
+    <button class="tab-btn {% if tab == 'products' %}active{% endif %}" onclick="location.href='/integrated-management?tab=products'">📦 상품</button>
+    <button class="tab-btn {% if tab == 'raw_materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=raw_materials'">🌿 원초</button>
+    <button class="tab-btn {% if tab == 'materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=materials'">🧰 부자재</button>
+    <button class="tab-btn {% if tab == 'productions' %}active{% endif %}" onclick="location.href='/integrated-management?tab=productions'">🏭 생산관리</button>
+    <button class="tab-btn {% if tab == 'requirements_calculator' %}active{% endif %}" onclick="location.href='/integrated-management?tab=requirements_calculator'">🧮 원부자재 계산기</button>
+    <button class="tab-btn {% if tab == 'stats' %}active{% endif %}" onclick="location.href='/integrated-management?tab=stats'">📈 통계</button>
+    <button class="tab-btn {% if tab == 'inventory_audit' %}active{% endif %}" onclick="location.href='/integrated-management?tab=inventory_audit'">📊 재고 조사</button>
+    <button class="tab-btn" onclick="location.href='/imports'">📥 엑셀 임포트</button>
+    <button class="tab-btn {% if tab == 'audit_logs' %}active{% endif %}" onclick="location.href='/integrated-management?tab=audit_logs'">🧾 감사로그</button>
+    <button class="tab-btn {% if tab == 'db_backups' %}active{% endif %}" onclick="location.href='/integrated-management?tab=db_backups'">💾 DB 백업</button>
+</div>
+
+<!-- 작업장 필터 -->
+{% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'materials'] %}
+<div class="subtabs">
+    <button class="subtab-btn {% if wp_filter == 'all' %}active{% endif %}"
+            onclick="location.href='/integrated-management?tab={{ tab }}&wp=all{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">전체</button>
+    {% for wp in workplaces %}
+    {% if not (tab == 'materials' and wp == '기타') %}
+    <button class="subtab-btn {% if wp_filter == wp %}active{% endif %}"
+            onclick="location.href='/integrated-management?tab={{ tab }}&wp={{ wp|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">{{ wp }}</button>
+    {% endif %}
+    {% endfor %}
+    {% if tab == 'materials' %}
+    <button class="subtab-btn {% if wp_filter == '물류' %}active{% endif %}"
+            onclick="location.href='/integrated-management?tab={{ tab }}&wp=물류{% if q %}&q={{ q|urlencode }}{% endif %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}'">물류</button>
+    {% endif %}
+    {% if tab in ['products', 'raw_materials', 'materials'] %}
+    <button class="subtab-btn {% if wp_filter == '공통' %}active{% endif %}"
+            onclick="location.href='/integrated-management?tab={{ tab }}&wp=공통{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">공통</button>
+    {% endif %}
+    {% if tab == 'products' %}
+    <button class="subtab-btn {% if wp_filter == 'unassigned' %}active{% endif %}"
+            onclick="location.href='/integrated-management?tab={{ tab }}&wp=unassigned{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">미등록</button>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="header-row">
+        <div class="title-wrap">
+            <h2 style="margin:0;">
+                {% if tab == 'products' %}전체 상품 관리
+                {% elif tab == 'raw_materials' %}전체 원초 관리
+                {% elif tab == 'materials' %}전체 부자재 관리
+                {% elif tab == 'productions' %}전체 생산 관리
+                {% elif tab == 'requirements_calculator' %}원부자재 계산기
+                {% elif tab == 'stats' %}통합 생산 통계
+                {% elif tab == 'inventory_audit' %}전체 재고 조사 현황
+                {% elif tab == 'audit_logs' %}전체 감사 로그
+                {% elif tab == 'db_backups' %}전체 DB 백업 관리
+                {% endif %}
+                {% if tab != 'requirements_calculator' %}
+                <span style="color:#999;font-size:0.9rem;font-weight:normal;">({{ data|length }}건)</span>
+                {% endif %}
+            </h2>
+        </div>
+        {% if tab == 'raw_materials' %}
+        <div class="tabs-center">
+            <div class="card-tabs">
+                <button class="card-tab-btn {% if rm_tab == 'active' %}active{% endif %}"
+                        onclick="location.href='/integrated-management?tab={{ tab }}&wp={{ wp_filter|urlencode }}&rm_tab=active{% if q %}&q={{ q|urlencode }}{% endif %}'">사용중</button>
+                <button class="card-tab-btn {% if rm_tab == 'done' %}active{% endif %}"
+                        onclick="location.href='/integrated-management?tab={{ tab }}&wp={{ wp_filter|urlencode }}&rm_tab=done{% if q %}&q={{ q|urlencode }}{% endif %}'">사용완료</button>
+            </div>
+        </div>
+        {% elif tab == 'productions' %}
+        <div class="tabs-center">
+            <div class="card-tabs">
+                <button class="card-tab-btn {% if prod_tab == 'active' %}active{% endif %}"
+                        onclick="location.href='/integrated-management?tab=productions&wp={{ wp_filter|urlencode }}&prod_tab=active{% if q %}&q={{ q|urlencode }}{% endif %}'">생산중 <span class="tab-count">{{ production_counts.active or 0 }}</span></button>
+                <button class="card-tab-btn {% if prod_tab == 'done' %}active{% endif %}"
+                        onclick="location.href='/integrated-management?tab=productions&wp={{ wp_filter|urlencode }}&prod_tab=done{% if q %}&q={{ q|urlencode }}{% endif %}'">생산완료 <span class="tab-count">{{ production_counts.done or 0 }}</span></button>
+                <button class="card-tab-btn {% if prod_tab == 'temp' %}active{% endif %}"
+                        onclick="location.href='/integrated-management?tab=productions&wp={{ wp_filter|urlencode }}&prod_tab=temp{% if q %}&q={{ q|urlencode }}{% endif %}'">임시저장 <span class="tab-count">{{ production_counts.temp or 0 }}</span></button>
+            </div>
+        </div>
+        {% endif %}
+        </div>
+        <div class="header-row" style="justify-content:flex-end;">
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-right:auto;">
+            <form method="GET" action="/integrated-management" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                <input type="hidden" name="tab" value="{{ tab }}">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                {% if tab == 'materials' and selected_product_id %}
+                <input type="hidden" name="product_id" value="{{ selected_product_id }}">
+                {% endif %}
+                {% if tab == 'materials' and selected_material_search_field and selected_material_search_field != 'all' %}
+                <input type="hidden" name="material_search_field" value="{{ selected_material_search_field }}">
+                {% endif %}
+                {% if tab == 'materials' and selected_material_type and selected_material_type != 'all' %}
+                <input type="hidden" name="material_type" value="{{ selected_material_type }}">
+                {% endif %}
+                {% if tab == 'materials' and selected_material_category %}
+                <input type="hidden" name="material_category" value="{{ selected_material_category }}">
+                {% endif %}
+                {% if tab == 'db_backups' %}
+                <input type="hidden" name="keep_count" value="{{ backup_keep_count or 10 }}">
+                {% endif %}
+                {% if tab not in ['inventory_audit', 'stats', 'requirements_calculator'] %}
+                <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="키워드 검색">
+                <button type="submit" class="btn btn-small">검색</button>
+                {% endif %}
+            </form>
+            {% if tab == 'stats' %}
+            <form method="GET" action="/integrated-management" style="display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;">
+                <input type="hidden" name="tab" value="stats">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                <input type="hidden" name="stat_view" value="{{ stat_view or 'table' }}">
+                <select name="stat_period" style="padding:0.42rem 0.55rem;border:1px solid #cbd5e1;border-radius:8px;">
+                    <option value="month" {% if stat_period == 'month' %}selected{% endif %}>월간</option>
+                    <option value="week" {% if stat_period == 'week' %}selected{% endif %}>주간</option>
+                </select>
+                <input type="date" name="stat_anchor" value="{{ stat_anchor or '' }}" style="padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;">
+                <button type="submit" class="btn btn-small" style="background:#2563eb;">적용</button>
+            </form>
+            {% endif %}
+            {% if tab == 'materials' %}
+            <button type="button" id="materialBulkAssignToggleBtn" class="btn btn-small" style="background:#2563eb;" onclick="toggleMaterialBulkAssignMode()">작업장 일괄 변경</button>
+            <form method="POST" action="/integrated-management/materials/reset-stock" style="margin-left:auto;" onsubmit="return confirm('부자재 재고를 모두 0으로 초기화할까요?\\n(로트 현재수량, 물류 재고, 위치별 잔량, 수불 이력, 발주 데이터까지 함께 초기화됩니다.)');">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                <input type="hidden" name="q" value="{{ q }}">
+                <input type="hidden" name="product_id" value="{{ selected_product_id }}">
+                <button type="submit" class="btn btn-small" style="background:#dc2626;border-color:#dc2626;color:#fff;">재고 초기화</button>
+            </form>
+            {% endif %}
+            {% if tab == 'productions' %}
+            <form method="POST" action="/integrated-management/productions/delete-all" onsubmit="return confirm('현재 작업장/검색/상태 탭 기준 생산건을 모두 삭제할까요?\\n완료 건은 원초/부자재 사용분까지 함께 롤백됩니다.');">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                <input type="hidden" name="q" value="{{ q }}">
+                <input type="hidden" name="prod_tab" value="{{ prod_tab }}">
+                <button type="submit" class="btn btn-small" style="background:#dc2626;border-color:#dc2626;color:#fff;">현재 목록 전체 삭제</button>
+            </form>
+            {% endif %}
+            {% if tab == 'products' %}
+            <button type="button" id="productBulkAssignToggleBtn" class="btn btn-small" style="background:#2563eb;" onclick="toggleProductBulkAssignMode()">작업장 일괄 변경</button>
+            {% endif %}
+            {% if tab == 'db_backups' %}
+            <form method="POST" action="/integrated-management/db-backups/create" style="display:flex;gap:0.35rem;align-items:center;">
+                <label style="font-size:0.82rem;color:#475569;">보관개수</label>
+                <input type="number" name="keep_count" value="{{ backup_keep_count or 10 }}" min="1" max="200" style="width:78px;padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;">
+                <button type="submit" class="btn btn-small" style="background:#2563eb;">지금 백업</button>
+            </form>
+            {% endif %}
+            {% if tab not in ['audit_logs', 'db_backups', 'inventory_audit', 'stats', 'requirements_calculator', 'productions'] %}
+            <button class="btn btn-small" onclick="openAddModal()">+ 추가</button>
+            {% endif %}
+            </div>
+            {% if tab == 'raw_materials' %}
+            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="openRawActivityModal()">금일 원초 사용/입고</button>
+            {% endif %}
+            {% if tab == 'inventory_audit' %}
+            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="exportInventoryAudit()">엑셀 다운로드</button>
+            <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="applyInventoryAudit()">실재고 반영</button>
+            {% endif %}
+        </div>
+        {% if tab == 'materials' %}
+        <div class="header-row" style="justify-content:flex-end;margin-top:0.75rem;padding:0.9rem 1rem;border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);">
+            <form method="GET" action="/integrated-management" style="display:flex;gap:0.65rem;align-items:flex-end;flex-wrap:wrap;width:100%;">
+                <input type="hidden" name="tab" value="materials">
+                {% if q %}
+                <input type="hidden" name="q" value="{{ q }}">
+                {% endif %}
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:170px;">
+                    <label for="integratedMaterialWpFilter" style="font-size:0.82rem;color:#475569;font-weight:700;">작업장</label>
+                    <select id="integratedMaterialWpFilter" name="wp" onchange="this.form.submit()" style="min-width:170px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                        <option value="all" {% if wp_filter == 'all' %}selected{% endif %}>전체 작업장</option>
+                        {% for wp in workplaces %}
+                        <option value="{{ wp }}" {% if wp_filter == wp %}selected{% endif %}>{{ wp }}</option>
+                        {% endfor %}
+                        <option value="물류" {% if wp_filter == '물류' %}selected{% endif %}>물류</option>
+                        <option value="공통" {% if wp_filter == '공통' %}selected{% endif %}>공통</option>
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:150px;">
+                <label for="integratedMaterialSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">검색 기준</label>
+                <select id="integratedMaterialSearchField" name="material_search_field" onchange="this.form.submit()" style="min-width:150px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="all" {% if selected_material_search_field == 'all' %}selected{% endif %}>전체</option>
+                    <option value="code" {% if selected_material_search_field == 'code' %}selected{% endif %}>코드</option>
+                    <option value="name" {% if selected_material_search_field == 'name' %}selected{% endif %}>품명</option>
+                    <option value="supplier" {% if selected_material_search_field == 'supplier' %}selected{% endif %}>거래처</option>
+                    <option value="category" {% if selected_material_search_field == 'category' %}selected{% endif %}>분류</option>
+                    <option value="unit" {% if selected_material_search_field == 'unit' %}selected{% endif %}>단위</option>
+                </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:150px;">
+                <label for="integratedMaterialTypeFilter" style="font-size:0.82rem;color:#475569;font-weight:600;">대분류</label>
+                <select id="integratedMaterialTypeFilter" name="material_type" onchange="this.form.submit()" style="min-width:150px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="all" {% if selected_material_type == 'all' %}selected{% endif %}>전체</option>
+                    <option value="raw_like" {% if selected_material_type == 'raw_like' %}selected{% endif %}>원재료성 자재</option>
+                    <option value="material_only" {% if selected_material_type == 'material_only' %}selected{% endif %}>일반 부자재</option>
+                </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:170px;">
+                <label for="integratedMaterialCategoryFilter" style="font-size:0.82rem;color:#475569;font-weight:600;">세부 분류</label>
+                <select id="integratedMaterialCategoryFilter" name="material_category" onchange="this.form.submit()" style="min-width:170px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="">전체 분류</option>
+                    {% for cat in material_category_options %}
+                    <option value="{{ cat }}" {% if selected_material_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:240px;flex:1 1 240px;">
+                <label for="integratedMaterialProductFilter" style="font-size:0.82rem;color:#475569;font-weight:600;">상품 BOM 필터</label>
+                <select id="integratedMaterialProductFilter" name="product_id" onchange="this.form.submit()" style="min-width:240px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="">전체 상품</option>
+                    {% for product in filter_products %}
+                    <option value="{{ product.id }}" data-workplace="{{ product.workplace|e }}" {% if selected_product_id == (product.id|string) %}selected{% endif %}>{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:flex-end;margin-left:auto;">
+                    <button type="submit" class="btn btn-small" style="height:42px;background:#2563eb;">적용</button>
+                    <a href="/integrated-management?tab=materials" class="btn btn-small btn-secondary" style="height:42px;display:inline-flex;align-items:center;justify-content:center;">초기화</a>
+                </div>
+            </form>
+        </div>
+        <div id="materialBulkAssignBar" style="display:none;margin-top:0.75rem;padding:0.85rem 1rem;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;">
+            <form method="POST" action="/integrated-management/materials/bulk-assign-workplace" id="materialBulkAssignForm" style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                <input type="hidden" name="q" value="{{ q }}">
+                <input type="hidden" name="product_id" value="{{ selected_product_id }}">
+                <div style="font-size:0.88rem;color:#1e3a8a;font-weight:700;">체크한 부자재의 주 사용처를 한 번에 변경합니다.</div>
+                <select name="target_workplace" id="materialBulkAssignTarget" style="min-width:180px;padding:0.45rem 0.55rem;border:1px solid #cbd5e1;border-radius:10px;">
+                    <option value="">변경 작업장 선택</option>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                    <option value="물류">물류</option>
+                </select>
+                <button type="submit" class="btn btn-small" style="background:#0f766e;">선택 항목 일괄 변경</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="toggleMaterialBulkAssignMode(false)">선택 종료</button>
+                <span id="materialBulkAssignCount" style="font-size:0.82rem;color:#475569;">선택 0건</span>
+                <div id="materialBulkAssignInputs"></div>
+            </form>
+        </div>
+        {% endif %}
+        {% if tab == 'products' %}
+        <div id="productBulkAssignBar" style="display:none;margin-top:0.75rem;padding:0.85rem 1rem;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;">
+            <form method="POST" action="/integrated-management/products/bulk-assign-workplace" id="productBulkAssignForm" style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                <input type="hidden" name="q" value="{{ q }}">
+                <div style="font-size:0.88rem;color:#1e3a8a;font-weight:700;">체크한 상품의 작업장을 한 번에 변경합니다.</div>
+                <select name="target_workplace" id="productBulkAssignTarget" style="min-width:180px;padding:0.45rem 0.55rem;border:1px solid #cbd5e1;border-radius:10px;">
+                    <option value="">변경 작업장 선택</option>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-small" style="background:#0f766e;">선택 항목 일괄 변경</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="toggleProductBulkAssignMode(false)">선택 종료</button>
+                <span id="productBulkAssignCount" style="font-size:0.82rem;color:#475569;">선택 0건</span>
+                <div id="productBulkAssignInputs"></div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if tab == 'requirements_calculator' %}
+    <div class="stats-table-wrap">
+        <div class="stats-table-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+                <div>
+                    <h3 style="margin:0 0 0.35rem;">상품별 예상 생산량 입력</h3>
+                    <p style="margin:0;color:#64748b;font-size:0.88rem;">상품을 여러 개 추가하고 박스 수를 입력한 뒤 계산하면 전체 필요 원초/원자재/부자재와 상품별 상세를 나눠서 보여줍니다.</p>
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;width:100%;">
+                    <select id="reqCalcWorkplaceSelect" onchange="filterRequirementCalcOptions()" style="min-width:180px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;">
+                        <option value="">작업장 선택</option>
+                        {% for wp in workplaces %}
+                        <option value="{{ wp }}">{{ wp }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="addRequirementCalcItemsByWorkplace()">작업장 전체 추가</button>
+                    <input type="text" id="reqCalcProductSearch" class="search-input" placeholder="상품명 키워드 검색" oninput="filterRequirementCalcOptions()">
+                    <select id="reqCalcProductSelect" ondblclick="addRequirementCalcItem()" style="min-width:280px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;">
+                        <option value="">상품 선택</option>
+                        {% for product in calculator_products %}
+                        <option value="{{ product.id }}" data-name="{{ product.name|e }}" data-code="{{ product.code|e }}" data-workplace="{{ product.workplace|e }}">{{ product.name }}{% if product.code %} [{{ product.code }}]{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-small" onclick="addRequirementCalcItem()">상품 추가</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="clearRequirementCalcItems()">전체 비우기</button>
+                    <button type="button" class="btn btn-small" style="background:#7c3aed;margin-left:auto;" onclick="applyTwoMonthRequirementPreset()">2달치 계산</button>
+                </div>
+            </div>
+            <div class="table-container" style="margin-top:1rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>작업장</th>
+                            <th>상품명</th>
+                            <th>예상 생산량(BOX)</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reqCalcInputBody">
+                        <tr id="reqCalcEmptyRow"><td colspan="4" style="text-align:center;color:#64748b;">선택한 상품이 없습니다.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                    <strong style="color:#0f172a;font-size:0.92rem;">예상 생산량 일괄 입력</strong>
+                    <input type="number" id="reqCalcBulkBoxes" min="0" step="0.1" placeholder="BOX 수 입력" style="width:140px;padding:0.45rem 0.55rem;border:1px solid #cbd5e1;border-radius:10px;">
+                    <button type="button" class="btn btn-small btn-secondary" onclick="applyRequirementCalcBulkBoxes()">전체 적용</button>
+                </div>
+                <div style="color:#64748b;font-size:0.86rem;">현재 추가된 모든 상품의 예상 생산량을 한 번에 변경합니다.</div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1rem;align-items:center;flex-wrap:wrap;">
+                <button type="button" class="btn btn-small" style="background:#b45309;margin-right:0.5rem;" onclick="openRequirementCategoryModal()">분류 선택 계산</button>
+                <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="calculateAllIntegratedRequirements()">계산하기</button>
+            </div>
+        </div>
+        <div class="stats-table-card reqcalc-print-scope">
+            <div class="reqcalc-print-header">
+                <h2 style="margin:0 0 0.25rem;">원부자재 계산기</h2>
+                <div id="reqCalcPrintSubtitle" style="color:#475569;font-size:0.9rem;"></div>
+            </div>
+            <div class="reqcalc-hide-print" style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <div class="reqcalc-result-tabs">
+                    <button type="button" id="reqCalcSummaryTabBtn" class="reqcalc-result-tab active" onclick="switchRequirementCalcResultTab('summary')">전체</button>
+                    <button type="button" id="reqCalcProductsTabBtn" class="reqcalc-result-tab" onclick="switchRequirementCalcResultTab('products')">상품별</button>
+                    <div id="reqCalcSavedTabs" style="display:flex;gap:0.45rem;flex-wrap:wrap;"></div>
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-small btn-secondary" onclick="printRequirementCalc('summary')">전체 A4 출력</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="printRequirementCalc('products')">상품별 A4 출력</button>
+                    <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="exportRequirementCalcExcel('summary')">전체 엑셀 출력</button>
+                    <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="exportRequirementCalcExcel('products')">상품별 엑셀 출력</button>
+                </div>
+            </div>
+            <div id="reqCalcSummaryPanel" class="reqcalc-result-panel active">
+                <h3 style="margin-bottom:0.75rem;">전체 필요 원부자재</h3>
+                <div id="reqCalcSummaryEmpty" style="color:#64748b;">계산 전입니다.</div>
+                <div id="reqCalcSummaryWrap" style="display:none;">
+                    <div style="margin-bottom:1.2rem;">
+                        <h4 style="margin:0 0 0.45rem;">원초 합계</h4>
+                        <div id="reqCalcRawSummary"></div>
+                    </div>
+                    <div style="margin-bottom:1.2rem;">
+                        <h4 style="margin:0 0 0.45rem;">원자재 합계</h4>
+                        <div id="reqCalcBaseSummary"></div>
+                    </div>
+                    <div>
+                        <h4 style="margin:0 0 0.45rem;">부자재 합계</h4>
+                        <div id="reqCalcSubSummary"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="reqCalcProductsPanel" class="reqcalc-result-panel">
+                <h3 style="margin-bottom:0.75rem;">상품별 필요 부자재</h3>
+                <div id="reqCalcProductsEmpty" style="color:#64748b;">계산 전입니다.</div>
+                <div id="reqCalcProductsWrap" style="display:none;"></div>
+            </div>
+            <div id="reqCalcPostActions" class="reqcalc-post-actions reqcalc-hide-print">
+                <div id="reqCalcPostHint" style="color:#64748b;font-size:0.9rem;">계산 결과를 확인한 뒤 추가 계산을 활성화하면 사용량, 로스량, 남은재고량을 같이 볼 수 있습니다.</div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                    <button type="button" id="reqCalcUsageActionBtn" class="btn btn-small" style="background:#7c3aed;" onclick="handleRequirementCalcUsageAction()">추가 계산 활성화</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="reqCalcCategoryModal" class="modal-bg" style="display:none;">
+        <div class="modal-box" style="max-width:520px;">
+            <h3 style="margin-top:0;">분류 선택 계산</h3>
+            <p style="margin:0 0 1rem;color:#64748b;">원초, 내포, 외포, 박스, 실리카 등 원하는 분류만 다중 선택해서 계산할 수 있습니다.</p>
+            <div id="reqCalcCategoryOptions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.65rem 0.9rem;margin-bottom:1rem;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-small btn-secondary" onclick="toggleRequirementCategoryChecks(true)">전체 선택</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="toggleRequirementCategoryChecks(false)">전체 해제</button>
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button type="button" class="btn btn-small btn-secondary" onclick="closeRequirementCategoryModal()">취소</button>
+                    <button type="button" class="btn btn-small" style="background:#b45309;" onclick="applyRequirementCategoryCalculation()">선택 분류 계산</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif tab == 'stats' %}
+    <div class="stats-toolbar">
+        <div style="color:#475569;font-size:0.92rem;">
+            기준 기간: <strong>{{ stats.start_date if stats else '-' }}</strong> ~ <strong>{{ stats.end_date if stats else '-' }}</strong>
+            {% if wp_filter != 'all' %}<span style="margin-left:0.35rem;">| 작업장: <strong>{{ wp_filter }}</strong></span>{% endif %}
+        </div>
+    </div>
+    <div class="stats-subtabs">
+        <button type="button" class="stats-subtab-btn {% if stat_view != 'graph' %}active{% endif %}" onclick="location.href='/integrated-management?tab=stats&wp={{ wp_filter|urlencode }}&stat_period={{ stat_period }}&stat_anchor={{ stat_anchor|urlencode }}&stat_view=table'">통계표</button>
+        <button type="button" class="stats-subtab-btn {% if stat_view == 'graph' %}active{% endif %}" onclick="location.href='/integrated-management?tab=stats&wp={{ wp_filter|urlencode }}&stat_period={{ stat_period }}&stat_anchor={{ stat_anchor|urlencode }}&stat_view=graph'">그래프</button>
+    </div>
+    <div class="stats-grid">
+        <div class="stats-card">
+            <span class="label">제품 생산량</span>
+            <span class="value">{{ "%.1f"|format(stats.summary.product_total if stats else 0) }}</span>
+        </div>
+        <div class="stats-card">
+            <span class="label">원/부자재 사용량</span>
+            <span class="value">{{ "%.1f"|format(stats.summary.material_total if stats else 0) }}</span>
+        </div>
+        <div class="stats-card">
+            <span class="label">원초 사용량</span>
+            <span class="value">{{ "%.1f"|format(stats.summary.raw_total if stats else 0) }}</span>
+        </div>
+        <div class="stats-card">
+            <span class="label">집계 일수</span>
+            <span class="value">{{ stats.summary.days_count if stats else 0 }}</span>
+        </div>
+    </div>
+    {% if stat_view == 'graph' %}
+    <div class="stats-panels">
+        <div class="stats-panel">
+            <h3>제품 생산량 그래프</h3>
+            <div class="stats-chart">
+                {% for point in stats.product_series.points if stats %}
+                <div class="stats-bar-row">
+                    <div class="stats-bar-label">{{ point.label }}</div>
+                    <div class="stats-bar-track"><div class="stats-bar-fill" style="width:{{ '%.2f'|format(point.width_pct) }}%;"></div></div>
+                    <div class="stats-bar-value">{{ "%.1f"|format(point.value) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="stats-panel">
+            <h3>원/부자재 사용량 그래프</h3>
+            <div class="stats-chart">
+                {% for point in stats.material_series.points if stats %}
+                <div class="stats-bar-row">
+                    <div class="stats-bar-label">{{ point.label }}</div>
+                    <div class="stats-bar-track"><div class="stats-bar-fill material" style="width:{{ '%.2f'|format(point.width_pct) }}%;"></div></div>
+                    <div class="stats-bar-value">{{ "%.1f"|format(point.value) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="stats-panel">
+            <h3>원초 사용량 그래프</h3>
+            <div class="stats-chart">
+                {% for point in stats.raw_series.points if stats %}
+                <div class="stats-bar-row">
+                    <div class="stats-bar-label">{{ point.label }}</div>
+                    <div class="stats-bar-track"><div class="stats-bar-fill raw" style="width:{{ '%.2f'|format(point.width_pct) }}%;"></div></div>
+                    <div class="stats-bar-value">{{ "%.1f"|format(point.value) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="stats-panel">
+            <h3>상위 생산 품목</h3>
+            <div class="stats-list">
+                {% for item in stats.top_products if stats %}
+                <div class="stats-list-item">
+                    <div class="stats-list-name">{{ item.name }}</div>
+                    <div class="stats-list-value">{{ "%.1f"|format(item.qty) }}</div>
+                </div>
+                {% else %}
+                <div class="stats-list-item"><div class="stats-list-name">데이터 없음</div><div class="stats-list-value">0.0</div></div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="stats-panel">
+            <h3>상위 원/부자재 사용량</h3>
+            <div class="stats-list">
+                {% for item in stats.top_materials if stats %}
+                <div class="stats-list-item">
+                    <div class="stats-list-name">{{ item.name }}</div>
+                    <div class="stats-list-value">{{ "%.1f"|format(item.qty) }}</div>
+                </div>
+                {% else %}
+                <div class="stats-list-item"><div class="stats-list-name">데이터 없음</div><div class="stats-list-value">0.0</div></div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="stats-panel">
+            <h3>상위 원초 사용량</h3>
+            <div class="stats-list">
+                {% for item in stats.top_raws if stats %}
+                <div class="stats-list-item">
+                    <div class="stats-list-name">{{ item.name }}</div>
+                    <div class="stats-list-value">{{ "%.1f"|format(item.qty) }}</div>
+                </div>
+                {% else %}
+                <div class="stats-list-item"><div class="stats-list-name">데이터 없음</div><div class="stats-list-value">0.0</div></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="stats-table-wrap">
+        <div class="stats-table-card">
+            <h3>제품 생산 통계</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>제품코드</th>
+                        <th>제품명</th>
+                        <th>생산량</th>
+                        <th>생산일수</th>
+                        <th>최근 생산일</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in stats.product_table if stats %}
+                    <tr>
+                        <td>{{ item.code }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ "%.1f"|format(item.qty) }}</td>
+                        <td>{{ item.day_count }}</td>
+                        <td>{{ item.last_date }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" style="text-align:center;color:#64748b;">집계 데이터가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="stats-table-card">
+            <h3>원/부자재 사용 통계</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>자재코드</th>
+                        <th>자재명</th>
+                        <th>분류</th>
+                        <th>단위</th>
+                        <th>사용량</th>
+                        <th>사용일수</th>
+                        <th>최근 사용일</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in stats.material_table if stats %}
+                    <tr>
+                        <td>{{ item.code }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.category }}</td>
+                        <td>{{ item.unit }}</td>
+                        <td>{{ "%.1f"|format(item.qty) }}</td>
+                        <td>{{ item.day_count }}</td>
+                        <td>{{ item.last_date }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" style="text-align:center;color:#64748b;">집계 데이터가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="stats-table-card">
+            <h3>원초 사용 통계</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>원초코드</th>
+                        <th>원초명</th>
+                        <th>자호/LOT</th>
+                        <th>사용량</th>
+                        <th>사용일수</th>
+                        <th>최근 사용일</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in stats.raw_table if stats %}
+                    <tr>
+                        <td>{{ item.code }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.lot_ref }}</td>
+                        <td>{{ "%.1f"|format(item.qty) }}</td>
+                        <td>{{ item.day_count }}</td>
+                        <td>{{ item.last_date }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" style="text-align:center;color:#64748b;">집계 데이터가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% elif tab == 'inventory_audit' %}
+    <div class="subtabs" style="margin-bottom:0.9rem;">
+        <button class="subtab-btn {% if inventory_type == 'all' %}active{% endif %}"
+                onclick="location.href='/integrated-management?tab=inventory_audit&inventory_type=all&inventory_wp={{ inventory_wp|urlencode }}&inventory_search_field={{ inventory_search_field|urlencode }}&inventory_category={{ inventory_category|urlencode }}&inventory_product_id={{ inventory_product_id|urlencode }}&inventory_q={{ inventory_q|urlencode }}'">전체</button>
+        <button class="subtab-btn {% if inventory_type == 'raw' %}active{% endif %}"
+                onclick="location.href='/integrated-management?tab=inventory_audit&inventory_type=raw&inventory_wp={{ inventory_wp|urlencode }}&inventory_search_field={{ inventory_search_field|urlencode }}&inventory_category={{ inventory_category|urlencode }}&inventory_product_id={{ inventory_product_id|urlencode }}&inventory_q={{ inventory_q|urlencode }}'">원초</button>
+        <button class="subtab-btn {% if inventory_type == 'material' %}active{% endif %}"
+                onclick="location.href='/integrated-management?tab=inventory_audit&inventory_type=material&inventory_wp={{ inventory_wp|urlencode }}&inventory_search_field={{ inventory_search_field|urlencode }}&inventory_category={{ inventory_category|urlencode }}&inventory_product_id={{ inventory_product_id|urlencode }}&inventory_q={{ inventory_q|urlencode }}'">부자재</button>
+    </div>
+    <div class="card" style="padding:1.1rem 1.25rem;margin-bottom:0.9rem;border:1px solid #dbeafe;background:linear-gradient(180deg,#f8fbff 0%, #ffffff 100%);">
+        <form method="get" action="/integrated-management">
+            <input type="hidden" name="tab" value="inventory_audit">
+            <input type="hidden" name="inventory_type" value="{{ inventory_type }}">
+            <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <div>
+                    <div style="font-size:1.02rem;font-weight:800;color:#0f172a;">재고조사 필터</div>
+                    <div style="font-size:0.9rem;color:#64748b;">원초/부자재를 나눠 보고, 카테고리와 BOM 기준으로 필요한 항목만 좁혀서 확인할 수 있습니다.</div>
+                </div>
+                <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
+                    {% if inventory_type != 'raw' and inventory_category %}
+                    <span class="small-badge">{{ inventory_category }}</span>
+                    {% endif %}
+                    {% if inventory_wp != 'all' %}
+                    <span class="small-badge">{{ inventory_wp }}</span>
+                    {% endif %}
+                    {% if inventory_product_id %}
+                    <span class="small-badge">상품 BOM 선택</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="inventory-filter-grid">
+                <div>
+                    <label style="display:block;font-weight:700;font-size:0.9rem;margin-bottom:0.35rem;color:#1e3a8a;">작업장</label>
+                    <select name="inventory_wp" id="inventoryAuditWorkplaceSelect" class="search-input">
+                        <option value="all" {% if inventory_wp == 'all' %}selected{% endif %}>전체 작업장</option>
+                        {% for wp in workplaces %}
+                        {% if wp != '기타' %}
+                        <option value="{{ wp }}" {% if inventory_wp == wp %}selected{% endif %}>{{ wp }}</option>
+                        {% endif %}
+                        {% endfor %}
+                        <option value="물류" {% if inventory_wp == '물류' %}selected{% endif %}>물류</option>
+                        <option value="공통" {% if inventory_wp == '공통' %}selected{% endif %}>공통</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-weight:700;font-size:0.9rem;margin-bottom:0.35rem;color:#1e3a8a;">검색 기준</label>
+                    <select name="inventory_search_field" class="search-input">
+                        <option value="all" {% if inventory_search_field == 'all' %}selected{% endif %}>전체</option>
+                        <option value="code" {% if inventory_search_field == 'code' %}selected{% endif %}>코드</option>
+                        <option value="name" {% if inventory_search_field == 'name' %}selected{% endif %}>품명</option>
+                        <option value="category" {% if inventory_search_field == 'category' %}selected{% endif %}>분류</option>
+                        <option value="workplace" {% if inventory_search_field == 'workplace' %}selected{% endif %}>작업장</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-weight:700;font-size:0.9rem;margin-bottom:0.35rem;color:#1e3a8a;">세부 분류</label>
+                    <select name="inventory_category" class="search-input" {% if inventory_type == 'raw' %}disabled{% endif %}>
+                        <option value="" {% if not inventory_category %}selected{% endif %}>전체 분류</option>
+                        {% for category in material_category_options %}
+                        <option value="{{ category }}" {% if inventory_category == category %}selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-weight:700;font-size:0.9rem;margin-bottom:0.35rem;color:#1e3a8a;">상품 BOM 필터</label>
+                    <select name="inventory_product_id" id="inventoryAuditProductSelect" class="search-input">
+                        <option value="" {% if not inventory_product_id %}selected{% endif %}>전체 상품</option>
+                        {% for product in filter_products %}
+                        <option value="{{ product.id }}" data-workplace="{{ product.workplace or '' }}" {% if inventory_product_id == (product.id|string) %}selected{% endif %}>{{ product.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-weight:700;font-size:0.9rem;margin-bottom:0.35rem;color:#1e3a8a;">키워드 검색</label>
+                    <input type="text" name="inventory_q" value="{{ inventory_q }}" class="search-input" placeholder="예: P03A008 / 외포 / 신관 2층">
+                </div>
+            </div>
+            <div class="inventory-filter-actions">
+                <button type="submit" class="btn btn-small">적용</button>
+                <a href="/integrated-management?tab=inventory_audit&inventory_type={{ inventory_type }}" class="btn btn-small btn-secondary">초기화</a>
+            </div>
+        </form>
+    </div>
+    <div class="inventory-audit-shell">
+    <div class="inventory-audit-table-card">
+        <div class="inventory-audit-head">
+            <div>
+                <h3>재고조사 목록</h3>
+                <p>실재고를 입력해 작업장 기준 재고를 바로 반영할 수 있습니다.</p>
+            </div>
+            <div class="inventory-audit-summary">
+                <span class="inventory-audit-chip">조회 {{ data|length }}건</span>
+                {% if inventory_wp != 'all' %}
+                <span class="inventory-audit-chip">{{ inventory_wp }}</span>
+                {% endif %}
+                <span class="inventory-audit-chip">
+                    {% if inventory_type == 'raw' %}원초{% elif inventory_type == 'material' %}부자재{% else %}전체{% endif %}
+                </span>
+            </div>
+            <div class="inventory-audit-actions">
+                <button type="button" class="btn btn-small btn-secondary" onclick="printInventoryAudit()">A4 출력</button>
+                <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="exportInventoryAudit()">엑셀 다운로드</button>
+            </div>
+        </div>
+        {% if data %}
+        <div class="table-container">
+        <table id="inventoryAuditTable">
+            <thead>
+                <tr>
+                    <th><button type="button" class="inventory-sort-btn" onclick="sortInventoryAuditTable(0, 'text')">작업장 <span class="inventory-sort-indicator" data-sort-index="0"></span></button></th>
+                    <th><button type="button" class="inventory-sort-btn" onclick="sortInventoryAuditTable(1, 'text')">카테고리 <span class="inventory-sort-indicator" data-sort-index="1"></span></button></th>
+                    <th><button type="button" class="inventory-sort-btn" onclick="sortInventoryAuditTable(2, 'text')">코드 <span class="inventory-sort-indicator" data-sort-index="2"></span></button></th>
+                    <th><button type="button" class="inventory-sort-btn" onclick="sortInventoryAuditTable(3, 'text')">품명 <span class="inventory-sort-indicator" data-sort-index="3"></span></button></th>
+                    {% if inventory_type != 'material' %}
+                    <th><button type="button" class="inventory-sort-btn" onclick="sortInventoryAuditTable(4, 'text')">자호 <span class="inventory-sort-indicator" data-sort-index="4"></span></button></th>
+                    <th><button type="button" class="inventory-sort-btn" onclick="sortInventoryAuditTable(5, 'text')">입고일 <span class="inventory-sort-indicator" data-sort-index="5"></span></button></th>
+                    {% endif %}
+                    <th><button type="button" class="inventory-sort-btn" onclick="sortInventoryAuditTable({% if inventory_type != 'material' %}6{% else %}4{% endif %}, 'number')">현재고 <span class="inventory-sort-indicator" data-sort-index="{% if inventory_type != 'material' %}6{% else %}4{% endif %}"></span></button></th>
+                    <th>실재고</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryAuditTbody">
+                {% for item in data %}
+                <tr>
+                    {% set wp_name = item.workplace or '-' %}
+                    {% set display_stock = item.logistics_stock if inventory_wp == '물류' else item.workplace_stock %}
+                    {% set wp_class = 'wp-unassigned' %}
+                    {% if wp_name == '1동 조미' %}{% set wp_class = 'wp-1jomi' %}{% endif %}
+                    {% if wp_name == '1동 자반' %}{% set wp_class = 'wp-1jaban' %}{% endif %}
+                    {% if wp_name == '2동 신관 1층' %}{% set wp_class = 'wp-2-1f' %}{% endif %}
+                    {% if wp_name == '2동 신관 2층' %}{% set wp_class = 'wp-2-2f' %}{% endif %}
+                    {% if wp_name == '공통' %}{% set wp_class = 'wp-shared' %}{% endif %}
+                    {% if wp_name == '물류' %}{% set wp_class = 'wp-logistics' %}{% endif %}
+                    {% if wp_name == '기타' %}{% set wp_class = 'wp-etc' %}{% endif %}
+                    {% set cat_name = item.inv_category or '기타' %}
+                    {% set cat_class = '' %}
+                    {% if cat_name == '원초' %}{% set cat_class = 'raw' %}{% endif %}
+                    {% if cat_name == '내포' %}{% set cat_class = 'inner' %}{% endif %}
+                    {% if cat_name == '외포' %}{% set cat_class = 'outer' %}{% endif %}
+                    {% if cat_name == '박스' %}{% set cat_class = 'box' %}{% endif %}
+                    {% if cat_name == '실리카' %}{% set cat_class = 'silica' %}{% endif %}
+                    {% if cat_name == '트레이' %}{% set cat_class = 'tray' %}{% endif %}
+                    {% if cat_name == '기름' %}{% set cat_class = 'oil' %}{% endif %}
+                    {% if cat_name == '소금' %}{% set cat_class = 'salt' %}{% endif %}
+                    <td><span class="inventory-wp-badge {{ wp_class }}">{{ wp_name }}</span></td>
+                    <td><span class="inventory-cat-badge {{ cat_class }}">{{ cat_name }}</span></td>
+                    <td><span class="inventory-code">{{ item.code or '-' }}</span></td>
+                    <td class="material-name-cell" {% if item.inv_type == 'raw_material' %}onclick="openRawLotModal({{ item.inv_id }})"{% else %}onclick="openMaterialDetailModal({{ item.inv_id }})"{% endif %}>
+                        <div class="inventory-item-main">
+                            <a href="#" class="material-name-link inventory-item-name" {% if item.inv_type == 'raw_material' %}onclick="openRawLotModal({{ item.inv_id }}); return false;"{% else %}onclick="openMaterialDetailModal({{ item.inv_id }}); return false;"{% endif %}>{{ item.item_name }}</a>
+                        </div>
+                        <div class="inventory-item-sub">{{ item.inv_type == 'raw_material' and '원초 재고' or '부자재 재고' }}</div>
+                    </td>
+                    {% if inventory_type != 'material' %}
+                    <td>{{ item.car_number or '-' }}</td>
+                    <td>{{ item.receiving_date or '-' }}</td>
+                    {% endif %}
+                    <td><span class="inventory-stock">{{ "%.1f"|format(display_stock or 0) }}</span></td>
+                    <td>
+                        <input type="number"
+                                step="0.1"
+                                class="inventory-actual-input"
+                               data-inv-type="{{ item.inv_type }}"
+                               data-inv-id="{{ item.inv_id }}"
+                               data-current-stock="{{ "%.4f"|format(display_stock or 0) }}"
+                               data-code="{{ item.code or '' }}"
+                               data-item-name="{{ item.item_name or '' }}"
+                                placeholder="실재고 입력">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="inventory-empty">현재고가 있는 재고 항목이 없습니다.</div>
+        {% endif %}
+    </div>
+    </div>
+    {% elif data %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    {% if tab == 'audit_logs' %}
+                    <th class="code-col">액션</th>
+                    <th class="wp-col">작업장</th>
+                    <th>대상</th>
+                    <th>대상ID</th>
+                    <th>작업자</th>
+                    <th>IP</th>
+                    <th>일시</th>
+                    {% elif tab == 'db_backups' %}
+                    <th>파일명</th>
+                    <th>크기(MB)</th>
+                    <th>생성일시</th>
+                    <th>관리</th>
+                    {% else %}
+                    {% if tab == 'materials' %}
+                    <th class="material-bulk-col" style="display:none;width:44px;">
+                        <input type="checkbox" id="materialBulkAssignAll" onchange="toggleAllMaterialBulkChecks(this.checked)">
+                    </th>
+                    {% endif %}
+                    {% if tab == 'products' %}
+                    <th class="product-bulk-col" style="display:none;width:44px;">
+                        <input type="checkbox" id="productBulkAssignAll" onchange="toggleAllProductBulkChecks(this.checked)">
+                    </th>
+                    {% endif %}
+                    <th class="code-col">코드</th>
+                    <th class="wp-col">작업장</th>
+                    {% if tab == 'products' %}
+                    <th>상품명</th>
+                    <th>분류</th>
+                    <th>BOM</th>
+                    {% elif tab == 'raw_materials' %}
+                    <th>원초명</th>
+                    <th>로트</th>
+                    <th>자호</th>
+                    <th>입고일</th>
+                    <th>재고</th>
+                    <th>잔여율</th>
+                    {% elif tab == 'materials' %}
+                    <th>부자재명</th>
+                    <th>분류</th>
+                    <th>제조사(발주업체)</th>
+                    <th>단위</th>
+                    <th>1동 조미</th>
+                    <th>1동 자반</th>
+                    <th>2동 신관 1층</th>
+                    <th>2동 신관 2층</th>
+                    <th>기타</th>
+                    <th>물류</th>
+                    <th>총수량</th>
+                    <th>로트수</th>
+                    {% elif tab == 'productions' %}
+                    <th>상품명</th>
+                    <th>상태</th>
+                    <th>생산일</th>
+                    <th>계획 BOX</th>
+                    <th>실제 BOX</th>
+                    {% elif tab == 'purchase_requests' %}
+                    <th>부자재</th>
+                    <th>상태</th>
+                    <th>수량</th>
+                    <th>요청일</th>
+                    <th>등록자</th>
+                    <th>입고처리</th>
+                    {% endif %}
+                    <th>관리</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data %}
+                <tr>
+                    {% if tab == 'audit_logs' %}
+                    <td class="code-col">{{ item.action or '-' }}</td>
+                    <td class="wp-col">
+                        <span class="workplace-badge 
+                            {% if item.workplace == '1동 조미' %}wp-1jomi
+                            {% elif item.workplace == '1동 자반' %}wp-1jaban
+                            {% elif item.workplace == '2동 신관 1층' %}wp-2-1f
+                            {% elif item.workplace == '2동 신관 2층' %}wp-2-2f
+                            {% elif item.workplace == '공통' %}wp-shared
+                            {% endif %}">
+                            {{ item.workplace or '-' }}
+                        </span>
+                    </td>
+                    <td>{{ item.entity or '-' }}</td>
+                    <td>{{ item.entity_id or '-' }}</td>
+                    <td>{{ item.name or item.username or '-' }}</td>
+                    <td>{{ item.ip or '-' }}</td>
+                    <td>{{ item.created_at }}</td>
+                    {% elif tab == 'db_backups' %}
+                    <td><code>{{ item.filename }}</code></td>
+                    <td>{{ "%.2f"|format(item.size_mb or 0) }}</td>
+                    <td>{{ item.created_at }}</td>
+                    <td style="white-space:nowrap;">
+                        <a class="btn btn-small" style="background:#0f766e;" href="/integrated-management/db-backups/{{ item.filename|urlencode }}/download">다운로드</a>
+                    </td>
+                    {% else %}
+                    {% if tab == 'materials' %}
+                    <td class="material-bulk-col" style="display:none;text-align:center;">
+                        <input type="checkbox" class="bulk-material-checkbox" value="{{ item.id }}" onchange="syncMaterialBulkSelection()">
+                    </td>
+                    {% endif %}
+                    {% if tab == 'products' %}
+                    <td class="product-bulk-col" style="display:none;text-align:center;">
+                        <input type="checkbox" class="bulk-product-checkbox" value="{{ item.id }}" onchange="syncProductBulkSelection()">
+                    </td>
+                    {% endif %}
+                    <td class="code-col">
+                        {% if tab == 'products' %}
+                        {{ item.code or '-' }}
+                        {% elif tab == 'raw_materials' %}
+                        {{ item.code or ('RM' ~ '%05d'|format(item.id)) }}
+                        {% elif tab == 'materials' %}
+                        {{ item.code or '-' }}
+                        {% elif tab == 'productions' %}
+                        PROD-{{ item.id }}
+                        {% elif tab == 'purchase_requests' %}
+                        {{ item.material_code or '-' }}
+                        {% endif %}
+                    </td>
+                    <td class="wp-col">
+                        <span class="workplace-badge 
+                            {% if item.workplace == '1동 조미' %}wp-1jomi
+                            {% elif item.workplace == '1동 자반' %}wp-1jaban
+                            {% elif item.workplace == '2동 신관 1층' %}wp-2-1f
+                            {% elif item.workplace == '2동 신관 2층' %}wp-2-2f
+                            {% elif item.workplace == '공통' %}wp-shared
+                            {% elif item.workplace == '물류' %}wp-logistics
+                            {% elif item.workplace == '기타' %}wp-etc
+                            {% elif not item.workplace %}wp-unassigned
+                            {% endif %}">
+                            {{ item.workplace or '미등록' }}
+                        </span>
+                    </td>
+                    
+                    {% if tab == 'products' %}
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category or '-' }}</td>
+                    <td>{{ item.bom_count }}</td>
+                    
+                    {% elif tab == 'raw_materials' %}
+                    <td><strong><a href="#" class="material-name-link" onclick="openRawLotModal({{ item.id }}); return false;">{{ item.name }}</a></strong></td>
+                    <td><code>{{ item.lot or '-' }}</code></td>
+                    <td>{{ item.car_number or '-' }}</td>
+                    <td>{{ item.receiving_date or '-' }}</td>
+                    {% elif tab == 'materials' %}
+                    <td class="material-name-cell" onclick="openMaterialDetailModal({{ item.id }})"><strong><a href="#" class="material-name-link" onclick="openMaterialDetailModal({{ item.id }}); return false;">{{ item.name }}</a></strong></td>
+                    <td>{{ item.category or '-' }}</td>
+                    <td>{{ item.supplier_name or '-' }}</td>
+                    <td>{{ item.unit or '-' }}</td>
+                    <td>{{ "%.1f"|format(item.stock_by_workplace.get('1동 조미', 0) if item.stock_by_workplace else 0) }}</td>
+                    <td>{{ "%.1f"|format(item.stock_by_workplace.get('1동 자반', 0) if item.stock_by_workplace else 0) }}</td>
+                    <td>{{ "%.1f"|format(item.stock_by_workplace.get('2동 신관 1층', 0) if item.stock_by_workplace else 0) }}</td>
+                    <td>{{ "%.1f"|format(item.stock_by_workplace.get('2동 신관 2층', 0) if item.stock_by_workplace else 0) }}</td>
+                    <td>{{ "%.1f"|format(item.stock_by_workplace.get('기타', 0) if item.stock_by_workplace else 0) }}</td>
+                    <td>{{ "%.1f"|format(item.logistics_stock or 0) }}</td>
+                    <td><strong>{{ "%.1f"|format(item.total_stock if item.total_stock is not none else 0) }}</strong></td>
+                    <td>{{ item.lot_count or 0 }}</td>
+                    
+                    {% elif tab == 'productions' %}
+                    <td><strong>{{ item.product_name or '-' }}</strong></td>
+                    <td>
+                        <span style="background:
+                            {% if item.list_type == 'done' %}#d1fae5
+                            {% elif item.list_type == 'temp' %}#fef3c7
+                            {% else %}#dbeafe{% endif %};
+                            color:
+                            {% if item.list_type == 'done' %}#065f46
+                            {% elif item.list_type == 'temp' %}#92400e
+                            {% else %}#1d4ed8{% endif %};
+                            padding:0.24rem 0.56rem;border-radius:999px;font-size:0.75rem;font-weight:700;">
+                            {{ item.display_status }}
+                        </span>
+                    </td>
+                    <td>{{ item.production_date or '-' }}</td>
+                    <td>{{ item.planned_boxes or 0 }}</td>
+                    <td>{{ item.actual_boxes or 0 }}</td>
+                    
+                    {% elif tab == 'purchase_requests' %}
+                    <td><strong>{{ item.material_name }}</strong></td>
+                    <td>
+                        <span style="background:
+                            {% if item.status == '발주필요' %}#fff3cd
+                            {% elif item.status == '발주중' %}#cfe2ff
+                            {% else %}#d1e7dd{% endif %};
+                            color:
+                            {% if item.status == '발주필요' %}#856404
+                            {% elif item.status == '발주중' %}#084298
+                            {% else %}#0a3622{% endif %};
+                            padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">
+                            {{ item.status }}
+                        </span>
+                    </td>
+                    <td>{{ item.ordered_quantity or item.requested_quantity }}{{ item.unit }}</td>
+                    <td>{{ item.requested_at[:10] if item.requested_at else '-' }}</td>
+                    <td>{{ item.ordered_by_name or '-' }}</td>
+                    <td>{{ item.received_by_name or '-' }}</td>
+                    {% endif %}
+                    
+                    <td style="white-space:nowrap;">
+                        {% if tab == 'products' %}
+                        <button type="button" class="btn btn-small" style="background:#4f46e5;"
+                                onclick="openEditModal(this)"
+                                data-tab="products"
+                                data-id="{{ item.id }}"
+                                data-workplace="{{ item.workplace }}"
+                                data-name="{{ item.name|e }}"
+                                data-code="{{ item.code|e }}"
+                                data-category="{{ item.category|e }}"
+                                data-description="{{ item.description|e }}"
+                                data-box_quantity="{{ item.box_quantity }}"
+                                 data-sheets_per_pack="{{ item.sheets_per_pack or 24 }}"
+                                 data-cuts_per_sheet="{{ item.cuts_per_sheet or 9 }}"
+                                 data-sok_per_box="{{ '%.1f'|format(item.sok_per_box) if item.sok_per_box or item.sok_per_box == 0 else '' }}"
+                                 data-expiry_months="{{ item.expiry_months or 12 }}"
+                                 >수정</button>
+                        {% if wp_filter == 'unassigned' %}
+                        <a href="/products/{{ item.id }}/bom" class="btn btn-small" style="background:#0f766e;">BOM</a>
+                        {% endif %}
+                        {% elif tab == 'raw_materials' %}
+                        <button type="button" class="btn btn-small" style="background:#4f46e5;"
+                                onclick="openEditModal(this)"
+                                data-tab="raw_materials"
+                                data-id="{{ item.id }}"
+                                data-workplace="{{ item.workplace }}"
+                                data-code="{{ item.code|e }}"
+                                data-name="{{ item.name|e }}"
+                                data-sheets_per_sok="{{ item.sheets_per_sok }}"
+                                data-receiving_date="{{ item.receiving_date }}"
+                                data-car_number="{{ item.car_number|e }}"
+                                data-total_stock="{{ item.total_stock }}"
+                                data-current_stock="{{ item.current_stock }}">수정</button>
+                        {% elif tab == 'materials' %}
+                        <button type="button" class="btn btn-small" style="background:#4f46e5;"
+                                onclick="openEditModal(this)"
+                                data-tab="materials"
+                                data-id="{{ item.id }}"
+                                data-workplace="{{ item.workplace }}"
+                                data-name="{{ item.name|e }}"
+                                data-code="{{ item.code|e }}"
+                                data-category="{{ item.category|e }}"
+                                data-unit="{{ item.unit|e }}"
+                                data-supplier_id="{{ item.supplier_id or '' }}"
+                                data-logistics_stock="{{ item.logistics_stock or 0 }}"
+                                data-total_stock="{{ (item.logistics_stock or 0) + (item.lot_total_quantity if item.lot_total_quantity is not none else item.current_stock or 0) }}"
+                                data-current_stock="{{ item.lot_total_quantity if item.lot_total_quantity is not none else item.current_stock }}"
+                                data-min_stock="{{ item.min_stock }}"
+                                data-moq="{{ item.moq if item.moq is not none else 0 }}">수정</button>
+                        <button type="button" class="btn btn-small" style="background:#0f766e;"
+                                onclick="openMaterialDetailModal({{ item.id }})">상세</button>
+                        {% elif tab == 'productions' %}
+                        <a href="/production/{{ item.id }}" class="btn btn-small" style="background:#2563eb;">조회</a>
+                        {% elif tab == 'purchase_requests' %}
+                        <button type="button" class="btn btn-small" style="background:#4f46e5;"
+                                onclick="openEditModal(this)"
+                                data-tab="purchase_requests"
+                                data-id="{{ item.id }}"
+                                data-workplace="{{ item.workplace }}"
+                                data-status="{{ item.status|e }}"
+                                data-requested_quantity="{{ item.requested_quantity }}"
+                                data-ordered_quantity="{{ item.ordered_quantity }}"
+                                data-received_quantity="{{ item.received_quantity }}"
+                                data-expected_delivery_date="{{ item.expected_delivery_date }}"
+                                data-note="{{ item.note|e }}">수정</button>
+                        {% endif %}
+                        <form method="POST" action="{% if tab == 'productions' %}/production/{{ item.id }}/delete{% else %}/integrated-management/{{ tab }}/{{ item.id }}/delete{% endif %}" 
+                              style="display:inline;" 
+                              onsubmit="return confirm('정말 삭제하시겠습니까?')">
+                            {% if tab == 'productions' %}
+                            <input type="hidden" name="next" value="{{ url_for('admin.integrated_management', tab='productions', wp=wp_filter, q=q, prod_tab=prod_tab) }}">
+                            {% endif %}
+                            <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align:center;color:#999;padding:3rem;">데이터가 없습니다</p>
+    {% endif %}
+</div>
+
+<!-- 원초 사용/입고 내역 모달 -->
+<div id="rawActivityModal" class="modal-bg">
+    <div class="modal-box" style="max-width:1100px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <h3 style="margin:0;">📌 원초 사용/입고 내역</h3>
+            <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+                <input type="date" id="rawActDateInput" style="padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;">
+                <button type="button" class="btn btn-small" style="background:#0f172a;" onclick="searchRawActivityByDate()">일자 검색</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="loadTodayRawActivity()">오늘</button>
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeRawActivityModal()">닫기</button>
+            </div>
+        </div>
+        <div id="rawActWpTabs" style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+            <button type="button" class="btn btn-small btn-secondary" data-wp-tab="all" onclick="setRawActivityWorkplace('all')">전체</button>
+            {% for wp in workplaces %}
+            <button type="button" class="btn btn-small btn-secondary" data-wp-tab="{{ wp }}" onclick="setRawActivityWorkplace('{{ wp }}')">{{ wp }}</button>
+            {% endfor %}
+        </div>
+        <p id="rawActivityPeriodText" style="margin:0 0 0.7rem;color:#64748b;font-size:0.86rem;">조회 일자: -</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>원초명</th>
+                        <th>코드</th>
+                        <th>로트</th>
+                        <th>입고일</th>
+                        <th>자호</th>
+                        <th>현재고</th>
+                        <th>사용량</th>
+                        <th>반출량</th>
+                        <th>생산 제품명</th>
+                    </tr>
+                </thead>
+                <tbody id="rawActivityTableBody">
+                    <tr><td colspan="9" style="text-align:center;color:#64748b;">조회 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 수정 모달 -->
+<div id="editModal" class="modal-bg">
+    <div class="modal-box">
+        <h3 class="modal-title" style="margin-bottom:1rem;">
+            {% if tab == 'products' %}상품 수정
+            {% elif tab == 'raw_materials' %}원초 수정
+            {% elif tab == 'materials' %}부자재 수정
+            {% elif tab == 'purchase_requests' %}발주 수정
+            {% endif %}
+        </h3>
+
+        {% if tab == 'products' %}
+        <form method="POST" action="/integrated-management/products/update">
+            <input type="hidden" name="id" id="edit_product_id">
+            <div class="form-grid">
+            <div class="form-group">
+                <label>작업장 *</label>
+                <select name="workplace" id="edit_product_workplace" required>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>상품명 *</label><input type="text" name="name" id="edit_product_name" required></div>
+            <div class="form-group"><label>코드</label><input type="text" name="code" id="edit_product_code"></div>
+            <div class="form-group">
+                <label>분류</label>
+                <select name="category" id="edit_product_category">
+                    <option value="식탁">식탁</option>
+                    <option value="김밥">김밥</option>
+                    <option value="유기">유기</option>
+                    <option value="도시락">도시락</option>
+                    <option value="전장">전장</option>
+                    <option value="생김">생김</option>
+                    <option value="세트">세트</option>
+                    <option value="기타">기타</option>
+                </select>
+            </div>
+            <div class="form-group"><label>박스당 수량</label><input type="number" name="box_quantity" id="edit_product_box_quantity" value="1"></div>
+            <div class="form-group"><label>매수</label><input type="number" name="sheets_per_pack" id="edit_product_sheets_per_pack" value="24"></div>
+            <div class="form-group"><label>절단</label><input type="number" name="cuts_per_sheet" id="edit_product_cuts_per_sheet" value="9"></div>
+            <div class="form-group"><label>한 박스당 원초(속)</label><input type="number" name="sok_per_box" id="edit_product_sok_per_box" step="0.1" min="0"></div>
+            <div class="form-group">
+                <label>소비기한(개월)</label>
+                <select name="expiry_months" id="edit_product_expiry_months">
+                    {% for month in range(1, 13) %}
+                    <option value="{{ month }}">{{ month }}개월</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>설명</label><textarea name="description" id="edit_product_description" rows="2"></textarea></div>
+            </div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeEditModal()">취소</button>
+                <button type="submit" class="btn btn-small">저장</button>
+            </div>
+        </form>
+        {% elif tab == 'raw_materials' %}
+        <form method="POST" action="/integrated-management/raw-materials/update">
+            <input type="hidden" name="id" id="edit_raw_id">
+            <div class="form-grid">
+            <div class="form-group">
+                <label>작업장 *</label>
+                <select name="workplace" id="edit_raw_workplace" required>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>코드</label><input type="text" name="code" id="edit_raw_code"></div>
+            <div class="form-group"><label>원초명 *</label><input type="text" name="name" id="edit_raw_name" required></div>
+            <div class="form-group"><label>1박스당 속수</label><input type="number" name="sheets_per_sok" id="edit_raw_sheets_per_sok" step="0.01"></div>
+            <div class="form-group"><label>입고일</label><input type="date" name="receiving_date" id="edit_raw_receiving_date"></div>
+            <div class="form-group"><label>자호</label><input type="text" name="ja_ho" id="edit_raw_car_number"></div>
+            <div class="form-group"><label>총 재고 (속)</label><input type="number" name="total_stock" id="edit_raw_total_stock" step="0.01"></div>
+            <div class="form-group"><label>현재 재고 (속)</label><input type="number" name="current_stock" id="edit_raw_current_stock" step="0.01"></div>
+            </div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeEditModal()">취소</button>
+                <button type="submit" class="btn btn-small">저장</button>
+            </div>
+        </form>
+        {% elif tab == 'materials' %}
+        <form method="POST" action="/integrated-management/materials/update">
+            <input type="hidden" name="id" id="edit_mat_id">
+            <input type="hidden" name="wp" value="{{ wp_filter }}">
+            <input type="hidden" name="q" value="{{ q }}">
+            <div class="form-grid">
+            <div class="form-group">
+                <label>작업장 *</label>
+                <select name="workplace" id="edit_mat_workplace" required>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                    <option value="물류">물류</option>
+                </select>
+            </div>
+            <div class="form-group"><label>부자재명 *</label><input type="text" name="name" id="edit_mat_name" required></div>
+            <div class="form-group"><label>코드</label><input type="text" name="code" id="edit_mat_code"></div>
+            <div class="form-group">
+                <label>분류</label>
+                <select name="category" id="edit_mat_category">
+                    <option value="기름">기름</option>
+                    <option value="소금">소금</option>
+                    <option value="외포">외포</option>
+                    <option value="내포">내포</option>
+                    <option value="실리카겔">실리카겔</option>
+                    <option value="트레이">트레이</option>
+                    <option value="박스">박스</option>
+                    <option value="스티커">스티커</option>
+                    <option value="강판">강판</option>
+                    <option value="기타">기타</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>단위</label>
+                <select name="unit" id="edit_mat_unit">
+                    <option>개</option><option>kg</option><option>L</option>
+                    <option>g</option><option>ml</option><option>박스</option><option>롤</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>공급업체</label>
+                <select name="supplier_id" id="edit_mat_supplier_id">
+                    <option value="">없음</option>
+                    {% for s in suppliers %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>작업장 재고</label><input type="number" name="current_stock" id="edit_mat_current_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
+            <div class="form-group"><label>물류 재고</label><input type="number" id="edit_mat_logistics_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
+            <div class="form-group"><label>총재고</label><input type="number" id="edit_mat_total_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
+            <div class="form-group"><label>최소 재고</label><input type="number" name="min_stock" id="edit_mat_min_stock" step="0.01"></div>
+            <div class="form-group"><label>MOQ</label><input type="number" name="moq" id="edit_mat_moq" step="0.01" min="0"></div>
+            </div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeEditModal()">취소</button>
+                <button type="submit" class="btn btn-small">저장</button>
+            </div>
+        </form>
+        {% elif tab == 'purchase_requests' %}
+        <form method="POST" action="/integrated-management/purchase-requests/update">
+            <input type="hidden" name="id" id="edit_pr_id">
+            <div class="form-grid">
+            <div class="form-group">
+                <label>작업장 *</label>
+                <select name="workplace" id="edit_pr_workplace" required>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                    <option value="공통">공통</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>상태</label>
+                <select name="status" id="edit_pr_status">
+                    <option value="발주필요">발주필요</option>
+                    <option value="발주중">발주중</option>
+                    <option value="입고완료">입고완료</option>
+                </select>
+            </div>
+            <div class="form-group"><label>요청 수량</label><input type="number" name="requested_quantity" id="edit_pr_requested_quantity" step="0.01"></div>
+            <div class="form-group"><label>발주 수량</label><input type="number" name="ordered_quantity" id="edit_pr_ordered_quantity" step="0.01"></div>
+            <div class="form-group"><label>입고 수량</label><input type="number" name="received_quantity" id="edit_pr_received_quantity" step="0.01"></div>
+            <div class="form-group"><label>입고 예정일</label><input type="date" name="expected_delivery_date" id="edit_pr_expected_delivery_date"></div>
+            <div class="form-group"><label>비고</label><textarea name="note" id="edit_pr_note" rows="2"></textarea></div>
+            </div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeEditModal()">취소</button>
+                <button type="submit" class="btn btn-small">저장</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 추가 모달 -->
+<div id="addModal" class="modal-bg">
+    <div class="modal-box">
+        <h3 style="margin-bottom:1rem;">
+            {% if tab == 'products' %}상품 추가
+            {% elif tab == 'raw_materials' %}원초 추가
+            {% elif tab == 'materials' %}부자재 추가
+            {% endif %}
+        </h3>
+        
+        {% if tab == 'products' %}
+        <form method="POST" action="/integrated-management/products/add">
+            <div class="form-group">
+                <label>작업장 *</label>
+                <select name="workplace" required>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>상품명 *</label><input type="text" name="name" required></div>
+            <div class="form-group"><label>코드</label><input type="text" name="code"></div>
+            <div class="form-group"><label>박스당 수량</label><input type="number" name="box_quantity" value="1"></div>
+            <div class="form-group"><label>설명</label><textarea name="description" rows="2"></textarea></div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeAddModal()">취소</button>
+                <button type="submit" class="btn btn-small">추가</button>
+            </div>
+        </form>
+        
+        {% elif tab == 'raw_materials' %}
+        <form method="POST" action="/integrated-management/raw-materials/add">
+            <div class="form-group">
+                <label>작업장 *</label>
+                <select name="workplace" required>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}">{{ wp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>코드</label><input type="text" name="code" placeholder="예: RM00001"></div>
+            <div class="form-group"><label>원초명 *</label><input type="text" name="name" required></div>
+            <div class="form-group"><label>1박스당 속수</label><input type="number" name="sheets_per_sok" step="0.01"></div>
+            <div class="form-group"><label>입고일</label><input type="date" name="receiving_date"></div>
+            <div class="form-group"><label>자호</label><input type="text" name="ja_ho"></div>
+            <div class="form-group"><label>총 재고 (속)</label><input type="number" name="total_stock" step="0.01" value="0"></div>
+            <div class="form-group"><label>현재 재고 (속)</label><input type="number" name="current_stock" step="0.01" value="0"></div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeAddModal()">취소</button>
+                <button type="submit" class="btn btn-small">추가</button>
+            </div>
+        </form>
+        
+        {% elif tab == 'materials' %}
+    <form method="POST" action="/integrated-management/materials/add">
+        <div class="form-group">
+            <label>자재 코드 (비워두면 자동 생성)</label>
+            <input type="text" name="code" placeholder="예: P01A018" style="border: 1px solid #667eea; background-color: #f8faff;">
+        </div>
+
+        <div class="form-group">
+            <label>작업장 *</label>
+            <select name="workplace" required>
+                {% for wp in workplaces %}
+                <option value="{{ wp }}">{{ wp }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group"><label>부자재명 *</label><input type="text" name="name" required></div>
+
+        <input type="hidden" name="category" value="기타">
+
+        <div class="form-group">
+            <label>단위</label>
+            <select name="unit">
+                <option>개</option><option>kg</option><option>L</option>
+                <option>g</option><option>ml</option><option>박스</option><option>롤</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>공급업체</label>
+            <select name="supplier_id">
+                <option value="">없음</option>
+                {% for s in suppliers %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group"><label>입고일 *</label><input type="date" name="receiving_date" required></div>
+        <div class="form-group"><label>제조일 *</label><input type="date" name="manufacture_date" required></div>
+        <div class="form-group"><label>소비기한</label><input type="date" name="expiry_date"></div>
+        <div class="form-group"><label>단가</label><input type="number" name="unit_price" step="0.01" value="0"></div>
+        <div class="form-group"><label>입고수량</label><input type="number" name="quantity" step="0.01" value="0"></div>
+        <div class="form-group"><label>최소 재고</label><input type="number" name="min_stock" step="0.01" value="0"></div>
+
+        <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeAddModal()">취소</button>
+            <button type="submit" class="btn btn-small">추가</button>
+        </div>
+    </form>
+{% endif %}
+    </div>
+</div>
+
+<!-- 부자재 상세 모달 -->
+<div id="materialDetailModal" class="modal-bg">
+    <div class="modal-box material-modal">
+        <div class="material-modal-top">
+            <h3 style="margin:0;">부자재 상세 관리</h3>
+            <div style="display:flex;gap:0.5rem;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeMaterialDetailModal()">닫기</button>
+            </div>
+        </div>
+
+        <div class="material-header-grid">
+            <div class="material-header-item"><span class="label">코드</span><span class="value" id="md_code">-</span></div>
+            <div class="material-header-item"><span class="label">제품명</span><span class="value" id="md_name">-</span></div>
+            <div class="material-header-item"><span class="label">제조사(업체)</span><span class="value" id="md_supplier">-</span></div>
+            <div class="material-header-item"><span class="label">단위</span><span class="value" id="md_unit">-</span></div>
+            <div class="material-header-item"><span class="label">총수량</span><span class="value" id="md_total_qty">0</span></div>
+        </div>
+
+        <div class="material-detail-tabs">
+            <button type="button" class="material-detail-tab active" id="tabLotsBtn" onclick="switchMaterialPanel('lots')">{% if can_manage_material_lots %}로트 관리{% else %}로트 목록{% endif %}</button>
+            <button type="button" class="material-detail-tab" id="tabLogsBtn" onclick="switchMaterialPanel('logs')">사용 로그</button>
+        </div>
+
+        <div id="materialLotsPanel" class="material-panel active">
+            {% if can_manage_material_lots %}
+            <p class="material-section-title">신규 로트 등록</p>
+            <form id="addLotForm" class="lot-inline-form" onsubmit="submitAddLot(event)">
+                <div class="lot-field">
+                    <label>입고일</label>
+                    <input type="date" name="receiving_date" required>
+                </div>
+                <div class="lot-field">
+                    <label>제조일</label>
+                    <input type="date" name="manufacture_date">
+                </div>
+                <div class="lot-field">
+                    <label>소비기한</label>
+                    <input type="date" name="expiry_date">
+                </div>
+                <div class="lot-field">
+                    <label>입고수량</label>
+                    <input type="number" name="received_quantity" step="0.1" placeholder="0" required>
+                </div>
+                <div class="lot-field">
+                    <label>현재수량</label>
+                    <input type="number" name="current_quantity" step="0.1" placeholder="0" required>
+                </div>
+                <div class="lot-field">
+                    <label>공급사LOT</label>
+                    <input type="text" name="supplier_lot" placeholder="선택 입력">
+                </div>
+                <button type="submit" class="btn btn-small lot-submit">로트 추가</button>
+            </form>
+            {% endif %}
+            <p class="material-section-title">로트 목록</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>보유 위치</th>
+                            <th>로트</th>
+                            <th>입고일</th>
+                            <th>제조일</th>
+                            <th>소비기한</th>
+                            <th>입고수량</th>
+                            <th>현재수량</th>
+                            {% if can_manage_material_lots %}<th>관리</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="lotTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="materialLogsPanel" class="material-panel">
+            <p class="material-section-title">부자재 사용 로그</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>사용일</th>
+                            <th>생산번호</th>
+                            <th>사용수량</th>
+                            <th>남은수량</th>
+                            <th>사용자</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usageLogTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="rawLotDetailModal" class="modal-bg">
+    <div class="modal-box material-modal">
+        <div class="material-modal-top">
+            <h3 style="margin:0;">원초 로트 상세 관리</h3>
+            <div style="display:flex;gap:0.5rem;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeRawLotModal()">닫기</button>
+            </div>
+        </div>
+        <div class="material-header-grid">
+            <div class="material-header-item"><span class="label">원초명</span><span class="value" id="rd_name">-</span></div>
+            <div class="material-header-item"><span class="label">코드</span><span class="value" id="rd_code">-</span></div>
+            <div class="material-header-item"><span class="label">작업장</span><span class="value" id="rd_workplace">-</span></div>
+            <div class="material-header-item"><span class="label">총재고 합계</span><span class="value" id="rd_total_stock">0</span></div>
+            <div class="material-header-item"><span class="label">현재고 합계</span><span class="value" id="rd_current_stock">0</span></div>
+        </div>
+        <p class="material-section-title">로트 목록</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>로트</th>
+                        <th>입고일</th>
+                        <th>자호</th>
+                        <th>1박스당 속수</th>
+                        <th>총재고</th>
+                        <th>현재고</th>
+                        <th>사용량</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody id="rawLotTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function openAddModal(){
+    document.getElementById('addModal').style.display='flex';
+}
+function closeAddModal(){
+    document.getElementById('addModal').style.display='none';
+}
+document.getElementById('addModal').addEventListener('click',function(e){
+    if(e.target===this) closeAddModal();
+});
+
+function openEditModal(btn){
+    const tab = btn.dataset.tab;
+    if(tab === 'products'){
+        document.getElementById('edit_product_id').value = btn.dataset.id || '';
+        document.getElementById('edit_product_workplace').value = btn.dataset.workplace || '';
+        document.getElementById('edit_product_name').value = btn.dataset.name || '';
+        document.getElementById('edit_product_code').value = btn.dataset.code || '';
+        document.getElementById('edit_product_category').value = btn.dataset.category || '기타';
+        document.getElementById('edit_product_description').value = btn.dataset.description || '';
+        document.getElementById('edit_product_box_quantity').value = btn.dataset.box_quantity || 1;
+        document.getElementById('edit_product_sheets_per_pack').value = btn.dataset.sheets_per_pack || 24;
+        document.getElementById('edit_product_cuts_per_sheet').value = btn.dataset.cuts_per_sheet || 9;
+        const sokPerBox = parseFloat(btn.dataset.sok_per_box || 0);
+        document.getElementById('edit_product_sok_per_box').value = Number.isFinite(sokPerBox) ? sokPerBox.toFixed(1) : '';
+        document.getElementById('edit_product_expiry_months').value = btn.dataset.expiry_months || 12;
+    } else if(tab === 'raw_materials'){
+        document.getElementById('edit_raw_id').value = btn.dataset.id || '';
+        document.getElementById('edit_raw_workplace').value = btn.dataset.workplace || '';
+        document.getElementById('edit_raw_code').value = btn.dataset.code || '';
+        document.getElementById('edit_raw_name').value = btn.dataset.name || '';
+        document.getElementById('edit_raw_sheets_per_sok').value = btn.dataset.sheets_per_sok || '';
+        document.getElementById('edit_raw_receiving_date').value = btn.dataset.receiving_date || '';
+        document.getElementById('edit_raw_car_number').value = btn.dataset.car_number || '';
+        document.getElementById('edit_raw_total_stock').value = btn.dataset.total_stock || 0;
+        document.getElementById('edit_raw_current_stock').value = btn.dataset.current_stock || 0;
+    } else if(tab === 'materials'){
+        document.getElementById('edit_mat_id').value = btn.dataset.id || '';
+        document.getElementById('edit_mat_workplace').value = btn.dataset.workplace || '';
+        document.getElementById('edit_mat_name').value = btn.dataset.name || '';
+        document.getElementById('edit_mat_code').value = btn.dataset.code || '';
+        document.getElementById('edit_mat_category').value = btn.dataset.category || '기타';
+        document.getElementById('edit_mat_unit').value = btn.dataset.unit || '개';
+        document.getElementById('edit_mat_supplier_id').value = btn.dataset.supplier_id || '';
+        const curStock = parseFloat(btn.dataset.current_stock || 0);
+        const logisticsStock = parseFloat(btn.dataset.logistics_stock || 0);
+        const totalStock = parseFloat(btn.dataset.total_stock || (curStock + logisticsStock));
+        document.getElementById('edit_mat_current_stock').value = Number.isFinite(curStock) ? curStock.toFixed(1) : 0;
+        document.getElementById('edit_mat_logistics_stock').value = Number.isFinite(logisticsStock) ? logisticsStock.toFixed(1) : 0;
+        document.getElementById('edit_mat_total_stock').value = Number.isFinite(totalStock) ? totalStock.toFixed(1) : 0;
+        document.getElementById('edit_mat_min_stock').value = btn.dataset.min_stock || 0;
+        document.getElementById('edit_mat_moq').value = btn.dataset.moq || 0;
+    } else if(tab === 'purchase_requests'){
+        document.getElementById('edit_pr_id').value = btn.dataset.id || '';
+        document.getElementById('edit_pr_workplace').value = btn.dataset.workplace || '';
+        document.getElementById('edit_pr_status').value = btn.dataset.status || '발주필요';
+        document.getElementById('edit_pr_requested_quantity').value = btn.dataset.requested_quantity || 0;
+        document.getElementById('edit_pr_ordered_quantity').value = btn.dataset.ordered_quantity || 0;
+        document.getElementById('edit_pr_received_quantity').value = btn.dataset.received_quantity || 0;
+        document.getElementById('edit_pr_expected_delivery_date').value = btn.dataset.expected_delivery_date || '';
+        document.getElementById('edit_pr_note').value = btn.dataset.note || '';
+    }
+    document.getElementById('editModal').style.display='flex';
+}
+function closeEditModal(){
+    document.getElementById('editModal').style.display='none';
+}
+document.getElementById('editModal').addEventListener('click',function(e){
+    if(e.target===this) closeEditModal();
+});
+
+const CAN_MANAGE_MATERIAL_LOTS = {{ 'true' if can_manage_material_lots else 'false' }};
+let currentMaterialId = null;
+let currentRawLotId = null;
+const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
+let rawActivityWorkplace = 'all';
+let productBulkAssignMode = false;
+let materialBulkAssignMode = false;
+let requirementCalcItems = [];
+let requirementCalcResultTab = 'summary';
+let requirementCalcSelectedCategories = [];
+let requirementCalcLastPayload = null;
+let requirementCalcLastCalculatedSignature = '';
+let requirementCalcUsageMode = false;
+let requirementCalcUsageValues = {};
+let requirementCalcActiveDraftId = null;
+const requirementCalcProductsMaster = {{ (calculator_products or [])|tojson }};
+const requirementCalcCategoryOptions = ['원초', '기름', '소금', '내포', '외포', '박스', '실리카', '트레이', '뚜껑', '각대', '기타'];
+const requirementCalcDraftStorageKey = 'integrated_requirement_calc_drafts_v1';
+let requirementCalcDrafts = [];
+const requirementCalcTwoMonthPreset = [
+    { code: 'A-EP-F002V1', boxes: 10589 },
+    { code: 'A-EP-F002V2', boxes: 6269 },
+    { code: 'A-EP-F003V1', boxes: 960 },
+    { code: 'A-EP-F004V1', boxes: 1081 },
+    { code: 'A-EP-F005V4', boxes: 4168 },
+    { code: 'A-EP-F005V5', boxes: 5958 },
+    { code: 'A-EP-F005V7', boxes: 796 },
+    { code: 'A-EP-F006V4', boxes: 2880 },
+    { code: 'A-EP-F009V1', boxes: 6240 },
+    { code: 'A-EP-F011V1', boxes: 2488 },
+    { code: 'A-EP-I001V2', boxes: 64 },
+    { code: 'A-EP-P001V1', boxes: 6989 },
+    { code: 'A-KR-F001V1', boxes: 10819 },
+    { code: 'A-KR-F001V2', boxes: 1814 },
+    { code: 'A-KR-F002V1', boxes: 17982 },
+    { code: 'A-KR-F004V1', boxes: 10 },
+    { code: 'A-KR-F004V4', boxes: 229 },
+    { code: 'A-KR-P005V1', boxes: 718 },
+    { code: 'A-KR-R002V1', boxes: 53 },
+    { code: 'A-KR-P004V1', boxes: 242 },
+    { code: 'A-KR-I001V5', boxes: 76 },
+    { code: 'A-KR-I001V2', boxes: 2776 },
+    { code: 'A-KRJ003V1', boxes: 523 },
+    { code: 'A-KRJ004V1', boxes: 572 },
+    { code: 'A-KR-J002V1', boxes: 74 },
+    { code: 'A-KR-J001V1', boxes: 67 },
+    { code: 'A-KR-R001V1', boxes: 5492 },
+    { code: 'A-KR-U001V2', boxes: 459 },
+    { code: 'B-EP-F001V1', boxes: 4032 },
+    { code: 'B-EP-F001V3', boxes: 3024 },
+];
+
+function toggleMaterialBulkAssignMode(forceMode){
+    const nextMode = typeof forceMode === 'boolean' ? forceMode : !materialBulkAssignMode;
+    materialBulkAssignMode = nextMode;
+    const bar = document.getElementById('materialBulkAssignBar');
+    const toggleBtn = document.getElementById('materialBulkAssignToggleBtn');
+    const columns = document.querySelectorAll('.material-bulk-col');
+    const headerCheckbox = document.getElementById('materialBulkAssignAll');
+    const targetSelect = document.getElementById('materialBulkAssignTarget');
+    if(bar) bar.style.display = materialBulkAssignMode ? 'block' : 'none';
+    if(toggleBtn){
+        toggleBtn.textContent = materialBulkAssignMode ? '일괄 변경 취소' : '작업장 일괄 변경';
+        toggleBtn.style.background = materialBulkAssignMode ? '#475569' : '#2563eb';
+    }
+    columns.forEach(node => {
+        node.style.display = materialBulkAssignMode ? '' : 'none';
+    });
+    if(!materialBulkAssignMode){
+        document.querySelectorAll('.bulk-material-checkbox').forEach(box => {
+            box.checked = false;
+        });
+        if(headerCheckbox) headerCheckbox.checked = false;
+        if(targetSelect) targetSelect.value = '';
+    }
+    syncMaterialBulkSelection();
+}
+
+function toggleProductBulkAssignMode(forceMode){
+    const nextMode = typeof forceMode === 'boolean' ? forceMode : !productBulkAssignMode;
+    productBulkAssignMode = nextMode;
+    const bar = document.getElementById('productBulkAssignBar');
+    const toggleBtn = document.getElementById('productBulkAssignToggleBtn');
+    const columns = document.querySelectorAll('.product-bulk-col');
+    const headerCheckbox = document.getElementById('productBulkAssignAll');
+    const targetSelect = document.getElementById('productBulkAssignTarget');
+    if(bar) bar.style.display = productBulkAssignMode ? 'block' : 'none';
+    if(toggleBtn){
+        toggleBtn.textContent = productBulkAssignMode ? '일괄 변경 취소' : '작업장 일괄 변경';
+        toggleBtn.style.background = productBulkAssignMode ? '#475569' : '#2563eb';
+    }
+    columns.forEach(node => {
+        node.style.display = productBulkAssignMode ? '' : 'none';
+    });
+    if(!productBulkAssignMode){
+        document.querySelectorAll('.bulk-product-checkbox').forEach(box => {
+            box.checked = false;
+        });
+        if(headerCheckbox) headerCheckbox.checked = false;
+        if(targetSelect) targetSelect.value = '';
+    }
+    syncProductBulkSelection();
+}
+
+function toggleAllMaterialBulkChecks(checked){
+    document.querySelectorAll('.bulk-material-checkbox').forEach(box => {
+        if(box.disabled) return;
+        box.checked = !!checked;
+    });
+    syncMaterialBulkSelection();
+}
+
+function toggleAllProductBulkChecks(checked){
+    document.querySelectorAll('.bulk-product-checkbox').forEach(box => {
+        if(box.disabled) return;
+        box.checked = !!checked;
+    });
+    syncProductBulkSelection();
+}
+
+function syncMaterialBulkSelection(){
+    const checkedBoxes = Array.from(document.querySelectorAll('.bulk-material-checkbox:checked'));
+    const countText = document.getElementById('materialBulkAssignCount');
+    const inputsWrap = document.getElementById('materialBulkAssignInputs');
+    const headerCheckbox = document.getElementById('materialBulkAssignAll');
+    const allBoxes = Array.from(document.querySelectorAll('.bulk-material-checkbox'));
+    if(countText){
+        countText.textContent = `선택 ${checkedBoxes.length}건`;
+    }
+    if(inputsWrap){
+        inputsWrap.innerHTML = checkedBoxes.map(box => `<input type="hidden" name="material_ids[]" value="${box.value}">`).join('');
+    }
+    if(headerCheckbox){
+        headerCheckbox.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+        headerCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < allBoxes.length;
+    }
+}
+
+function syncProductBulkSelection(){
+    const checkedBoxes = Array.from(document.querySelectorAll('.bulk-product-checkbox:checked'));
+    const countText = document.getElementById('productBulkAssignCount');
+    const inputsWrap = document.getElementById('productBulkAssignInputs');
+    const headerCheckbox = document.getElementById('productBulkAssignAll');
+    const allBoxes = Array.from(document.querySelectorAll('.bulk-product-checkbox'));
+    if(countText){
+        countText.textContent = `선택 ${checkedBoxes.length}건`;
+    }
+    if(inputsWrap){
+        inputsWrap.innerHTML = checkedBoxes.map(box => `<input type="hidden" name="product_ids[]" value="${box.value}">`).join('');
+    }
+    if(headerCheckbox){
+        headerCheckbox.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+        headerCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < allBoxes.length;
+    }
+}
+
+function populateRequirementCalcOptions(filteredProducts){
+    const select = document.getElementById('reqCalcProductSelect');
+    if(!select) return;
+    const currentValue = select.value;
+    const rows = filteredProducts || requirementCalcProductsMaster;
+    select.innerHTML = '<option value="">상품 선택</option>' + rows.map(product => {
+        const codeText = product.code ? ` [${product.code}]` : '';
+        return `<option value="${product.id}" data-name="${String(product.name || '').replace(/"/g, '&quot;')}" data-code="${String(product.code || '').replace(/"/g, '&quot;')}" data-workplace="${String(product.workplace || '').replace(/"/g, '&quot;')}">${product.name || ''}${codeText}</option>`;
+    }).join('');
+    if(rows.some(product => String(product.id) === String(currentValue))){
+        select.value = currentValue;
+    }
+}
+
+function filterRequirementCalcOptions(){
+    const workplaceSelect = document.getElementById('reqCalcWorkplaceSelect');
+    const workplace = String(workplaceSelect ? workplaceSelect.value : '').trim();
+    const input = document.getElementById('reqCalcProductSearch');
+    const keyword = String(input ? input.value : '').trim().toLowerCase();
+    const filtered = requirementCalcProductsMaster.filter(product => {
+        const name = String(product.name || '').toLowerCase();
+        const code = String(product.code || '').toLowerCase();
+        const matchedKeyword = !keyword || name.includes(keyword) || code.includes(keyword);
+        const matchedWorkplace = !workplace || String(product.workplace || '') === workplace;
+        return matchedKeyword && matchedWorkplace;
+    });
+    populateRequirementCalcOptions(filtered);
+}
+
+function renderRequirementCategoryModalOptions(){
+    const wrap = document.getElementById('reqCalcCategoryOptions');
+    if(!wrap) return;
+    wrap.innerHTML = requirementCalcCategoryOptions.map((category) => `
+        <label style="display:flex;align-items:center;gap:0.55rem;padding:0.65rem 0.75rem;border:1px solid #dbe2ea;border-radius:12px;background:#fff;">
+            <input type="checkbox" class="req-calc-category-check" value="${category}" ${requirementCalcSelectedCategories.includes(category) ? 'checked' : ''}>
+            <span style="font-weight:700;color:#0f172a;">${category}</span>
+        </label>
+    `).join('');
+}
+
+function openRequirementCategoryModal(){
+    renderRequirementCategoryModalOptions();
+    const modal = document.getElementById('reqCalcCategoryModal');
+    if(modal) {
+        modal.style.display = 'flex';
+        window.setTimeout(() => {
+            const firstCheck = modal.querySelector('.req-calc-category-check');
+            if(firstCheck) firstCheck.focus();
+        }, 0);
+    }
+}
+
+function closeRequirementCategoryModal(){
+    const modal = document.getElementById('reqCalcCategoryModal');
+    if(modal) modal.style.display = 'none';
+}
+
+function toggleRequirementCategoryChecks(checked){
+    document.querySelectorAll('.req-calc-category-check').forEach((box) => {
+        box.checked = !!checked;
+    });
+}
+
+function getRequirementCalcSelectedCategories(){
+    return Array.from(document.querySelectorAll('.req-calc-category-check:checked')).map((box) => String(box.value || '').trim()).filter(Boolean);
+}
+
+function applyRequirementCategoryCalculation(){
+    const selected = getRequirementCalcSelectedCategories();
+    if(!selected.length){
+        alert('계산할 분류를 하나 이상 선택해주세요.');
+        return;
+    }
+    requirementCalcSelectedCategories = selected;
+    closeRequirementCategoryModal();
+    calculateIntegratedRequirements(selected);
+}
+
+function calculateAllIntegratedRequirements(){
+    requirementCalcSelectedCategories = [];
+    calculateIntegratedRequirements([]);
+}
+
+function focusNextRequirementCalcBoxInput(currentIndex){
+    const inputs = Array.from(document.querySelectorAll('.req-calc-box-input'));
+    if(!inputs.length) return;
+    const nextInput = inputs.find((input) => Number(input.dataset.reqBoxIndex || -1) > currentIndex);
+    if(nextInput){
+        nextInput.focus();
+        nextInput.select?.();
+        return;
+    }
+    const bulkInput = document.getElementById('reqCalcBulkBoxes');
+    if(bulkInput){
+        bulkInput.focus();
+        bulkInput.select?.();
+    }
+}
+
+function bindRequirementCalcInputKeyHandlers(){
+    document.querySelectorAll('.req-calc-box-input').forEach((input) => {
+        if(input.dataset.keyBound === '1') return;
+        input.dataset.keyBound = '1';
+        input.addEventListener('keydown', function(e){
+            if(e.key === 'Tab' && !e.shiftKey){
+                e.preventDefault();
+                focusNextRequirementCalcBoxInput(Number(this.dataset.reqBoxIndex || -1));
+                return;
+            }
+            if(e.key === 'Enter'){
+                e.preventDefault();
+                calculateAllIntegratedRequirements();
+            }
+        });
+    });
+}
+
+function addRequirementCalcItemsByWorkplace(){
+    const workplaceSelect = document.getElementById('reqCalcWorkplaceSelect');
+    const workplace = String(workplaceSelect ? workplaceSelect.value : '').trim();
+    if(!workplace){
+        alert('작업장을 먼저 선택해주세요.');
+        return;
+    }
+    const targets = requirementCalcProductsMaster.filter(product => String(product.workplace || '') === workplace);
+    if(!targets.length){
+        alert('선택한 작업장에 등록된 상품이 없습니다.');
+        return;
+    }
+    let addedCount = 0;
+    targets.forEach(product => {
+        const productId = Number(product.id || 0);
+        if(productId <= 0) return;
+        if(requirementCalcItems.some(item => item.product_id === productId)) return;
+        requirementCalcItems.push({
+            product_id: productId,
+            name: product.name || '',
+            code: product.code || '',
+            workplace: product.workplace || '',
+            boxes: 1,
+        });
+        addedCount += 1;
+    });
+    requirementCalcActiveDraftId = null;
+    renderRequirementCalcInputRows();
+    renderRequirementCalcDraftTabs();
+    alert(addedCount > 0 ? `${workplace} 상품 ${addedCount}건을 추가했습니다.` : '이미 모두 추가된 상품입니다.');
+}
+
+function applyTwoMonthRequirementPreset(){
+    const byCode = new Map(requirementCalcProductsMaster.map(product => [String(product.code || '').trim(), product]));
+    const missingCodes = [];
+    requirementCalcItems = [];
+    requirementCalcTwoMonthPreset.forEach(item => {
+        const product = byCode.get(String(item.code || '').trim());
+        if(!product){
+            missingCodes.push(item.code);
+            return;
+        }
+        const boxes = Number(item.boxes || 0);
+        requirementCalcItems.push({
+            product_id: Number(product.id || 0),
+            name: product.name || '',
+            code: product.code || '',
+            workplace: product.workplace || '',
+            boxes: Number.isFinite(boxes) && boxes > 0 ? boxes : 0,
+        });
+    });
+    requirementCalcActiveDraftId = null;
+    renderRequirementCalcInputRows();
+    renderRequirementCalcDraftTabs();
+    if(missingCodes.length){
+        alert(`2달치 계산 대상 중 미등록 상품 ${missingCodes.length}건은 제외되었습니다.\n${missingCodes.join(', ')}`);
+    }
+    calculateIntegratedRequirements(requirementCalcSelectedCategories);
+}
+
+function switchRequirementCalcResultTab(tab){
+    requirementCalcResultTab = tab === 'products' ? 'products' : 'summary';
+    const summaryBtn = document.getElementById('reqCalcSummaryTabBtn');
+    const productsBtn = document.getElementById('reqCalcProductsTabBtn');
+    const summaryPanel = document.getElementById('reqCalcSummaryPanel');
+    const productsPanel = document.getElementById('reqCalcProductsPanel');
+    if(summaryBtn) summaryBtn.classList.toggle('active', requirementCalcResultTab === 'summary');
+    if(productsBtn) productsBtn.classList.toggle('active', requirementCalcResultTab === 'products');
+    if(summaryPanel) summaryPanel.classList.toggle('active', requirementCalcResultTab === 'summary');
+    if(productsPanel) productsPanel.classList.toggle('active', requirementCalcResultTab === 'products');
+    const activeDraft = requirementCalcDrafts.find((item) => item.id === requirementCalcActiveDraftId);
+    if(activeDraft){
+        activeDraft.result_tab = requirementCalcResultTab;
+        saveRequirementCalcDraftsToStorage();
+    }
+}
+
+function printRequirementCalc(mode){
+    const printMode = mode === 'products' ? 'products' : 'summary';
+    const source = document.getElementById(printMode === 'products' ? 'reqCalcProductsPanel' : 'reqCalcSummaryPanel');
+    if(!source) return;
+    const hasContent = printMode === 'products'
+        ? document.getElementById('reqCalcProductsWrap')?.style.display !== 'none'
+        : document.getElementById('reqCalcSummaryWrap')?.style.display !== 'none';
+    if(!hasContent){
+        alert('출력할 계산 결과가 없습니다.');
+        return;
+    }
+    const subtitle = printMode === 'products' ? '상품별 필요 원부자재 계산 결과' : '전체 필요 원부자재 계산 결과';
+    const printWindow = window.open('', '_blank', 'width=1100,height=800');
+    if(!printWindow){
+        alert('출력 창을 열 수 없습니다.');
+        return;
+    }
+    const style = `
+        <style>
+            body{font-family:'Malgun Gothic',sans-serif;padding:24px;color:#111827;}
+            h1{margin:0 0 8px;font-size:24px;}
+            .sub{margin:0 0 18px;color:#4b5563;font-size:13px;}
+            h3,h4{margin:0 0 8px;color:#111827;}
+            table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;}
+            th,td{border:1px solid #cbd5e1;padding:6px 7px;text-align:left;vertical-align:top;}
+            th{background:#f8fafc;}
+            .table-container{overflow:visible !important;}
+            .reqcalc-product-card{page-break-inside:avoid;border:1px solid #dbe2ea;border-radius:12px;padding:12px;margin-bottom:14px;}
+            .reqcalc-usage-input{width:64px !important;min-width:64px !important;padding:2px 4px !important;font-size:11px !important;text-align:right;border:1px solid #cbd5e1;border-radius:6px;box-sizing:border-box;}
+        </style>
+    `;
+    printWindow.document.open();
+    printWindow.document.write(`
+        <html>
+        <head><title>원부자재 계산기 출력</title>${style}</head>
+        <body>
+            <h1>원부자재 계산기</h1>
+            <p class="sub">${subtitle}</p>
+            ${source.innerHTML}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+    }, 300);
+}
+
+
+async function exportRequirementCalcExcel(mode){
+    if(!requirementCalcItems.length){
+        alert('엑셀로 내보낼 상품을 먼저 추가해주세요.');
+        return;
+    }
+    const items = requirementCalcItems
+        .map(item => ({ product_id: item.product_id, boxes: Number(item.boxes || 0) }))
+        .filter(item => item.product_id > 0 && item.boxes > 0);
+    if(!items.length){
+        alert('0보다 큰 예상 생산량이 있는 상품이 필요합니다.');
+        return;
+    }
+
+    try{
+        const res = await fetch('/integrated-management/requirements-calculator-export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mode: mode === 'products' ? 'products' : 'summary',
+                items,
+                categories: requirementCalcSelectedCategories,
+            }),
+        });
+        if(!res.ok){
+            alert('엑셀 출력 파일 생성 중 오류가 발생했습니다.');
+            return;
+        }
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        const url = window.URL.createObjectURL(blob);
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const matched = disposition.match(/filename=([^;]+)/i);
+        const fallback = mode === 'products' ? 'requirements_products.xlsx' : 'requirements_summary.xlsx';
+        const filename = matched ? matched[1].trim().replace(/^"|"$/g, '') : fallback;
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch(err){
+        alert('엑셀 출력 요청에 실패했습니다.');
+    }
+}
+
+function renderRequirementCalcInputRows(){
+    const tbody = document.getElementById('reqCalcInputBody');
+    if(!tbody) return;
+    if(!requirementCalcItems.length){
+        tbody.innerHTML = '<tr id="reqCalcEmptyRow"><td colspan="4" style="text-align:center;color:#64748b;">선택한 상품이 없습니다.</td></tr>';
+        bindRequirementCalcInputKeyHandlers();
+        return;
+    }
+    tbody.innerHTML = requirementCalcItems.map((item, idx) => `
+        <tr>
+            <td>${item.workplace || '-'}</td>
+            <td><strong>${item.name}</strong>${item.code ? ` <span style="color:#64748b;">[${item.code}]</span>` : ''}</td>
+            <td><input type="number" class="req-calc-box-input" data-req-box-index="${idx}" min="0" step="0.1" value="${item.boxes}" style="width:120px;padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;" onchange="updateRequirementCalcBoxes(${idx}, this.value)"></td>
+            <td><button type="button" class="btn btn-small" style="background:#e74c3c;" onclick="removeRequirementCalcItem(${idx})">삭제</button></td>
+        </tr>
+    `).join('');
+    bindRequirementCalcInputKeyHandlers();
+}
+
+function addRequirementCalcItem(){
+    const select = document.getElementById('reqCalcProductSelect');
+    if(!select || !select.value){
+        alert('상품을 먼저 선택해주세요.');
+        return;
+    }
+    const productId = Number(select.value || 0);
+    if(requirementCalcItems.some(item => item.product_id === productId)){
+        alert('이미 추가된 상품입니다.');
+        return;
+    }
+    const option = select.options[select.selectedIndex];
+    requirementCalcItems.push({
+        product_id: productId,
+        name: option.dataset.name || option.textContent || '',
+        code: option.dataset.code || '',
+        workplace: option.dataset.workplace || '',
+        boxes: 1,
+    });
+    requirementCalcActiveDraftId = null;
+    renderRequirementCalcInputRows();
+    renderRequirementCalcDraftTabs();
+    select.value = '';
+}
+
+function removeRequirementCalcItem(index){
+    requirementCalcItems.splice(index, 1);
+    requirementCalcActiveDraftId = null;
+    renderRequirementCalcInputRows();
+    renderRequirementCalcDraftTabs();
+}
+
+function updateRequirementCalcBoxes(index, value){
+    const num = Number(value || 0);
+    requirementCalcItems[index].boxes = Number.isFinite(num) && num > 0 ? num : 0;
+    requirementCalcActiveDraftId = null;
+    renderRequirementCalcDraftTabs();
+}
+
+function applyRequirementCalcBulkBoxes(){
+    if(!requirementCalcItems.length){
+        alert('먼저 상품을 추가해주세요.');
+        return;
+    }
+    const input = document.getElementById('reqCalcBulkBoxes');
+    const num = Number(input ? input.value : 0);
+    if(!Number.isFinite(num) || num <= 0){
+        alert('0보다 큰 BOX 수를 입력해주세요.');
+        if(input){
+            input.focus();
+            input.select?.();
+        }
+        return;
+    }
+    requirementCalcItems = requirementCalcItems.map(item => ({
+        ...item,
+        boxes: num,
+    }));
+    requirementCalcActiveDraftId = null;
+    renderRequirementCalcInputRows();
+    renderRequirementCalcDraftTabs();
+}
+
+function clearRequirementCalcItems(){
+    requirementCalcItems = [];
+    requirementCalcLastPayload = null;
+    requirementCalcUsageMode = false;
+    requirementCalcUsageValues = {};
+    requirementCalcActiveDraftId = null;
+    renderRequirementCalcInputRows();
+    renderRequirementCalcDraftTabs();
+    renderCurrentRequirementCalcPayload();
+}
+
+function escapeRequirementCalcHtml(value){
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getRequirementCalcUsageKey(scopeKey, item){
+    return `${scopeKey}::${String(item.code || item.name || '-')}`;
+}
+
+function getRequirementCalcUsageValue(scopeKey, item){
+    const key = getRequirementCalcUsageKey(scopeKey, item);
+    return Number(requirementCalcUsageValues[key] || 0);
+}
+
+function syncRequirementCalcItemsFromInputs(){
+    const inputs = Array.from(document.querySelectorAll('.req-calc-box-input'));
+    inputs.forEach((input) => {
+        const index = Number(input.dataset.reqBoxIndex || -1);
+        if(index < 0 || !requirementCalcItems[index]) return;
+        const num = Number(input.value || 0);
+        requirementCalcItems[index].boxes = Number.isFinite(num) && num > 0 ? num : 0;
+    });
+}
+
+function getRequirementCalcItemsSignature(){
+    return JSON.stringify(
+        requirementCalcItems
+            .map((item) => ({
+                product_id: Number(item.product_id || 0),
+                boxes: Number(item.boxes || 0),
+            }))
+            .filter((item) => item.product_id > 0)
+            .sort((a, b) => a.product_id - b.product_id)
+    );
+}
+
+function buildRequirementCalcDraftLabel(items){
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const firstName = items && items.length ? String(items[0].name || '계산결과') : '계산결과';
+    const suffix = items && items.length > 1 ? ` 외 ${items.length - 1}` : '';
+    return `${month}-${day} ${firstName}${suffix}`;
+}
+
+function saveRequirementCalcDraftsToStorage(){
+    try{
+        localStorage.setItem(requirementCalcDraftStorageKey, JSON.stringify(requirementCalcDrafts));
+    } catch(err){
+        console.warn('requirementCalcDrafts save failed', err);
+    }
+}
+
+function loadRequirementCalcDraftsFromStorage(){
+    try{
+        const raw = localStorage.getItem(requirementCalcDraftStorageKey);
+        requirementCalcDrafts = raw ? JSON.parse(raw) : [];
+        if(!Array.isArray(requirementCalcDrafts)){
+            requirementCalcDrafts = [];
+        }
+    } catch(err){
+        requirementCalcDrafts = [];
+    }
+}
+
+function renderRequirementCalcDraftTabs(){
+    const wrap = document.getElementById('reqCalcSavedTabs');
+    if(!wrap) return;
+    if(!requirementCalcDrafts.length){
+        wrap.innerHTML = '';
+        return;
+    }
+    wrap.innerHTML = requirementCalcDrafts.map((draft) => `
+        <button type="button" class="reqcalc-result-tab ${draft.id === requirementCalcActiveDraftId ? 'active' : ''}" onclick="loadRequirementCalcDraft('${draft.id}')">
+            <span class="reqcalc-saved-tab">
+                <span>${escapeRequirementCalcHtml(draft.label || '임시저장')}</span>
+                <span class="close" onclick="event.stopPropagation(); deleteRequirementCalcDraft('${draft.id}')">×</span>
+            </span>
+        </button>
+    `).join('');
+}
+
+function updateRequirementCalcPostActions(){
+    const wrap = document.getElementById('reqCalcPostActions');
+    const hint = document.getElementById('reqCalcPostHint');
+    const btn = document.getElementById('reqCalcUsageActionBtn');
+    if(!wrap || !hint || !btn) return;
+    const hasPayload = !!(requirementCalcLastPayload && requirementCalcLastPayload.ok);
+    wrap.classList.toggle('active', hasPayload);
+    if(!hasPayload) return;
+    if(requirementCalcUsageMode){
+        hint.textContent = '사용량을 입력하면 로스량과 남은재고량이 함께 계산됩니다. 저장하면 결과 탭으로 다시 불러올 수 있습니다.';
+        btn.textContent = '임시저장';
+        btn.style.background = '#0f766e';
+    } else {
+        hint.textContent = '계산 결과를 확인한 뒤 추가 계산을 활성화하면 사용량, 로스량, 남은재고량을 같이 볼 수 있습니다.';
+        btn.textContent = '추가 계산 활성화';
+        btn.style.background = '#7c3aed';
+    }
+}
+
+function renderCurrentRequirementCalcPayload(){
+    const emptySummary = document.getElementById('reqCalcSummaryEmpty');
+    const summaryWrap = document.getElementById('reqCalcSummaryWrap');
+    const rawWrap = document.getElementById('reqCalcRawSummary');
+    const baseWrap = document.getElementById('reqCalcBaseSummary');
+    const subWrap = document.getElementById('reqCalcSubSummary');
+    const subtitle = document.getElementById('reqCalcPrintSubtitle');
+    const productsWrap = document.getElementById('reqCalcProductsWrap');
+    const emptyProducts = document.getElementById('reqCalcProductsEmpty');
+
+    if(!requirementCalcLastPayload){
+        if(emptySummary) emptySummary.style.display = 'block';
+        if(summaryWrap) summaryWrap.style.display = 'none';
+        if(emptyProducts) emptyProducts.style.display = 'block';
+        if(productsWrap){
+            productsWrap.style.display = 'none';
+            productsWrap.innerHTML = '';
+        }
+        if(subtitle){
+            subtitle.textContent = requirementCalcSelectedCategories.length
+                ? `선택 분류: ${requirementCalcSelectedCategories.join(', ')}`
+                : '전체 분류 기준';
+        }
+        updateRequirementCalcPostActions();
+        return;
+    }
+
+    if(emptySummary) emptySummary.style.display = 'none';
+    if(summaryWrap) summaryWrap.style.display = 'block';
+    if(rawWrap) rawWrap.innerHTML = renderRequirementCalcTable((requirementCalcLastPayload.summary || {}).raw || [], { scopeKey: 'summary:raw' });
+    if(baseWrap) baseWrap.innerHTML = renderRequirementCalcTable((requirementCalcLastPayload.summary || {}).base || [], { scopeKey: 'summary:base' });
+    if(subWrap) subWrap.innerHTML = renderRequirementCalcTable((requirementCalcLastPayload.summary || {}).sub || [], { scopeKey: 'summary:sub' });
+    if(subtitle){
+        subtitle.textContent = requirementCalcSelectedCategories.length
+            ? `선택 분류: ${requirementCalcSelectedCategories.join(', ')}`
+            : '전체 분류 기준';
+    }
+    renderRequirementCalcProducts(requirementCalcLastPayload.products || []);
+    bindRequirementCalcUsageInputKeyHandlers();
+    updateRequirementCalcPostActions();
+}
+
+async function handleRequirementCalcUsageAction(){
+    syncRequirementCalcItemsFromInputs();
+    if(!requirementCalcLastPayload){
+        alert('먼저 계산을 완료해주세요.');
+        return;
+    }
+    const currentSignature = getRequirementCalcItemsSignature();
+    if(currentSignature !== requirementCalcLastCalculatedSignature){
+        const ok = await calculateIntegratedRequirements(requirementCalcSelectedCategories, { preserveResultTab: true, activateUsageMode: true });
+        if(!ok) return;
+    }
+    if(!requirementCalcUsageMode){
+        requirementCalcUsageMode = true;
+        renderCurrentRequirementCalcPayload();
+        return;
+    }
+    saveCurrentRequirementCalcDraft();
+}
+
+function saveCurrentRequirementCalcDraft(){
+    syncRequirementCalcItemsFromInputs();
+    if(!requirementCalcLastPayload){
+        alert('임시저장할 계산 결과가 없습니다.');
+        return;
+    }
+    const draftId = requirementCalcActiveDraftId || `draft_${Date.now()}`;
+    const draft = {
+        id: draftId,
+        label: buildRequirementCalcDraftLabel(requirementCalcItems),
+        saved_at: new Date().toISOString(),
+        items: JSON.parse(JSON.stringify(requirementCalcItems)),
+        selected_categories: [...requirementCalcSelectedCategories],
+        result_tab: requirementCalcResultTab,
+        usage_mode: !!requirementCalcUsageMode,
+        usage_values: { ...requirementCalcUsageValues },
+        payload: JSON.parse(JSON.stringify(requirementCalcLastPayload)),
+    };
+    const existingIndex = requirementCalcDrafts.findIndex((item) => item.id === draftId);
+    if(existingIndex >= 0){
+        requirementCalcDrafts.splice(existingIndex, 1, draft);
+    } else {
+        requirementCalcDrafts.unshift(draft);
+    }
+    requirementCalcActiveDraftId = draftId;
+    saveRequirementCalcDraftsToStorage();
+    renderRequirementCalcDraftTabs();
+    alert(existingIndex >= 0 ? '임시저장된 계산 결과를 업데이트했습니다.' : '계산 결과를 임시저장했습니다.');
+}
+
+function loadRequirementCalcDraft(draftId){
+    const draft = requirementCalcDrafts.find((item) => item.id === draftId);
+    if(!draft) return;
+    requirementCalcItems = Array.isArray(draft.items) ? JSON.parse(JSON.stringify(draft.items)) : [];
+    requirementCalcSelectedCategories = Array.isArray(draft.selected_categories) ? [...draft.selected_categories] : [];
+    requirementCalcLastPayload = draft.payload ? JSON.parse(JSON.stringify(draft.payload)) : null;
+    requirementCalcUsageMode = !!draft.usage_mode;
+    requirementCalcUsageValues = draft.usage_values ? { ...draft.usage_values } : {};
+    requirementCalcActiveDraftId = draft.id;
+    renderRequirementCalcInputRows();
+    renderRequirementCalcDraftTabs();
+    renderCurrentRequirementCalcPayload();
+    switchRequirementCalcResultTab(draft.result_tab === 'products' ? 'products' : 'summary');
+}
+
+function deleteRequirementCalcDraft(draftId){
+    requirementCalcDrafts = requirementCalcDrafts.filter((item) => item.id !== draftId);
+    if(requirementCalcActiveDraftId === draftId){
+        requirementCalcActiveDraftId = null;
+    }
+    saveRequirementCalcDraftsToStorage();
+    renderRequirementCalcDraftTabs();
+}
+
+function updateRequirementCalcUsageValue(scopeKey, codeKey, value){
+    const mapKey = `${scopeKey}::${codeKey}`;
+    const num = Number(value || 0);
+    requirementCalcUsageValues[mapKey] = Number.isFinite(num) && num > 0 ? num : 0;
+    renderCurrentRequirementCalcPayload();
+}
+
+function focusRequirementCalcUsageInputByIndex(targetIndex){
+    const inputs = Array.from(document.querySelectorAll('.reqcalc-usage-input'));
+    const target = inputs[targetIndex];
+    if(target){
+        target.focus();
+        target.select?.();
+    }
+}
+
+function bindRequirementCalcUsageInputKeyHandlers(){
+    const inputs = Array.from(document.querySelectorAll('.reqcalc-usage-input'));
+    inputs.forEach((input, index) => {
+        if(input.dataset.keyBound === '1') return;
+        input.dataset.keyBound = '1';
+        input.addEventListener('keydown', function(e){
+            if(e.key === 'Tab'){
+                e.preventDefault();
+                updateRequirementCalcUsageValue(
+                    this.dataset.scopeKey || '',
+                    this.dataset.codeKey || '',
+                    this.value
+                );
+                window.setTimeout(() => {
+                    const nextIndex = e.shiftKey ? index - 1 : index + 1;
+                    focusRequirementCalcUsageInputByIndex(nextIndex);
+                }, 0);
+            }
+        });
+    });
+}
+
+function renderRequirementCalcTable(items, options){
+    const opts = options || {};
+    const scopeKey = opts.scopeKey || 'summary';
+    if(!items || !items.length){
+        return '<div style="color:#64748b;padding:0.4rem 0;">데이터가 없습니다.</div>';
+    }
+    const usageHeader = requirementCalcUsageMode ? `
+        <th class="reqcalc-num">사용량</th>
+        <th class="reqcalc-num">로스량</th>
+        <th class="reqcalc-num">남은재고량</th>
+    ` : '';
+    return `
+        <div class="table-container">
+            <table class="reqcalc-table">
+                <thead>
+                    <tr>
+                        <th>코드</th>
+                        <th>자재명</th>
+                        <th>현재 총재고</th>
+                        <th>필요량</th>
+                        <th>부족량</th>
+                        ${usageHeader}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(item => `
+                        ${(() => {
+                            const usageValue = getRequirementCalcUsageValue(scopeKey, item);
+                            const required = Number(item.required || 0);
+                            const stock = Number(item.stock || 0);
+                            const loss = Math.max(usageValue - required, 0);
+                            const remaining = stock - usageValue;
+                            const codeKey = escapeRequirementCalcHtml(String(item.code || item.name || '-'));
+                            return `
+                                <tr>
+                                    <td>${escapeRequirementCalcHtml(item.code || '-')}</td>
+                                    <td>${escapeRequirementCalcHtml(item.name || '-')}</td>
+                                    <td class="reqcalc-num">${Number(stock).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
+                                    <td class="reqcalc-num"><strong>${Number(required).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</strong></td>
+                                    <td class="reqcalc-num" style="color:${Number(item.shortage || 0) > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">${Number(item.shortage || 0).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
+                                    ${requirementCalcUsageMode ? `
+                                        <td class="reqcalc-num">
+                                            <input type="number" min="0" step="0.1" class="reqcalc-usage-input" data-scope-key="${escapeRequirementCalcHtml(scopeKey)}" data-code-key="${codeKey}" value="${usageValue > 0 ? Number(usageValue).toFixed(1) : ''}" onchange="updateRequirementCalcUsageValue('${escapeRequirementCalcHtml(scopeKey)}', '${codeKey}', this.value)">
+                                        </td>
+                                        <td class="reqcalc-num" style="color:${loss > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">${loss.toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
+                                        <td class="reqcalc-num" style="color:${remaining < 0 ? '#dc2626' : '#0f766e'};font-weight:700;">${remaining.toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
+                                    ` : ''}
+                                </tr>
+                            `;
+                        })()}
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function renderRequirementCalcProducts(products){
+    const wrap = document.getElementById('reqCalcProductsWrap');
+    const empty = document.getElementById('reqCalcProductsEmpty');
+    if(!wrap || !empty) return;
+    if(!products || !products.length){
+        empty.style.display = 'block';
+        wrap.style.display = 'none';
+        wrap.innerHTML = '';
+        return;
+    }
+    empty.style.display = 'none';
+    wrap.style.display = 'block';
+    wrap.innerHTML = products.map(product => `
+        <div class="reqcalc-product-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <div>
+                    <strong style="font-size:1rem;color:#0f172a;">${product.product_name}</strong>
+                    <div style="font-size:0.84rem;color:#64748b;">작업장: ${product.workplace || '-'} | 예상 생산량: ${Number(product.planned_boxes || 0).toFixed(1)} BOX</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr;gap:0.9rem;">
+                <div>
+                    <h4 style="margin:0 0 0.4rem;">원초</h4>
+                    ${renderRequirementCalcTable(product.raw_items || [], { scopeKey: `product:${product.product_id}:raw` })}
+                </div>
+                <div>
+                    <h4 style="margin:0 0 0.4rem;">원자재</h4>
+                    ${renderRequirementCalcTable(product.base_items || [], { scopeKey: `product:${product.product_id}:base` })}
+                </div>
+                <div>
+                    <h4 style="margin:0 0 0.4rem;">부자재</h4>
+                    ${renderRequirementCalcTable(product.sub_items || [], { scopeKey: `product:${product.product_id}:sub` })}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function calculateIntegratedRequirements(selectedCategories, options){
+    const opts = options || {};
+    syncRequirementCalcItemsFromInputs();
+    if(!requirementCalcItems.length){
+        alert('계산할 상품을 먼저 추가해주세요.');
+        return false;
+    }
+    const items = requirementCalcItems
+        .map(item => ({ product_id: item.product_id, boxes: Number(item.boxes || 0) }))
+        .filter(item => item.product_id > 0 && item.boxes > 0);
+    if(!items.length){
+        alert('예상 생산량 박스 수를 0보다 크게 입력해주세요.');
+        return false;
+    }
+    if(Array.isArray(selectedCategories)){
+        requirementCalcSelectedCategories = selectedCategories
+            .map((category) => String(category || '').trim())
+            .filter(Boolean);
+    }
+
+    try{
+        const res = await fetch('/integrated-management/requirements-calculator-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items, categories: requirementCalcSelectedCategories })
+        });
+        const payload = await res.json();
+        if(!res.ok || !payload.ok){
+            alert(payload.message || '원부자재 계산 중 오류가 발생했습니다.');
+            return false;
+        }
+        requirementCalcLastPayload = payload;
+        requirementCalcLastCalculatedSignature = JSON.stringify(items.slice().sort((a, b) => a.product_id - b.product_id));
+        requirementCalcUsageMode = !!opts.activateUsageMode;
+        requirementCalcUsageValues = {};
+        if(!opts.preserveDraft){
+            requirementCalcActiveDraftId = null;
+        }
+        renderRequirementCalcDraftTabs();
+        renderCurrentRequirementCalcPayload();
+        if(opts.preserveResultTab){
+            switchRequirementCalcResultTab(requirementCalcResultTab);
+        } else {
+            switchRequirementCalcResultTab('summary');
+        }
+        return true;
+    } catch(err){
+        alert('원부자재 계산 요청에 실패했습니다.');
+        return false;
+    }
+}
+
+loadRequirementCalcDraftsFromStorage();
+renderRequirementCalcDraftTabs();
+filterRequirementCalcOptions();
+
+const reqCalcCategoryModal = document.getElementById('reqCalcCategoryModal');
+if(reqCalcCategoryModal){
+    reqCalcCategoryModal.addEventListener('click', function(e){
+        if(e.target === this) closeRequirementCategoryModal();
+    });
+}
+
+const reqCalcProductSelect = document.getElementById('reqCalcProductSelect');
+if(reqCalcProductSelect){
+    reqCalcProductSelect.addEventListener('dblclick', function(){
+        addRequirementCalcItem();
+    });
+    reqCalcProductSelect.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+            e.preventDefault();
+            addRequirementCalcItem();
+        }
+    });
+}
+
+const reqCalcBulkBoxes = document.getElementById('reqCalcBulkBoxes');
+if(reqCalcBulkBoxes){
+    reqCalcBulkBoxes.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+            e.preventDefault();
+            applyRequirementCalcBulkBoxes();
+        }
+    });
+}
+
+const reqCalcInputBody = document.getElementById('reqCalcInputBody');
+if(reqCalcInputBody){
+    reqCalcInputBody.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+            const target = e.target;
+            if(target && target.id === 'reqCalcBulkBoxes') return;
+            if(target && target.classList && target.classList.contains('req-calc-box-input')) return;
+            e.preventDefault();
+            calculateAllIntegratedRequirements();
+        }
+    });
+}
+
+const reqCalcProductSearch = document.getElementById('reqCalcProductSearch');
+if(reqCalcProductSearch){
+    reqCalcProductSearch.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+            e.preventDefault();
+            calculateAllIntegratedRequirements();
+        }
+    });
+}
+
+const materialBulkAssignForm = document.getElementById('materialBulkAssignForm');
+if(materialBulkAssignForm){
+    materialBulkAssignForm.addEventListener('submit', function(e){
+        const checkedCount = document.querySelectorAll('.bulk-material-checkbox:checked').length;
+        const targetSelect = document.getElementById('materialBulkAssignTarget');
+        if(!materialBulkAssignMode){
+            e.preventDefault();
+            alert('먼저 작업장 일괄 변경 모드를 켜주세요.');
+            return;
+        }
+        if(checkedCount === 0){
+            e.preventDefault();
+            alert('변경할 부자재를 하나 이상 선택해주세요.');
+            return;
+        }
+        if(!targetSelect || !String(targetSelect.value || '').trim()){
+            e.preventDefault();
+            alert('변경할 작업장을 선택해주세요.');
+            targetSelect?.focus();
+            return;
+        }
+        if(!confirm(`선택한 ${checkedCount}건의 주 사용처를 "${targetSelect.value}" 작업장으로 변경할까요?`)){
+            e.preventDefault();
+        }
+    });
+}
+
+const productBulkAssignForm = document.getElementById('productBulkAssignForm');
+if(productBulkAssignForm){
+    productBulkAssignForm.addEventListener('submit', function(e){
+        const checkedCount = document.querySelectorAll('.bulk-product-checkbox:checked').length;
+        const targetSelect = document.getElementById('productBulkAssignTarget');
+        if(!productBulkAssignMode){
+            e.preventDefault();
+            alert('먼저 작업장 일괄 변경 모드를 켜주세요.');
+            return;
+        }
+        if(checkedCount === 0){
+            e.preventDefault();
+            alert('변경할 상품을 하나 이상 선택해주세요.');
+            return;
+        }
+        if(!targetSelect || !String(targetSelect.value || '').trim()){
+            e.preventDefault();
+            alert('변경할 작업장을 선택해주세요.');
+            targetSelect?.focus();
+            return;
+        }
+        if(!confirm(`선택한 ${checkedCount}건의 상품 작업장을 "${targetSelect.value}"로 변경할까요?`)){
+            e.preventDefault();
+        }
+    });
+}
+
+function exportInventoryAudit(){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'inventory_audit');
+    const qs = params.toString();
+    const url = `/integrated-management/inventory-audit/export${qs ? `?${qs}` : ''}`;
+    window.location.href = url;
+}
+
+const inventoryAuditSortState = { index: null, direction: 'asc' };
+const inventoryAuditCategoryOrder = {
+    '원초': 1,
+    '내포': 2,
+    '외포': 3,
+    '박스': 4,
+    '실리카': 5,
+    '트레이': 6,
+    '기름': 7,
+    '소금': 8,
+    '기타': 9,
+};
+
+function sortInventoryAuditTable(columnIndex, type){
+    const tbody = document.getElementById('inventoryAuditTbody');
+    if(!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    if(!rows.length) return;
+
+    const nextDirection = (inventoryAuditSortState.index === columnIndex && inventoryAuditSortState.direction === 'asc') ? 'desc' : 'asc';
+    inventoryAuditSortState.index = columnIndex;
+    inventoryAuditSortState.direction = nextDirection;
+
+    const parseCellValue = (row) => {
+        const cell = row.children[columnIndex];
+        if(!cell) return type === 'number' ? 0 : '';
+        const raw = (cell.textContent || '').replace(/,/g, ' ').trim();
+        if(columnIndex === 1){
+            const rank = inventoryAuditCategoryOrder[raw] || 99;
+            return { rank, label: raw.toLowerCase() };
+        }
+        if(type === 'number'){
+            const matched = raw.match(/-?\d+(?:\.\d+)?/);
+            return matched ? Number(matched[0]) : 0;
+        }
+        return raw.toLowerCase();
+    };
+
+    rows.sort((a, b) => {
+        const aVal = parseCellValue(a);
+        const bVal = parseCellValue(b);
+        if(columnIndex === 1){
+            if(aVal.rank < bVal.rank) return nextDirection === 'asc' ? -1 : 1;
+            if(aVal.rank > bVal.rank) return nextDirection === 'asc' ? 1 : -1;
+            if(aVal.label < bVal.label) return nextDirection === 'asc' ? -1 : 1;
+            if(aVal.label > bVal.label) return nextDirection === 'asc' ? 1 : -1;
+            return 0;
+        }
+        if(aVal < bVal) return nextDirection === 'asc' ? -1 : 1;
+        if(aVal > bVal) return nextDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+    document.querySelectorAll('.inventory-sort-indicator').forEach(el => el.textContent = '');
+    const indicator = document.querySelector(`.inventory-sort-indicator[data-sort-index="${columnIndex}"]`);
+    if(indicator) indicator.textContent = nextDirection === 'asc' ? '▲' : '▼';
+}
+
+function printInventoryAudit(){
+    const table = document.getElementById('inventoryAuditTable');
+    if(!table){
+        alert('출력할 재고조사 목록이 없습니다.');
+        return;
+    }
+    const printWindow = window.open('', '_blank', 'width=1200,height=860');
+    if(!printWindow){
+        alert('출력 창을 열 수 없습니다. 팝업 차단을 확인해주세요.');
+        return;
+    }
+
+    const typeLabel = (() => {
+        const params = new URLSearchParams(window.location.search);
+        const type = params.get('inventory_type') || 'all';
+        if(type === 'raw') return '원초';
+        if(type === 'material') return '부자재';
+        return '전체';
+    })();
+    const chips = Array.from(document.querySelectorAll('.inventory-audit-summary .inventory-audit-chip'))
+        .map(el => `<span class="inventory-print-chip">${el.textContent.trim()}</span>`)
+        .join('');
+
+    printWindow.document.open();
+    printWindow.document.write(`
+        <!doctype html>
+        <html lang="ko">
+        <head>
+            <meta charset="utf-8">
+            <title>재고조사 A4 출력</title>
+            <style>
+                *{box-sizing:border-box;}
+                html,body{width:100%;max-width:100%;overflow:hidden;}
+                body{font-family:"IBM Plex Sans","Noto Sans KR","Malgun Gothic",sans-serif;padding:0;color:#111827;background:#f6f7fb;}
+                .inventory-print-shell{display:flex;flex-direction:column;gap:6px;width:100%;}
+                .inventory-print-title{font-size:18px;font-weight:800;color:#0f172a;margin:0 0 2px;}
+                .inventory-print-subtitle{font-size:11px;color:#475569;margin:0 0 4px;}
+                .inventory-print-meta{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;max-width:100%;}
+                .inventory-print-chip{display:inline-flex;align-items:center;padding:2px 6px;border:1px solid #cbd5e1;border-radius:999px;font-size:10px;color:#334155;background:#fff;}
+                .inventory-audit-table-card{width:100%;border:1px solid #dbe7f3;border-radius:10px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:none;overflow:hidden;}
+                .inventory-audit-head{display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;padding:0.4rem 0.5rem 0.35rem;border-bottom:1px solid #e5edf5;}
+                .inventory-audit-head h3{margin:0;font-size:0.96rem;color:#0f172a;}
+                .inventory-audit-head p{margin:0.15rem 0 0;color:#64748b;font-size:0.8rem;}
+                .inventory-audit-summary{display:flex;gap:0.35rem;flex-wrap:wrap;}
+                .inventory-audit-chip{display:inline-flex;align-items:center;gap:0.25rem;padding:0.26rem 0.48rem;border-radius:999px;background:#eef4ff;color:#1d4ed8;font-size:0.72rem;font-weight:800;border:1px solid #dbeafe;}
+                .inventory-wp-badge{display:inline-flex;align-items:center;padding:0.18rem 0.42rem;border-radius:999px;font-size:0.68rem;font-weight:800;border:1px solid transparent;line-height:1.15;}
+                .wp-1jomi{background:#e3f2fd;color:#1565c0;}
+                .wp-1jaban{background:#e8f5e9;color:#2e7d32;}
+                .wp-2-1f{background:#fff3cd;color:#856404;}
+                .wp-2-2f{background:#fce4ec;color:#c62828;}
+                .wp-shared{background:#ede7f6;color:#512da8;}
+                .wp-unassigned{background:#f1f5f9;color:#475569;}
+                .wp-etc{background:#fff7ed;color:#9a3412;}
+                .wp-logistics{background:#e0f2fe;color:#0369a1;}
+                .inventory-cat-badge{display:inline-flex;align-items:center;padding:0.16rem 0.4rem;border-radius:999px;font-size:0.68rem;font-weight:800;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;line-height:1.15;}
+                .inventory-cat-badge.raw{background:#ecfccb;color:#3f6212;border-color:#d9f99d;}
+                .inventory-cat-badge.inner{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+                .inventory-cat-badge.outer{background:#ffedd5;color:#c2410c;border-color:#fed7aa;}
+                .inventory-cat-badge.box{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+                .inventory-cat-badge.silica{background:#f3e8ff;color:#7e22ce;border-color:#e9d5ff;}
+                .inventory-cat-badge.tray{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+                .inventory-cat-badge.oil{background:#ffe4e6;color:#be123c;border-color:#fecdd3;}
+                .inventory-cat-badge.salt{background:#f1f5f9;color:#0f172a;border-color:#cbd5e1;}
+                .inventory-item-main{display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;}
+                .inventory-item-name{font-weight:800;color:#0f172a;text-decoration:none;}
+                .inventory-item-sub{font-size:0.68rem;color:#64748b;line-height:1.2;}
+                .inventory-code{display:inline-block;min-width:52px;font-family:Consolas,Monaco,monospace;font-size:0.7rem;padding:0.12rem 0.3rem;border-radius:6px;background:#eff6ff;border:1px solid #dbeafe;color:#1d4ed8;line-height:1.2;}
+                .inventory-stock{font-weight:800;color:#0f172a;white-space:nowrap;}
+                table{width:100%;max-width:100%;border-collapse:collapse;font-size:10.5px;background:#fff;table-layout:fixed;}
+                th,td{padding:4px 4px;text-align:left;vertical-align:middle;border-bottom:1px solid #eef2f7;box-sizing:border-box;word-break:keep-all;overflow-wrap:anywhere;}
+                thead th{background:#f8fafc;color:#475569;font-size:0.76rem;border-bottom:1px solid #e5edf5;}
+                tbody tr:nth-child(even){background:#fbfdff;}
+                .num{text-align:center;white-space:nowrap;font-weight:700;color:#0f172a;}
+                thead th:nth-last-child(2), tbody td:nth-last-child(2),
+                thead th:last-child, tbody td:last-child{text-align:center;}
+                tbody td:last-child{padding-left:2px;padding-right:2px;}
+                .inventory-actual-input{display:inline-flex;min-width:74px;width:74px;height:30px;padding:4px 4px;border:1.2px solid #94a3b8;border-radius:8px;background:#fff;font-size:11px;font-weight:700;color:#0f172a;text-align:center;}
+                table.print-raw-cols th:nth-child(1), table.print-raw-cols td:nth-child(1){width:11%;}
+                table.print-raw-cols th:nth-child(2), table.print-raw-cols td:nth-child(2){width:8%;}
+                table.print-raw-cols th:nth-child(3), table.print-raw-cols td:nth-child(3){width:8%;}
+                table.print-raw-cols th:nth-child(4), table.print-raw-cols td:nth-child(4){width:23%;}
+                table.print-raw-cols th:nth-child(5), table.print-raw-cols td:nth-child(5){width:13%;}
+                table.print-raw-cols th:nth-child(6), table.print-raw-cols td:nth-child(6){width:11%;}
+                table.print-raw-cols th:nth-child(7), table.print-raw-cols td:nth-child(7){width:10%;}
+                table.print-raw-cols th:nth-child(8), table.print-raw-cols td:nth-child(8){width:16%;}
+                table.print-material-cols th:nth-child(1), table.print-material-cols td:nth-child(1){width:13%;}
+                table.print-material-cols th:nth-child(2), table.print-material-cols td:nth-child(2){width:10%;}
+                table.print-material-cols th:nth-child(3), table.print-material-cols td:nth-child(3){width:10%;}
+                table.print-material-cols th:nth-child(4), table.print-material-cols td:nth-child(4){width:31%;}
+                table.print-material-cols th:nth-child(5), table.print-material-cols td:nth-child(5){width:12%;}
+                table.print-material-cols th:nth-child(6), table.print-material-cols td:nth-child(6){width:24%;}
+                @page{size:A4;margin:3mm;}
+            </style>
+        </head>
+        <body>
+            <div class="inventory-print-shell">
+                <div class="inventory-audit-table-card">
+                    <div class="inventory-audit-head">
+                        <div>
+                            <div class="inventory-print-title">재고조사 목록</div>
+                            <div class="inventory-print-subtitle">${typeLabel} 기준 현재 리스트 출력</div>
+                        </div>
+                        <div class="inventory-print-meta">${chips}</div>
+                    </div>
+                    <div style="padding:0;">
+                        ${table.outerHTML}
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+
+    setTimeout(() => {
+        const clonedTable = printWindow.document.getElementById('inventoryAuditTable');
+        if(clonedTable){
+            clonedTable.querySelectorAll('button').forEach(btn => btn.replaceWith(document.createTextNode(btn.textContent.replace(/[▲▼]/g, '').trim())));
+            clonedTable.querySelectorAll('td:nth-last-child(2)').forEach(td => td.classList.add('num'));
+            const headerCount = clonedTable.querySelectorAll('thead th').length;
+            clonedTable.classList.add(headerCount >= 8 ? 'print-raw-cols' : 'print-material-cols');
+            clonedTable.querySelectorAll('.inventory-actual-input').forEach(input => {
+                input.setAttribute('placeholder', '');
+                input.removeAttribute('aria-label');
+                input.value = '';
+            });
+        }
+        printWindow.focus();
+        printWindow.print();
+    }, 250);
+}
+
+function inventoryAuditNavigate(){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'inventory_audit');
+    window.location.href = `/integrated-management?${params.toString()}`;
+}
+
+function filterInventoryAuditProductsByWorkplace(){
+    const workplaceSelect = document.getElementById('inventoryAuditWorkplaceSelect');
+    const productSelect = document.getElementById('inventoryAuditProductSelect');
+    if(!workplaceSelect || !productSelect) return;
+
+    const selectedWorkplace = String(workplaceSelect.value || '').trim();
+    const currentValue = String(productSelect.value || '').trim();
+    let hasVisibleSelected = !currentValue;
+
+    Array.from(productSelect.options).forEach((option, index) => {
+        if(index === 0){
+            option.hidden = false;
+            option.disabled = false;
+            return;
+        }
+        const optionWorkplace = String(option.dataset.workplace || '').trim();
+        const visible = !selectedWorkplace || selectedWorkplace === 'all' || optionWorkplace === selectedWorkplace;
+        option.hidden = !visible;
+        option.disabled = !visible;
+        if(visible && option.value === currentValue){
+            hasVisibleSelected = true;
+        }
+    });
+
+    if(!hasVisibleSelected){
+        productSelect.value = '';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const workplaceSelect = document.getElementById('inventoryAuditWorkplaceSelect');
+    if(!workplaceSelect) return;
+    workplaceSelect.addEventListener('change', filterInventoryAuditProductsByWorkplace);
+    filterInventoryAuditProductsByWorkplace();
+});
+
+async function applyInventoryAudit(){
+    const inputs = document.querySelectorAll('.inventory-actual-input');
+    const rows = [];
+
+    for(const input of inputs){
+        const rawValue = String(input.value || '').trim();
+        if(!rawValue) continue;
+
+        const actualStock = Number(rawValue);
+        if(!Number.isFinite(actualStock)){
+            alert('실재고는 숫자로 입력해주세요.');
+            input.focus();
+            return;
+        }
+        if(actualStock < 0){
+            alert('실재고는 0 이상이어야 합니다.');
+            input.focus();
+            return;
+        }
+
+        rows.push({
+            inv_type: input.dataset.invType || '',
+            inv_id: Number(input.dataset.invId || 0),
+            actual_stock: actualStock
+        });
+    }
+
+    if(rows.length === 0){
+        alert('반영할 실재고를 먼저 입력해주세요.');
+        return;
+    }
+
+    if(!confirm(`입력한 ${rows.length}건의 실재고를 FIFO 기준으로 반영할까요?`)){
+        return;
+    }
+
+    try{
+        const res = await fetch('/integrated-management/inventory-audit/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows })
+        });
+        const payload = await res.json();
+        if(!res.ok || !payload.ok){
+            alert(payload.message || '실재고 반영 중 오류가 발생했습니다.');
+            return;
+        }
+
+        let msg = `실재고 반영 완료: ${payload.applied_count || 0}건`;
+        if((payload.failed_count || 0) > 0){
+            const firstErr = (payload.failed && payload.failed[0] && payload.failed[0].message) ? payload.failed[0].message : '일부 항목 실패';
+            msg += `\n실패: ${payload.failed_count}건 (${firstErr})`;
+        }
+        alert(msg);
+        inventoryAuditNavigate();
+    } catch(err){
+        alert('실재고 반영 요청에 실패했습니다.');
+    }
+}
+
+function closeMaterialDetailModal(){
+    document.getElementById('materialDetailModal').style.display = 'none';
+}
+
+function switchMaterialPanel(type){
+    const lotsPanel = document.getElementById('materialLotsPanel');
+    const logsPanel = document.getElementById('materialLogsPanel');
+    const lotBtn = document.getElementById('tabLotsBtn');
+    const logBtn = document.getElementById('tabLogsBtn');
+    if(type === 'logs' || !lotsPanel || !lotBtn){
+        if(lotsPanel) lotsPanel.classList.remove('active');
+        if(logsPanel) logsPanel.classList.add('active');
+        if(lotBtn) lotBtn.classList.remove('active');
+        if(logBtn) logBtn.classList.add('active');
+    } else {
+        if(logsPanel) logsPanel.classList.remove('active');
+        lotsPanel.classList.add('active');
+        if(logBtn) logBtn.classList.remove('active');
+        lotBtn.classList.add('active');
+    }
+}
+
+function renderLotRows(lots){
+    const tbody = document.getElementById('lotTableBody');
+    if(!tbody) return;
+    if(!lots || lots.length === 0){
+        tbody.innerHTML = `<tr><td colspan="${CAN_MANAGE_MATERIAL_LOTS ? 8 : 7}" style="text-align:center;color:#64748b;">등록된 로트가 없습니다.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = lots.map(lot => `
+        <tr>
+            <td>${lot.location_name || '-'}<input type="hidden" value="${lot.location_id || ''}" id="lot_location_${lot.id}"></td>
+            <td><span class="lot-code">${lot.lot || '-'}</span></td>
+            <td>${CAN_MANAGE_MATERIAL_LOTS ? `<input type="date" value="${lot.receiving_date || ''}" id="lot_receiving_${lot.id}" style="width:100%;" disabled>` : (lot.receiving_date || '-')}</td>
+            <td>${CAN_MANAGE_MATERIAL_LOTS ? `<input type="date" value="${lot.manufacture_date || ''}" id="lot_manufacture_${lot.id}" style="width:100%;" disabled>` : (lot.manufacture_date || '-')}</td>
+            <td>${CAN_MANAGE_MATERIAL_LOTS ? `<input type="date" value="${lot.expiry_date || ''}" id="lot_expiry_${lot.id}" style="width:100%;" disabled>` : (lot.expiry_date || '-')}</td>
+            <td>${CAN_MANAGE_MATERIAL_LOTS ? `<input type="number" step="0.1" value="${Number(lot.received_quantity || lot.quantity || 0).toFixed(1)}" id="lot_received_quantity_${lot.id}" style="width:100%;" disabled>` : Number(lot.received_quantity || lot.quantity || 0).toFixed(1)}</td>
+            <td>${CAN_MANAGE_MATERIAL_LOTS ? `<input type="number" step="0.1" value="${Number(lot.location_quantity || 0).toFixed(1)}" id="lot_current_quantity_${lot.id}" style="width:100%;" disabled>` : Number(lot.location_quantity || 0).toFixed(1)}</td>
+            <input type="hidden" value="${lot.supplier_lot || ''}" id="lot_supplier_lot_${lot.id}">
+            ${CAN_MANAGE_MATERIAL_LOTS ? `<td class="lot-actions">
+                <button type="button" class="btn btn-small" id="lot_edit_btn_${lot.id}" data-mode="view" style="background:#4f46e5;" onclick="toggleLotEdit(${lot.id})">수정</button>
+                <button type="button" class="btn btn-small" style="background:#e74c3c;" onclick="submitDeleteLot(${lot.id})">폐기</button>
+            </td>` : ''}
+        </tr>
+    `).join('');
+}
+
+function setLotInputsEditable(lotId, editable){
+    const ids = [
+        `lot_receiving_${lotId}`,
+        `lot_manufacture_${lotId}`,
+        `lot_expiry_${lotId}`,
+        `lot_received_quantity_${lotId}`,
+        `lot_current_quantity_${lotId}`,
+    ];
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if(el) el.disabled = !editable;
+    });
+}
+
+async function toggleLotEdit(lotId){
+    if(!CAN_MANAGE_MATERIAL_LOTS) return;
+    const btn = document.getElementById(`lot_edit_btn_${lotId}`);
+    if(!btn) return;
+    const mode = btn.dataset.mode || 'view';
+    if(mode === 'view'){
+        setLotInputsEditable(lotId, true);
+        btn.dataset.mode = 'edit';
+        btn.textContent = '수정 완료';
+        btn.style.background = '#16a34a';
+        return;
+    }
+    await submitUpdateLot(lotId);
+}
+
+function renderUsageRows(logs){
+    const tbody = document.getElementById('usageLogTableBody');
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.use_date || '-').toString().slice(0,10)}</td>
+            <td>${log.production_no || '-'}</td>
+            <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
+            <td>${Number(log.remaining_quantity || 0).toFixed(1)}</td>
+            <td>${log.user_name || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadMaterialDetail(materialId){
+    let payload;
+    try{
+        const res = await fetch(`/integrated-management/materials/${materialId}/detail`);
+        payload = await res.json();
+    } catch (err){
+        alert('상세 조회 중 오류가 발생했습니다.');
+        return;
+    }
+    if(!payload.ok){
+        alert(payload.message || '상세 조회 실패');
+        return;
+    }
+    const m = payload.material;
+    document.getElementById('md_code').textContent = m.code || '-';
+    document.getElementById('md_name').textContent = m.name || '-';
+    document.getElementById('md_supplier').textContent = m.supplier_name || '-';
+    document.getElementById('md_unit').textContent = m.unit || '-';
+    document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
+    renderLotRows(payload.lots || []);
+    renderUsageRows(payload.usage_logs || []);
+}
+
+async function openMaterialDetailModal(materialId){
+    currentMaterialId = materialId;
+    switchMaterialPanel('lots');
+    const ok = await loadMaterialDetail(materialId);
+    if(ok !== false){
+        document.getElementById('materialDetailModal').style.display = 'flex';
+    }
+}
+
+async function submitAddLot(e){
+    e.preventDefault();
+    if(!CAN_MANAGE_MATERIAL_LOTS || !currentMaterialId) return;
+    const form = document.getElementById('addLotForm');
+    const formData = new FormData(form);
+    formData.append('material_id', currentMaterialId);
+    const res = await fetch('/integrated-management/material-lots/add', { method: 'POST', body: formData });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '로트 추가 실패');
+        return;
+    }
+    form.reset();
+    await loadMaterialDetail(currentMaterialId);
+}
+
+async function submitUpdateLot(lotId){
+    if(!CAN_MANAGE_MATERIAL_LOTS) return;
+    const formData = new FormData();
+    formData.append('receiving_date', document.getElementById(`lot_receiving_${lotId}`).value);
+    formData.append('manufacture_date', document.getElementById(`lot_manufacture_${lotId}`).value);
+    formData.append('expiry_date', document.getElementById(`lot_expiry_${lotId}`).value);
+    formData.append('received_quantity', document.getElementById(`lot_received_quantity_${lotId}`).value);
+    formData.append('current_quantity', document.getElementById(`lot_current_quantity_${lotId}`).value);
+    formData.append('supplier_lot', document.getElementById(`lot_supplier_lot_${lotId}`).value);
+    formData.append('location_id', document.getElementById(`lot_location_${lotId}`)?.value || '');
+    const res = await fetch(`/integrated-management/material-lots/${lotId}/update`, { method: 'POST', body: formData });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '로트 수정 실패');
+        return;
+    }
+    const btn = document.getElementById(`lot_edit_btn_${lotId}`);
+    if(btn){
+        btn.dataset.mode = 'view';
+        btn.textContent = '수정';
+        btn.style.background = '#4f46e5';
+    }
+    await loadMaterialDetail(currentMaterialId);
+}
+
+async function submitDeleteLot(lotId){
+    if(!confirm('해당 로트를 폐기 처리하시겠습니까?')) return;
+    const res = await fetch(`/integrated-management/material-lots/${lotId}/delete`, { method: 'POST' });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '로트 삭제 실패');
+        return;
+    }
+    await loadMaterialDetail(currentMaterialId);
+}
+
+function closeRawLotModal(){
+    document.getElementById('rawLotDetailModal').style.display = 'none';
+}
+
+function setRawLotInputsEditable(lotId, editable){
+    const ids = [
+        `raw_lot_receiving_${lotId}`,
+        `raw_lot_car_number_${lotId}`,
+        `raw_lot_sheets_${lotId}`,
+        `raw_lot_total_${lotId}`,
+        `raw_lot_current_${lotId}`,
+    ];
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if(el) el.disabled = !editable;
+    });
+}
+
+function renderRawLotRows(lots){
+    const tbody = document.getElementById('rawLotTableBody');
+    if(!lots || lots.length === 0){
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">등록된 로트가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lots.map((lot) => {
+        const usedQty = Number(lot.used_quantity || 0);
+        return `
+        <tr>
+            <td><span class="lot-code">${escapeHtml(lot.lot || '-')}</span></td>
+            <td><input type="date" id="raw_lot_receiving_${lot.id}" value="${lot.receiving_date || ''}" style="width:100%;" disabled></td>
+            <td><input type="text" id="raw_lot_car_number_${lot.id}" value="${escapeHtml(lot.car_number || '')}" style="width:100%;" disabled></td>
+            <td><input type="number" step="0.01" id="raw_lot_sheets_${lot.id}" value="${Number(lot.sheets_per_sok || 0)}" style="width:100%;" disabled></td>
+            <td><input type="number" step="0.01" id="raw_lot_total_${lot.id}" value="${Number(lot.total_stock || 0)}" style="width:100%;" disabled></td>
+            <td><input type="number" step="0.01" id="raw_lot_current_${lot.id}" value="${Number(lot.current_stock || 0)}" style="width:100%;" disabled></td>
+            <td>${usedQty.toFixed(1)}속</td>
+            <td class="lot-actions">
+                <button type="button" class="btn btn-small" id="raw_lot_edit_btn_${lot.id}" data-mode="view" style="background:#4f46e5;" onclick="toggleRawLotEdit(${lot.id})">수정</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function loadRawLotDetail(rawMaterialId){
+    let payload;
+    try{
+        const res = await fetch(`/integrated-management/raw-materials/${rawMaterialId}/detail`);
+        payload = await res.json();
+    } catch (err){
+        alert('원초 상세 조회 중 오류가 발생했습니다.');
+        return;
+    }
+    if(!payload.ok){
+        alert(payload.message || '원초 상세 조회 실패');
+        return;
+    }
+    const rd = payload.raw_material || {};
+    document.getElementById('rd_name').textContent = rd.name || '-';
+    document.getElementById('rd_code').textContent = rd.code || '-';
+    document.getElementById('rd_workplace').textContent = rd.workplace || '-';
+    document.getElementById('rd_total_stock').textContent = Number(rd.total_stock_sum || 0).toFixed(1);
+    document.getElementById('rd_current_stock').textContent = Number(rd.current_stock_sum || 0).toFixed(1);
+    renderRawLotRows(payload.lots || []);
+}
+
+async function openRawLotModal(rawMaterialId){
+    currentRawLotId = rawMaterialId;
+    document.getElementById('rawLotDetailModal').style.display = 'flex';
+    await loadRawLotDetail(rawMaterialId);
+}
+
+async function toggleRawLotEdit(lotId){
+    const btn = document.getElementById(`raw_lot_edit_btn_${lotId}`);
+    if(!btn) return;
+    const mode = btn.dataset.mode || 'view';
+    if(mode === 'view'){
+        setRawLotInputsEditable(lotId, true);
+        btn.dataset.mode = 'edit';
+        btn.textContent = '수정 완료';
+        btn.style.background = '#16a34a';
+        return;
+    }
+    await submitRawLotUpdate(lotId);
+}
+
+async function submitRawLotUpdate(lotId){
+    const formData = new FormData();
+    formData.append('receiving_date', document.getElementById(`raw_lot_receiving_${lotId}`).value);
+    formData.append('ja_ho', document.getElementById(`raw_lot_car_number_${lotId}`).value);
+    formData.append('sheets_per_sok', document.getElementById(`raw_lot_sheets_${lotId}`).value);
+    formData.append('total_stock', document.getElementById(`raw_lot_total_${lotId}`).value);
+    formData.append('current_stock', document.getElementById(`raw_lot_current_${lotId}`).value);
+    const res = await fetch(`/integrated-management/raw-material-lots/${lotId}/update`, { method: 'POST', body: formData });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '원초 로트 수정 실패');
+        return;
+    }
+    const btn = document.getElementById(`raw_lot_edit_btn_${lotId}`);
+    if(btn){
+        btn.dataset.mode = 'view';
+        btn.textContent = '수정';
+        btn.style.background = '#4f46e5';
+    }
+    if(currentRawLotId){
+        await loadRawLotDetail(currentRawLotId);
+    }
+}
+
+document.getElementById('materialDetailModal').addEventListener('click', function(e){
+    if(e.target === this) closeMaterialDetailModal();
+});
+document.getElementById('rawLotDetailModal').addEventListener('click', function(e){
+    if(e.target === this) closeRawLotModal();
+});
+
+function closeRawActivityModal(){
+    const modal = document.getElementById('rawActivityModal');
+    if(modal) modal.style.display = 'none';
+}
+
+function renderRawActivityWorkplaceTabs(){
+    const current = CURRENT_WORKPLACE;
+    let hasCurrent = false;
+    document.querySelectorAll('#rawActWpTabs [data-wp-tab]').forEach(btn => {
+        if(btn.getAttribute('data-wp-tab') === current){
+            hasCurrent = true;
+        }
+    });
+    rawActivityWorkplace = (current && current !== 'all' && hasCurrent) ? current : 'all';
+    setRawActivityWorkplace(rawActivityWorkplace, true);
+}
+
+function setRawActivityWorkplace(wp, skipReload){
+    rawActivityWorkplace = wp || 'all';
+    document.querySelectorAll('#rawActWpTabs [data-wp-tab]').forEach(btn => {
+        if(btn.getAttribute('data-wp-tab') === rawActivityWorkplace){
+            btn.classList.remove('btn-secondary');
+            btn.style.background = '#0f172a';
+            btn.style.color = '#fff';
+        } else {
+            btn.classList.add('btn-secondary');
+            btn.style.background = '';
+            btn.style.color = '';
+        }
+    });
+    if(skipReload) return;
+    searchRawActivityByDate();
+}
+
+function getTodayIsoDate(){
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function escapeHtml(v){
+    return String(v || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+async function loadRawActivityByDate(targetDate){
+    const tbody = document.getElementById('rawActivityTableBody');
+    const periodEl = document.getElementById('rawActivityPeriodText');
+    if(tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748b;">조회 중...</td></tr>';
+    try{
+        const url = `/integrated-management/raw-materials/activity?date=${encodeURIComponent(targetDate)}&wp=${encodeURIComponent(rawActivityWorkplace)}`;
+        const res = await fetch(url);
+        const payload = await res.json();
+        if(!payload.ok){
+            throw new Error(payload.message || '조회 실패');
+        }
+        if(periodEl){
+            periodEl.textContent = `조회 일자: ${payload.date}`;
+        }
+        const rows = payload.rows || [];
+        if(!rows.length){
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748b;">해당 일자 사용/입고/반출된 원초가 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => {
+            const badge = r.is_period_received ? '<span style="margin-left:0.35rem;background:#e0f2fe;color:#0369a1;padding:0.12rem 0.4rem;border-radius:999px;font-size:0.72rem;font-weight:700;">신규입고</span>' : '';
+            return `
+            <tr>
+                <td><strong>${escapeHtml(r.name)}</strong>${badge}</td>
+                <td>${escapeHtml(r.code || '-')}</td>
+                <td>${escapeHtml(r.lot || '-')}</td>
+                <td>${escapeHtml(r.receiving_date || '-')}</td>
+                <td>${escapeHtml(r.car_number || '-')}</td>
+                <td>${Number(r.current_stock || 0).toFixed(0)}속</td>
+                <td><strong>${Number(r.period_used_quantity || 0).toFixed(1)}속</strong></td>
+                <td><strong>${Number(r.period_export_quantity || 0).toFixed(1)}속</strong></td>
+                <td>${escapeHtml(r.product_names || '-')}</td>
+            </tr>`;
+        }).join('');
+    } catch (err){
+        if(periodEl) periodEl.textContent = '조회 일자: -';
+        if(tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#dc2626;">내역 조회 실패: ${escapeHtml(err.message || '오류')}</td></tr>`;
+    }
+}
+
+function searchRawActivityByDate(){
+    const input = document.getElementById('rawActDateInput');
+    const targetDate = (input && input.value) ? input.value : getTodayIsoDate();
+    if(input && !input.value){
+        input.value = targetDate;
+    }
+    loadRawActivityByDate(targetDate);
+}
+
+function loadTodayRawActivity(){
+    const input = document.getElementById('rawActDateInput');
+    const today = getTodayIsoDate();
+    if(input){
+        input.value = today;
+    }
+    loadRawActivityByDate(today);
+}
+
+function openRawActivityModal(){
+    const modal = document.getElementById('rawActivityModal');
+    if(!modal) return;
+    modal.style.display = 'flex';
+    renderRawActivityWorkplaceTabs();
+    loadTodayRawActivity();
+}
+
+document.getElementById('rawActivityModal').addEventListener('click', function(e){
+    if(e.target === this) closeRawActivityModal();
+});
+document.getElementById('rawActDateInput').addEventListener('change', function(){
+    if(this.value){
+        loadRawActivityByDate(this.value);
+    }
+});
+</script>
+{% endblock %}

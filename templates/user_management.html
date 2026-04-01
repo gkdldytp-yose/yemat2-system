@@ -1,0 +1,234 @@
+﻿{% extends "base.html" %}
+{% block title %}사용자 관리{% endblock %}
+{% block extra_css %}
+<style>
+.role-select{padding:0.4rem 0.6rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;}
+.role-admin{border-color:#e74c3c;color:#e74c3c;background:#fff5f5;}
+.role-production{border-color:#27ae60;color:#27ae60;background:#f0fff4;}
+.role-purchase{border-color:#3498db;color:#3498db;background:#f0f8ff;}
+.role-logistics{border-color:#0ea5e9;color:#0369a1;background:#ecfeff;}
+.role-rawmat{border-color:#e67e22;color:#e67e22;background:#fffbf0;}
+.role-readonly{border-color:#95a5a6;color:#666;background:#f8f9fa;}
+.perm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;}
+.perm-card{border-radius:12px;padding:1.25rem;border:2px solid;}
+.perm-card h4{margin-bottom:0.75rem;font-size:0.9rem;}
+.perm-card ul{list-style:none;font-size:0.82rem;line-height:1.8;}
+.perm-card ul li::before{content:"✓ ";}
+.user-row{display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:1rem;align-items:center;padding:1rem;border-bottom:1px solid #f0f0f0;}
+.user-row:hover{background:#f8f9fa;}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:white;}
+.pending-row{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;padding:1rem;border-bottom:1px solid #f0f0f0;}
+.pending-row:hover{background:#f8f9fa;}
+.pending-actions{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
+.wp-checks{display:flex;flex-wrap:wrap;gap:0.4rem;}
+.wp-chip{border:1px solid #e5e7eb;border-radius:999px;padding:0.2rem 0.6rem;font-size:0.75rem;background:#fff;display:flex;align-items:center;gap:0.25rem;}
+</style>
+{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+    <h1>👥 사용자 관리</h1>
+    <a href="/" class="btn btn-secondary btn-small">← 대시보드</a>
+</div>
+
+{% if pending_users and pending_users|length > 0 %}
+<div class="card" style="margin-bottom:2rem;">
+    <h2>🕒 가입 승인 대기 ({{ pending_users|length }}명)</h2>
+    {% for u in pending_users %}
+    <div class="pending-row">
+        <div>
+            <strong>{{ u.name or u.username }}</strong>
+            <div style="font-size:0.82rem;color:#999;">@{{ u.username }}</div>
+            <div style="font-size:0.8rem;color:#666;margin-top:0.25rem;">
+                {{ u.department or '-' }} · {{ u.phone or '-' }} · {{ u.email or '-' }}
+            </div>
+            <div style="font-size:0.75rem;color:#999;margin-top:0.2rem;">요청일: {{ u.created_at[:10] if u.created_at else '-' }}</div>
+        </div>
+        <div class="pending-actions">
+            <form method="POST" action="/users/{{ u.id }}/approve" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                <select name="role" class="role-select">
+                    <option value="readonly">👁️ 읽기전용</option>
+                    <option value="production">🏭 생산관리</option>
+                    <option value="purchase">📦 발주관리</option>
+                    <option value="logistics">🚚 물류관리</option>
+                    <option value="rawmat">🌿 원초관리</option>
+                    <option value="admin">👑 관리자</option>
+                </select>
+                <div class="wp-checks">
+                    {% for wp in workplaces %}
+                    <label class="wp-chip">
+                        <input type="checkbox" name="workplaces" value="{{ wp }}">
+                        {{ wp }}
+                    </label>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-small">승인</button>
+            </form>
+            <form method="POST" action="/users/{{ u.id }}/reject" onsubmit="return confirm('가입 요청을 반려하시겠습니까?')">
+                <button type="submit" class="btn btn-small btn-danger">반려</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 권한 안내 카드 -->
+<div class="card" style="margin-bottom:2rem;">
+    <h2>🔑 권한 종류 안내</h2>
+    <div class="perm-grid">
+        <div class="perm-card" style="border-color:#e74c3c;background:#fff5f5;">
+            <h4 style="color:#e74c3c;">👑 관리자</h4>
+            <ul style="color:#555;">
+                <li>모든 기능 사용</li>
+                <li>사용자 관리</li>
+                <li>데이터 삭제</li>
+                <li>권한 부여/변경</li>
+            </ul>
+        </div>
+        <div class="perm-card" style="border-color:#27ae60;background:#f0fff4;">
+            <h4 style="color:#27ae60;">🏭 생산관리</h4>
+            <ul style="color:#555;">
+                <li>읽기 전용 포함</li>
+                <li>생산 스케줄</li>
+                <li>생산 관리</li>
+                <li>상품 관리</li>
+            </ul>
+        </div>
+        <div class="perm-card" style="border-color:#3498db;background:#f0f8ff;">
+            <h4 style="color:#3498db;">📦 발주관리</h4>
+            <ul style="color:#555;">
+                <li>읽기 전용 포함</li>
+                <li>부자재 관리</li>
+                <li>발주 관리</li>
+                <li>업체 관리</li>
+            </ul>
+        </div>
+        <div class="perm-card" style="border-color:#0ea5e9;background:#ecfeff;">
+            <h4 style="color:#0369a1;">🚚 물류관리</h4>
+            <ul style="color:#555;">
+                <li>물류 작업장 기반 전체 권한</li>
+                <li>전 작업장 재고/불출/발주 관리</li>
+                <li>불출 확정 및 입출고 처리</li>
+                <li>원초/부자재 조회 및 관리</li>
+            </ul>
+        </div>
+        <div class="perm-card" style="border-color:#e67e22;background:#fffbf0;">
+            <h4 style="color:#e67e22;">🌿 원초관리</h4>
+            <ul style="color:#555;">
+                <li>읽기 전용 포함</li>
+                <li>원초 입고/반출</li>
+                <li>원초 재고 조정</li>
+                <li>원초 로그</li>
+            </ul>
+        </div>
+        <div class="perm-card" style="border-color:#95a5a6;background:#f8f9fa;">
+            <h4 style="color:#666;">👁️ 읽기전용</h4>
+            <ul style="color:#555;">
+                <li>모든 페이지 열람</li>
+                <li>등록/수정 불가</li>
+                <li>삭제 불가</li>
+                <li>기능 버튼 비활성</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- 사용자 목록 -->
+<div class="card">
+    <h2>계정 목록 ({{ users_list|length }}명)</h2>
+
+    {% for u in users_list %}
+    {% set urole = u.role if u.role else ('admin' if u.is_admin else 'readonly') %}
+    <div class="user-row">
+        <!-- 아바타 -->
+        <div class="avatar" style="background:
+            {% if urole == 'admin' %}#e74c3c
+            {% elif urole == 'production' %}#27ae60
+            {% elif urole == 'purchase' %}#3498db
+            {% elif urole == 'logistics' %}#0369a1
+            {% elif urole == 'rawmat' %}#e67e22
+            {% else %}#95a5a6{% endif %}">
+            {{ (u.name or u.username)[0]|upper }}
+        </div>
+
+        <!-- 이름/계정 -->
+        <div>
+            <strong>{{ u.name or u.username }}</strong>
+            {% if u.id == session_user_id %}<span style="font-size:0.75rem;background:#e8f5e9;color:#27ae60;padding:0.1rem 0.4rem;border-radius:8px;margin-left:0.5rem;">본인</span>{% endif %}
+            <div style="font-size:0.82rem;color:#999;">@{{ u.username }}</div>
+        </div>
+
+        <!-- 현재 권한 -->
+        <div>
+            <span class="role-select role-{{ urole }}" style="display:inline-block;padding:0.3rem 0.8rem;">
+                {% if urole == 'admin' %}👑 관리자
+                {% elif urole == 'production' %}🏭 생산관리
+                {% elif urole == 'purchase' %}📦 발주관리
+                {% elif urole == 'logistics' %}🚚 물류관리
+                {% elif urole == 'rawmat' %}🌿 원초관리
+                {% else %}👁️ 읽기전용{% endif %}
+            </span>
+        </div>
+
+        <!-- 가입일 -->
+        <div style="font-size:0.85rem;color:#999;">
+            {{ u.created_at[:10] if u.created_at else '-' }}
+        </div>
+
+        <!-- 권한 변경 -->
+        {% if u.id != session_user_id %}
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+            <form method="POST" action="/users/{{ u.id }}/update-role" style="display:flex;gap:0.5rem;align-items:center;">
+                <select name="role" class="role-select" id="rolesel_{{ u.id }}"
+                        onchange="this.className='role-select role-'+this.value">
+                    <option value="readonly" {% if urole == 'readonly' %}selected{% endif %}>👁️ 읽기전용</option>
+                    <option value="production" {% if urole == 'production' %}selected{% endif %}>🏭 생산관리</option>
+                    <option value="purchase" {% if urole == 'purchase' %}selected{% endif %}>📦 발주관리</option>
+                    <option value="logistics" {% if urole == 'logistics' %}selected{% endif %}>🚚 물류관리</option>
+                    <option value="rawmat" {% if urole == 'rawmat' %}selected{% endif %}>🌿 원초관리</option>
+                    <option value="admin" {% if urole == 'admin' %}selected{% endif %}>👑 관리자</option>
+                </select>
+                <button type="submit" class="btn btn-small">변경</button>
+            </form>
+            <form method="POST" action="/users/{{ u.id }}/update-workplaces" style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+                {% set uwps = (u.workplaces or '').split(',') %}
+                {% for wp in workplaces %}
+                <label class="wp-chip">
+                    <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in uwps %}checked{% endif %}>
+                    {{ wp }}
+                </label>
+                {% endfor %}
+                <button type="submit" class="btn btn-small">작업장 수정</button>
+            </form>
+            <form method="POST" action="/users/{{ u.id }}/delete"
+                  onsubmit="return confirm('{{ u.username }} 계정을 삭제하시겠습니까?')">
+                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+            </form>
+        </div>
+        {% else %}
+        <div style="color:#aaa;font-size:0.85rem;">본인 계정은 변경 불가</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// select 색상 초기화
+document.querySelectorAll('.role-select select, select.role-select').forEach(sel => {
+    sel.addEventListener('change', function(){
+        this.className = 'role-select role-' + this.value;
+    });
+    // 초기값 색상 적용
+    if(this !== sel) sel.className = 'role-select role-' + sel.value;
+});
+document.querySelectorAll('select[name="role"]').forEach(sel => {
+    sel.className = 'role-select role-' + sel.value;
+});
+</script>
+{% endblock %}

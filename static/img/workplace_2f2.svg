@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect x="8" y="8" width="144" height="144" rx="18" fill="#f8fafc" stroke="#0f172a" stroke-width="4"/>
+  <rect x="42" y="42" width="76" height="70" rx="10" fill="#0f172a"/>
+  <path d="M56 70 L80 54 L104 70" stroke="#e2e8f0" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <rect x="68" y="76" width="24" height="26" fill="#e2e8f0"/>
+  <path d="M32 118 L128 118" stroke="#0f172a" stroke-width="6" stroke-linecap="round"/>
+  <text x="80" y="136" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#0f172a" font-weight="700">2동 2층</text>
+</svg>

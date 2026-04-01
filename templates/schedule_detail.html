@@ -1,0 +1,370 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ date }} 생산 스케줄{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<div class="container">
+    <div class="page-header">
+        <div>
+            <h1>📅 {{ date }} 생산 스케줄</h1>
+            <p style="color: #7f8c8d; margin-top: 0.5rem;">해당 날짜의 생산 계획을 관리합니다</p>
+        </div>
+        <a href="{{ url_for('production.schedules') }}" class="btn-secondary">← 목록으로</a>
+    </div>
+
+    <!-- 생산 계획 추가 폼 -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1.5rem;">➕ 생산 계획 추가</h3>
+        <form method="POST" action="{{ url_for('production.add_schedule_to_date', date=date) }}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label>상품명 * (검색해서 선택하세요)</label>
+                    
+                    <!-- 검색 입력 -->
+                    <div class="search-box">
+                        <input type="text" id="productSearch" 
+                               placeholder="🔍 키워드를 입력하세요 (예: 김, 기름, 100 등)" 
+                               autocomplete="off" 
+                               oninput="searchProducts()"
+                               onfocus="showAllProducts()">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    
+                    <!-- 안내 메시지 -->
+                    <div style="font-size: 0.85rem; color: #7f8c8d; margin-top: 0.25rem;">
+                        💡 상품명의 일부만 입력해도 검색됩니다
+                    </div>
+                    
+                    <!-- 검색 결과 리스트 -->
+                    <div class="product-list" id="productList" style="display: none;">
+                        <!-- JavaScript로 동적 생성 -->
+                    </div>
+                    
+                    <!-- 선택된 상품 표시 -->
+                    <div id="selectedProduct" style="display: none; margin-top: 0.75rem; padding: 1rem; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: #155724;">✓ 선택된 상품:</strong>
+                                <span id="selectedProductName" style="margin-left: 0.5rem; font-weight: 600;"></span>
+                            </div>
+                            <button type="button" onclick="clearSelection()" 
+                                    style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                취소
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden input for product_id -->
+                    <input type="hidden" name="product_id" id="productId" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>계획 박스 수 *</label>
+                    <input type="number" name="planned_boxes" min="1" required placeholder="예: 100" style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label>생산 라인 * (중복 선택 가능)</label>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                    {% for line in range(1, 13) %}
+                    <label style="display: flex; align-items: center; padding: 0.5rem; border: 2px solid #dee2e6; border-radius: 4px; cursor: pointer; background: white;">
+                        <input type="checkbox" name="production_lines" value="{{ line }}" 
+                               style="margin-right: 0.5rem; width: 18px; height: 18px; cursor: pointer;">
+                        <span style="font-weight: 600;">라인 {{ line }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div style="font-size: 0.85rem; color: #7f8c8d; margin-top: 0.5rem;">
+                    💡 생산할 라인을 선택하세요 (여러 개 선택 가능)
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-primary" style="width: 100%;">추가</button>
+        </form>
+    </div>
+
+    <!-- 등록된 생산 계획 목록 -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem;">📋 등록된 생산 계획 ({{ schedules|length }}건)</h3>
+        
+        {% if schedules %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 1rem; text-align: left; font-weight: 600;">상품명</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600;">계획 박스</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600;">생산 라인</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600;">등록일시</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600;">작업</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for schedule in schedules %}
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 1rem;">
+                            <div style="font-weight: 600; color: #2c3e50;">{{ schedule.product_name }}</div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="background: #e3f2fd; color: #1976d2; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 600;">
+                                {{ schedule.planned_boxes }}박스
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            {% if schedule.line %}
+                                {% for line_num in schedule.line.split(',') %}
+                                <span style="background: #fff3e0; color: #f57c00; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.85rem; margin: 0.1rem; display: inline-block;">
+                                    라인 {{ line_num }}
+                                </span>
+                                {% endfor %}
+                            {% else %}
+                                <span style="color: #999;">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-size: 0.9rem; color: #7f8c8d;">
+                            {{ schedule.created_at.split(' ')[0] if schedule.created_at else '-' }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <form method="POST" action="{{ url_for('production.delete_schedule', schedule_id=schedule.id) }}" 
+                                  onsubmit="return confirm('정말 삭제하시겠습니까?');" style="display: inline;">
+                                <button type="submit" style="background: #e74c3c; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                    🗑️ 삭제
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #7f8c8d;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+            <p>등록된 생산 계획이 없습니다.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+}
+
+.card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background: #5568d3;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* 검색 기능 스타일 */
+.search-box {
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.75rem 2.5rem 0.75rem 0.75rem;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.search-box input:focus {
+    border-color: #667eea;
+    outline: none;
+}
+
+.search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    pointer-events: none;
+}
+
+.product-list {
+    position: absolute;
+    z-index: 1000;
+    width: 26%;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.product-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+.product-item:hover {
+    background: #f8f9fa;
+}
+
+.product-item:last-child {
+    border-bottom: none;
+}
+
+.product-item.selected {
+    background: #e7f3ff;
+    font-weight: 600;
+}
+</style>
+
+<script>
+// 상품 데이터 (서버에서 전달)
+const allProducts = {{ products|tojson }};
+let selectedProductId = null;
+
+// 상품 검색
+function searchProducts() {
+    const searchTerm = document.getElementById('productSearch').value.toLowerCase().trim();
+    const productList = document.getElementById('productList');
+    
+    if (searchTerm === '') {
+        showAllProducts();
+        return;
+    }
+    
+    // 검색어와 일치하는 상품 필터링
+    const filtered = allProducts.filter(p => 
+        p.name.toLowerCase().includes(searchTerm)
+    );
+    
+    displayProducts(filtered);
+}
+
+// 모든 상품 표시
+function showAllProducts() {
+    displayProducts(allProducts);
+}
+
+// 상품 목록 표시
+function displayProducts(products) {
+    const productList = document.getElementById('productList');
+    
+    if (products.length === 0) {
+        productList.innerHTML = '<div class="product-item" style="color: #999; text-align: center;">검색 결과가 없습니다</div>';
+        productList.style.display = 'block';
+        return;
+    }
+    
+    productList.innerHTML = products.map(p => 
+        `<div class="product-item" onclick="selectProduct(${p.id}, '${p.name.replace(/'/g, "\\'")}')">
+            ${p.name}
+        </div>`
+    ).join('');
+    
+    productList.style.display = 'block';
+}
+
+// 상품 선택
+function selectProduct(productId, productName) {
+    selectedProductId = productId;
+    
+    // Hidden input에 값 설정
+    document.getElementById('productId').value = productId;
+    
+    // 선택된 상품 표시
+    document.getElementById('selectedProductName').textContent = productName;
+    document.getElementById('selectedProduct').style.display = 'block';
+    
+    // 검색창 초기화 및 목록 숨기기
+    document.getElementById('productSearch').value = '';
+    document.getElementById('productList').style.display = 'none';
+}
+
+// 선택 취소
+function clearSelection() {
+    selectedProductId = null;
+    document.getElementById('productId').value = '';
+    document.getElementById('selectedProduct').style.display = 'none';
+    document.getElementById('productSearch').value = '';
+    document.getElementById('productList').style.display = 'none';
+}
+
+// 외부 클릭 시 목록 닫기
+document.addEventListener('click', function(event) {
+    const searchBox = document.querySelector('.search-box');
+    const productList = document.getElementById('productList');
+    
+    if (searchBox && !searchBox.contains(event.target) && !productList.contains(event.target)) {
+        productList.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
+

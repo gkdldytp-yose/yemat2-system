@@ -1,0 +1,988 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ page_title or '발주 관리' }}{% endblock %}
+{% block extra_css %}
+<style>
+.mini-badge{display:inline-block;margin-top:0.35rem;padding:0.15rem 0.5rem;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:0.72rem;font-weight:700;}
+.cnt-badge{background:#0f172a;color:white;border-radius:999px;padding:0.12rem 0.55rem;font-size:0.72rem;margin-left:0.35rem;font-weight:700;}
+.cnt-badge.red{background:#ef4444;}
+.status-tag{display:inline-block;padding:0.2rem 0.7rem;border-radius:12px;font-size:0.78rem;font-weight:700;}
+.st-need{background:#fce4ec;color:#c62828;}
+.st-ordered{background:#fff3e0;color:#e65100;}
+.st-done{background:#e8f5e9;color:#2e7d32;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;}
+.modal-box{background:white;border-radius:16px;padding:2rem;max-width:680px;width:95vw;max-height:85vh;overflow-y:auto;}
+.modal-box h3{margin-bottom:1.5rem;color:#2c3e50;}
+.sup-item{padding:0.7rem 1rem;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.sup-item:hover{background:#f8f9ff;}
+.progress-bar{height:6px;background:#e1e8ed;border-radius:3px;margin-top:0.3rem;}
+.progress-fill{height:100%;border-radius:3px;background:#e74c3c;transition:width 0.3s;}
+.action-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;}
+.mat-link{color:inherit;text-decoration:none;font-weight:700;cursor:pointer;}
+.mat-link:hover{text-decoration:underline;}
+.detail-modal{max-width:1050px;background:#f8fafc;}
+.detail-header-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0.55rem;margin:0.75rem 0 1rem;}
+.detail-header-item{background:#fff;border:1px solid #dbe5f0;border-radius:10px;padding:0.55rem 0.7rem;}
+.detail-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
+.detail-header-item .value{font-size:0.9rem;font-weight:800;color:#0f172a;}
+.detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.7rem;}
+.detail-tab{padding:0.45rem 0.9rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-weight:700;cursor:pointer;}
+.detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;}
+.detail-panel{display:none;}
+.detail-panel.active{display:block;}
+.issue-builder{display:grid;grid-template-columns:1fr 1.1fr;gap:1rem;}
+.logistics-alert-board{margin-bottom:1rem;padding:1.1rem;border:1px solid #dbe7f3;border-radius:22px;background:linear-gradient(135deg,#fffdf8 0%,#f8fbff 58%,#eef6ff 100%);box-shadow:0 16px 40px rgba(15,23,42,0.08);}
+.logistics-alert-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:0.9rem;}
+.logistics-alert-title{margin:0;font-size:1.08rem;color:#0f172a;}
+.logistics-alert-sub{margin:0.3rem 0 0;color:#64748b;font-size:0.86rem;}
+.logistics-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.75rem;margin-bottom:1rem;}
+.logistics-metric{padding:0.95rem 1rem;border-radius:18px;border:1px solid rgba(148,163,184,0.18);background:rgba(255,255,255,0.88);}
+.logistics-metric .eyebrow{font-size:0.74rem;font-weight:800;letter-spacing:0.04em;color:#64748b;text-transform:uppercase;}
+.logistics-metric .value{display:block;margin-top:0.35rem;font-size:1.6rem;font-weight:900;color:#0f172a;}
+.logistics-metric .caption{margin-top:0.2rem;font-size:0.82rem;color:#475569;}
+.metric-due{background:linear-gradient(135deg,#ecfeff,#f0fdfa);border-color:#99f6e4;}
+.metric-overdue{background:linear-gradient(135deg,#fff1f2,#fff7f7);border-color:#fecdd3;}
+.metric-issue{background:linear-gradient(135deg,#f8fafc,#eef2ff);border-color:#cbd5e1;}
+.metric-action{background:linear-gradient(135deg,#eff6ff,#eefcf7);border-color:#bfdbfe;}
+.logistics-toolbar{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.85rem;}
+.logistics-toolbar form{display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;}
+.logistics-overdue-table{border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;background:#fff;}
+.logistics-inline-actions{display:flex;flex-direction:column;gap:0.4rem;align-items:flex-start;}
+.issue-action-stack{display:flex;flex-direction:column;gap:0.45rem;align-items:flex-start;}
+.issue-action-row{display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;}
+.issue-reject-input{width:220px;}
+.reject-reason{display:block;margin-top:0.2rem;color:#b91c1c;font-size:0.8rem;font-weight:700;}
+.logistics-request-board{padding:0;overflow:hidden;margin-bottom:1rem;border:1px solid #dbe7f3;border-radius:20px;background:linear-gradient(180deg,#ffffff,#f8fbff);box-shadow:0 14px 34px rgba(15,23,42,.06);}
+.logistics-request-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;padding:1rem 1.05rem 0.85rem;border-bottom:1px solid #e2e8f0;}
+.logistics-request-title{font-size:1rem;font-weight:900;color:#0f172a;}
+.logistics-request-sub{margin-top:0.22rem;font-size:0.82rem;color:#64748b;}
+.workplace-filter-tabs{display:flex;gap:0.55rem;flex-wrap:wrap;margin:0 0 1rem;}
+.workplace-filter-tab{display:inline-flex;align-items:center;padding:0.52rem 0.9rem;border-radius:999px;border:1px solid #d7deea;background:linear-gradient(180deg,#ffffff,#f8fafc);color:#0f172a;text-decoration:none;font-size:0.82rem;font-weight:800;box-shadow:0 6px 18px rgba(15,23,42,.05);}
+.workplace-filter-tab.active{background:linear-gradient(135deg,#0f172a,#1e3a8a);border-color:#0f172a;color:#fff;box-shadow:0 10px 24px rgba(30,58,138,.18);}
+.logistics-request-table{width:100%;border-collapse:separate;border-spacing:0 10px;}
+.logistics-request-table thead th{font-size:0.74rem;text-transform:uppercase;letter-spacing:.04em;color:#475569;background:transparent;border:none;padding:0 0.7rem 0.35rem;}
+.logistics-request-table tbody tr{background:#fff;box-shadow:0 10px 24px rgba(15,23,42,.05);}
+.logistics-request-table tbody td{padding:0.85rem 0.7rem;border-top:1px solid #e6edf5;border-bottom:1px solid #e6edf5;background:#fff;vertical-align:middle;}
+.logistics-request-table tbody td:first-child{border-left:1px solid #e6edf5;border-top-left-radius:14px;border-bottom-left-radius:14px;}
+.logistics-request-table tbody td:last-child{border-right:1px solid #e6edf5;border-top-right-radius:14px;border-bottom-right-radius:14px;}
+.logistics-code-pill{display:inline-flex;align-items:center;padding:0.28rem 0.55rem;border-radius:999px;background:#e8f0ff;color:#1d4ed8;font-weight:900;font-size:0.78rem;}
+.logistics-note-box{display:block;max-width:340px;padding:0.58rem 0.72rem;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;line-height:1.45;}
+.logistics-request-empty{padding:2rem 1rem!important;text-align:center;color:#94a3b8!important;background:linear-gradient(180deg,#ffffff,#f8fafc)!important;}
+.btn-disabled{background:#cbd5e1 !important;color:#64748b !important;border-color:#cbd5e1 !important;cursor:not-allowed !important;pointer-events:none;opacity:1;}
+@media (max-width: 980px){.logistics-metrics{grid-template-columns:1fr;}.issue-reject-input{width:100%;}.logistics-request-table{min-width:920px;}.logistics-note-box{max-width:250px;}}
+@media (max-width: 980px){.issue-builder{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_logistics = _r in ['admin','logistics'] -%}
+{%- set can_receive = _r == 'logistics' -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+{% macro fmt_qty(v) -%}
+{%- set n = (v or 0)|float -%}
+{%- if n == (n|int) -%}
+{{ "{:,}".format(n|int) }}
+{%- else -%}
+{{ "{:,.2f}".format(n).rstrip('0').rstrip('.') }}
+{%- endif -%}
+{%- endmacro %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+    <h1 style="margin:0;">📋 {{ page_title or '발주 관리' }}</h1>
+    <div style="display:flex;gap:0.5rem;">
+        {% if can_purch and not disable_purchase_actions %}
+        <button class="btn btn-secondary btn-small" onclick="document.getElementById('supplierModal').style.display='flex'">🏢 업체 관리</button>
+        <button class="btn btn-small" style="background:#2563eb;" onclick="openDirectOrderModal()">➕ 직접 발주 등록</button>
+        <form method="POST" action="/purchase-requests/auto-scan" style="display:inline;">
+            <button type="submit" class="btn btn-small" style="background:#e67e22;">🔍 재고 자동 스캔</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 탭 -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('active',this)" id="tab_active">
+        발주 현황
+        <span class="cnt-badge red">{{ requests_active|length }}</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('done',this)" id="tab_done">
+        입고 완료
+        <span class="cnt-badge">{{ requests_done|length }}</span>
+    </button>
+    {% if show_low_stock_tab %}
+    <button class="tab-btn" onclick="switchTab('low',this)" id="tab_low">
+        발주 필요 부자재
+        <span class="cnt-badge red">{{ low_stock|length }}</span>
+    </button>
+    {% endif %}
+</div>
+
+{% if show_logistics_hub %}
+<div class="workplace-filter-tabs">
+    {% for wp_tab in logistics_workplace_tabs %}
+    <a
+        href="/logistics-materials?logistics_workplace={{ wp_tab|urlencode }}{% if selected_month %}&month={{ selected_month|urlencode }}{% endif %}"
+        class="workplace-filter-tab {% if logistics_workplace_filter == wp_tab %}active{% endif %}"
+    >
+        {{ wp_tab }}
+    </a>
+    {% endfor %}
+</div>
+<div class="logistics-alert-board">
+    <div class="logistics-alert-head">
+        <div>
+            <h3 class="logistics-alert-title">물류 알림 센터</h3>
+            <p class="logistics-alert-sub">{{ logistics_workplace_filter }} 기준으로 미입고 발주 또는 미처리 불출 요청이 남아 있는 가장 빠른 날짜를 표시합니다.</p>
+        </div>
+        <span class="status-tag st-ordered">처리 기준일 {{ logistics_focus_date or today_str }}</span>
+    </div>
+    <div class="logistics-metrics">
+        <div class="logistics-metric metric-due">
+            <span class="eyebrow">기준 예정일</span>
+            <span class="value">{{ logistics_focus_date or '-' }}</span>
+            <div class="caption">가장 빠른 미완료 예정일</div>
+        </div>
+        <div class="logistics-metric metric-overdue">
+            <span class="eyebrow">입고 처리 필요</span>
+            <span class="value">{{ logistics_receive_action_count or 0 }}</span>
+            <div class="caption">입고 완료 버튼 처리 대상</div>
+        </div>
+        <div class="logistics-metric metric-issue">
+            <span class="eyebrow">입고 완료</span>
+            <span class="value">{{ logistics_received_pending_count or 0 }}</span>
+            <div class="caption">해당 기준일 입고완료 건</div>
+        </div>
+        <div class="logistics-metric metric-action">
+            <span class="eyebrow">불출 처리 필요</span>
+            <span class="value">{{ logistics_issue_action_count or 0 }}</span>
+            <div class="caption">불출 완료 또는 반려 대기</div>
+        </div>
+    </div>
+    <div class="logistics-toolbar">
+        <div style="font-size:0.84rem;color:#475569;">기준일 불출 대기 {{ logistics_issue_action_count or 0 }}건, 전체 불출 대기 {{ issue_requests|length }}건. 입고 완료 또는 날짜 변경, 불출 완료 또는 반려가 되면 해당 건은 즉시 처리 완료로 봅니다.</div>
+    </div>
+    {% if logistics_focus_items %}
+    <div class="table-container logistics-overdue-table">
+        <table>
+            <thead><tr><th>입고예정일</th><th>작업장</th><th>자재</th><th>상태</th><th>발주수량</th><th>입고수량</th><th>처리</th></tr></thead>
+            <tbody>
+            {% for od in logistics_focus_items %}
+            <tr>
+                <td>{{ od.expected_delivery_date or '-' }}</td>
+                <td>{{ od.workplace }}</td>
+                <td>{{ od.material_name }}</td>
+                <td>{{ od.status }}</td>
+                <td>{{ fmt_qty(od.ordered_quantity) }} {{ od.unit or '' }}</td>
+                <td>{{ fmt_qty(od.received_quantity) }} {{ od.unit or '' }}</td>
+                <td>
+                    {% if od.status == '발주중' %}
+                    <form method="POST" action="/purchase-requests/{{ od.id }}/reschedule" style="display:inline-flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
+                        <input type="hidden" name="next_page" value="logistics">
+                        <input type="date" name="expected_delivery_date" required style="height:30px;">
+                        <input type="text" name="note" placeholder="변경 사유" style="height:30px;">
+                        <button type="submit" class="btn btn-small" style="background:#f59e0b;">날짜 변경</button>
+                    </form>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if logistics_focus_issue_requests %}
+    <div class="card" style="margin-top:0.75rem;padding:1rem;border:1px solid #dbeafe;background:#f8fbff;color:#334155;">
+        {{ logistics_focus_date }} 불출 요청 {{ logistics_focus_issue_requests|length }}건이 아직 처리 대기 중입니다. 하단 `작업장 불출 요청`에서 완료 또는 반려 처리해 주세요.
+    </div>
+    {% endif %}
+    {% elif logistics_focus_issue_requests %}
+    <div class="card" style="margin:0;padding:1rem;border:1px solid #dbeafe;background:#f8fbff;color:#334155;">
+        {{ logistics_focus_date }} 불출 요청 {{ logistics_focus_issue_requests|length }}건이 처리 대기 중입니다. 하단 `작업장 불출 요청`에서 완료 또는 반려 처리해 주세요.
+    </div>
+    {% elif logistics_focus_date %}
+    <div class="card" style="margin:0;padding:1rem;color:#475569;">{{ logistics_focus_date }} 처리 대상은 모두 정리되었습니다. 다음 미처리 날짜가 있으면 자동으로 기준일이 변경됩니다.</div>
+    {% else %}
+    <div class="card" style="margin:0;padding:1rem;color:#475569;">현재 처리 대기 중인 입고 또는 불출 요청이 없습니다.</div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- 발주 현황 탭 -->
+<div id="pane_active">
+{% if show_logistics_hub and issue_requests %}
+<div class="logistics-request-board">
+    <div class="logistics-request-head">
+        <div>
+            <div class="logistics-request-title">📦 작업장 불출 요청 <span class="cnt-badge">{{ issue_requests|length }}</span></div>
+            <div class="logistics-request-sub">{{ logistics_workplace_filter }} 기준 작업장 불출 요청을 검토하고 지급 또는 반려 처리합니다.</div>
+        </div>
+    </div>
+    <div class="table-container"><table class="logistics-request-table">
+        <thead><tr><th>요청 정보</th><th>자재</th><th>요청수량</th><th>비고</th><th>처리</th></tr></thead>
+        <tbody>
+        {% for ir in issue_requests %}
+        <tr>
+            <td>
+                <div style="font-weight:800;color:#0f172a;">{{ ir.requested_at[:16] if ir.requested_at else '-' }}</div>
+                <div style="margin-top:0.18rem;font-size:0.78rem;color:#64748b;">{{ ir.requester_workplace or '-' }}</div>
+            </td>
+            <td>
+                <div class="logistics-code-pill">{{ ir.material_code or '-' }}</div>
+                <div style="margin-top:0.3rem;font-weight:800;color:#0f172a;">{{ ir.material_name }}</div>
+            </td>
+            <td><strong style="color:#0f172a;">{{ fmt_qty(ir.requested_quantity) }} {{ ir.unit or '' }}</strong></td>
+            <td><span class="logistics-note-box">{{ ir.note or '-' }}</span></td>
+            <td>
+                {% if can_logistics %}
+                <div class="issue-action-stack">
+                    <form method="POST" action="/issue-requests/{{ ir.id }}/complete" class="issue-action-row">
+                        <input type="number" name="approved_quantity" value="{{ ir.requested_quantity }}" step="0.01" min="0" style="width:95px;">
+                        <input type="text" name="process_note" placeholder="지급 메모" style="width:120px;">
+                        <button type="submit" class="btn btn-small" style="background:#0ea5e9;">완료</button>
+                    </form>
+                    <form method="POST" action="/issue-requests/{{ ir.id }}/reject" class="issue-action-row">
+                        <input type="text" name="rejected_reason" class="issue-reject-input" placeholder="반려 사유 입력" required>
+                        <button type="submit" class="btn btn-small" style="background:#dc2626;">반려</button>
+                    </form>
+                </div>
+                {% else %}
+                <span style="color:#64748b;font-size:0.82rem;">물류관리 권한 필요</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</div>
+{% endif %}
+{% if show_logistics_hub and export_issue_requests %}
+<div class="logistics-request-board">
+    <div class="logistics-request-head">
+        <div>
+            <div class="logistics-request-title">↩ 작업장 반출 요청 <span class="cnt-badge">{{ export_issue_requests|length }}</span></div>
+            <div class="logistics-request-sub">{{ logistics_workplace_filter }} 기준 작업장 반출 요청을 검토하고 승인 또는 반려 처리합니다.</div>
+        </div>
+    </div>
+    <div class="table-container"><table class="logistics-request-table">
+        <thead><tr><th>요청 정보</th><th>자재</th><th>로트</th><th>반출수량</th><th>사유</th><th>비고</th><th>처리</th></tr></thead>
+        <tbody>
+        {% for er in export_issue_requests %}
+        <tr>
+            <td>
+                <div style="font-weight:800;color:#0f172a;">{{ er.requested_at[:16] if er.requested_at else '-' }}</div>
+                <div style="margin-top:0.18rem;font-size:0.78rem;color:#64748b;">{{ er.requester_workplace or '-' }}</div>
+            </td>
+            <td>
+                <div class="logistics-code-pill">{{ er.material_code or '-' }}</div>
+                <div style="margin-top:0.3rem;font-weight:800;color:#0f172a;">{{ er.material_name }}</div>
+            </td>
+            <td>{{ er.material_lot or '-' }}</td>
+            <td><strong style="color:#0f172a;">{{ fmt_qty(er.requested_quantity) }} {{ er.unit or '' }}</strong></td>
+            <td>
+                <div style="font-weight:700;color:#334155;">{{ er.reason or '-' }}</div>
+                <div style="margin-top:0.18rem;font-size:0.78rem;color:#64748b;">{{ er.reason_detail or '-' }}</div>
+            </td>
+            <td><span class="logistics-note-box">{{ er.note or '-' }}</span></td>
+            <td>
+                {% if can_logistics %}
+                <div class="issue-action-stack">
+                    <form method="POST" action="/export-requests/{{ er.id }}/complete" class="issue-action-row">
+                        <input type="number" name="approved_quantity" value="{{ er.requested_quantity }}" step="0.01" min="0" style="width:95px;">
+                        <input type="text" name="process_note" placeholder="처리 메모" style="width:120px;">
+                        <button type="submit" class="btn btn-small" style="background:#f97316;">승인</button>
+                    </form>
+                    <form method="POST" action="/export-requests/{{ er.id }}/reject" class="issue-action-row">
+                        <input type="text" name="rejected_reason" class="issue-reject-input" placeholder="반려 사유 입력" required>
+                        <button type="submit" class="btn btn-small" style="background:#dc2626;">반려</button>
+                    </form>
+                </div>
+                {% else %}
+                <span style="color:#64748b;font-size:0.82rem;">물류관리 권한 필요</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</div>
+{% endif %}
+{% if requests_active %}
+<div class="logistics-request-board">
+    <div class="logistics-request-head">
+        <div>
+            <div class="logistics-request-title">🧾 작업장 발주 요청 <span class="cnt-badge">{{ requests_active|length }}</span></div>
+            <div class="logistics-request-sub">{{ logistics_workplace_filter }} 기준 작업장 자재 발주 요청 현황입니다. 입고 처리 대상도 여기서 이어서 확인합니다.</div>
+        </div>
+    </div>
+    <div class="table-container"><table class="logistics-request-table">
+        <thead><tr><th>코드</th><th>부자재명</th><th>분류</th><th>상태</th><th>발주 수량</th><th>MOQ</th><th>리드타임</th><th>입고 예정일</th><th>공급업체</th><th>현재 재고</th>{% if can_purch and (not disable_purchase_actions or can_receive) %}<th>관리</th>{% endif %}</tr></thead>
+        <tbody>
+        {% for r in requests_active %}
+        <tr>
+            <td><span class="logistics-code-pill">{{ r.material_code or '-' }}</span></td>
+            <td><a href="#" class="mat-link" onclick="openMaterialDetailModal({{ r.material_id }}); return false;">{{ r.material_name }}</a></td>
+            <td>{{ r.unit }}</td>
+            <td>
+                {% if r.status == '발주필요' %}<span class="status-tag st-need">⚡ 발주필요</span>
+                {% elif r.status == '발주중' %}<span class="status-tag st-ordered">📦 발주중</span>
+                {% endif %}
+            </td>
+            <td>{% if r.ordered_quantity > 0 %}{{ "{:,}".format((r.ordered_quantity or 0)|int) }}{% else %}-{% endif %}</td>
+            <td>{{ r.moq or '-' }}</td>
+            <td>{{ r.lead_time or '-' }}</td>
+            <td>{{ r.expected_delivery_date or '-' }}</td>
+            <td><span class="logistics-note-box" style="max-width:220px;">{{ r.supplier_name or '-' }}</span></td>
+            <td>
+                <span style="color:{% if r.current_stock < r.min_stock %}#e74c3c{% else %}#27ae60{% endif %}">
+                    {{ "%.1f"|format(r.current_stock) }} / {{ "%.1f"|format(r.min_stock) }}
+                </span>
+                {% if r.min_stock > 0 %}
+                <div class="progress-bar"><div class="progress-fill" style="width:{{ [((r.current_stock/r.min_stock)*100)|int, 100]|min }}%;background:{% if r.current_stock >= r.min_stock %}#27ae60{% else %}#e74c3c{% endif %};"></div></div>
+                {% endif %}
+            </td>
+            {% if can_purch and (not disable_purchase_actions or can_receive) %}
+            <td style="white-space:nowrap;">
+                {% if r.status == '발주필요' %}
+                {% if not disable_purchase_actions %}
+                <button class="btn btn-small" onclick="openOrderModal({{ r.id }},{{ r.material_id }},'{{ r.material_name }}',{{ r.requested_quantity if (r.requested_quantity is not none and r.requested_quantity > 0) else (r.min_stock - r.current_stock if r.min_stock > r.current_stock else 0) }},'{{ r.moq if r.moq is not none else '' }}','{{ r.lead_time if r.lead_time is not none else '' }}')">📝 발주 등록</button>
+                {% else %}
+                -
+                {% endif %}
+                {% elif r.status == '발주중' %}
+                {% if can_receive %}
+                <button class="btn btn-small" style="background:#27ae60;" onclick='openReceiveModal({{ r.id }}, {{ r.material_name|tojson }}, {{ r.ordered_quantity }}, {{ r.unit_price if r.unit_price is not none else 0 }}, {{ (r.expected_delivery_date or "")|tojson }})'>✅ 입고 완료</button>
+                {% else %}
+                <span style="color:#64748b;font-size:0.82rem;">물류관리 권한 필요</span>
+                {% endif %}
+                {% endif %}
+                {% if not disable_purchase_actions %}
+                <form method="POST" action="/purchase-requests/{{ r.id }}/delete" style="display:inline;" onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+                </form>
+                {% endif %}
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:3rem;color:#999;">진행 중인 발주가 없습니다 ✅</div>
+{% endif %}
+</div>
+
+<!-- 입고 완료 탭 -->
+<div id="pane_done" style="display:none;">
+<!-- 월별 필터 -->
+<div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;background:white;padding:0.75rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+    <a href="{{ '/logistics-materials' if page_mode == 'logistics' else '/purchase-orders' }}?tab=done" class="btn btn-small {% if not selected_month %}active{% endif %}" style="{% if not selected_month %}background:#667eea;color:white;{% endif %}">전체</a>
+    {% for m in months %}
+    <a href="{{ '/logistics-materials' if page_mode == 'logistics' else '/purchase-orders' }}?tab=done&month={{ m }}" class="btn btn-small {% if selected_month == m %}active{% endif %}" style="{% if selected_month == m %}background:#667eea;color:white;{% endif %}">{{ m }}</a>
+    {% endfor %}
+</div>
+
+{% if requests_done %}
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-container"><table>
+        <thead><tr><th>코드</th><th>부자재명</th><th>발주 수량</th><th>입고 수량</th><th>입고 예정일</th><th>완료일</th><th>공급업체</th></tr></thead>
+        <tbody>
+        {% for r in requests_done %}
+        <tr>
+            <td>{{ r.material_code or '-' }}</td>
+            <td><a href="#" class="mat-link" onclick="openMaterialDetailModal({{ r.material_id }}); return false;">{{ r.material_name }}</a></td>
+            <td>{{ fmt_qty(r.ordered_quantity) }}</td>
+            <td><strong style="color:#27ae60;">{{ fmt_qty(r.received_quantity) }}</strong></td>
+            <td>{{ r.expected_delivery_date or '-' }}</td>
+            <td>{{ r.received_at[:10] if r.received_at else '-' }}</td>
+            <td>{{ r.supplier_name or '-' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:3rem;color:#999;">입고 완료된 발주가 없습니다</div>
+{% endif %}
+</div>
+
+{% if show_low_stock_tab %}
+<!-- 발주 필요 부자재 탭 -->
+<div id="pane_low" style="display:none;">
+{% if low_stock %}
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-container"><table>
+        <thead><tr><th>코드</th><th>부자재명</th><th>분류</th><th>현재 재고</th><th>최소 재고</th><th>부족량</th><th>공급업체</th>{% if can_purch and not disable_purchase_actions %}<th>발주 등록</th>{% endif %}</tr></thead>
+        <tbody>
+        {% for m in low_stock %}
+        <tr style="{% if m.already_requested %}opacity:0.5;{% endif %}">
+            <td>{{ m.code or '-' }}</td>
+            <td><strong>{{ m.name }}</strong></td>
+            <td>{{ m.category or '-' }}</td>
+            <td><strong style="color:#e74c3c;">{{ "%.1f"|format(m.current_stock) }}</strong></td>
+            <td>{{ "%.1f"|format(m.min_stock) }}</td>
+            {% set shortage_unit = (m.unit or '')|trim %}
+            {% if shortage_unit|lower in ['1kg', '1 kg'] %}
+                {% set shortage_unit = 'kg' %}
+            {% endif %}
+            <td><strong style="color:#e67e22;">{{ "%.1f"|format(m.min_stock - m.current_stock) }} {{ shortage_unit }}</strong></td>
+            <td>{{ m.supplier_name or '-' }}</td>
+            {% if can_purch and not disable_purchase_actions %}
+            <td>
+                {% if m.already_requested %}
+                <span style="color:#27ae60;font-size:0.85rem;">✓ 발주중</span>
+                {% else %}
+                <button class="btn btn-small" onclick="openOrderModal(null,{{ m.id }},'{{ m.name }}',{{ "%.1f"|format(m.min_stock - m.current_stock) }},'{{ m.moq if m.moq is not none else '' }}','{{ m.lead_time if m.lead_time is not none else '' }}')">📝 발주 등록</button>
+                {% endif %}
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:3rem;color:#27ae60;">⚡ 모든 부자재 재고가 충분합니다!</div>
+{% endif %}
+</div>
+{% endif %}
+
+
+<!-- 발주 등록 모달 -->
+<div class="modal-bg" id="orderModal">
+    <div class="modal-box">
+        <h3>📝 발주 등록</h3>
+        <form method="POST" action="/purchase-requests/add" onsubmit="return validatePurchaseRequestForm(this)">
+            <input type="hidden" name="material_id" id="om_mid">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                    <label>부자재명</label>
+                    <input type="text" id="om_name" readonly style="background:#f8f9fa;">
+                </div>
+                <div class="form-group">
+                    <label>MOQ</label>
+                    <input type="text" id="om_moq" readonly style="background:#f8f9fa;">
+                    <div id="om_moq_badge" class="mini-badge" style="display:none;">미등록</div>
+                </div>
+                <div class="form-group">
+                    <label>발주 수량 *</label>
+                    <input type="number" name="quantity" id="om_qty" step="0.01" min="0" required placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>리드타임</label>
+                    <input type="text" id="om_lead" readonly style="background:#f8f9fa;">
+                    <div id="om_lead_badge" class="mini-badge" style="display:none;">미등록</div>
+                </div>
+                <div class="form-group">
+                    <label>입고 예정일 *</label>
+                    <input type="date" name="expected_delivery_date" required>
+                </div>
+                <div class="form-group">
+                    <label>비고</label>
+                    <input type="text" name="note" placeholder="참고 사항">
+                </div>
+            </div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('orderModal').style.display='none'">취소</button>
+                <button type="submit" class="btn">발주 등록</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 직접 발주 등록 모달 -->
+<div class="modal-bg" id="directOrderModal">
+    <div class="modal-box">
+        <h3>➕ 직접 발주 등록</h3>
+        <form method="POST" action="/purchase-requests/add" onsubmit="return validatePurchaseRequestForm(this)">
+            <div class="form-group">
+                <label>부자재 검색</label>
+                <input type="text" id="dom_search" placeholder="코드 또는 부자재명 검색..." oninput="filterDirectMaterials()">
+            </div>
+            <div class="form-group">
+                <label>부자재 선택 *</label>
+                <select name="material_id" id="dom_material_id" size="8" required onchange="updateDirectMaterialInfo()">
+                    {% for m in order_materials %}
+                    <option value="{{ m.id }}"
+                            data-code="{{ m.code or '' }}"
+                            data-name="{{ m.name or '' }}"
+                            data-moq="{{ m.moq or '' }}"
+                            data-lead="{{ m.lead_time or '' }}"
+                            data-unit="{{ m.unit or '' }}">
+                        [{{ m.code or '-' }}] {{ m.name }} {% if m.supplier_name %}({{ m.supplier_name }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                    <label>MOQ</label>
+                    <input type="text" id="dom_moq" readonly style="background:#f8f9fa;">
+                    <div id="dom_moq_badge" class="mini-badge" style="display:none;">미등록</div>
+                </div>
+                <div class="form-group">
+                    <label>리드타임</label>
+                    <input type="text" id="dom_lead" readonly style="background:#f8f9fa;">
+                    <div id="dom_lead_badge" class="mini-badge" style="display:none;">미등록</div>
+                </div>
+                <div class="form-group">
+                    <label>입고 예정일 *</label>
+                    <input type="date" name="expected_delivery_date" required>
+                </div>
+                <div class="form-group">
+                    <label>발주 수량 *</label>
+                    <input type="number" name="quantity" id="dom_qty" step="0.01" min="0.01" required placeholder="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>비고</label>
+                <input type="text" name="note" placeholder="참고 사항">
+            </div>
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('directOrderModal').style.display='none'">취소</button>
+                <button type="submit" class="btn">발주 등록</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 입고 완료 모달 -->
+<div class="modal-bg" id="receiveModal">
+    <div class="modal-box">
+        <h3>✅ 입고 완료 처리</h3>
+        <form method="POST" id="receiveForm">
+            <input type="hidden" name="next_page" value="{{ receive_next_page }}">
+            <input type="hidden" name="request_id" id="rm_request_id">
+            <div class="form-group">
+                <label>부자재명</label>
+                <input type="text" id="rm_name" readonly style="background:#f8f9fa;">
+            </div>
+            <div class="form-group">
+                <label>발주 수량</label>
+                <input type="text" id="rm_ordered" readonly style="background:#f8f9fa;">
+            </div>
+            <div class="form-group">
+                <label>실제 입고 수량 *</label>
+                <input type="number" name="received_quantity" id="rm_qty" step="0.01" min="0" required placeholder="0">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                    <label>입고일 *</label>
+                    <input type="date" name="receiving_date" id="rm_receiving_date" required>
+                </div>
+                <div class="form-group">
+                    <label>제조일 *</label>
+                    <input type="date" name="manufacture_date" id="rm_manufacture_date" required>
+                </div>
+                <div class="form-group">
+                    <label>소비기한 *</label>
+                    <input type="date" name="expiry_date" id="rm_expiry_date" required>
+                </div>
+                <div class="form-group">
+                    <label>단가 *</label>
+                    <input type="number" name="unit_price" id="rm_unit_price" step="0.01" min="0" required>
+                </div>
+                <div class="form-group" style="grid-column:1 / -1;">
+                    <label>공급사 LOT</label>
+                    <input type="text" name="supplier_lot" id="rm_supplier_lot" placeholder="선택 입력">
+                </div>
+            </div>
+            <div style="background:#e8f5e9;border-radius:8px;padding:0.75rem;font-size:0.9rem;color:#2e7d32;margin-bottom:1rem;">
+                ✅ 마지막 단가를 자동으로 불러오며 수정 가능합니다. 입고 완료 시 로트가 생성됩니다.
+            </div>
+            <div style="border:1px solid #fde68a;background:#fffdf3;border-radius:10px;padding:0.9rem;margin-bottom:1rem;">
+                <div style="font-weight:800;color:#92400e;margin-bottom:0.5rem;">입고가 되지 않아 입고일 변경이 필요한 경우</div>
+                <div style="display:grid;grid-template-columns:1fr 1.4fr auto;gap:0.6rem;align-items:end;">
+                    <div class="form-group" style="margin:0;">
+                        <label>변경할 입고일</label>
+                        <input type="date" id="rm_reschedule_date">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label>변경 사유</label>
+                        <input type="text" id="rm_reschedule_note" placeholder="미입고 사유 입력">
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-small" style="background:#f59e0b;" onclick="submitReceiveReschedule()">입고일 변경</button>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align:right;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('receiveModal').style.display='none'">취소</button>
+                <button type="submit" class="btn">입고 완료 처리</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 업체 관리 모달 -->
+<div class="modal-bg" id="supplierModal">
+    <div class="modal-box" style="max-width:750px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h3 style="margin:0;">🏢 발주 업체 관리</h3>
+            <button onclick="document.getElementById('supplierModal').style.display='none'" style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
+        </div>
+
+        <!-- 업체 추가 -->
+        {% if can_purch %}
+        <div style="background:#f8f9fa;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+            <h4 style="margin-bottom:1rem;color:#2c3e50;">업체 추가</h4>
+            <form method="POST" action="/suppliers/add">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="form-group"><label>업체명 *</label><input type="text" name="name" required></div>
+                    <div class="form-group"><label>연락처</label><input type="text" name="contact" placeholder="010-0000-0000"></div>
+                    <div class="form-group"><label>주소</label><input type="text" name="address"></div>
+                    <div class="form-group"><label>비고</label><input type="text" name="note"></div>
+                </div>
+                <div style="text-align:right;">
+                    <button type="submit" class="btn btn-small">업체 등록</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- 검색 -->
+        <div style="margin-bottom:1rem;">
+            <input type="text" id="supSearch" placeholder="🔍 업체명 또는 연락처 검색..."
+                   oninput="filterSuppliers()"
+                   style="width:100%;padding:0.75rem;border:2px solid #e1e8ed;border-radius:8px;">
+        </div>
+
+        <!-- 업체 목록 -->
+        <div id="supList">
+        {% if suppliers %}
+        {% for s in suppliers %}
+        <div class="sup-item" data-name="{{ s.name }}" data-contact="{{ s.contact or '' }}">
+            <div>
+                <strong>{{ s.name }}</strong>
+                <div style="font-size:0.85rem;color:#666;margin-top:0.2rem;">
+                    📞 {{ s.contact or '-' }} | 📍 {{ s.address or '-' }}
+                </div>
+            </div>
+            {% if can_purch %}
+            <div style="display:flex;gap:0.5rem;">
+                <button type="button" class="btn btn-small" style="background:#667eea;"
+                    onclick="openEditSupplier({{ s.id }},'{{ s.name|replace("'","\\'") }}','{{ (s.contact or '')|replace("'","\\'") }}','{{ (s.address or '')|replace("'","\\'") }}','{{ (s.note or '')|replace("'","\\'") }}')">수정</button>
+                <form method="POST" action="/suppliers/delete/{{ s.id }}" onsubmit="return confirm('{{ s.name }} 업체를 삭제하시겠습니까?')">
+                    <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="text-align:center;color:#aaa;padding:2rem;">등록된 업체가 없습니다</p>
+        {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 업체 수정 모달 -->
+<div class="modal-bg" id="editSupplierModal">
+    <div class="modal-box" style="max-width:500px;">
+        <h3>🏢 업체 정보 수정</h3>
+        <form method="POST" action="/suppliers/update">
+            <input type="hidden" name="supplier_id" id="es_id">
+            <div class="form-group"><label>업체명 *</label><input type="text" name="name" id="es_name" required></div>
+            <div class="form-group"><label>연락처</label><input type="text" name="contact" id="es_contact"></div>
+            <div class="form-group"><label>주소</label><input type="text" name="address" id="es_address"></div>
+            <div class="form-group"><label>비고</label><input type="text" name="note" id="es_note"></div>
+            <div style="text-align:right;display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('editSupplierModal').style.display='none'">취소</button>
+                <button type="submit" class="btn">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 부자재 상세 모달 -->
+<div class="modal-bg" id="materialDetailModal">
+    <div class="modal-box detail-modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+            <h3 style="margin:0;">부자재 상세</h3>
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeMaterialDetailModal()">닫기</button>
+        </div>
+        <div class="detail-header-grid">
+            <div class="detail-header-item"><span class="label">코드</span><span class="value" id="d_code">-</span></div>
+            <div class="detail-header-item"><span class="label">제품명</span><span class="value" id="d_name">-</span></div>
+            <div class="detail-header-item"><span class="label">제조사</span><span class="value" id="d_supplier">-</span></div>
+            <div class="detail-header-item"><span class="label">단위</span><span class="value" id="d_unit">-</span></div>
+            <div class="detail-header-item"><span class="label">총수량</span><span class="value" id="d_total">0</span></div>
+        </div>
+        <div class="detail-tabs">
+            <button type="button" class="detail-tab active" id="dTabLot" onclick="switchDetailTab('lot')">로트</button>
+            <button type="button" class="detail-tab" id="dTabLog" onclick="switchDetailTab('log')">사용 로그</button>
+        </div>
+        <div id="dPanelLot" class="detail-panel active">
+            <div class="table-container"><table>
+                <thead><tr><th>로트</th><th>입고일</th><th>제조일</th><th>소비기한</th><th>단가</th><th>입고수량</th><th>현재수량</th><th>공급사LOT</th></tr></thead>
+                <tbody id="dLotBody"></tbody>
+            </table></div>
+        </div>
+        <div id="dPanelLog" class="detail-panel">
+            <div class="table-container"><table>
+                <thead><tr><th>사용일</th><th>생산번호</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
+                <tbody id="dLogBody"></tbody>
+            </table></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(name, btn){
+    ['active','done','low'].forEach(t=>{
+        const pane = document.getElementById('pane_'+t);
+        if(!pane) return;
+        pane.style.display = t===name?'':'none';
+        document.getElementById('tab_'+t)?.classList.toggle('active', t===name);
+    });
+}
+
+// 페이지 로드 시 URL에서 tab 파라미터 읽어서 자동 선택
+window.onload = function(){
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if(tab && ['active','done','low'].includes(tab) && document.getElementById('pane_' + tab)){
+        switchTab(tab, null);
+    }
+};
+
+function openOrderModal(reqId, matId, matName, defQty, moq, leadTime){
+    document.getElementById('om_mid').value = matId;
+    document.getElementById('om_name').value = matName;
+    const qty = Number(defQty || 0);
+    document.getElementById('om_qty').value = qty > 0 ? (Math.round(qty * 100) / 100) : '';
+    const moqVal = moq && String(moq).trim() ? moq : '';
+    const leadVal = leadTime && String(leadTime).trim() ? leadTime : '';
+    document.getElementById('om_moq').value = moqVal || '-';
+    document.getElementById('om_lead').value = leadVal || '-';
+    document.getElementById('om_moq_badge').style.display = moqVal ? 'none' : 'inline-block';
+    document.getElementById('om_lead_badge').style.display = leadVal ? 'none' : 'inline-block';
+    document.getElementById('orderModal').style.display = 'flex';
+}
+
+function validatePurchaseRequestForm(form){
+    const expectedDate = (form.querySelector('input[name="expected_delivery_date"]')?.value || '').trim();
+    if(!expectedDate){
+        alert('입고 예정일을 등록해 주세요.');
+        return false;
+    }
+    return true;
+}
+
+function openReceiveModal(reqId, matName, orderedQty, lastUnitPrice, expectedDate){
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('rm_request_id').value = reqId;
+    document.getElementById('rm_name').value = matName;
+    document.getElementById('rm_ordered').value = orderedQty;
+    document.getElementById('rm_qty').value = orderedQty;
+    document.getElementById('rm_receiving_date').value = today;
+    document.getElementById('rm_manufacture_date').value = today;
+    document.getElementById('rm_expiry_date').value = '';
+    document.getElementById('rm_unit_price').value = Number(lastUnitPrice || 0).toFixed(2);
+    document.getElementById('rm_supplier_lot').value = '';
+    document.getElementById('rm_reschedule_date').value = expectedDate || '';
+    document.getElementById('rm_reschedule_note').value = '';
+    document.getElementById('receiveForm').action = '/purchase-requests/' + reqId + '/receive';
+    document.getElementById('receiveModal').style.display = 'flex';
+}
+
+function submitReceiveReschedule(){
+    const reqId = document.getElementById('rm_request_id')?.value;
+    const nextDate = document.getElementById('rm_reschedule_date')?.value;
+    const note = (document.getElementById('rm_reschedule_note')?.value || '').trim();
+    if(!reqId){
+        alert('대상 발주를 찾을 수 없습니다.');
+        return;
+    }
+    if(!nextDate){
+        alert('변경할 입고일을 선택해 주세요.');
+        return;
+    }
+    if(!note){
+        alert('입고일 변경 사유를 입력해 주세요.');
+        return;
+    }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/purchase-requests/${reqId}/reschedule`;
+    [
+        ['expected_delivery_date', nextDate],
+        ['note', note],
+        ['next_page', '{{ receive_next_page }}'],
+    ].forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function openDirectOrderModal(){
+    document.getElementById('dom_search').value = '';
+    const sel = document.getElementById('dom_material_id');
+    for(const opt of sel.options){
+        opt.hidden = false;
+    }
+    if(sel.options.length > 0){
+        sel.selectedIndex = 0;
+    }
+    updateDirectMaterialInfo();
+    document.getElementById('directOrderModal').style.display = 'flex';
+}
+
+function filterDirectMaterials(){
+    const q = (document.getElementById('dom_search').value || '').toLowerCase().trim();
+    const sel = document.getElementById('dom_material_id');
+    let firstVisible = -1;
+    for(let i=0;i<sel.options.length;i++){
+        const opt = sel.options[i];
+        const txt = (opt.textContent || '').toLowerCase();
+        const show = !q || txt.includes(q);
+        opt.hidden = !show;
+        if(show && firstVisible < 0) firstVisible = i;
+    }
+    if(firstVisible >= 0){
+        sel.selectedIndex = firstVisible;
+    } else {
+        sel.selectedIndex = -1;
+    }
+    updateDirectMaterialInfo();
+}
+
+function updateDirectMaterialInfo(){
+    const sel = document.getElementById('dom_material_id');
+    const opt = sel.options[sel.selectedIndex];
+    const moqEl = document.getElementById('dom_moq');
+    const leadEl = document.getElementById('dom_lead');
+    const moqBadge = document.getElementById('dom_moq_badge');
+    const leadBadge = document.getElementById('dom_lead_badge');
+    if(!opt || opt.hidden){
+        moqEl.value = '-';
+        leadEl.value = '-';
+        moqBadge.style.display = 'inline-block';
+        leadBadge.style.display = 'inline-block';
+        return;
+    }
+    const moq = (opt.dataset.moq || '').trim();
+    const lead = (opt.dataset.lead || '').trim();
+    moqEl.value = moq || '-';
+    leadEl.value = lead || '-';
+    moqBadge.style.display = moq ? 'none' : 'inline-block';
+    leadBadge.style.display = lead ? 'none' : 'inline-block';
+}
+
+function filterSuppliers(){
+    const q = document.getElementById('supSearch').value.toLowerCase();
+    document.querySelectorAll('.sup-item').forEach(el => {
+        const n = el.dataset.name.toLowerCase();
+        const c = el.dataset.contact.toLowerCase();
+        el.style.display = (n.includes(q)||c.includes(q)) ? '' : 'none';
+    });
+}
+
+// 모달 외부 클릭 닫기
+['orderModal','directOrderModal','receiveModal','supplierModal','editSupplierModal','materialDetailModal'].forEach(id=>{
+    document.getElementById(id).addEventListener('click', function(e){
+        if(e.target === this) this.style.display = 'none';
+    });
+});
+
+function switchDetailTab(tab){
+    const lotBtn = document.getElementById('dTabLot');
+    const logBtn = document.getElementById('dTabLog');
+    const lotPanel = document.getElementById('dPanelLot');
+    const logPanel = document.getElementById('dPanelLog');
+    if(tab === 'log'){
+        lotBtn.classList.remove('active');
+        logBtn.classList.add('active');
+        lotPanel.classList.remove('active');
+        logPanel.classList.add('active');
+    } else {
+        logBtn.classList.remove('active');
+        lotBtn.classList.add('active');
+        logPanel.classList.remove('active');
+        lotPanel.classList.add('active');
+    }
+}
+
+function closeMaterialDetailModal(){
+    document.getElementById('materialDetailModal').style.display = 'none';
+}
+
+function renderDetailLots(lots){
+    const body = document.getElementById('dLotBody');
+    if(!lots || lots.length === 0){
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">등록된 로트가 없습니다.</td></tr>';
+        return;
+    }
+    body.innerHTML = lots.map(l => `
+        <tr>
+            <td><strong>${l.lot || '-'}</strong></td>
+            <td>${l.receiving_date || '-'}</td>
+            <td>${l.manufacture_date || '-'}</td>
+            <td>${l.expiry_date || '-'}</td>
+            <td>${Number(l.unit_price || 0).toFixed(2)}</td>
+            <td>${Number(l.received_quantity || l.quantity || 0).toFixed(1)}</td>
+            <td>${Number(l.current_quantity || l.quantity || 0).toFixed(1)}</td>
+            <td>${l.supplier_lot || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+function renderDetailLogs(logs){
+    const body = document.getElementById('dLogBody');
+    if(!logs || logs.length === 0){
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        return;
+    }
+    body.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.use_date || '-').toString().slice(0,10)}</td>
+            <td>${log.production_no || '-'}</td>
+            <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
+            <td>${Number(log.remaining_quantity || 0).toFixed(1)}</td>
+            <td>${log.user_name || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+async function openMaterialDetailModal(materialId){
+    switchDetailTab('lot');
+    const res = await fetch(`/materials/${materialId}/detail`);
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '상세 조회 실패');
+        return;
+    }
+    const m = payload.material || {};
+    document.getElementById('d_code').textContent = m.code || '-';
+    document.getElementById('d_name').textContent = m.name || '-';
+    document.getElementById('d_supplier').textContent = m.supplier_name || '-';
+    document.getElementById('d_unit').textContent = m.unit || '-';
+    document.getElementById('d_total').textContent = Number(m.total_quantity || 0).toFixed(1);
+    renderDetailLots(payload.lots || []);
+    renderDetailLogs(payload.usage_logs || []);
+    document.getElementById('materialDetailModal').style.display = 'flex';
+}
+
+document.getElementById('materialDetailModal').addEventListener('click', function(e){
+    if(e.target === this) this.style.display = 'none';
+});
+
+function openEditSupplier(id, name, contact, address, note){
+    document.getElementById('es_id').value = id;
+    document.getElementById('es_name').value = name;
+    document.getElementById('es_contact').value = contact;
+    document.getElementById('es_address').value = address;
+    document.getElementById('es_note').value = note;
+    document.getElementById('editSupplierModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

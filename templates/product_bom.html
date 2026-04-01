@@ -1,0 +1,545 @@
+﻿{% extends "base.html" %}
+{% block title %}BOM - {{ product.name }}{% endblock %}
+{% block extra_css %}
+<style>
+.tab-container{display:flex;gap:0.5rem;margin-bottom:2rem;background:linear-gradient(135deg,#f6f7fb 0%, #eef2ff 100%);padding:0.5rem;border-radius:14px;border:1px solid #e3e7ff;box-shadow:0 6px 20px rgba(37,99,235,0.12);}
+.tab-btn{flex:1;padding:0.9rem 1rem;background:transparent;border:1px solid transparent;border-radius:10px;cursor:pointer;font-size:0.95rem;font-weight:700;transition:all 0.2s;color:#4b5563;}
+.tab-btn:hover{background:rgba(255,255,255,0.7);color:#0f172a;}
+.tab-btn.active{color:#0f172a;background:#fff;border-color:#c7d2fe;box-shadow:0 4px 12px rgba(79,70,229,0.15);}
+.search-container{position:relative;margin-bottom:1.5rem;}
+.search-container input{width:100%;padding:1rem 3rem 1rem 1rem;border:2px solid #e1e8ed;border-radius:8px;font-size:1rem;}
+.search-container input:focus{border-color:#667eea;outline:none;}
+.search-icon{position:absolute;right:1rem;top:50%;transform:translateY(-50%);font-size:1.2rem;color:#999;}
+.selection-panel{border:1px solid #dbe4ff;border-radius:16px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 12px 28px rgba(37,99,235,0.08);overflow:hidden;margin-bottom:1.5rem;}
+.selection-panel-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:0.95rem 1.1rem;border-bottom:1px solid #e5ecff;background:#f8fbff;}
+.selection-panel-title{font-size:0.95rem;font-weight:800;color:#0f172a;}
+.selection-panel-sub{font-size:0.8rem;color:#64748b;}
+.selection-table-wrap{max-height:420px;overflow:auto;}
+.selection-table{width:100%;border-collapse:separate;border-spacing:0;}
+.selection-table thead th{position:sticky;top:0;background:#eef4ff;color:#334155;font-size:0.8rem;font-weight:800;padding:0.8rem 0.9rem;border-bottom:1px solid #dbe4ff;text-align:left;z-index:1;}
+.selection-table tbody td{padding:0.82rem 0.9rem;border-bottom:1px solid #eef2f7;vertical-align:middle;background:#fff;}
+.selection-table tbody tr:hover td{background:#f8fbff;}
+.selection-table tbody tr.selected td{background:#eef4ff;}
+.selection-check{width:18px;height:18px;accent-color:#4f46e5;cursor:pointer;}
+.selection-name{font-size:0.95rem;font-weight:700;color:#0f172a;}
+.selection-meta{font-size:0.8rem;color:#64748b;margin-top:0.2rem;display:flex;flex-wrap:wrap;gap:0.5rem 0.8rem;}
+.selection-stock{display:inline-flex;align-items:center;gap:0.25rem;font-size:0.8rem;font-weight:700;color:#166534;background:#ecfdf5;border:1px solid #bbf7d0;padding:0.18rem 0.5rem;border-radius:999px;}
+.selection-code{display:inline-flex;align-items:center;padding:0.16rem 0.48rem;border-radius:999px;background:#f8fafc;color:#475569;border:1px solid #e2e8f0;font-size:0.76rem;font-weight:700;}
+.selection-empty{padding:2.5rem 1.5rem;text-align:center;color:#94a3b8;}
+.item-category{display:inline-block;padding:0.25rem 0.75rem;background:#e8f5e9;color:#2e7d32;border-radius:12px;font-size:0.85rem;font-weight:500;}
+.bom-category-badge{display:inline-flex;align-items:center;justify-content:center;padding:0.32rem 0.7rem;border-radius:999px;font-size:0.78rem;font-weight:700;letter-spacing:-0.01em;border:1px solid transparent;white-space:nowrap;}
+.bom-cat-raw{background:#e0f2fe;color:#075985;border-color:#bae6fd;}
+.bom-cat-inner{background:#eef2ff;color:#3730a3;border-color:#c7d2fe;}
+.bom-cat-outer{background:#fff7ed;color:#c2410c;border-color:#fdba74;}
+.bom-cat-box{background:#ecfdf5;color:#166534;border-color:#86efac;}
+.bom-cat-silica{background:#f5f3ff;color:#6d28d9;border-color:#d8b4fe;}
+.bom-cat-tray{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
+.bom-cat-other{background:#f1f5f9;color:#334155;border-color:#cbd5e1;}
+.quantity-input-box{background:#f8f9fa;padding:1.5rem;border-radius:12px;margin-bottom:1.5rem;}
+.quantity-input-box label{display:block;font-weight:600;margin-bottom:0.5rem;color:#2c3e50;}
+.quantity-input-box input{width:100%;padding:0.75rem;border:2px solid #e1e8ed;border-radius:8px;font-size:1rem;}
+.quantity-input-box input:focus{border-color:#667eea;outline:none;}
+.quantity-input-box .hint{font-size:0.85rem;color:#666;margin-top:0.25rem;}
+.selected-items-list{background:white;border:2px solid #dbe4ff;border-radius:14px;padding:1.25rem 1.4rem;margin-bottom:1.5rem;box-shadow:0 10px 24px rgba(79,70,229,0.08);}
+.selected-item-row{display:flex;align-items:center;gap:1rem;padding:1rem;background:#f8f9fa;border-radius:8px;margin-bottom:0.5rem;}
+.selected-item-row .name{flex:1;font-weight:600;}
+.selected-item-row .qty-input{width:150px;padding:0.5rem;border:2px solid #e1e8ed;border-radius:6px;}
+.selected-item-row .remove-btn{padding:0.5rem 1rem;background:#e74c3c;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;}
+.selected-item-row .remove-btn:hover{background:#c0392b;}
+.empty-state{text-align:center;padding:4rem 2rem;color:#999;}
+.empty-state .icon{font-size:4rem;margin-bottom:1rem;opacity:0.5;}
+.raw-list-helper{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:0.85rem 1.1rem;background:#f8fbff;border-bottom:1px solid #e5ecff;color:#64748b;font-size:0.82rem;}
+.raw-list-helper strong{color:#0f172a;}
+</style>
+{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+    <h1>📦 {{ product.name }}</h1>
+    <a href="/products" class="btn btn-secondary">← 목록</a>
+</div>
+
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h3>상품 정보</h3>
+        {% if can_prod %}
+        <button class="btn btn-small" onclick="document.getElementById('editProductInfo').style.display='block'">수정</button>
+        {% endif %}
+    </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:1rem;padding:1rem;background:#f8f9fa;border-radius:8px;">
+        <div><strong>분류:</strong> {{ product.category or '-' }}</div>
+        <div><strong>박스당 낱봉:</strong> {{ product.box_quantity }}개</div>
+        <div><strong>매수:</strong> {{ product.sheets_per_pack or 24 }}매</div>
+        <div><strong>절단:</strong> {{ product.cuts_per_sheet or 9 }}</div>
+        <div><strong>소비기한:</strong> {{ product.expiry_months or 12 }}개월</div>
+        <div><strong>1박스당 원초(속):</strong>
+            {% if product.sok_per_box and product.sok_per_box > 0 %}
+            <span style="color:#667eea;font-weight:700;">{{ "%.1f"|format(product.sok_per_box) }}속</span>
+            {% else %}
+            <span style="color:#e74c3c;font-size:0.85rem;">⚠️ 미설정</span>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if can_prod %}
+    <div id="editProductInfo" style="display:none;margin-top:1rem;padding:1rem;background:#fff3e0;border-radius:8px;">
+        <h4 style="margin-bottom:1rem;">상품 정보 수정</h4>
+        <form method="POST" action="/products/{{ product.id }}/update-info">
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:1rem;">
+                <div class="form-group">
+                    <label>분류</label>
+                    <select name="category" required>
+                        {% set PRODUCT_CATEGORIES = ['식탁','김밥','유기','도시락','전장','생김','세트','기타'] %}
+                        {% for category in PRODUCT_CATEGORIES %}
+                        <option value="{{ category }}" {% if (product.category or '기타') == category %}selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>박스당 낱봉</label>
+                    <input type="number" name="box_quantity" value="{{ product.box_quantity }}" required>
+                </div>
+                <div class="form-group">
+                    <label>매수</label>
+                    <input type="number" name="sheets_per_pack" value="{{ product.sheets_per_pack or 24 }}" required>
+                </div>
+                <div class="form-group">
+                    <label>절단</label>
+                    <input type="number" name="cuts_per_sheet" value="{{ product.cuts_per_sheet or 9 }}" required>
+                </div>
+                <div class="form-group">
+                    <label>소비기한</label>
+                    <select name="expiry_months" required>
+                        {% for month in range(1, 13) %}
+                        <option value="{{ month }}" {% if (product.expiry_months or 12) == month %}selected{% endif %}>{{ month }}개월</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>1박스당 원초 사용량(속)</label>
+                    <input type="number" name="sok_per_box" step="0.1"
+                           value="{{ '%.1f'|format(product.sok_per_box) if product.sok_per_box or product.sok_per_box == 0 else '' }}" placeholder="예: 2.7"
+                           style="border-color:#667eea;">
+                </div>
+            </div>
+            <div style="text-align:right;margin-top:1rem;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('editProductInfo').style.display='none'">취소</button>
+                <button type="submit" class="btn">저장</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+{% if can_prod %}
+<div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:2rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <h2>BOM 추가</h2>
+        <button type="button" class="btn btn-secondary btn-small" onclick="closeForm()">✕ 닫기</button>
+    </div>
+    
+    <form method="POST" action="/products/{{ product.id }}/bom/add-individual" id="bomForm">
+        <div class="tab-container">
+            <button type="button" class="tab-btn active" data-tab="raw" onclick="switchTab('raw')">🌿 원초</button>
+            <button type="button" class="tab-btn" data-tab="material" onclick="switchTab('material')">🧰 부자재</button>
+        </div>
+        
+        <input type="hidden" name="item_type" id="itemType" value="raw">
+        
+        <div id="rawTab">
+            <div class="search-container">
+                <input type="text" id="rawSearch" placeholder="원초 검색..." onkeyup="search('raw')">
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="selection-panel">
+                <div class="selection-panel-head">
+                    <div>
+                        <div class="selection-panel-title">원초 선택</div>
+                        <div class="selection-panel-sub">목록에서 1개 원초를 선택하면 상품 설정값 기준으로 BOM에 연결됩니다.</div>
+                    </div>
+                </div>
+                <div class="raw-list-helper">
+                    <span>선택 방식: <strong>단일 선택</strong></span>
+                    <span>현재고가 있는 원초만 표시됩니다.</span>
+                </div>
+                <div class="selection-table-wrap">
+                    {% if raw_materials %}
+                    <table class="selection-table" id="rawList">
+                        <thead>
+                            <tr>
+                                <th style="width:52px;">선택</th>
+                                <th>원초명</th>
+                                <th style="width:130px;">코드</th>
+                                <th style="width:120px;">속수</th>
+                                <th style="width:170px;">입고/자호</th>
+                                <th style="width:130px;">현재고</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rm in raw_materials %}
+                            <tr data-name="{{ (rm.name ~ ' ' ~ (rm.code or ''))|lower }}">
+                                <td>
+                                    <input type="checkbox" class="selection-check raw-check" value="{{ rm.id }}"
+                                           data-name="{{ rm.name|e }}" onchange="toggleRawSelection(this)">
+                                </td>
+                                <td>
+                                    <div class="selection-name">{{ rm.name }}</div>
+                                    <div class="selection-meta">
+                                        {% if rm.car_number %}<span>🚗 {{ rm.car_number }}</span>{% endif %}
+                                        {% if rm.receiving_date %}<span>📅 {{ rm.receiving_date }}</span>{% endif %}
+                                    </div>
+                                </td>
+                                <td><span class="selection-code">{{ rm.code or '-' }}</span></td>
+                                <td>{{ rm.sheets_per_sok }}속/box</td>
+                                <td>
+                                    {% if rm.receiving_date %}{{ rm.receiving_date }}{% else %}-{% endif %}
+                                </td>
+                                <td><span class="selection-stock">{{ "%.1f"|format(rm.current_stock) }}속</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="selection-empty">등록된 원초가 없습니다. 원초 관리에서 먼저 등록해주세요.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="background:#e8f5e9;border-radius:10px;padding:1rem 1.25rem;margin-top:0.5rem;font-size:0.9rem;color:#2e7d32;">
+                ✅ 원초 1박스당 사용량(속)은 <strong>상품 정보</strong>에서 설정합니다.<br>
+                현재 설정값: <strong>{% if product.sok_per_box or product.sok_per_box == 0 %}{{ "%.1f"|format(product.sok_per_box) }}속{% else %}미설정{% endif %}</strong>
+                {% if not product.sok_per_box or product.sok_per_box == 0 %}
+                — <a href="#" onclick="document.getElementById('editProductInfo').style.display='block';document.getElementById('addForm').style.display='none';" style="color:#e67e22;">상품 정보에서 먼저 설정하세요</a>
+                {% endif %}
+            </div>
+            <input type="hidden" name="raw_quantity" id="rawQty" value="{{ product.sok_per_box or 0 }}">
+        </div>
+        
+        <div id="matTab" style="display:none;">
+            <div class="search-container">
+                <input type="text" id="matSearch" placeholder="부자재명/코드 검색..." onkeyup="search('mat')">
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="selection-panel">
+                <div class="selection-panel-head">
+                    <div>
+                        <div class="selection-panel-title">부자재 선택</div>
+                        <div class="selection-panel-sub">체크박스로 여러 품목을 선택한 뒤, 아래에서 품목별 사용량을 입력해 BOM에 추가합니다.</div>
+                    </div>
+                </div>
+                <div class="selection-table-wrap">
+                    {% if materials %}
+                    <table class="selection-table" id="matList">
+                        <thead>
+                            <tr>
+                                <th style="width:52px;">선택</th>
+                                <th>부자재명</th>
+                                <th style="width:120px;">코드</th>
+                                <th style="width:110px;">분류</th>
+                                <th style="width:90px;">단위</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in materials %}
+                            <tr data-name="{{ (m.name ~ ' ' ~ (m.code or ''))|lower }}" data-cat="{{ (m.category or '')|lower }}">
+                                <td>
+                                    <input type="checkbox" class="selection-check"
+                                           value="{{ m.id }}"
+                                           data-name="{{ m.name|e }}"
+                                           data-unit="{{ (m.unit or '')|e }}"
+                                           onchange="toggleMaterialSelection(this)">
+                                </td>
+                                <td>
+                                    <div class="selection-name">{{ m.name }}</div>
+                                    <div class="selection-meta">
+                                        {% if m.supplier_name %}<span>🏭 {{ m.supplier_name }}</span>{% endif %}
+                                    </div>
+                                </td>
+                                <td><span class="selection-code">{{ m.code or '-' }}</span></td>
+                                <td><span class="item-category">{{ m.category }}</span></td>
+                                <td>{{ m.unit }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="selection-empty">등록된 부자재가 없습니다. 부자재 관리에서 먼저 등록해주세요.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="selected-items-list" id="selectedMaterials" style="display:none;">
+                <h3 style="margin-bottom:1rem;">선택된 부자재 (개별 사용량 입력)</h3>
+                <div id="materialRows"></div>
+            </div>
+        </div>
+        
+        <div style="text-align:right;margin-top:1.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="closeForm()">취소</button>
+            <button type="submit" class="btn">추가하기</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+        <h2>등록된 BOM</h2>
+        {% if can_prod %}<button class="btn" onclick="openForm()">+ BOM 추가</button>{% endif %}
+    </div>
+    
+    {% if bom_items %}
+    <table><thead><tr><th>카테고리</th><th>부자재/원초</th><th>입고일/자호</th><th>1박스당 사용량</th><th>100박스 생산 시</th><th>관리</th></tr></thead>
+    <tbody>{% for item in bom_items %}
+    <tr>
+        {% set cat = item.category or '원초' %}
+        {% set cat_class = 'bom-cat-other' %}
+        {% if item.raw_material_id %}
+            {% set cat_class = 'bom-cat-raw' %}
+        {% elif cat == '내포' %}
+            {% set cat_class = 'bom-cat-inner' %}
+        {% elif cat == '외포' %}
+            {% set cat_class = 'bom-cat-outer' %}
+        {% elif cat == '박스' %}
+            {% set cat_class = 'bom-cat-box' %}
+        {% elif cat == '실리카' %}
+            {% set cat_class = 'bom-cat-silica' %}
+        {% elif cat == '트레이' %}
+            {% set cat_class = 'bom-cat-tray' %}
+        {% endif %}
+        <td><span class="bom-category-badge {{ cat_class }}">{{ cat }}</span></td>
+        <td><strong>{% if item.raw_material_display_name %}{{ item.raw_material_display_name }}{% else %}{{ item.material_name }}{% endif %}</strong></td>
+        <td>
+            {% if item.raw_material_id %}
+                <div style="font-size:0.85rem;color:#666;">
+                    {% if item.raw_receiving_date %}<div>📅 {{ item.raw_receiving_date }}</div>{% endif %}
+                    {% if item.raw_car_number %}<div>🚗 {{ item.raw_car_number }}</div>{% endif %}
+                    {% if not item.raw_receiving_date and not item.raw_car_number %}-{% endif %}
+                </div>
+            {% else %}
+                <span style="color:#ccc;">-</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if item.raw_material_id %}
+                {# 원초: products.sok_per_box 사용 #}
+                {% if product.sok_per_box and product.sok_per_box > 0 %}
+                <span style="color:#667eea;font-weight:600;">{{ "%.1f"|format(product.sok_per_box) }}속</span>
+                <span style="color:#aaa;font-size:0.78rem;">(상품 설정값)</span>
+                {% else %}
+                <span style="color:#e74c3c;font-size:0.85rem;">⚠️ 미설정</span>
+                {% endif %}
+            {% else %}
+                {{ "%.4f"|format(item.quantity_per_box) }} {{ item.unit or '' }}
+            {% endif %}
+        </td>
+        <td style="color:#999;">
+            {% if item.raw_material_id and product.sok_per_box %}
+                {{ "%.1f"|format(product.sok_per_box * 100) }}속
+            {% elif not item.raw_material_id %}
+                {{ "%.2f"|format(item.quantity_per_box * 100) }}
+            {% else %}-{% endif %}
+        </td>
+        <td>
+            {% if can_prod %}
+            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="toggleBomEdit({{ item.id }})">수정</button>
+            <form method="POST" action="/bom/{{ item.id }}/delete" style="display:inline;">
+                <button type="submit" class="btn btn-small btn-danger" onclick="return confirm('삭제?')">삭제</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% if can_prod %}
+    <tr id="bom_edit_{{ item.id }}" style="display:none;background:#f8fafc;">
+        <td colspan="6" style="padding:0.75rem 1rem;">
+            {% if item.raw_material_id %}
+            <form method="POST" action="/bom/{{ item.id }}/update" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                <strong style="min-width:72px;">원초 변경</strong>
+                <select name="raw_material_id" required style="min-width:260px;">
+                    {% for rm in raw_materials %}
+                    <option value="{{ rm.id }}" {% if (item.raw_code or '') == (rm.code or '') %}selected{% endif %}>
+                        {{ rm.name }} | 코드: {{ rm.code or '-' }} | 재고: {{ "%.1f"|format(rm.current_stock or 0) }}속
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-small">저장</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="toggleBomEdit({{ item.id }})">취소</button>
+            </form>
+            {% else %}
+            <form method="POST" action="/bom/{{ item.id }}/update" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                <strong style="min-width:72px;">사용량 수정</strong>
+                <input type="number" step="0.000001" min="0.000001" name="quantity_per_box"
+                       value="{{ item.quantity_per_box }}" required style="width:180px;">
+                <span style="color:#475569;">{{ item.unit or '' }} / BOX</span>
+                <button type="submit" class="btn btn-small">저장</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="toggleBomEdit({{ item.id }})">취소</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% endif %}
+    {% endfor %}</tbody></table>
+    {% else %}
+    <div class="empty-state"><div class="icon">📋</div><p>등록된 BOM이 없습니다.</p></div>
+    {% endif %}
+</div>
+
+<script>
+let selectedRawId=null;
+let selectedMaterials=[];
+
+function openForm(){
+    document.getElementById('addForm').style.display='block';
+    switchTab('raw');
+}
+
+function toggleBomEdit(bomId){
+    const row = document.getElementById(`bom_edit_${bomId}`);
+    if(!row) return;
+    const next = row.style.display === 'none' || row.style.display === '' ? 'table-row' : 'none';
+    row.style.display = next;
+}
+
+function switchTab(type){
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    const targetBtn = document.querySelector(`.tab-btn[data-tab="${type}"]`);
+    if(targetBtn) targetBtn.classList.add('active');
+    document.getElementById('itemType').value=type;
+    document.getElementById('rawTab').style.display=type==='raw'?'block':'none';
+    document.getElementById('matTab').style.display=type==='material'?'block':'none';
+}
+
+function toggleRawSelection(input){
+    document.querySelectorAll('.raw-check').forEach(cb=>{
+        if(cb!==input) cb.checked=false;
+        const row = cb.closest('tr');
+        if(row) row.classList.toggle('selected', cb.checked);
+    });
+    selectedRawId = input.checked ? Number(input.value) : null;
+}
+
+function toggleMaterialSelection(input){
+    const id = Number(input.value);
+    const name = input.dataset.name || '';
+    const unit = input.dataset.unit || '';
+    const row = input.closest('tr');
+    if(row) row.classList.toggle('selected', input.checked);
+
+    const exists=selectedMaterials.find(m=>m.id===id);
+    if(input.checked){
+        if(!exists){
+            selectedMaterials.push({id,name,unit,quantity:''});
+        }
+    }else{
+        selectedMaterials=selectedMaterials.filter(m=>m.id!==id);
+    }
+    updateMaterialList();
+}
+
+function removeMaterial(id){
+    selectedMaterials=selectedMaterials.filter(m=>m.id!==id);
+    updateMaterialList();
+}
+
+function updateMaterialList(){
+    const container=document.getElementById('materialRows');
+    const listDiv=document.getElementById('selectedMaterials');
+    
+    if(selectedMaterials.length===0){
+        listDiv.style.display='none';
+        return;
+    }
+    
+    listDiv.style.display='block';
+    container.innerHTML=selectedMaterials.map(m=>`
+        <div class="selected-item-row">
+            <div class="name">${m.name}</div>
+            <input type="number" step="0.000001" placeholder="사용량" class="qty-input" 
+                   data-id="${m.id}" onchange="updateQty(${m.id},this.value)" value="${m.quantity}">
+            <span style="color:#666;">${m.unit}</span>
+            <button type="button" class="remove-btn" onclick="removeMaterial(${m.id})">✕</button>
+        </div>
+    `).join('');
+}
+
+function updateQty(id,value){
+    const item=selectedMaterials.find(m=>m.id===id);
+    if(item)item.quantity=value;
+}
+
+function search(type){
+    const searchText=document.getElementById(type==='raw'?'rawSearch':'matSearch').value.toLowerCase();
+    const rows=document.querySelectorAll(`#${type}List tbody tr`);
+    rows.forEach(row=>{
+        const name=row.getAttribute('data-name')||'';
+        const cat=row.getAttribute('data-cat')||'';
+        row.style.display=(name.includes(searchText)||cat.includes(searchText))?'table-row':'none';
+    });
+}
+
+document.getElementById('bomForm').onsubmit=function(e){
+    const type=document.getElementById('itemType').value;
+    
+    if(type==='raw'){
+        if(!selectedRawId){
+            alert('원초를 선택해주세요.');
+            e.preventDefault();
+            return false;
+        }
+        const qty=document.getElementById('rawQty').value;
+        if(!qty||parseFloat(qty)<=0){
+            alert('사용량을 입력해주세요.');
+            e.preventDefault();
+            return false;
+        }
+        
+        const input=document.createElement('input');
+        input.type='hidden';input.name='raw_id';input.value=selectedRawId;
+        this.appendChild(input);
+    }else{
+        if(selectedMaterials.length===0){
+            alert('부자재를 선택해주세요.');
+            e.preventDefault();
+            return false;
+        }
+        
+        for(let m of selectedMaterials){
+            if(!m.quantity||parseFloat(m.quantity)<=0){
+                alert(`${m.name}의 사용량을 입력해주세요.`);
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        selectedMaterials.forEach(m=>{
+            const idInput=document.createElement('input');
+            idInput.type='hidden';idInput.name='mat_ids[]';idInput.value=m.id;
+            this.appendChild(idInput);
+            
+            const qtyInput=document.createElement('input');
+            qtyInput.type='hidden';qtyInput.name='mat_quantities[]';qtyInput.value=m.quantity;
+            this.appendChild(qtyInput);
+        });
+    }
+    
+    return true;
+};
+
+function closeForm(){
+    document.getElementById('addForm').style.display='none';
+    selectedRawId=null;
+    selectedMaterials=[];
+    document.querySelectorAll('.selection-check').forEach(cb=>cb.checked=false);
+    document.querySelectorAll('#rawList tbody tr, #matList tbody tr').forEach(row=>row.classList.remove('selected'));
+    updateMaterialList();
+}
+</script>
+{% endblock %}
+

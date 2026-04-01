@@ -1,0 +1,780 @@
+{% extends "base.html" %}
+{% block title %}원초 관리{% endblock %}
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<h1 style="margin-bottom:1rem;">{{ "\uc6d0\ucd08 \uad00\ub9ac" }}</h1>
+
+{% if can_raw %}
+<div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:2rem;">
+    <h2>{{ "\uc6d0\ucd08 \ucd94\uac00" }}</h2>
+    <form method="POST" action="/raw-materials/add">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+            <div class="form-group">
+                <label>{{ "\ub4f1\ub85d \ucf54\ub4dc \uc120\ud0dd" }}</label>
+                <select id="existingCodeSelect" onchange="applyRawCodeProfile(this.value)">
+                    <option value="">{{ "\uc9c1\uc811 \uc785\ub825" }}</option>
+                    {% for p in raw_code_profiles %}
+                    <option value="{{ p.code }}">{{ p.code }} - {{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>{{ "\uc6d0\ucd08\uba85 *" }}</label><input type="text" id="add_name" name="name" required placeholder="{{ "\uc608: \uacf1\ucc3d\ub3cc\uae40" }}"></div>
+            <div class="form-group"><label>{{ "\ucf54\ub4dc" }}</label><input type="text" id="add_code" name="code" placeholder="{{ "\uc608: RM00001" }}"></div>
+            <div class="form-group"><label>{{ "1\ubc15\uc2a4\ub2f9 \uc18d\uc218 *" }}</label><input type="number" id="add_sheets_per_sok" name="sheets_per_sok" required placeholder="{{ "\uc608: 12" }}"><small style="color:#666;">{{ "1\ubc15\uc2a4 \uc0dd\uc0b0 \uc2dc \ud544\uc694\ud55c \uc18d\uc218" }}</small></div>
+            <div class="form-group"><label>{{ "\uc785\uace0\uc77c" }}</label><input type="date" id="add_receiving_date" name="receiving_date"></div>
+            <div class="form-group"><label>{{ "\uc790\ud638" }}</label><input type="text" id="add_ja_ho" name="ja_ho" placeholder="{{ "\uc608: 12\uac003456" }}"></div>
+            <div class="form-group"><label>{{ "\ucd1d\uc7ac\uace0(\uc18d)" }}</label><input type="number" name="total_stock" step="0.01" value="0"></div>
+            <div class="form-group"><label>{{ "\ud604\uc7ac\uace0(\uc18d)" }}</label><input type="number" name="current_stock" step="0.01" value="0"></div>
+        </div>
+        <div style="text-align:right;margin-top:1rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('addForm').style.display='none'">{{ "\ucde8\uc18c" }}</button>
+            <button type="submit" class="btn">{{ "\ucd94\uac00" }}</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+        <h2>원초 목록</h2>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="openRawActivityModal()">금일 원초 사용/입고</button>
+            {% if can_raw %}<button class="btn btn-small" onclick="document.getElementById('addForm').style.display='block'">+ 추가</button>{% endif %}
+        </div>
+    </div>
+
+    <!-- 탭 -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('active')" id="tab_active">
+            🌿 사용중
+            {% set cnt = raw_materials | selectattr('current_stock', 'gt', 0) | list | length %}
+            <span class="cnt-badge">{{ cnt }}</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('done')" id="tab_done">
+            🌿 사용완료
+            {% set cnt2 = raw_materials | selectattr('current_stock', 'le', 0) | list | length %}
+            <span class="cnt-badge" id="done_cnt">{{ cnt2 }}</span>
+        </button>
+    </div>
+
+    <!-- 사용중 탭 -->
+    <div id="pane_active">
+    {% set active_list = raw_materials | selectattr('current_stock', 'gt', 0) | list %}
+    {% if active_list %}
+    <div class="table-container"><table><thead><tr><th>원초명</th><th>1박스당 속수</th><th>입고일</th><th>자호</th><th>총재고</th><th>현재고</th><th>사용량</th><th>잔여율</th><th>관리</th></tr></thead>
+    <tbody>{% for rm in active_list %}
+    <tr style="cursor:pointer;" onclick="showLogs({{ rm.id }},'{{ rm.name|e }}')">
+        <td>
+            <strong>
+                <a href="#" class="raw-name-link" onclick="event.stopPropagation(); openRawLotModal({{ rm.id }}); return false;">{{ rm.name }}</a>
+            </strong>
+        </td>
+        <td>{{ rm.sheets_per_sok }}속/box</td>
+        <td>{{ rm.receiving_date or '-' }}</td>
+        <td>{{ rm.car_number or '-' }}</td>
+        <td>{{ rm.total_stock|int }}속</td>
+        <td><strong style="color:{% if rm.current_stock<10 %}#e74c3c{% else %}#27ae60{% endif %}">{{ rm.current_stock|int }}속</strong></td>
+        <td>{{ rm.used_quantity|int }}속</td>
+        <td>
+            {% if rm.total_stock and rm.total_stock > 0 %}
+            {% set percent = (rm.current_stock / rm.total_stock * 100) | int %}
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px;min-width:60px;">
+                    <div style="height:100%;background:{% if percent > 50 %}#27ae60{% elif percent > 20 %}#f39c12{% else %}#e74c3c{% endif %};border-radius:4px;width:{{ percent }}%;transition:width 0.3s;"></div>
+                </div>
+                <span style="font-size:0.85rem;font-weight:600;color:#666;white-space:nowrap;">{{ percent }}%</span>
+            </div>
+            {% else %}-{% endif %}
+        </td>
+        <td onclick="event.stopPropagation()">
+            {% if can_raw %}
+            <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">입고</button>
+            <button class="btn btn-small" onclick="showExport({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">반출</button>
+            <button class="btn btn-small" onclick="showAdjust({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }})">조정</button>
+            <form method="POST" action="/raw-materials/{{ rm.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n※ 생산 기록에 사용된 적이 있으면 삭제할 수 없습니다.\n※ BOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
+                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}</tbody></table></div>
+    {% else %}<p style="text-align:center;color:#999;padding:2rem;">사용중인 원초가 없습니다</p>{% endif %}
+    </div>
+
+    <!-- 사용완료 탭 -->
+    <div id="pane_done" style="display:none;">
+    
+    <!-- 월별 필터 -->
+    <div class="subtabs">
+        <a href="/raw-materials?tab=done" class="subtab-btn {% if not selected_month %}active{% endif %}">전체</a>
+        {% for m in months %}
+        <a href="/raw-materials?tab=done&month={{ m }}" class="subtab-btn {% if selected_month == m %}active{% endif %}">{{ m }}</a>
+        {% endfor %}
+    </div>
+    
+    {% if selected_month %}
+        {% set done_list = raw_materials | selectattr('current_stock', 'le', 0) | selectattr('receiving_date', 'defined') | list %}
+        {% set done_list = done_list | selectattr('receiving_date', 'match', '^' + selected_month) | list %}
+    {% else %}
+        {% set done_list = raw_materials | selectattr('current_stock', 'le', 0) | list %}
+    {% endif %}
+    
+    {% if done_list %}
+    <div class="table-container"><table><thead><tr><th>원초명</th><th>1박스당 속수</th><th>입고일</th><th>자호</th><th>총재고</th><th>사용량</th><th>완료일</th><th>관리</th></tr></thead>
+    <tbody>{% for rm in done_list %}
+    <tr style="cursor:pointer;opacity:0.7;" onclick="showLogs({{ rm.id }},'{{ rm.name|e }}')">
+        <td>
+            <strong>
+                <a href="#" class="raw-name-link" onclick="event.stopPropagation(); openRawLotModal({{ rm.id }}); return false;">{{ rm.name }}</a>
+            </strong>
+        </td>
+        <td>{{ rm.sheets_per_sok }}속/box</td>
+        <td>{{ rm.receiving_date or '-' }}</td>
+        <td>{{ rm.car_number or '-' }}</td>
+        <td>{{ rm.total_stock|int }}속</td>
+        <td>{{ rm.used_quantity|int }}속</td>
+        <td><span style="background:#e8f5e9;color:#27ae60;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;">소진완료</span></td>
+        <td onclick="event.stopPropagation()">
+            {% if can_raw %}
+            <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">입고</button>
+            <button class="btn btn-small" onclick="showAdjust({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }})">조정</button>
+            <form method="POST" action="/raw-materials/{{ rm.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n※ 생산 기록에 사용된 적이 있으면 삭제할 수 없습니다.\n※ BOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
+                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}</tbody></table></div>
+    {% else %}<p style="text-align:center;color:#999;padding:2rem;">사용완료된 원초가 없습니다</p>{% endif %}
+    </div>
+</div>
+
+<!-- 원초 사용/입고/반출 내역 모달 -->
+<div id="rawLotDetailModal" class="modal" style="display:none;">
+    <div class="modal-content raw-lot-modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <h2 style="margin:0;">Raw Lot Detail</h2>
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeRawLotModal()">Close</button>
+        </div>
+        <div class="raw-lot-header-grid">
+            <div class="raw-lot-header-item"><span class="label">Raw Name</span><span class="value" id="rd_name">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">Code</span><span class="value" id="rd_code">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">Workplace</span><span class="value" id="rd_workplace">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">Total Stock Sum</span><span class="value" id="rd_total_stock">0</span></div>
+            <div class="raw-lot-header-item"><span class="label">Current Stock Sum</span><span class="value" id="rd_current_stock">0</span></div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Lot</th>
+                        <th>Receiving Date</th>
+                        <th>Ja-ho</th>
+                        <th>Sheets/Box</th>
+                        <th>Total Stock</th>
+                        <th>Current Stock</th>
+                        <th>Used Qty</th>
+                        <th>Manage</th>
+                    </tr>
+                </thead>
+                <tbody id="rawLotTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="rawActivityModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:1100px;margin:5% auto;background:white;padding:1.25rem;border-radius:12px;max-height:84vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <h2 style="margin:0;">📌 원초 사용/입고/반출 내역</h2>
+            <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+                <input type="date" id="rawActDateInput" style="padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;">
+                <button type="button" class="btn btn-small" style="background:#0f172a;" onclick="searchRawActivityByDate()">일자 검색</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="loadTodayRawActivity()">오늘</button>
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeRawActivityModal()">닫기</button>
+            </div>
+        </div>
+        <div id="rawActWpTabs" style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+            <button type="button" class="btn btn-small btn-secondary" data-wp-tab="all" onclick="setRawActivityWorkplace('all')">전체</button>
+            {% for wp in workplaces %}
+            <button type="button" class="btn btn-small btn-secondary" data-wp-tab="{{ wp }}" onclick="setRawActivityWorkplace('{{ wp }}')">{{ wp }}</button>
+            {% endfor %}
+        </div>
+        <p id="rawActivityPeriodText" style="margin:0 0 0.7rem;color:#64748b;font-size:0.86rem;">조회 일자: -</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>원초명</th>
+                        <th>입고일</th>
+                        <th>자호</th>
+                        <th>현재고</th>
+                        <th>사용량</th>
+                        <th>반출량</th>
+                        <th>생산 제품명</th>
+                    </tr>
+                </thead>
+                <tbody id="rawActivityTableBody">
+                    <tr><td colspan="7" style="text-align:center;color:#64748b;">조회 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if can_raw %}
+<!-- 입고 모달 -->
+<div id="receiveModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:500px;margin:10% auto;background:white;padding:2rem;border-radius:12px;">
+        <h2>📦 <span id="receiveName"></span> 입고</h2>
+        <form method="POST" action="/raw-materials/update-stock">
+            <input type="hidden" name="raw_material_id" id="receiveId">
+            <input type="hidden" name="log_type" value="receive">
+            
+            <div class="form-group">
+                <label>현재 재고</label>
+                <input type="text" id="receiveCurrentStock" readonly style="background:#f0f0f0;">
+            </div>
+            
+            <div class="form-group">
+                <label>입고 수량 (속) *</label>
+                <input type="number" name="receive_quantity" id="receiveQty" step="0.01" required onchange="calcReceiveTotal()">
+            </div>
+            
+            <div class="form-group">
+                <label>입고 후 재고</label>
+                <input type="text" id="receiveNewStock" readonly style="background:#e8f5e9;font-weight:bold;">
+            </div>
+            
+            <div class="form-group">
+                <label>입고일</label>
+                <input type="date" name="receiving_date" id="receivingDate">
+            </div>
+            
+            <div class="form-group">
+                <label>자호</label>
+                <input type="text" name="ja_ho" id="receiveCarNumber" readonly style="background:#f0f0f0;">
+            </div>
+            
+            <div class="form-group">
+                <label>비고</label>
+                <textarea name="note" rows="2" placeholder="입고 관련 메모"></textarea>
+            </div>
+            
+            <input type="hidden" name="current_stock" id="receiveHiddenStock">
+            
+            <div style="text-align:right;">
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">취소</button>
+                <button type="submit" class="btn">입고 처리</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 반출 모달 -->
+<div id="exportModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:500px;margin:10% auto;background:white;padding:2rem;border-radius:12px;">
+        <h2>📤 <span id="exportName"></span> 반출</h2>
+        <form method="POST" action="/raw-materials/update-stock">
+            <input type="hidden" name="raw_material_id" id="exportId">
+            <input type="hidden" name="log_type" value="export">
+            
+            <div class="form-group">
+                <label>현재 재고</label>
+                <input type="text" id="exportCurrentStock" readonly style="background:#f0f0f0;">
+            </div>
+            
+            <div class="form-group">
+                <label>반출 수량 (속) *</label>
+                <input type="number" name="export_quantity" id="exportQty" step="0.01" required onchange="calcExportTotal()">
+            </div>
+            
+            <div class="form-group">
+                <label>반출 후 재고</label>
+                <input type="text" id="exportNewStock" readonly style="background:#fff3e0;font-weight:bold;">
+            </div>
+            
+            <div class="form-group">
+                <label>반출 사유 *</label>
+                <select name="export_reason" required>
+                    <option value="">선택</option>
+                    <option value="타공장 이동">타공장 이동</option>
+                    <option value="폐기">폐기</option>
+                    <option value="반품">반품</option>
+                    <option value="기타">기타</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>자호</label>
+                <input type="text" id="exportCarNumber" readonly style="background:#f0f0f0;">
+            </div>
+            
+            <div class="form-group">
+                <label>상세 사유</label>
+                <textarea name="note" rows="2" placeholder="반출 상세 내용" required></textarea>
+            </div>
+            
+            <input type="hidden" name="current_stock" id="exportHiddenStock">
+            
+            <div style="text-align:right;">
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">취소</button>
+                <button type="submit" class="btn btn-danger">반출 처리</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 재고 조정 모달 -->
+<div id="adjustModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:500px;margin:10% auto;background:white;padding:2rem;border-radius:12px;">
+        <h2>⚙️ <span id="adjustName"></span> 재고 조정</h2>
+        <form method="POST" action="/raw-materials/update-stock">
+            <input type="hidden" name="raw_material_id" id="adjustId">
+            <input type="hidden" name="log_type" value="adjustment">
+            
+            <div class="form-group">
+                <label>현재 재고 (속)</label>
+                <input type="number" name="current_stock" id="adjustStock" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label>조정 사유</label>
+                <textarea name="note" rows="2" placeholder="예: 재고 실사, 오류 수정"></textarea>
+            </div>
+            
+            <div style="text-align:right;">
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">취소</button>
+                <button type="submit" class="btn">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- 로그 모달 -->
+<div id="logsModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:900px;margin:5% auto;background:white;padding:2rem;border-radius:12px;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h2>📊 <span id="logsName"></span> 사용 로그</h2>
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeModals()">닫기</button>
+        </div>
+        <div id="logsContent">
+            <p style="text-align:center;padding:2rem;color:#999;">로딩중...</p>
+        </div>
+    </div>
+</div>
+
+<script id="rawCodeProfilesData" type="application/json">{{ raw_code_profiles_json|safe }}</script>
+<script>
+const RAW_CODE_PROFILES = (() => {
+    const el = document.getElementById('rawCodeProfilesData');
+    if (!el) return [];
+    try { return JSON.parse(el.textContent || '[]'); } catch (_) { return []; }
+})();
+
+function applyRawCodeProfile(code){
+    const selectedCode = (code || '').trim();
+    const nameEl = document.getElementById('add_name');
+    const codeEl = document.getElementById('add_code');
+    const sheetsEl = document.getElementById('add_sheets_per_sok');
+    const dateEl = document.getElementById('add_receiving_date');
+    const jaHoEl = document.getElementById('add_ja_ho');
+    if(!codeEl || !nameEl || !sheetsEl || !dateEl || !jaHoEl) return;
+
+    if(!selectedCode){
+        codeEl.value = '';
+        nameEl.value = '';
+        sheetsEl.value = '';
+        dateEl.value = '';
+        jaHoEl.value = '';
+        return;
+    }
+
+    const p = RAW_CODE_PROFILES.find(x => (x.code || '').trim() === selectedCode);
+    codeEl.value = selectedCode;
+    if(!p) return;
+
+    nameEl.value = p.name || '';
+    sheetsEl.value = p.sheets_per_sok || '';
+    dateEl.value = p.receiving_date || '';
+    jaHoEl.value = p.ja_ho || '';
+}
+
+const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
+let rawActivityWorkplace = 'all';
+
+function switchTab(tab){
+    document.getElementById('pane_active').style.display = tab==='active' ? '' : 'none';
+    document.getElementById('pane_done').style.display = tab==='done' ? '' : 'none';
+    document.getElementById('tab_active').classList.toggle('active', tab==='active');
+    document.getElementById('tab_done').classList.toggle('active', tab==='done');
+}
+
+// 페이지 로드 시 URL에서 tab 파라미터 읽어서 자동 선택
+window.onload = function(){
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if(tab === 'done'){
+        switchTab('done');
+    }
+};
+
+let currentStock = 0;
+
+// 오늘 날짜를 YYYY-MM-DD 형식으로
+function getTodayDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function showReceive(id,name,stock,carNumber){
+    currentStock = stock;
+    document.getElementById('receiveId').value=id;
+    document.getElementById('receiveName').textContent=name;
+    document.getElementById('receiveCurrentStock').value=stock.toFixed(2)+' 속';
+    document.getElementById('receiveQty').value='';
+    document.getElementById('receiveNewStock').value='';
+    document.getElementById('receiveHiddenStock').value='';
+    document.getElementById('receivingDate').value=getTodayDate();
+    document.getElementById('receiveCarNumber').value=carNumber||'-';
+    document.getElementById('receiveModal').style.display='block';
+}
+
+function calcReceiveTotal(){
+    const qty = parseFloat(document.getElementById('receiveQty').value) || 0;
+    const newStock = currentStock + qty;
+    document.getElementById('receiveNewStock').value=newStock.toFixed(2)+' 속';
+    document.getElementById('receiveHiddenStock').value=newStock;
+}
+
+function showExport(id,name,stock,carNumber){
+    currentStock = stock;
+    document.getElementById('exportId').value=id;
+    document.getElementById('exportName').textContent=name;
+    document.getElementById('exportCurrentStock').value=stock.toFixed(2)+' 속';
+    document.getElementById('exportQty').value='';
+    document.getElementById('exportNewStock').value='';
+    document.getElementById('exportHiddenStock').value='';
+    document.getElementById('exportCarNumber').value=carNumber||'-';
+    document.getElementById('exportModal').style.display='block';
+}
+
+function calcExportTotal(){
+    const qty = parseFloat(document.getElementById('exportQty').value) || 0;
+    const newStock = currentStock - qty;
+    document.getElementById('exportNewStock').value=newStock.toFixed(2)+' 속';
+    document.getElementById('exportHiddenStock').value=newStock;
+}
+
+function showAdjust(id,name,stock){
+    document.getElementById('adjustId').value=id;
+    document.getElementById('adjustName').textContent=name;
+    document.getElementById('adjustStock').value=stock;
+    document.getElementById('adjustModal').style.display='block';
+}
+
+function showLogs(id,name){
+    document.getElementById('logsName').textContent=name;
+    document.getElementById('logsModal').style.display='block';
+    
+    fetch(`/raw-materials/${id}/logs-data`)
+        .then(r=>r.json())
+        .then(data=>{
+            const html = data.logs.length > 0 ? `
+                <table style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>일시</th>
+                            <th>유형</th>
+                            <th>수량</th>
+                            <th>내용</th>
+                            <th>담당자</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.logs.map(log=>`
+                            <tr>
+                                <td>${log.created_at}</td>
+                                <td><span class="badge ${log.type==='production'?'badge-warning':log.type==='receive'?'badge-success':log.type==='export'?'badge-danger':'badge-info'}">${log.type_text}</span></td>
+                                <td style="color:${log.quantity>0?'#27ae60':'#e74c3c'};font-weight:bold;">${log.quantity>0?'+':''}${log.quantity.toFixed(2)} 속</td>
+                                <td>${log.note||'-'}</td>
+                                <td>${log.created_by||'-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table></div>
+            ` : '<p style="text-align:center;padding:2rem;color:#999;">로그가 없습니다.</p>';
+            document.getElementById('logsContent').innerHTML=html;
+        })
+        .catch(err=>{
+            document.getElementById('logsContent').innerHTML='<p style="color:#e74c3c;text-align:center;">로그를 불러오는데 실패했습니다.</p>';
+        });
+}
+
+function closeModals(){
+    document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
+}
+
+function closeRawActivityModal(){
+    const modal = document.getElementById('rawActivityModal');
+    if(modal) modal.style.display='none';
+}
+
+function renderRawActivityWorkplaceTabs(){
+    let hasCurrent = false;
+    document.querySelectorAll('#rawActWpTabs [data-wp-tab]').forEach(btn => {
+        if(btn.getAttribute('data-wp-tab') === CURRENT_WORKPLACE){
+            hasCurrent = true;
+        }
+    });
+    rawActivityWorkplace = (CURRENT_WORKPLACE && CURRENT_WORKPLACE !== 'all' && hasCurrent) ? CURRENT_WORKPLACE : 'all';
+    setRawActivityWorkplace(rawActivityWorkplace, true);
+}
+
+function setRawActivityWorkplace(wp, skipReload){
+    rawActivityWorkplace = wp || 'all';
+    document.querySelectorAll('#rawActWpTabs [data-wp-tab]').forEach(btn => {
+        if(btn.getAttribute('data-wp-tab') === rawActivityWorkplace){
+            btn.classList.remove('btn-secondary');
+            btn.style.background = '#0f172a';
+            btn.style.color = '#fff';
+        } else {
+            btn.classList.add('btn-secondary');
+            btn.style.background = '';
+            btn.style.color = '';
+        }
+    });
+    if(skipReload) return;
+    searchRawActivityByDate();
+}
+
+function getTodayIsoDate(){
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function escapeHtml(v){
+    return String(v || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+let currentRawLotId = null;
+
+function closeRawLotModal(){
+    const modal = document.getElementById('rawLotDetailModal');
+    if(modal) modal.style.display = 'none';
+}
+
+function setRawLotInputsEditable(lotId, editable){
+    const ids = [
+        `raw_lot_receiving_${lotId}`,
+        `raw_lot_car_number_${lotId}`,
+        `raw_lot_sheets_${lotId}`,
+        `raw_lot_total_${lotId}`,
+        `raw_lot_current_${lotId}`,
+    ];
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if(el) el.disabled = !editable;
+    });
+}
+
+function renderRawLotRows(lots){
+    const tbody = document.getElementById('rawLotTableBody');
+    if(!tbody) return;
+    if(!lots || lots.length === 0){
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">No lots found.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lots.map((lot) => {
+        const usedQty = Number(lot.used_quantity || 0);
+        return `
+        <tr>
+            <td><span class="lot-code">${escapeHtml(lot.lot || '-')}</span></td>
+            <td><input type="date" id="raw_lot_receiving_${lot.id}" value="${lot.receiving_date || ''}" style="width:100%;" disabled></td>
+            <td><input type="text" id="raw_lot_car_number_${lot.id}" value="${escapeHtml(lot.car_number || '')}" style="width:100%;" disabled></td>
+            <td><input type="number" step="0.01" id="raw_lot_sheets_${lot.id}" value="${Number(lot.sheets_per_sok || 0)}" style="width:100%;" disabled></td>
+            <td><input type="number" step="0.01" id="raw_lot_total_${lot.id}" value="${Number(lot.total_stock || 0)}" style="width:100%;" disabled></td>
+            <td><input type="number" step="0.01" id="raw_lot_current_${lot.id}" value="${Number(lot.current_stock || 0)}" style="width:100%;" disabled></td>
+            <td>${usedQty.toFixed(1)}</td>
+            <td><button type="button" class="btn btn-small" id="raw_lot_edit_btn_${lot.id}" data-mode="view" style="background:#4f46e5;" onclick="toggleRawLotEdit(${lot.id})">Edit</button></td>
+        </tr>`;
+    }).join('');
+}
+
+async function loadRawLotDetail(rawMaterialId){
+    let payload;
+    try{
+        const res = await fetch(`/raw-materials/${rawMaterialId}/detail`);
+        payload = await res.json();
+    } catch (err){
+        alert('Failed to load raw lot detail.');
+        return;
+    }
+    if(!payload.ok){
+        alert(payload.message || 'Raw lot update failed');
+        return;
+    }
+    const rd = payload.raw_material || {};
+    document.getElementById('rd_name').textContent = rd.name || '-';
+    document.getElementById('rd_code').textContent = rd.code || '-';
+    document.getElementById('rd_workplace').textContent = rd.workplace || '-';
+    document.getElementById('rd_total_stock').textContent = Number(rd.total_stock_sum || 0).toFixed(1);
+    document.getElementById('rd_current_stock').textContent = Number(rd.current_stock_sum || 0).toFixed(1);
+    renderRawLotRows(payload.lots || []);
+}
+
+async function openRawLotModal(rawMaterialId){
+    currentRawLotId = rawMaterialId;
+    const modal = document.getElementById('rawLotDetailModal');
+    if(modal) modal.style.display = 'block';
+    await loadRawLotDetail(rawMaterialId);
+}
+
+async function toggleRawLotEdit(lotId){
+    const btn = document.getElementById(`raw_lot_edit_btn_${lotId}`);
+    if(!btn) return;
+    const mode = btn.dataset.mode || 'view';
+    if(mode === 'view'){
+        setRawLotInputsEditable(lotId, true);
+        btn.dataset.mode = 'edit';
+        btn.textContent = 'Save';
+        btn.style.background = '#16a34a';
+        return;
+    }
+    await submitRawLotUpdate(lotId);
+}
+
+async function submitRawLotUpdate(lotId){
+    const formData = new FormData();
+    formData.append('receiving_date', document.getElementById(`raw_lot_receiving_${lotId}`).value);
+    formData.append('ja_ho', document.getElementById(`raw_lot_car_number_${lotId}`).value);
+    formData.append('sheets_per_sok', document.getElementById(`raw_lot_sheets_${lotId}`).value);
+    formData.append('total_stock', document.getElementById(`raw_lot_total_${lotId}`).value);
+    formData.append('current_stock', document.getElementById(`raw_lot_current_${lotId}`).value);
+    const res = await fetch(`/raw-material-lots/${lotId}/update`, { method: 'POST', body: formData });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || 'Raw lot update failed');
+        return;
+    }
+    const btn = document.getElementById(`raw_lot_edit_btn_${lotId}`);
+    if(btn){
+        btn.dataset.mode = 'view';
+        btn.textContent = 'Edit';
+        btn.style.background = '#4f46e5';
+    }
+    if(currentRawLotId){
+        await loadRawLotDetail(currentRawLotId);
+    }
+}
+
+async function loadRawActivityByDate(targetDate){
+    const tbody = document.getElementById('rawActivityTableBody');
+    const periodEl = document.getElementById('rawActivityPeriodText');
+    if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">조회 중...</td></tr>';
+    try{
+        const url = `/raw-materials/activity?date=${encodeURIComponent(targetDate)}&wp=${encodeURIComponent(rawActivityWorkplace)}`;
+        const res = await fetch(url);
+        const payload = await res.json();
+        if(!payload.ok){
+            throw new Error(payload.message || '조회 실패');
+        }
+        if(periodEl){
+            periodEl.textContent = `조회 일자: ${payload.date}`;
+        }
+        const rows = payload.rows || [];
+        if(!rows.length){
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">해당 일자 사용/입고/반출된 원초가 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => {
+            const badge = r.is_period_received ? '<span style="margin-left:0.35rem;background:#e0f2fe;color:#0369a1;padding:0.12rem 0.4rem;border-radius:999px;font-size:0.72rem;font-weight:700;">신규입고</span>' : '';
+            return `
+            <tr>
+                <td><strong>${escapeHtml(r.name)}</strong>${badge}</td>
+                <td>${escapeHtml(r.receiving_date || '-')}</td>
+                <td>${escapeHtml(r.car_number || '-')}</td>
+                <td>${Number(r.current_stock || 0).toFixed(0)}속</td>
+                <td><strong>${Number(r.period_used_quantity || 0).toFixed(1)}속</strong></td>
+                <td><strong>${Number(r.period_export_quantity || 0).toFixed(1)}속</strong></td>
+                <td>${escapeHtml(r.product_names || '-')}</td>
+            </tr>`;
+        }).join('');
+    } catch (err){
+        if(periodEl) periodEl.textContent = '조회 일자: -';
+        if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;">내역 조회 실패: ${escapeHtml(err.message || '오류')}</td></tr>`;
+    }
+}
+
+function searchRawActivityByDate(){
+    const input = document.getElementById('rawActDateInput');
+    const targetDate = (input && input.value) ? input.value : getTodayIsoDate();
+    if(input && !input.value){
+        input.value = targetDate;
+    }
+    loadRawActivityByDate(targetDate);
+}
+
+function loadTodayRawActivity(){
+    const input = document.getElementById('rawActDateInput');
+    const today = getTodayIsoDate();
+    if(input){
+        input.value = today;
+    }
+    loadRawActivityByDate(today);
+}
+
+function openRawActivityModal(){
+    const modal = document.getElementById('rawActivityModal');
+    if(!modal) return;
+    modal.style.display='block';
+    renderRawActivityWorkplaceTabs();
+    loadTodayRawActivity();
+}
+
+document.getElementById('rawActDateInput').addEventListener('change', function(){
+    if(this.value){
+        loadRawActivityByDate(this.value);
+    }
+});
+
+window.onclick=function(e){
+    if(e.target.classList.contains('modal')){
+        closeModals();
+    }
+}
+</script>
+
+<style>
+.modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,0.4);}
+tr[onclick]{cursor:pointer;}
+tr[onclick]:hover{background:#f8f9fa;}
+.raw-name-link{color:inherit;text-decoration:none;font-weight:700;}
+.raw-name-link:hover{text-decoration:underline;}
+.raw-lot-modal{max-width:1100px;margin:5% auto;background:#f8fafc;padding:1.25rem;border-radius:12px;max-height:84vh;overflow-y:auto;border:1px solid #dbe5f0;}
+.raw-lot-header-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0.55rem;margin:0.75rem 0 1rem;}
+.raw-lot-header-item{background:#fff;border:1px solid #dbe5f0;border-radius:10px;padding:0.6rem 0.7rem;box-shadow:0 1px 2px rgba(15,23,42,0.04);}
+.raw-lot-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
+.raw-lot-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
+.lot-code{display:inline-block;font-family:Consolas,Monaco,monospace;font-size:0.78rem;background:#eef3f9;border:1px solid #d6e0ec;border-radius:6px;padding:0.2rem 0.35rem;color:#0f172a;}
+@media (max-width: 900px){
+  .raw-lot-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
+}
+</style>
+{% endblock %}

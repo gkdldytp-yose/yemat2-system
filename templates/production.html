@@ -1,0 +1,264 @@
+﻿{% extends "base.html" %}
+{% block title %}생산 관리{% endblock %}
+{% block extra_css %}
+<style>
+.month-nav{display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(135deg,#f8fafc,#eef2ff);padding:0.8rem 1rem;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 8px 20px rgba(30,64,175,0.08);max-width:440px;margin:1rem auto;}
+.nav-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid #e5e7eb;background:#fff;border-radius:50%;cursor:pointer;transition:all 0.2s ease;color:#0f172a;font-size:1.1rem;}
+.nav-btn:hover{background:#0f172a;color:white;border-color:#0f172a;transform:translateY(-1px);box-shadow:0 6px 16px rgba(2,6,23,0.2);}
+.nav-btn:active{transform:scale(0.96);}
+.month-display{text-align:center;flex-grow:1;user-select:none;}
+.display-year-month{display:block;font-size:1.1rem;font-weight:800;color:#0f172a;letter-spacing:-0.2px;}
+.display-eng{display:block;font-size:0.72rem;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-top:-2px;}
+.status-tabs{display:flex;gap:0.6rem;margin-bottom:1rem;}
+.status-tab{flex:1;padding:0.8rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:white;cursor:pointer;font-weight:700;font-size:0.9rem;text-align:center;transition:all 0.2s;text-decoration:none;color:#374151;box-shadow:0 6px 14px rgba(15,23,42,0.06);}
+.status-tab:hover{border-color:#c7d2fe;background:#f8fafc;}
+.status-tab.active{background:linear-gradient(135deg,#0f172a,#2563eb);color:white;border-color:#1e3a8a;box-shadow:0 10px 24px rgba(30,64,175,0.25);}
+.status-tab .count{display:block;font-size:1.4rem;margin-bottom:0.2rem;font-weight:800;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:1rem;}
+.modal-box{background:white;border-radius:16px;padding:1.5rem;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;box-shadow:0 16px 40px rgba(0,0,0,0.25);}
+.search-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
+.search-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;}
+.search-actions{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem;}
+.search-results{margin-top:1rem;border-top:1px solid #e5e7eb;padding-top:1rem;}
+.search-empty{color:#9ca3af;text-align:center;padding:2rem;font-size:0.85rem;}
+.search-status{font-size:0.85rem;color:#64748b;}
+.search-table thead th{font-size:0.8rem;}
+.search-table tbody td{font-size:0.85rem;}
+@media (max-width: 768px) {
+    .month-nav{padding:0.7rem;gap:0.4rem;}
+    .nav-btn{width:36px;height:36px;}
+    .display-year-month{font-size:1rem;}
+    .display-eng{font-size:0.68rem;}
+    .status-tabs{flex-direction:column;}
+    .status-tab{padding:0.7rem 0.8rem;}
+    .status-tab .count{font-size:1.25rem;}
+    .modal-box{padding:1rem;border-radius:12px;}
+    .search-grid{grid-template-columns:1fr;}
+}
+</style>
+{% endblock %}
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+    <h1 style="margin:0;">🏭 생산 관리</h1>
+    <div style="display:flex;gap:0.5rem;">
+        {% if can_prod %}
+        <a href="/production/add" class="btn btn-small">+ 등록</a>
+        {% endif %}
+        <button class="btn btn-small btn-secondary" onclick="openSearchModal()">🔍 전체 검색</button>
+    </div>
+</div>
+
+<!-- 월 네비게이션 -->
+<div class="month-nav">
+    <button class="nav-btn" 
+            onclick="location.href='/production?month={{ prev_month }}&tab={{ current_tab }}'"
+            aria-label="이전 달">
+        ‹
+    </button>
+
+    <div class="month-display">
+        <span class="display-year-month">
+            {{ current_year }}년 {{ current_month_num }}월
+        </span>
+        <small class="display-eng">{{ current_month }}</small>
+    </div>
+
+    <button class="nav-btn" 
+            onclick="location.href='/production?month={{ next_month }}&tab={{ current_tab }}'"
+            aria-label="다음 달">
+        ›
+    </button>
+</div>
+
+<!-- 진행/완료 탭 -->
+<div class="status-tabs">
+    <a href="/production?month={{ current_month }}&tab=active" class="status-tab {% if current_tab == 'active' %}active{% endif %}">
+        <span class="count">{{ active_count }}</span>
+        <span>진행 중</span>
+    </a>
+    <a href="/production?month={{ current_month }}&tab=done" class="status-tab {% if current_tab == 'done' %}active{% endif %}">
+        <span class="count">{{ done_count }}</span>
+        <span>완료</span>
+    </a>
+</div>
+
+<div class="card">
+    <h2>{{ current_year }}년 {{ current_month_num }}월 생산</h2>
+    {% if productions %}
+    <div class="table-container">
+    <table>
+        <thead>
+            <tr><th>일자</th><th>상품</th><th>라인</th><th>계획</th><th>실제</th><th>상태</th><th>관리</th></tr>
+        </thead>
+        <tbody>
+        {% for prod in productions %}
+        <tr>
+            <td style="white-space:nowrap;">{{ prod.production_date[5:] }}</td>
+            <td><strong style="font-size:0.85rem;">{{ prod.product_name }}</strong></td>
+            <td>
+                {% if prod.display_line %}
+                    {% for line_num in prod.display_line.split(',') %}
+                    <span class="badge badge-info">라인 {{ line_num.strip() }}</span>
+                    {% endfor %}
+                {% else %}
+                    <span style="color:#94a3b8;">-</span>
+                {% endif %}
+            </td>
+            <td>{{ prod.planned_boxes }}</td>
+            <td>{{ prod.actual_boxes or '-' }}</td>
+            <td>
+                {% if prod.status == '계획' %}<span class="badge badge-info">계획</span>
+                {% elif prod.status == '진행중' %}<span class="badge badge-warning">진행</span>
+                {% elif prod.status == '완료' %}<span class="badge badge-success">완료</span>
+                {% else %}<span class="badge badge-info">{{ prod.status }}</span>{% endif %}
+            </td>
+            <td style="white-space:nowrap;">
+                <a href="/production/{{ prod.id }}" class="btn btn-small" style="background:#6c757d;">조회</a>
+                {% if current_tab == 'done' or prod.status == '완료' %}
+                <a href="/production/{{ prod.id }}/print" class="btn btn-small">출력</a>
+                {% endif %}
+                {% if can_prod %}
+                <form method="POST" action="/production/{{ prod.id }}/delete" style="display:inline;"
+                      onsubmit="return confirm('삭제?')">
+                    <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#999;padding:2rem;text-align:center;font-size:0.85rem;">
+        {% if current_tab == 'done' %}완료된 생산 없음{% else %}진행 중인 생산 없음{% endif %}
+    </p>
+    {% endif %}
+</div>
+
+<!-- 전체 검색 모달 -->
+<div id="searchModal" class="modal-bg">
+    <div class="modal-box">
+        <div class="search-head">
+            <h3 style="margin:0;">🔍 완료건 전체 검색</h3>
+            <button onclick="closeSearchModal()" class="btn btn-ghost btn-small">닫기</button>
+        </div>
+        
+        <div class="search-grid" style="margin-bottom:1rem;">
+            <div class="form-group">
+                <label>시작일</label>
+                <input type="date" id="searchStartDate" value="{{ search_start }}">
+            </div>
+            <div class="form-group">
+                <label>종료일</label>
+                <input type="date" id="searchEndDate" value="{{ search_end }}">
+            </div>
+            <div class="form-group">
+                <label>상품명 / 생산번호</label>
+                <input type="text" id="searchKeyword" placeholder="상품명 또는 생산번호 숫자 검색">
+            </div>
+        </div>
+        <div class="search-actions">
+            <button class="btn btn-secondary btn-small" onclick="resetSearch()">초기화</button>
+            <button class="btn btn-small" onclick="doSearch()">검색</button>
+        </div>
+        
+        <div id="searchResults" class="search-results">
+            <p class="search-empty">검색 조건을 입력하고 검색 버튼을 눌러주세요</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function openSearchModal() {
+    document.getElementById('searchModal').style.display = 'flex';
+    setTimeout(() => {
+        const keywordInput = document.getElementById('searchKeyword');
+        if (keywordInput) {
+            keywordInput.focus();
+            keywordInput.select();
+        }
+    }, 0);
+}
+function closeSearchModal() {
+    document.getElementById('searchModal').style.display = 'none';
+}
+document.getElementById('searchModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSearchModal();
+});
+
+document.getElementById('searchModal').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSearchModal();
+        return;
+    }
+    if (e.key === 'Enter') {
+        const tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'input') {
+            e.preventDefault();
+            doSearch();
+        }
+    }
+});
+
+async function doSearch() {
+    const keyword = document.getElementById('searchKeyword').value.trim();
+    const start = document.getElementById('searchStartDate').value;
+    const end = document.getElementById('searchEndDate').value;
+    
+    const params = new URLSearchParams();
+    if (keyword) {
+        params.append('keyword', keyword);
+    } else {
+        if (start) params.append('start', start);
+        if (end) params.append('end', end);
+    }
+    
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = '<p class="search-status">검색 중...</p>';
+    try {
+        const res = await fetch('/production/search?' + params.toString());
+        if (!res.ok) throw new Error('검색 실패');
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) {
+            resultsDiv.innerHTML = '<p class="search-empty">검색 결과 없음</p>';
+            return;
+        }
+        let html = '<div class="table-container"><table class="search-table"><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>박스</th><th>관리</th></tr></thead><tbody>';
+        data.results.forEach(p => {
+            html += `<tr>
+                <td>PROD-${p.id}</td>
+                <td>${p.production_date}</td>
+                <td><strong>${p.product_name}</strong></td>
+                <td>${p.actual_boxes || p.planned_boxes}</td>
+                <td style="white-space:nowrap;">
+                    <a href="/production/${p.id}" class="btn btn-small btn-secondary">조회</a>
+                    {% if can_prod %}
+                    <form method="POST" action="/production/${p.id}/delete" style="display:inline;" onsubmit="return confirm('삭제?')">
+                        <button type="submit" class="btn btn-small btn-danger">삭제</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        html += `<p class="search-status" style="text-align:center;margin-top:0.75rem;">총 ${data.results.length}건</p>`;
+        resultsDiv.innerHTML = html;
+    } catch (e) {
+        resultsDiv.innerHTML = '<p class="search-empty">검색 중 오류가 발생했습니다.</p>';
+    }
+}
+
+function resetSearch() {
+    document.getElementById('searchKeyword').value = '';
+    document.getElementById('searchStartDate').value = '';
+    document.getElementById('searchEndDate').value = '';
+    document.getElementById('searchResults').innerHTML = '<p class="search-empty">검색 조건을 입력하고 검색 버튼을 눌러주세요</p>';
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,205 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>일일생산관리일지</title>
+  <style>
+    @page { size: A4; margin: 8mm; }
+    body { font-family: "Noto Sans KR", Arial, sans-serif; color:#111; }
+    .sheet { width: 190mm; margin: 0 auto; }
+    table { width:100%; border-collapse: collapse; font-size:11px; }
+    th, td {
+      border-left:1px solid #000;
+      border-right:1px solid #000;
+      border-top:1px dashed #000;
+      border-bottom:1px dashed #000;
+      padding:4px;
+      vertical-align:middle;
+    }
+    .b2 { border:2px solid #000; }
+    .col-head th, .col-head td { border-top:1px solid #000; border-bottom:1px solid #000; }
+    .sum-row th, .sum-row td { border-top:1px solid #000; border-bottom:1px solid #000; }
+    .center { text-align:center; }
+    .title { font-size:18px; font-weight:700; text-align:center; }
+    .subtitle { font-size:11px; text-align:center; margin:2px 0; }
+    .section { background:#f5f5f5; font-weight:700; }
+    .stamp { height:44px; }
+    .row-fixed td { height:24px; }
+  </style>
+  {% macro fmt1(v) -%}
+  {%- if v is not none and v != '' -%}
+  {{ "%.1f"|format((v or 0)|float) }}
+  {%- endif -%}
+  {%- endmacro %}
+</head>
+<body>
+  <div class="sheet">
+    <!-- 상단 제목 + 결재선 -->
+    <table class="b2">
+      <tr>
+        <td style="width:66%; position:relative;" class="center">
+          <div style="position:absolute; top:4px; left:8px; font-size:10px; font-weight:700;">생산번호: PROD-{{ production.id }}</div>
+          <div class="title">일일생산관리일지</div>
+          <div class="subtitle">({{ workplace }})</div>
+        </td>
+        <td style="width:34%" rowspan="2">
+          <table style="width:100%; border-collapse:collapse; font-size:11px;">
+            <tr>
+              <th class="center" style="border:1px solid #000;">작성</th>
+              <th class="center" style="border:1px solid #000;">검토</th>
+              <th class="center" style="border:1px solid #000;">승인</th>
+            </tr>
+            <tr>
+              <td class="stamp" style="border:1px solid #000;"></td>
+              <td class="stamp" style="border:1px solid #000;"></td>
+              <td class="stamp" style="border:1px solid #000;"></td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td class="center" style="font-size:11px; padding:4px 6px;">{{ date_str }} {{ weekday }}</td>
+      </tr>
+    </table>
+
+    <!-- 일일 생산 현황 -->
+    <table class="b2" style="margin-top:6px;">
+      <tr><th class="section" colspan="5" style="text-align:left;">■ 일일 생산 현황</th></tr>
+      <tr class="col-head">
+        <th style="width:18%" class="center">제품코드</th>
+        <th style="width:42%" class="center">품목명</th>
+        <th style="width:14%" class="center">소비기한</th>
+        <th style="width:13%" class="center">생산박스(실적)</th>
+        <th style="width:13%" class="center">생산봉수(낱봉)</th>
+      </tr>
+      <tr>
+        <td class="center">{{ production.product_code or '' }}</td>
+        <td>{{ production.product_name or '' }}</td>
+        <td class="center">{{ production.expiry_date or display_expiry or '' }}</td>
+        <td class="center">{{ production.actual_boxes or '' }}</td>
+        <td class="center">
+          {% if production.actual_boxes and production.box_quantity %}
+          {{ (production.actual_boxes * production.box_quantity)|int }}
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+
+    <!-- 인원 관리 -->
+    <table class="b2" style="margin-top:6px;">
+      <tr><th class="section" colspan="8" style="text-align:left;">■ 인원 관리</th></tr>
+      <tr class="col-head">
+        <th class="center" style="width:9%">공급 라인</th>
+        <th class="center" style="width:9%">공급 인원</th>
+        <th class="center" style="width:9%">포장 라인</th>
+        <th class="center" style="width:9%">포장 인원</th>
+        <th class="center" style="width:10%">외포장 라인</th>
+        <th class="center" style="width:10%">외포장 인원</th>
+        <th class="center" style="width:12%">작업시간</th>
+        <th class="center" style="width:32%">비고</th>
+      </tr>
+      <tr class="row-fixed">
+        <td class="center">{{ production.display_supply_line or production.supply_line or '' }}</td>
+        <td class="center">{{ production.supply_people if production.supply_people is not none else '' }}</td>
+        <td class="center">{{ production.display_supply_line or production.packing_line or production.supply_line or '' }}</td>
+        <td class="center">{{ production.packing_people if production.packing_people is not none else '' }}</td>
+        <td class="center">{{ production.display_supply_line or production.outer_packing_line or production.supply_line or '' }}</td>
+        <td class="center">{{ production.outer_packing_people if production.outer_packing_people is not none else '' }}</td>
+        <td class="center">{{ production.work_time or '' }}</td>
+        <td>{{ production.personnel_note or '' }}</td>
+      </tr>
+    </table>
+
+    <!-- 원재료 사용현황 -->
+    <table class="b2" style="margin-top:6px;">
+      <tr><th class="section" colspan="5" style="text-align:left;">■ 원재료 사용현황</th></tr>
+      <tr class="col-head">
+        <th class="center" style="width:20%">품목</th>
+        <th class="center" style="width:15%">자호</th>
+        <th class="center" style="width:20%">입고일자</th>
+        <th class="center" style="width:15%">사용속수</th>
+        <th class="center" style="width:30%">비고</th>
+      </tr>
+      {% for r in raw_usages[:3] %}
+      <tr class="row-fixed">
+        <td>{{ r.raw_material_name or '' }}</td>
+        <td class="center">{{ r.car_number or '' }}</td>
+        <td class="center">{{ r.receiving_date or '' }}</td>
+        <td class="center">{{ fmt1(r.actual_quantity) }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+      {% for i in range(0, 3 - raw_usages|length if raw_usages|length < 3 else 0) %}
+      <tr class="row-fixed"><td></td><td></td><td></td><td></td><td></td></tr>
+      {% endfor %}
+      {% set total_used = (raw_usages | sum(attribute='actual_quantity')) %}
+      {% set total_expected = (raw_usages | sum(attribute='expected_quantity')) %}
+      {% set yield_rate = (total_expected / total_used * 100) if total_used else None %}
+      <tr class="row-fixed sum-row">
+        <th class="center">총 사용속수</th>
+        <td class="center">{{ "%.0f"|format(total_used) if total_used else '' }}</td>
+        <th class="center">원재료속수</th>
+        <td class="center">{{ "%.0f"|format(total_expected) if total_expected else '' }}</td>
+        <td class="center" style="padding:4px 6px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;">수율</span>
+            <span style="font-weight:800;font-size:12px;">{% if yield_rate is not none %}{{ "%.1f"|format(yield_rate) }}%{% endif %}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- 부재료 사용현황 -->
+    <table class="b2" style="margin-top:6px;">
+      <tr><th class="section" colspan="5" style="text-align:left;">■ 부재료 사용현황</th></tr>
+      <tr class="col-head">
+        <th class="center" style="width:35%">품목</th>
+        <th class="center" style="width:15%">사용량</th>
+        <th class="center" style="width:20%">입고일</th>
+        <th class="center" style="width:15%">소비기한</th>
+        <th class="center" style="width:15%">비고</th>
+      </tr>
+      {% for m in material_usages %}
+      <tr class="row-fixed">
+        <td>{{ m.material_name or '' }}</td>
+        <td class="center">{{ fmt1(m.lot_used_quantity if m.lot_used_quantity is not none else (m.actual_quantity if m.actual_quantity is not none else m.expected_quantity)) }}</td>
+        <td class="center">{{ m.lot_receiving_date or '' }}</td>
+        <td class="center">{{ m.lot_expiry_date or '' }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+      {% for i in range(0, 5 - material_usages|length if material_usages|length < 5 else 0) %}
+      <tr class="row-fixed"><td></td><td></td><td></td><td></td><td></td></tr>
+      {% endfor %}
+    </table>
+
+    <!-- 포장재 사용현황 -->
+    <table class="b2" style="margin-top:6px;">
+      <tr><th class="section" colspan="5" style="text-align:left;">■ 포장재 사용현황</th></tr>
+      <tr class="col-head">
+        <th class="center" style="width:35%">품목</th>
+        <th class="center" style="width:15%">사용량</th>
+        <th class="center" style="width:15%">로스량</th>
+        <th class="center" style="width:20%">입고일</th>
+        <th class="center" style="width:15%">비고</th>
+      </tr>
+      {% for p in packaging_usages %}
+      <tr class="row-fixed">
+        <td>{{ p.material_name or '' }}</td>
+        <td class="center">{{ fmt1(p.lot_used_quantity if p.lot_used_quantity is not none else (p.actual_quantity if p.actual_quantity is not none else p.expected_quantity)) }}</td>
+        <td class="center">{% if p.display_loss_quantity is defined and p.display_loss_quantity is not none %}{{ "%.1f"|format(p.display_loss_quantity) }}{% elif p.loss_quantity is not none %}{{ "%.1f"|format(p.loss_quantity) }}{% endif %}</td>
+        <td class="center">{{ p.lot_receiving_date or '' }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+      {% for i in range(0, 7 - packaging_usages|length if packaging_usages|length < 7 else 0) %}
+      <tr class="row-fixed"><td></td><td></td><td></td><td></td><td></td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <script>
+    window.onload = () => { window.print(); };
+  </script>
+</body>
+</html>

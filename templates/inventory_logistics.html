@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}물류 불출 확정{% endblock %}
+{% block content %}
+<h1 style="margin-bottom:1rem;">🚚 물류 불출 확정</h1>
+<p style="color:#666;margin-bottom:1rem;">작업장별 불출요청을 물류 재고에서 출고 처리합니다.</p>
+
+<div class="card">
+    <h2>대기 요청</h2>
+    {% if grouped_requests %}
+    {% for req in grouped_requests %}
+    <div style="border:1px solid #e5e7eb;border-radius:10px;padding:0.75rem;margin-bottom:1rem;background:#fafafa;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.65rem;">
+            <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;">
+                <strong>{{ req.request_no }}</strong>
+                <span style="font-size:0.85rem;color:#374151;">작업장: {{ req.workplace }}</span>
+                <span style="font-size:0.85rem;color:#374151;">상태: {{ req.status }}</span>
+                <span style="font-size:0.85rem;color:#6b7280;">필요일: {{ req.need_date or '-' }}</span>
+                <span style="font-size:0.85rem;color:#6b7280;">요청자: {{ req.created_by or '-' }}</span>
+            </div>
+            <div style="display:flex;gap:0.4rem;align-items:center;">
+                <form method="POST" action="/inventory/logistics/{{ req.id }}/issue-all">
+                    <button type="submit" class="btn btn-small" onclick="return confirm('요청 건을 가능한 수량까지 일괄 출고할까요?')">일괄 출고</button>
+                </form>
+                <form method="POST" action="/inventory/logistics/{{ req.id }}/approve">
+                    <button type="submit" class="btn btn-small">요청 승인</button>
+                </form>
+                <form method="POST" action="/inventory/logistics/{{ req.id }}/reject" style="display:flex;gap:0.35rem;">
+                    <input type="text"
+                           name="reject_note"
+                           placeholder="반려 사유"
+                           style="width:140px;padding:0.25rem 0.35rem;border:1px solid #d1d5db;border-radius:8px;">
+                    <button type="submit" class="btn btn-small btn-danger">반려</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>부자재</th>
+                        <th>요청수량</th>
+                        <th>출고수량</th>
+                        <th>잔량</th>
+                        <th>물류 가용</th>
+                        <th>상태</th>
+                        <th>출고</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in req.item_rows %}
+                    {% set remain = (i.requested_qty or 0) - (i.issued_qty or 0) %}
+                    <tr>
+                        <td><strong>{{ i.material_name }}</strong> <span style="color:#777;">({{ i.material_code or '-' }})</span></td>
+                        <td>{{ "%.1f"|format(i.requested_qty or 0) }} {{ i.unit or '' }}</td>
+                        <td>{{ "%.1f"|format(i.issued_qty or 0) }} {{ i.unit or '' }}</td>
+                        <td><strong>{{ "%.1f"|format(remain if remain > 0 else 0) }}</strong> {{ i.unit or '' }}</td>
+                        <td>{{ "%.1f"|format(i.wh_qty or 0) }} {{ i.unit or '' }}</td>
+                        <td>{{ i.item_status }}</td>
+                        <td>
+                            <form method="POST" action="/inventory/logistics/{{ i.item_id }}/issue" style="display:flex;gap:0.35rem;align-items:center;">
+                                <input type="number"
+                                       name="issue_qty"
+                                       step="0.1"
+                                       min="0.1"
+                                       max="{{ remain if remain > 0 else 0 }}"
+                                       value="{{ remain if remain > 0 else 0 }}"
+                                       style="width:90px;padding:0.3rem 0.35rem;border:1px solid #d1d5db;border-radius:8px;">
+                                <button type="submit" class="btn btn-small">출고</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color:#777;">처리할 불출요청이 없습니다.</p>
+    {% endif %}
+</div>
+{% endblock %}

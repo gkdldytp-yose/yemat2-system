@@ -1,0 +1,580 @@
+﻿{% extends "base.html" %}
+{% block title %}생산 상세{% endblock %}
+{% block extra_css %}
+<style>
+.sec{background:white;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.sec h3{font-size:1.1rem;color:#2c3e50;border-bottom:2px solid #667eea;padding-bottom:0.5rem;margin-bottom:1rem;}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.info-item .lbl{font-size:0.78rem;color:#999;margin-bottom:0.2rem;}
+.info-item .val{font-weight:600;font-size:0.95rem;white-space:normal;word-break:break-word;line-height:1.35;}
+.raw-card{border:2px solid #e1e8ed;border-radius:8px;padding:1rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.2s;}
+.raw-card:hover{border-color:#667eea;background:#f8f9ff;}
+.raw-card.active{border-color:#27ae60;background:#f0fff4;}
+.raw-card.active::after{content:"◑";float:right;color:#27ae60;font-weight:bold;}
+.raw-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.5rem;margin-top:0.5rem;font-size:0.85rem;}
+.raw-meta .ml{color:#999;font-size:0.75rem;}
+.raw-meta .mv{font-weight:600;}
+.raw-input-row{display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem;padding-top:0.75rem;border-top:1px dashed #ccc;}
+.mat-tbl{width:100%;border-collapse:collapse;font-size:0.9rem;table-layout:fixed;}
+.mat-tbl th{background:#667eea;color:white;padding:0.55rem 0.75rem;text-align:left;}
+.mat-tbl td{padding:0.55rem 0.75rem;border-bottom:1px solid #f0f0f0;}
+.mat-tbl tr:hover td{background:#fafafa;}
+.mat-tbl th,.mat-tbl td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mat-tbl th:first-child,.mat-tbl td:first-child{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word;}
+.ainput{width:90px;padding:0.35rem 0.5rem;border:2px solid #667eea;border-radius:6px;text-align:right;font-size:0.9rem;}
+.lp{color:#e74c3c;font-weight:600;}
+.lm{color:#27ae60;font-weight:600;}
+.ok{color:#27ae60;}
+.warn{color:#e74c3c;}
+.shortage-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.shortage-modal{width:min(860px,96vw);background:#fff;border-radius:14px;border:1px solid #e5e7eb;box-shadow:0 18px 38px rgba(0,0,0,0.12);}
+.shortage-head{padding:14px 18px;border-bottom:1px solid #e5e7eb;font-weight:800;color:#b91c1c;}
+.shortage-body{padding:14px 18px;}
+.shortage-desc{margin:0 0 10px 0;font-size:0.9rem;color:#374151;}
+.shortage-table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+.shortage-table th,.shortage-table td{border:1px solid #e5e7eb;padding:8px 10px;text-align:left;}
+.shortage-table th{background:#f8fafc;}
+.shortage-actions{display:flex;justify-content:flex-end;gap:0.5rem;margin-top:12px;}
+.lot-gap-row td{background:#fffef8 !important;padding:.35rem .75rem 1rem;border-bottom:1px dashed #fed7aa;}
+.lot-gap-panel{display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:1rem;padding:1rem 1.05rem;border:1px solid #fdba74;border-radius:16px;background:linear-gradient(180deg,#fffef9 0%,#fff7ed 100%);box-shadow:0 10px 24px rgba(194,65,12,.08);}
+.lot-gap-copy{min-width:0;}
+.lot-gap-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.34rem .7rem;border-radius:999px;background:#f97316;color:#fff;font-size:.74rem;font-weight:800;margin-bottom:.45rem;}
+.lot-gap-title{font-size:.98rem;font-weight:900;color:#9a3412;margin-bottom:.2rem;}
+.lot-gap-desc{font-size:.82rem;color:#7c2d12;line-height:1.5;}
+.lot-gap-meta{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.55rem;}
+.lot-gap-meta span{display:inline-flex;align-items:center;padding:.28rem .55rem;border-radius:999px;background:#fff;border:1px solid #fed7aa;color:#9a3412;font-size:.75rem;font-weight:700;}
+.lot-gap-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;align-content:start;}
+.lot-gap-field{min-width:0;}
+.lot-gap-fields label{display:block;font-size:.74rem;color:#9a3412;font-weight:800;margin-bottom:.28rem;}
+.lot-gap-fields input{width:100%;padding:.62rem .7rem;border:1px solid #fdba74;border-radius:12px;min-height:42px;background:#fff;box-sizing:border-box;font-size:.88rem;}
+.lot-gap-fields input:focus{outline:none;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.14);}
+.lot-gap-hint{grid-column:1 / -1;font-size:.76rem;color:#9a3412;background:rgba(255,255,255,.72);border:1px dashed #fdba74;border-radius:10px;padding:.55rem .7rem;}
+.lot-gap-actions{grid-column:1 / -1;display:flex;justify-content:flex-end;gap:.6rem;margin-top:.1rem;}
+.lot-gap-apply{display:inline-flex;align-items:center;justify-content:center;padding:.62rem .95rem;border:none;border-radius:11px;background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);color:#fff;font-weight:800;font-size:.83rem;cursor:pointer;box-shadow:0 10px 18px rgba(234,88,12,.18);}
+.lot-gap-apply:hover{filter:brightness(.98);}
+.ainfo{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.ainfo .ainput{flex:0 0 110px;}
+
+@media (max-width: 768px) {
+    .info-grid{grid-template-columns:1fr !important;}
+    .sec{padding:1rem !important;}
+    .raw-card{padding:0.75rem !important;}
+    .raw-meta{grid-template-columns:1fr 1fr !important;gap:0.5rem !important;}
+    .mat-tbl{font-size:0.75rem !important;}
+    .mat-tbl th,.mat-tbl td{padding:0.4rem 0.2rem !important;}
+    .lot-gap-panel{grid-template-columns:1fr;}
+    .lot-gap-fields{grid-template-columns:1fr;}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+{%- set edit_completed = request.args.get('edit') == '1' -%}
+{%- set can_edit = can_prod and (production.status != '완료' or edit_completed) -%}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
+    <h1>🏭 생산 상세</h1>
+    <div style="display:flex;gap:0.5rem;align-items:center;">
+        {% if production.status == '완료' and can_prod and not edit_completed %}
+        <a href="/production/{{ production.id }}?edit=1" class="btn btn-small" style="background:#f59e0b;">✏️ 완료건 수정</a>
+        {% elif edit_completed %}
+        <a href="/production/{{ production.id }}" class="btn btn-small btn-secondary">수정 취소</a>
+        {% endif %}
+        {% if production.status == '완료' %}
+        <a href="/production/{{ production.id }}/print" class="btn btn-small">🖨️ A4 출력</a>
+        {% endif %}
+        <a href="/production" class="btn btn-secondary btn-small">← 목록</a>
+    </div>
+</div>
+
+{% if production.status == '완료' %}
+<div style="background:#e8f5e9;border:2px solid #27ae60;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;text-align:center;font-weight:600;color:#27ae60;">✅ 생산 완료</div>
+{% endif %}
+
+<form method="POST" action="/production/{{ production.id }}/update-usage">
+<input type="hidden" name="return_edit" value="{{ '1' if edit_completed else '' }}">
+
+<div class="sec">
+    <h3>📦 생산 정보</h3>
+    <div class="info-grid">
+        <div class="info-item" style="grid-column:1 / -1;"><div class="lbl">제품명</div><div class="val">{{ production.product_name }}</div></div>
+        <div class="info-item"><div class="lbl">생산번호</div><div class="val">PROD-{{ production.id }}</div></div>
+        <div class="info-item"><div class="lbl">생산일</div><div class="val">{{ production.production_date }}</div></div>
+        <div class="info-item"><div class="lbl">상태</div><div class="val">
+            {% if production.status == '완료' %}<span class="badge badge-success">완료</span>
+            {% elif production.status == '진행중' %}<span class="badge badge-warning">진행중</span>
+            {% else %}<span class="badge badge-info">예정</span>{% endif %}
+        </div></div>
+        <div class="info-item"><div class="lbl">계획 박스 수</div><div class="val">{{ production.planned_boxes }} BOX</div></div>
+        <div class="info-item">
+            <div class="lbl">실제 생산 박스 수 *</div>
+            {% if not can_edit %}
+            <div class="val">{{ production.actual_boxes }} BOX</div>
+            {% else %}
+            <input type="number" name="actual_boxes" id="actualBoxes"
+                   value="{{ production.actual_boxes or production.planned_boxes }}"
+                   min="1" style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:120px;"
+                   oninput="recalcAll()">
+            {% endif %}
+        </div>
+        <div class="info-item"><div class="lbl">박스당 수량</div><div class="val">{{ production.box_quantity }}개</div></div>
+        <div class="info-item">
+            <div class="lbl">소비기한 *</div>
+            {% if not can_edit %}
+            <div class="val">{{ production.expiry_date or calculated_expiry_date }}</div>
+            {% else %}
+            <input type="text" name="expiry_date"
+                   value="{{ production.expiry_date or calculated_expiry_date }}"
+                   placeholder="예: 2026-03-15A"
+                   {% if can_edit %}required{% else %}readonly{% endif %}
+                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:180px;">
+            <div class="lbl" style="margin-top:0.25rem;">자동 계산: {{ calculated_expiry_date }} (생산일 + {{ production.expiry_months or 12 }}개월)</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="sec">
+    <h3>👥 인원 관리</h3>
+    <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr 1.2fr 2fr;">
+        <div class="info-item"><div class="lbl">공급 인원 *</div>
+            <input type="number" name="supply_people" min="0" value="{{ production.supply_people or '' }}"
+                   {% if can_edit %}required{% else %}readonly{% endif %}
+                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+        </div>
+        <div class="info-item"><div class="lbl">포장 인원 *</div>
+            <input type="number" name="packing_people" min="0" value="{{ production.packing_people or '' }}"
+                   {% if can_edit %}required{% else %}readonly{% endif %}
+                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+        </div>
+        <div class="info-item"><div class="lbl">외포장 인원 *</div>
+            <input type="number" name="outer_packing_people" min="0" value="{{ production.outer_packing_people or '' }}"
+                   {% if can_edit %}required{% else %}readonly{% endif %}
+                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+        </div>
+        <div class="info-item"><div class="lbl">작업시간 *</div>
+            <input type="text" name="work_time" value="{{ production.work_time or '' }}" placeholder="예: 08:30~17:30"
+                   {% if can_edit %}required{% else %}readonly{% endif %}
+                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+        </div>
+        <div class="info-item"><div class="lbl">비고</div>
+            <input type="text" name="personnel_note" value="{{ production.personnel_note or '' }}"
+                   {% if not can_edit %}readonly{% endif %}
+                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+        </div>
+    </div>
+</div>
+
+{% if bom_raw_items %}
+<div class="sec" style="margin-top:0.75rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:2px solid #667eea;padding-bottom:0.5rem;">
+        <h3 style="border:none;padding:0;margin:0;">🌿 원초 선택 및 사용량</h3>
+        {% if can_edit %}
+        <button type="button" onclick="autoSelect()" style="background:#e8f5e9;border:1px solid #27ae60;color:#27ae60;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.85rem;">⚡ 자동 선택</button>
+        {% endif %}
+    </div>
+
+    <div style="background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem;display:flex;gap:2rem;flex-wrap:wrap;">
+        <span>1박스당 <strong>{{ "%.1f"|format(production.sok_per_box or 0) }}속</strong></span>
+        <span>총 필요량 <strong id="totalNeed" class="warn">-</strong></span>
+        <span>선택 합계 <strong id="totalSel" style="color:#667eea;">0속</strong></span>
+        <span>잔여 <strong id="remain">-</strong></span>
+        <span>수율 <strong id="rawYield" style="color:#2c3e50;">-</strong></span>
+    </div>
+
+    {% for rm in bom_raw_items %}
+    {% set saved_raw_qty = raw_saved_map.get(rm.rm_id) %}
+    <div class="raw-card{% if saved_raw_qty is not none and saved_raw_qty > 0 %} active{% endif %}" id="rc_{{ rm.rm_id }}"
+         data-id="{{ rm.rm_id }}" data-stock="{{ rm.current_stock }}"
+         data-pbox="{{ rm.quantity_per_box }}"
+         {% if can_edit %}onclick="toggleCard({{ rm.rm_id }})"{% endif %}>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong>🌿 {{ rm.rm_name }}</strong>
+            <span style="font-size:0.85rem;padding:0.2rem 0.6rem;border-radius:20px;background:{% if rm.current_stock > 20 %}#e8f5e9;color:#27ae60{% elif rm.current_stock > 5 %}#fff3e0;color:#e67e22{% else %}#fce4ec;color:#e74c3c{% endif %};">재고 {{ rm.current_stock|int }}속</span>
+        </div>
+        <div class="raw-meta">
+            <div><div class="ml">자호</div><div class="mv">{{ rm.car_number or '-' }}</div></div>
+            <div><div class="ml">입고일</div><div class="mv">{{ rm.receiving_date or '-' }}</div></div>
+            <div><div class="ml">현재 재고</div><div class="mv {% if rm.current_stock < 5 %}warn{% else %}ok{% endif %}">{{ rm.current_stock|int }}속</div></div>
+            {% if not can_edit %}
+            <div><div class="ml">사용량</div><div class="mv">{{ rm.actual_quantity|round(1) if (rm.actual_quantity is defined and rm.actual_quantity is not none) else '-' }}속</div></div>
+            <div><div class="ml">수율</div><div class="mv">{{ (rm.yield_rate|round(1) ~ '%') if (rm.yield_rate is defined and rm.yield_rate is not none) else '-' }}</div></div>
+            {% else %}
+            <div><div class="ml">최대 생산</div><div class="mv">{% if rm.quantity_per_box > 0 %}{{ (rm.current_stock / rm.quantity_per_box)|int }}박스{% else %}-{% endif %}</div></div>
+            {% endif %}
+        </div>
+        {% if can_edit %}
+        <div id="iw_{{ rm.rm_id }}" class="raw-input-row" style="display:{% if saved_raw_qty is not none and saved_raw_qty > 0 %}flex{% else %}none{% endif %};" onclick="event.stopPropagation()">
+            <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
+            <input type="number" name="raw_actual_{{ loop.index0 }}"
+                   id="ri_{{ rm.rm_id }}" step="1" min="0" max="{{ rm.current_stock|int }}"
+                   value="{{ saved_raw_qty if saved_raw_qty is not none else '' }}" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;"
+                   oninput="checkRawOver({{ rm.rm_id }}, {{ rm.current_stock|int }}); updateTotal()">
+            <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}">
+            <span id="rw_{{ rm.rm_id }}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% set calc_base_boxes = production.actual_boxes or production.planned_boxes %}
+{% set mat_list = material_usage | selectattr('material_id') | list %}
+{% if mat_list %}
+{% set pack_cats = ['포장재','내포','외포','박스','트레이','실리카'] %}
+{% set pack_keys = ['내포','외포','박스','트레이','실리카'] %}
+{% set ns = namespace(pack_inner=[], pack_outer=[], pack_box=[], pack_rest=[], other=[]) %}
+{% for u in mat_list %}
+    {% set cat = (u.category or '') %}
+    {% set nm = (u.material_name or '') %}
+    {% if cat in pack_cats or (pack_keys | select('in', nm) | list | length) > 0 %}
+        {% if cat == '내포' or ('내포' in nm) %}
+            {% set ns.pack_inner = ns.pack_inner + [u] %}
+        {% elif cat == '외포' or ('외포' in nm) %}
+            {% set ns.pack_outer = ns.pack_outer + [u] %}
+        {% elif cat == '박스' or ('박스' in nm) %}
+            {% set ns.pack_box = ns.pack_box + [u] %}
+        {% else %}
+            {% set ns.pack_rest = ns.pack_rest + [u] %}
+        {% endif %}
+    {% else %}
+        {% set ns.other = ns.other + [u] %}
+    {% endif %}
+{% endfor %}
+
+{% if ns.other|length %}
+<div class="sec">
+    <h3>🧰 부자재 사용량</h3>
+    <table class="mat-tbl">
+        <thead><tr><th>부자재명</th><th>단위</th><th>예상량</th><th>실제 사용량</th><th>로스량</th><th>수율</th></tr></thead>
+        <tbody id="matBody">
+        {% for u in ns.other %}
+        <tr data-uid="{{ u.id }}" data-pbox="{{ ((u.expected_quantity|default(0)) / calc_base_boxes)|round(6) if calc_base_boxes else 0 }}">
+            <td><strong>{{ u.material_name }}</strong></td>
+            <td>{{ u.unit }}</td>
+            <td id="exp_{{ u.id }}">{{ (u.expected_quantity|default(0))|round(1) }}</td>
+            <td>
+                {% if not can_edit %}
+                {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                {% elif can_edit %}
+                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
+                {% else %}
+                {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                {% endif %}
+            </td>
+            <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
+            <td id="yld_{{ u.id }}">{% if u.yield_rate %}<strong>{{ u.yield_rate|round(1) }}%</strong>{% else %}-{% endif %}</td>
+        </tr>
+        {% if can_edit and u.has_lot_info_gap and u.lot_info_gap %}
+        <tr class="lot-gap-row">
+            <td colspan="6">
+                <div class="lot-gap-panel">
+                    <div class="lot-gap-copy">
+                        <div class="lot-gap-badge">정보 보완 필요</div>
+                        <div class="lot-gap-title">{{ u.material_name }} 사용 전 lot 정보를 채워주세요</div>
+                        <div class="lot-gap-desc">실제 사용은 그대로 진행할 수 있고, 이번 생산에서 먼저 소진될 lot의 빠진 정보만 입력하면 됩니다.</div>
+                        <div class="lot-gap-meta">
+                            <span>대상 lot {{ u.lot_info_gap.lot }}</span>
+                            <span>현재 잔량 {{ '%.1f'|format(u.lot_info_gap.available_qty or 0) }} {{ u.unit }}</span>
+                        </div>
+                    </div>
+                    <div class="lot-gap-fields">
+                        <div class="lot-gap-field">
+                            <label for="mat_info_receiving_{{ u.id }}">입고일</label>
+                            <input id="mat_info_receiving_{{ u.id }}" type="date" name="mat_info_receiving_{{ u.id }}" value="{{ u.lot_info_gap.receiving_date or '' }}">
+                        </div>
+                        {% if 'manufacture_date' in u.lot_info_gap.missing_fields %}
+                        <div class="lot-gap-field">
+                            <label for="mat_info_manufacture_{{ u.id }}">제조일 입력</label>
+                            <input id="mat_info_manufacture_{{ u.id }}" type="date" name="mat_info_manufacture_{{ u.id }}" value="">
+                        </div>
+                        {% endif %}
+                        {% if 'expiry_date' in u.lot_info_gap.missing_fields %}
+                        <div class="lot-gap-field">
+                            <label for="mat_info_expiry_{{ u.id }}">소비기한 입력</label>
+                            <input id="mat_info_expiry_{{ u.id }}" type="date" name="mat_info_expiry_{{ u.id }}" value="">
+                        </div>
+                        {% endif %}
+                        <div class="lot-gap-hint">
+                            이번에 입력한 값은 현재 사용되는 lot에 저장되고, 해당 lot 재고를 모두 소진할 때까지 동일하게 유지됩니다.
+                        </div>
+                        <div class="lot-gap-actions">
+                            <button type="submit" class="lot-gap-apply" name="apply_usage_id" value="{{ u.id }}" formnovalidate>정보 적용</button>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% set ordered_pack = ns.pack_inner + ns.pack_outer + ns.pack_box + ns.pack_rest %}
+{% if ordered_pack|length %}
+<div class="sec">
+    <h3>📦 포장재 사용량</h3>
+    <table class="mat-tbl">
+        <thead><tr><th>포장재명</th><th>단위</th><th>예상량</th><th>실제 사용량</th><th>로스량</th><th>수율</th></tr></thead>
+        <tbody id="packBody">
+        {% for u in ordered_pack %}
+        <tr data-uid="{{ u.id }}" data-pbox="{{ ((u.expected_quantity|default(0)) / calc_base_boxes)|round(6) if calc_base_boxes else 0 }}">
+            <td><strong>{{ u.material_name }}</strong></td>
+            <td>{{ u.unit }}</td>
+            <td id="exp_{{ u.id }}">{{ (u.expected_quantity|default(0))|round(1) }}</td>
+            <td>
+                {% if not can_edit %}
+                {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                {% elif can_edit %}
+                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
+                {% else %}
+                {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                {% endif %}
+            </td>
+            <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
+            <td id="yld_{{ u.id }}">{% if u.yield_rate %}<strong>{{ u.yield_rate|round(1) }}%</strong>{% else %}-{% endif %}</td>
+        </tr>
+        {% if can_edit and u.has_lot_info_gap and u.lot_info_gap %}
+        <tr class="lot-gap-row">
+            <td colspan="6">
+                <div class="lot-gap-panel">
+                    <div class="lot-gap-copy">
+                        <div class="lot-gap-badge">정보 보완 필요</div>
+                        <div class="lot-gap-title">{{ u.material_name }} 사용 전 lot 정보를 채워주세요</div>
+                        <div class="lot-gap-desc">포장재 사용 흐름은 그대로 두고, 먼저 소진되는 lot의 빠진 정보만 입력하면 저장 시 자동 반영됩니다.</div>
+                        <div class="lot-gap-meta">
+                            <span>대상 lot {{ u.lot_info_gap.lot }}</span>
+                            <span>현재 잔량 {{ '%.1f'|format(u.lot_info_gap.available_qty or 0) }} {{ u.unit }}</span>
+                        </div>
+                    </div>
+                    <div class="lot-gap-fields">
+                        <div class="lot-gap-field">
+                            <label for="mat_info_receiving_{{ u.id }}">입고일</label>
+                            <input id="mat_info_receiving_{{ u.id }}" type="date" name="mat_info_receiving_{{ u.id }}" value="{{ u.lot_info_gap.receiving_date or '' }}">
+                        </div>
+                        {% if 'manufacture_date' in u.lot_info_gap.missing_fields %}
+                        <div class="lot-gap-field">
+                            <label for="mat_info_manufacture_{{ u.id }}">제조일 입력</label>
+                            <input id="mat_info_manufacture_{{ u.id }}" type="date" name="mat_info_manufacture_{{ u.id }}" value="">
+                        </div>
+                        {% endif %}
+                        {% if 'expiry_date' in u.lot_info_gap.missing_fields %}
+                        <div class="lot-gap-field">
+                            <label for="mat_info_expiry_{{ u.id }}">소비기한 입력</label>
+                            <input id="mat_info_expiry_{{ u.id }}" type="date" name="mat_info_expiry_{{ u.id }}" value="">
+                        </div>
+                        {% endif %}
+                        <div class="lot-gap-hint">
+                            입력한 정보는 이번 생산에서 실제 차감되는 마지막 lot에 저장됩니다. 같은 lot가 남아 있으면 다음 사용 때도 그대로 이어집니다.
+                        </div>
+                        <div class="lot-gap-actions">
+                            <button type="submit" class="lot-gap-apply" name="apply_usage_id" value="{{ u.id }}" formnovalidate>정보 적용</button>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endif %}
+
+{% if can_edit %}
+<div class="sec">
+    <div style="background:#fff3e0;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;">
+        ⚠️ 저장 시 선택한 원초 및 부자재 재고가 차감됩니다.
+    </div>
+    <div style="text-align:right;display:flex;gap:1rem;justify-content:flex-end;">
+        <a href="/production" class="btn btn-secondary">취소</a>
+        {% if not edit_completed %}
+        <button type="submit" class="btn btn-secondary" name="save_action" value="temp">임시저장</button>
+        {% endif %}
+        <button type="submit" class="btn" name="save_action" value="complete" onclick="return confirm('{{ '완료건을 수정 저장하시겠습니까?' if edit_completed else '저장하고 생산을 완료 처리하시겠습니까?' }}')">{{ '💾 수정 저장' if edit_completed else '💾 저장 및 완료' }}</button>
+    </div>
+</div>
+{% elif production.status != '완료' %}
+<div class="sec"><div style="background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;font-size:0.9rem;color:#666;text-align:center;">읽기 전용입니다.</div></div>
+{% endif %}
+
+</form>
+
+{% if material_shortage_popup %}
+<div class="shortage-modal-bg" id="materialShortageModal">
+    <div class="shortage-modal">
+        <div class="shortage-head">부자재 재고 부족 알림</div>
+        <div class="shortage-body">
+            <p class="shortage-desc">아래 부자재의 재고가 부족합니다.</p>
+            <table class="shortage-table">
+                <thead><tr><th>부자재</th><th>현재고</th><th>필요 재고</th></tr></thead>
+                <tbody>
+                    {% for s in material_shortage_popup.shortages %}
+                    <tr>
+                        <td>{{ s.name }}</td>
+                        <td>{{ '%.2f'|format(s.have|float) }} {{ s.unit or '' }}</td>
+                        <td>{{ '%.2f'|format(s.need|float) }} {{ s.unit or '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="shortage-actions">
+                <form method="POST" action="/production/{{ production.id }}/update-usage" style="margin:0;">
+                    {% for item in material_shortage_popup.form_payload %}
+                    <input type="hidden" name="{{ item.name }}" value="{{ item.value }}">
+                    {% endfor %}
+                    <input type="hidden" name="save_action" value="temp">
+                    <input type="hidden" name="move_to_purchase" value="1">
+                    <button type="submit" class="btn">임시 저장 후 발주관리 이동</button>
+                </form>
+                <button type="button" class="btn btn-secondary" onclick="closeMaterialShortageModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+const PER_BOX = {{ production.sok_per_box or 0 }};
+const PLANNED = {{ production.planned_boxes }};
+const DEFAULT_BOXES = {{ production.actual_boxes or production.planned_boxes }};
+const IS_DONE = {{ 'false' if can_edit else 'true' }};
+
+window.onload = () => recalcAll();
+
+function getActualBoxes(){
+    const el = document.getElementById('actualBoxes');
+    return parseFloat(el && el.value) || DEFAULT_BOXES;
+}
+
+function recalcAll(){
+    const boxes = getActualBoxes();
+    const need = PER_BOX * boxes;
+    const tn = document.getElementById('totalNeed');
+    if(tn) tn.textContent = Math.ceil(need) + '속';
+
+    document.querySelectorAll('#matBody tr, #packBody tr').forEach(row => {
+        const uid = row.dataset.uid;
+        const pb = parseFloat(row.dataset.pbox) || 0;
+        const newExp = Math.ceil(pb * boxes * 10) / 10;
+        const ec = document.getElementById(`exp_${uid}`);
+        if(ec) ec.textContent = newExp.toFixed(1);
+    });
+    updateTotal();
+}
+
+function toggleCard(id){
+    if(IS_DONE) return;
+    const card = document.getElementById(`rc_${id}`);
+    const iw = document.getElementById(`iw_${id}`);
+    const inp = document.getElementById(`ri_${id}`);
+    if(card.classList.contains('active')){
+        card.classList.remove('active');
+        iw.style.display = 'none';
+        inp.value = '';
+        document.getElementById(`rw_${id}`).style.display = 'none';
+    } else {
+        card.classList.add('active');
+        iw.style.display = 'flex';
+        inp.focus();
+    }
+    updateTotal();
+}
+
+function checkRawOver(id, maxStock){
+    const val = parseFloat(document.getElementById(`ri_${id}`).value) || 0;
+    const warnEl = document.getElementById(`rw_${id}`);
+    warnEl.style.display = val > maxStock ? 'inline' : 'none';
+}
+
+function updateTotal(){
+    let total = 0;
+    document.querySelectorAll('[id^="ri_"]').forEach(inp => total += parseFloat(inp.value) || 0);
+    const boxes = getActualBoxes();
+    const need = PER_BOX * boxes;
+    const remain = need - total;
+
+    const ts = document.getElementById('totalSel');
+    const rem = document.getElementById('remain');
+    if(ts) ts.textContent = Math.ceil(total) + '속';
+    if(rem){
+        rem.textContent = Math.ceil(remain) + '속';
+        rem.style.color = remain <= 0 ? '#27ae60' : '#e74c3c';
+    }
+
+    const yieldEl = document.getElementById('rawYield');
+    if(yieldEl && total > 0 && need > 0) {
+        const yr = (need / total * 100).toFixed(1);
+        const color = yr >= 95 ? '#27ae60' : yr >= 90 ? '#f39c12' : '#e74c3c';
+        yieldEl.innerHTML = `<span style="color:${color}">${yr}%</span>`;
+    } else if(yieldEl) {
+        yieldEl.textContent = '-';
+    }
+}
+
+function autoSelect(){
+    const boxes = getActualBoxes();
+    let remaining = PER_BOX * boxes;
+
+    document.querySelectorAll('.raw-card').forEach(c => {
+        c.classList.remove('active');
+        const iw = document.getElementById(`iw_${c.dataset.id}`);
+        const inp = document.getElementById(`ri_${c.dataset.id}`);
+        const wn = document.getElementById(`rw_${c.dataset.id}`);
+        if(iw) iw.style.display = 'none';
+        if(inp) inp.value = '';
+        if(wn) wn.style.display = 'none';
+    });
+
+    document.querySelectorAll('.raw-card').forEach(c => {
+        if(remaining <= 0) return;
+        const id = c.dataset.id;
+        const stock = parseInt(c.dataset.stock) || 0;
+        if(stock <= 0) return;
+        const use = Math.min(Math.ceil(remaining), stock);
+        remaining -= use;
+        c.classList.add('active');
+        const iw = document.getElementById(`iw_${id}`);
+        const inp = document.getElementById(`ri_${id}`);
+        if(iw) iw.style.display = 'flex';
+        if(inp) inp.value = use;
+    });
+
+    updateTotal();
+    if(remaining > 0) alert(`원초 재고 부족: ${Math.ceil(remaining)}속 부족`);
+}
+
+function calcLoss(uid, val, expOverride){
+    const expCell = document.getElementById(`exp_${uid}`);
+    const exp = expOverride !== undefined ? expOverride : parseFloat(expCell?.textContent) || 0;
+    const actual = parseFloat(val) || 0;
+    const lc = document.getElementById(`loss_${uid}`);
+    const yc = document.getElementById(`yld_${uid}`);
+    if(actual > 0 && lc){
+        const loss = actual - exp;
+        const yr = exp > 0 ? (exp/actual*100) : 0;
+        lc.innerHTML = `<span class="${loss>0?'lp':'lm'}">${loss>0?'+':''}${loss.toFixed(1)}</span>`;
+        if(yc){
+            const col = yr>=95?'#27ae60':yr>=90?'#f39c12':'#e74c3c';
+            yc.innerHTML = `<strong style="color:${col}">${yr.toFixed(1)}%</strong>`;
+        }
+    }
+}
+
+function closeMaterialShortageModal(){
+    const modal = document.getElementById('materialShortageModal');
+    if(modal){
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+﻿{% extends "base.html" %}
+{% block title %}작업장 선택 - 예맛 생산관리{% endblock %}
+
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;">
+    <div class="card" style="max-width:600px;width:100%;text-align:center;">
+        <h1 style="margin-bottom:2rem;">작업장 선택</h1>
+        
+        <p style="color:#666;margin-bottom:2rem;">
+            작업하실 작업장을 선택해주세요<br>
+            <small>선택한 작업장의 데이터만 표시됩니다</small>
+        </p>
+        
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-bottom:2rem;">
+            {% for wp in user.workplaces %}
+            <a href="/select-workplace/{{ wp }}" class="workplace-card">
+                <div class="workplace-icon">
+                    {% if '1동 조미' in wp %}
+                    <img src="/static/img/workplace_jomi.svg" alt="1동 조미" class="workplace-img">
+                    {% elif '1동 자반' in wp %}
+                    <img src="/static/img/workplace_jaban.svg" alt="1동 자반" class="workplace-img">
+                    {% elif '1층' in wp %}
+                    <img src="/static/img/workplace_2f1.svg" alt="2동 1층" class="workplace-img">
+                    {% elif '2층' in wp %}
+                    <img src="/static/img/workplace_2f2.svg" alt="2동 2층" class="workplace-img">
+                    {% elif '물류' in wp %}
+                    <img src="/static/img/workplace_jaban.svg" alt="물류" class="workplace-img">
+                    {% else %}
+                    <img src="/static/img/workplace_jomi.svg" alt="작업장" class="workplace-img">
+                    {% endif %}
+                </div>
+                <div class="workplace-name">{{ wp }}</div>
+            </a>
+            {% endfor %}
+        </div>
+        
+        <div style="padding:1rem;background:#f8f9fa;border-radius:8px;font-size:0.9rem;color:#666;">
+            💡 <strong>{{ user.name }}</strong>님은 {{ user.workplaces|length }}개 작업장에 접근 가능합니다
+        </div>
+    </div>
+</div>
+
+<style>
+.workplace-card {
+    display:block;
+    padding:2rem 1rem;
+    background:white;
+    border:2px solid #e1e8ed;
+    border-radius:12px;
+    text-decoration:none;
+    transition:all 0.3s;
+}
+.workplace-card:hover {
+    border-color:#667eea;
+    transform:translateY(-4px);
+    box-shadow:0 8px 24px rgba(102,126,234,0.15);
+}
+.workplace-icon {
+    margin-bottom:1rem;
+}
+.workplace-img{
+    width:96px;
+    height:96px;
+    display:block;
+    margin:0 auto;
+}
+.workplace-name {
+    font-size:1.1rem;
+    font-weight:700;
+    color:#2c3e50;
+}
+</style>
+{% endblock %}
+

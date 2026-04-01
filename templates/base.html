@@ -1,0 +1,378 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}예맛 생산관리{% endblock %}</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        :root{
+            --bg:#f6f7fb;
+            --panel:#ffffff;
+            --ink:#111827;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --brand:#1e293b;
+            --brand-2:#2563eb;
+            --accent:#0ea5e9;
+            --ok:#10b981;
+            --warn:#f59e0b;
+            --danger:#ef4444;
+        }
+        body{font-family:"IBM Plex Sans","Noto Sans KR","Apple SD Gothic Neo",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:60px;}
+        
+        /* 네비게이션 */
+        nav{background:linear-gradient(135deg,#0f172a 0%,#1e293b 55%,#0ea5e9 140%);box-shadow:0 8px 24px rgba(2,6,23,0.25);position:sticky;top:0;z-index:100;}
+        .nav-container{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1rem;padding:0.75rem 1rem;}
+        .nav-brand{color:white;font-size:1.2rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.5rem;}
+        .nav-logo{height:28px;width:28px;display:block;}
+        .menu-toggle{display:none;background:none;border:none;color:white;font-size:1.5rem;cursor:pointer;padding:0.5rem;}
+        .nav-menu{display:flex;gap:0.25rem;list-style:none;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0;}
+        .nav-menu a{color:white;text-decoration:none;font-weight:600;padding:0.45rem 0.85rem;border-radius:8px;transition:all 0.2s;font-size:0.85rem;white-space:nowrap;}
+        .nav-menu a:hover{background:rgba(255,255,255,0.16);transform:translateY(-1px);}
+        .nav-menu .admin-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);}
+        .nav-user{color:white;display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;}
+        .role-tag{padding:0.2rem 0.5rem;border-radius:12px;font-size:0.7rem;font-weight:700;background:rgba(255,255,255,0.2);white-space:nowrap;}
+        
+        /* 모바일 메뉴 */
+        @media (max-width: 768px) {
+            .nav-container{display:flex;justify-content:space-between;align-items:center;}
+            .menu-toggle{display:block;}
+            .nav-menu{display:none;position:absolute;top:100%;left:0;right:0;background:#667eea;flex-direction:column;padding:1rem;gap:0.5rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);}
+            .nav-menu.active{display:flex;}
+            .nav-menu a{display:block;width:100%;text-align:left;padding:0.75rem 1rem;font-size:0.9rem;}
+            .nav-user{font-size:0.75rem;gap:0.25rem;}
+            .role-tag{font-size:0.65rem;padding:0.15rem 0.4rem;}
+            .nav-brand{font-size:1rem;}
+        }
+        
+        main{max-width:1400px;margin:0 auto;padding:1rem;}
+        @media (max-width: 768px) {
+            main{padding:0.75rem;}
+        }
+        
+        /* 카드 */
+        .card{background:var(--panel);border-radius:14px;padding:1.5rem;box-shadow:0 8px 24px rgba(15,23,42,0.08);border:1px solid rgba(15,23,42,0.06);margin-bottom:1rem;}
+        @media (max-width: 768px) {
+            .card{padding:1rem;border-radius:8px;}
+        }
+        .card h2{margin-bottom:1rem;color:var(--ink);font-size:1.1rem;border-bottom:2px solid #eef2f7;padding-bottom:0.5rem;}
+        @media (max-width: 768px) {
+            .card h2{font-size:1rem;margin-bottom:0.75rem;}
+        }
+        
+        /* 테이블 반응형 */
+        .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+        table{width:100%;border-collapse:collapse;font-size:0.9rem;}
+        th{background:#f8fafc;padding:0.75rem 0.5rem;text-align:left;font-weight:700;color:#334155;border-bottom:2px solid #e5e7eb;white-space:nowrap;}
+        td{padding:0.75rem 0.5rem;border-bottom:1px solid #f1f5f9;}
+        tr:hover td{background:#f8fafc;}
+        @media (max-width: 768px) {
+            table{font-size:0.8rem;}
+            th,td{padding:0.5rem 0.3rem;}
+        }
+
+        /* 탭 공통 */
+        .tabs{display:flex;gap:0.5rem;margin-bottom:1.2rem;overflow-x:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(135deg,#f6f7fb 0%, #eef2ff 100%);padding:0.5rem;border-radius:14px;border:1px solid #e3e7ff;box-shadow:0 6px 20px rgba(37,99,235,0.12);}
+        .tab-btn{padding:0.7rem 1.2rem;background:transparent;border:1px solid transparent;border-radius:10px;font-weight:700;color:#4b5563;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+        .tab-btn.active{color:#0f172a;background:#fff;border-color:#c7d2fe;box-shadow:0 4px 12px rgba(79,70,229,0.15);}
+        .tab-btn:hover{color:#0f172a;background:rgba(255,255,255,0.7);}
+        .subtabs{display:flex;gap:0.5rem;margin:0.2rem 0 1rem;flex-wrap:wrap;}
+        .subtab-btn{padding:0.35rem 0.9rem;border:1px solid #e5e7eb;border-radius:999px;background:#fff;color:#374151;font-size:0.85rem;cursor:pointer;transition:all 0.2s;font-weight:700;}
+        .subtab-btn.active{background:#111827;color:white;border-color:#111827;box-shadow:0 6px 16px rgba(17,24,39,0.18);}
+        .subtab-btn:hover{border-color:#9ca3af;}
+        
+        /* 버튼 */
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:0.35rem;padding:0.6rem 1rem;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:white;border:1px solid rgba(15,23,42,0.2);border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;text-decoration:none;transition:all 0.2s;text-align:center;box-shadow:0 6px 16px rgba(37,99,235,0.18);}
+        .btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(30,64,175,0.25);}
+        .btn-secondary{background:linear-gradient(135deg,#334155,#64748b);border-color:#334155;}
+        .btn-danger{background:linear-gradient(135deg,#b91c1c,#ef4444);border-color:#b91c1c;}
+        .btn-warning{background:linear-gradient(135deg,#b45309,#f59e0b);border-color:#b45309;}
+        .btn-ghost{background:#fff;color:#111827;border:1px solid #e5e7eb;box-shadow:none;}
+        .btn-small{padding:0.35rem 0.7rem;font-size:0.75rem;border-radius:8px;}
+        @media (max-width: 768px) {
+            .btn{padding:0.5rem 0.8rem;font-size:0.8rem;}
+            .btn-small{padding:0.3rem 0.5rem;font-size:0.7rem;}
+        }
+        
+        /* 폼 그룹 */
+        .form-group{margin-bottom:1rem;}
+        .form-group label{display:block;font-weight:700;margin-bottom:0.4rem;color:#374151;font-size:0.85rem;}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:0.6rem;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;background:#fff;}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#94a3b8;outline:none;box-shadow:0 0 0 3px rgba(148,163,184,0.18);}
+        .search-input{padding:0.45rem 0.7rem;border:1px solid #e5e7eb;border-radius:8px;min-width:220px;background:#fff;box-shadow:inset 0 1px 2px rgba(0,0,0,0.04);}
+        @media (max-width: 768px) {
+            .form-group label{font-size:0.8rem;}
+            .form-group input,.form-group select,.form-group textarea{padding:0.5rem;font-size:0.85rem;}
+        }
+        
+        /* 배지 */
+        .badge{display:inline-block;padding:0.25rem 0.6rem;border-radius:12px;font-size:0.75rem;font-weight:600;white-space:nowrap;}
+        .badge-info{background:#e0f2fe;color:#0369a1;}
+        .badge-success{background:#dcfce7;color:#15803d;}
+        .badge-warning{background:#fef3c7;color:#b45309;}
+        .badge-danger{background:#fee2e2;color:#b91c1c;}
+        .cnt-badge{display:inline-block;background:#0f172a;color:white;border-radius:999px;padding:0.12rem 0.55rem;font-size:0.72rem;margin-left:0.35rem;font-weight:700;}
+        .cnt-badge.red{background:#ef4444;}
+        @media (max-width: 768px) {
+            .badge{font-size:0.7rem;padding:0.2rem 0.5rem;}
+        }
+        
+        /* 알림 */
+        .alert{padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:0.85rem;}
+        .alert-info{background:#e3f2fd;color:#1976d2;border-left:4px solid #1976d2;}
+        .alert-success{background:#e8f5e9;color:#388e3c;border-left:4px solid #388e3c;}
+        .alert-warning{background:#fff3e0;color:#f57c00;border-left:4px solid #f57c00;}
+        .alert-danger{background:#ffebee;color:#d32f2f;border-left:4px solid #d32f2f;}
+        @media (max-width: 768px) {
+            .alert{padding:0.6rem 0.8rem;font-size:0.8rem;}
+        }
+        
+        /* 반응형 그리드 */
+        .grid{display:grid;gap:1rem;}
+        .grid-2{grid-template-columns:repeat(2,1fr);}
+        .grid-3{grid-template-columns:repeat(3,1fr);}
+        .grid-4{grid-template-columns:repeat(4,1fr);}
+        @media (max-width: 768px) {
+            .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
+        }
+        .nav-notify{position:relative;}
+        .nav-notify-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:none;border-radius:12px;background:#eef2ff;color:#334155;cursor:pointer;font-size:1.05rem;}
+        .nav-notify-btn:hover{background:#e0e7ff;}
+        .nav-notify-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:0.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+        .nav-notify-menu{display:none;position:absolute;right:0;top:48px;width:360px;max-width:calc(100vw - 2rem);background:#fff;border:1px solid #dbe5f0;border-radius:18px;box-shadow:0 18px 48px rgba(15,23,42,0.18);overflow:hidden;z-index:1200;}
+        .nav-notify-menu.open{display:block;}
+        .nav-notify-head{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(135deg,#f8fafc,#eef2ff);}
+        .nav-notify-list{max-height:420px;overflow:auto;}
+        .nav-notify-empty{padding:1.4rem 1rem;color:#64748b;text-align:center;}
+        .nav-notify-item{padding:0.9rem 1rem;border-bottom:1px solid #f1f5f9;background:#fff;}
+        .nav-notify-item.unread{background:#f8fbff;}
+        .nav-notify-title{font-size:0.9rem;font-weight:800;color:#0f172a;margin-bottom:0.2rem;}
+        .nav-notify-body{font-size:0.82rem;color:#475569;line-height:1.5;}
+        .nav-notify-meta{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-top:0.55rem;}
+        .nav-notify-time{font-size:0.75rem;color:#94a3b8;}
+         
+        h1{font-size:1.5rem;margin-bottom:1rem;}
+        @media (max-width: 768px) {
+            h1{font-size:1.2rem;margin-bottom:0.75rem;}
+        }
+        
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+{% if user %}
+        {%- set _r = user.role if user.role else ('admin' if user.is_admin else 'readonly') -%}
+        {%- set _sa = user.is_admin -%}
+        {%- set _is_logistics = _r == 'logistics' -%}
+
+<nav>
+    <div class="nav-container">
+        <a href="/" class="nav-brand">
+            <img src="/static/img/yemat_mark.svg" alt="예맛" class="nav-logo">
+            예맛
+        </a>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <ul class="nav-menu" id="navMenu">
+            {% if not _is_logistics %}
+            <li><a href="/" onclick="closeMenu()">대시보드</a></li>
+            <li><a href="/schedules" onclick="closeMenu()">생산 스케줄</a></li>
+            <li><a href="/production" onclick="closeMenu()">생산 관리</a></li>
+            <li><a href="/products" onclick="closeMenu()">상품 관리</a></li>
+            {% endif %}
+            <li><a href="/raw-materials" onclick="closeMenu()">원초 관리</a></li>
+            <li><a href="/materials" onclick="closeMenu()">부자재 관리</a></li>
+            {% if not _is_logistics %}
+            <li><a href="/purchase-orders" onclick="closeMenu()">발주관리</a></li>
+            {% endif %}
+            {% if _is_logistics %}
+            <li><a href="/logistics-materials" onclick="closeMenu()">부자재 수불 관리</a></li>
+            <li><a href="/logistics-ledger" onclick="closeMenu()">원 부자재 수불대장</a></li>
+            {% endif %}
+            {% if _sa %}
+            <li><a href="/integrated-management" onclick="closeMenu()" style="color:#f39c12;font-weight:600;">🔧 통합 관리</a></li>
+            <li><a href="/users" class="admin-btn" onclick="closeMenu()">👥 사용자</a></li>
+            {% endif %}
+        </ul>
+        <div class="nav-user">
+            <!-- 현재 작업장 표시 -->
+            {% if session.get('workplace') %}
+            <div style="background:#667eea;color:white;padding:0.4rem 0.8rem;border-radius:8px;font-size:0.85rem;font-weight:600;white-space:nowrap;">
+                🏭 {{ session.get('workplace') }}
+            </div>
+            {% if user.workplaces|length > 1 %}
+            <a href="/switch-workplace" class="btn btn-small" style="background:#f39c12;">전환</a>
+            {% endif %}
+            {% endif %}
+            
+            <span class="role-tag">
+                {% if _r == 'admin' %}👑
+                {% elif _r == 'production' %}🏭
+                {% elif _r == 'purchase' %}📦
+                {% elif _r == 'logistics' %}🚚
+                {% elif _r == 'rawmat' %}🌿
+                {% else %}👁️{% endif %}
+            </span>
+            <div class="nav-notify" id="navNotifyWrap">
+                <button type="button" class="nav-notify-btn" onclick="toggleNotifyMenu(event)">
+                    🔔
+                    {% if nav_unread_notifications %}
+                    <span class="nav-notify-badge">{{ nav_unread_notifications }}</span>
+                    {% endif %}
+                </button>
+                <div class="nav-notify-menu" id="navNotifyMenu">
+                    <div class="nav-notify-head">
+                        <strong>알림</strong>
+                        {% if nav_unread_notifications %}
+                        <form method="POST" action="/notifications/read-all">
+                            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                            <button type="submit" class="btn btn-small" style="background:#0f766e;">모두 읽음</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div class="nav-notify-list">
+                        {% if nav_notifications %}
+                            {% for nt in nav_notifications %}
+                            <div class="nav-notify-item {% if not nt.is_read %}unread{% endif %}">
+                                <div class="nav-notify-title">{{ nt.title }}</div>
+                                <div class="nav-notify-body">{{ nt.body or '세부 내용이 없습니다.' }}</div>
+                                <div class="nav-notify-meta">
+                                    <span class="nav-notify-time">{{ nt.created_at[:16] if nt.created_at else '-' }}</span>
+                                    <div style="display:flex;gap:0.35rem;">
+                                        {% if nt.link %}
+                                        <a href="{{ nt.link }}" class="btn btn-small" style="background:#2563eb;">열기</a>
+                                        {% endif %}
+                                        {% if nt.id and not nt.is_read %}
+                                        <form method="POST" action="/notifications/{{ nt.id }}/read">
+                                            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                            <button type="submit" class="btn btn-small btn-secondary">읽음</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="nav-notify-empty">새 알림이 없습니다.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <span style="display:none;">{{ user.name or user.username }}</span>
+            <a href="/profile" class="btn btn-small" style="background:#667eea;">내 정보</a>
+            <a href="/logout" class="btn btn-small btn-secondary">로그아웃</a>
+        </div>
+    </div>
+</nav>
+{% endif %}
+
+<main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div style="margin-bottom:1rem;">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category in ['info','success','warning','danger'] else 'info' }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</main>
+
+<script>
+function toggleMenu() {
+    const menu = document.getElementById('navMenu');
+    menu.classList.toggle('active');
+}
+function closeMenu() {
+    const menu = document.getElementById('navMenu');
+    menu.classList.remove('active');
+}
+function toggleNotifyMenu(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('navNotifyMenu');
+    if (menu) menu.classList.toggle('open');
+}
+// 메뉴 외부 클릭 시 닫기
+document.addEventListener('click', function(e) {
+    const nav = document.querySelector('nav');
+    const menu = document.getElementById('navMenu');
+    if (menu && !nav.contains(e.target)) {
+        menu.classList.remove('active');
+    }
+    const notifyWrap = document.getElementById('navNotifyWrap');
+    const notifyMenu = document.getElementById('navNotifyMenu');
+    if (notifyMenu && notifyWrap && !notifyWrap.contains(e.target)) {
+        notifyMenu.classList.remove('open');
+    }
+});
+
+function isVisibleModal(el) {
+    if (!el) return false;
+    if (!(el.classList.contains('modal') || el.classList.contains('modal-bg'))) return false;
+    const style = window.getComputedStyle(el);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+}
+
+function getOpenModals() {
+    return Array.from(document.querySelectorAll('.modal, .modal-bg')).filter(isVisibleModal);
+}
+
+function focusFirstModalField(modal) {
+    if (!modal) return;
+    const selector = 'input:not([type=\"hidden\"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])';
+    const firstField = modal.querySelector(selector);
+    if (firstField) {
+        firstField.focus();
+        if (firstField.tagName && firstField.tagName.toLowerCase() === 'input' && firstField.type !== 'date') {
+            firstField.select?.();
+        }
+    }
+}
+
+function closeModalElement(modal) {
+    if (!modal) return;
+    const closeTrigger = modal.querySelector('.close, [onclick*="closeModal"], [onclick*="closeAddModal"], [onclick*="closeSearchModal"], [onclick*="closeCopyModal"], [onclick*="closeEditModal"], [onclick*="closeMaterialDetailModal"], [onclick*="closeRawLotModal"], [onclick*="closeRawActivityModal"]');
+    if (closeTrigger && typeof closeTrigger.click === 'function') {
+        closeTrigger.click();
+        return;
+    }
+    modal.style.display = 'none';
+}
+
+let lastFocusedModal = null;
+
+function refreshModalFocus() {
+    const openModals = getOpenModals();
+    const topModal = openModals.length ? openModals[openModals.length - 1] : null;
+    if (topModal && topModal !== lastFocusedModal) {
+        lastFocusedModal = topModal;
+        setTimeout(() => focusFirstModalField(topModal), 0);
+    }
+    if (!topModal) {
+        lastFocusedModal = null;
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    const openModals = getOpenModals();
+    if (!openModals.length) return;
+    e.preventDefault();
+    closeModalElement(openModals[openModals.length - 1]);
+});
+
+document.addEventListener('click', function() {
+    setTimeout(refreshModalFocus, 0);
+});
+
+const modalObserver = new MutationObserver(() => refreshModalFocus());
+modalObserver.observe(document.body, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class']
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% block title %}대시보드{% endblock %}
+{% block content %}
+<style>
+.dashboard-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: stretch;
+}
+.dashboard-summary-card {
+    color: #fff;
+    padding: 1.25rem;
+    border-radius: 18px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+}
+.dashboard-summary-label {
+    font-size: 0.8rem;
+    opacity: 0.92;
+    margin-bottom: 0.25rem;
+}
+.dashboard-summary-value {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0.25rem 0;
+}
+.dashboard-summary-link {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.78rem;
+    text-decoration: none;
+}
+.dashboard-section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.dashboard-empty {
+    color: #16a34a;
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.9rem;
+}
+.dashboard-muted-empty {
+    color: #9ca3af;
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.85rem;
+}
+.raw-shortage-wrap {
+    display: grid;
+    gap: 0.9rem;
+}
+.raw-shortage-item {
+    padding: 1rem 1.05rem;
+    border: 1px solid #eef2f7;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+.raw-shortage-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.7rem;
+}
+.raw-shortage-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.5rem;
+}
+.raw-shortage-code {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.14rem 0.48rem;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.raw-shortage-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+.raw-shortage-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.55rem 0.85rem;
+}
+.raw-shortage-meta-box {
+    background: #fff;
+    border: 1px solid #eef2f7;
+    border-radius: 12px;
+    padding: 0.6rem 0.75rem;
+}
+.raw-shortage-meta-label {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-bottom: 0.18rem;
+}
+.raw-shortage-meta-value {
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+.raw-shortage-progress {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 0.8rem;
+}
+.raw-shortage-progress-bar {
+    height: 100%;
+    border-radius: 999px;
+}
+</style>
+
+<h1>대시보드</h1>
+
+<div class="dashboard-summary-grid">
+    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+        <div class="dashboard-summary-label">금주 스케줄</div>
+        <div class="dashboard-summary-value">{{ schedules|length }}</div>
+        <a class="dashboard-summary-link" href="/schedules">상세 보기</a>
+    </div>
+    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#f093fb,#f5576c);">
+        <div class="dashboard-summary-label">재고 부족</div>
+        <div class="dashboard-summary-value">{{ low_stock_materials|length }}</div>
+        <a class="dashboard-summary-link" href="/materials">부자재 보기</a>
+    </div>
+    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#ef4444,#f59e0b);">
+        <div class="dashboard-summary-label">원초 부족</div>
+        <div class="dashboard-summary-value">{{ raw_shortages|length }}</div>
+        <a class="dashboard-summary-link" href="#raw-shortage-card">원초 보기</a>
+    </div>
+    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">
+        <div class="dashboard-summary-label">진행 발주</div>
+        <div class="dashboard-summary-value">{{ pending_orders|length }}</div>
+        <a class="dashboard-summary-link" href="/purchase-orders">발주 보기</a>
+    </div>
+    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#43e97b,#38f9d7);">
+        <div class="dashboard-summary-label">이번달</div>
+        <div class="dashboard-summary-value">
+            {% set total = namespace(v=0) %}
+            {% for s in production_stats %}
+                {% set total.v = total.v + s.production_count %}
+            {% endfor %}
+            {{ total.v }}
+        </div>
+        <a class="dashboard-summary-link" href="/production">생산 보기</a>
+    </div>
+</div>
+
+<div class="dashboard-section-grid">
+    <div class="card">
+        <h2>금주 생산 스케줄</h2>
+        {% if schedules %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>날짜</th>
+                        <th>상품</th>
+                        <th>박스</th>
+                        <th>상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in schedules[:5] %}
+                    <tr>
+                        <td style="white-space:nowrap;">{{ s.scheduled_date[5:] }}</td>
+                        <td><strong>{{ s.product_name }}</strong></td>
+                        <td>{{ s.planned_boxes }}</td>
+                        <td>
+                            {% if s.status == '완료' %}
+                            <span class="badge badge-success">완료</span>
+                            {% elif s.status == '진행중' %}
+                            <span class="badge badge-warning">진행중</span>
+                            {% else %}
+                            <span class="badge badge-info">{{ s.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if schedules|length > 5 %}
+        <div style="text-align:center;margin-top:0.75rem;">
+            <a href="/schedules" style="color:#667eea;font-size:0.8rem;">+{{ schedules|length - 5 }}건 더 보기</a>
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="dashboard-muted-empty">스케줄이 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>재고 부족 부자재</h2>
+        {% if low_stock_materials %}
+            {% for m in low_stock_materials[:6] %}
+            <div style="padding:0.55rem 0;border-bottom:1px solid #f0f0f0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;gap:0.75rem;">
+                    <strong style="font-size:0.88rem;">{{ m.name }}</strong>
+                    <span style="font-size:0.72rem;background:#fce4ec;color:#c62828;padding:0.12rem 0.48rem;border-radius:999px;font-weight:700;">부족</span>
+                </div>
+                <div style="font-size:0.78rem;color:#64748b;">
+                    현재 {{ "%.1f"|format(m.current_stock) }}{{ m.unit }} / 최소 {{ "%.1f"|format(m.min_stock) }}{{ m.unit }}
+                </div>
+                {% if m.min_stock > 0 %}
+                <div style="height:4px;background:#eceff1;border-radius:999px;margin-top:0.35rem;overflow:hidden;">
+                    <div style="height:100%;background:#ef4444;border-radius:999px;width:{{ [((m.current_stock / m.min_stock) * 100)|int, 100]|min }}%;"></div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="dashboard-empty">재고 부족 부자재가 없습니다.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div id="raw-shortage-card" class="card" style="margin-bottom:1.5rem;">
+    <h2>🌿 원초 부족 알림</h2>
+    {% if raw_shortages %}
+    <div class="raw-shortage-wrap">
+        {% for r in raw_shortages[:6] %}
+            {% set shortage_ratio = 0 if r.required_qty <= 0 else (r.shortage_qty / r.required_qty) %}
+            {% set shortage_percent = shortage_ratio * 100 %}
+            {% set badge_bg = '#fff3e0' %}
+            {% set badge_color = '#f97316' %}
+            {% set bar_color = 'linear-gradient(90deg,#f59e0b,#ef4444)' %}
+            {% set panel_bg = '#fffaf3' %}
+            {% if shortage_ratio >= 0.6 %}
+                {% set severity_text = '⛔ 심각' %}
+                {% set severity_bg = '#fde8e8' %}
+                {% set severity_color = '#b91c1c' %}
+            {% elif shortage_ratio >= 0.3 %}
+                {% set severity_text = '⚠️ 주의' %}
+                {% set severity_bg = '#fff3e0' %}
+                {% set severity_color = '#e65100' %}
+            {% else %}
+                {% set severity_text = '' %}
+                {% set severity_bg = '#e8f7ef' %}
+                {% set severity_color = '#1e8e5a' %}
+            {% endif %}
+            <div class="raw-shortage-item" style="background:{{ panel_bg }};border-left:6px solid {{ badge_color }};">
+                <div class="raw-shortage-head">
+                    <div style="min-width:0;flex:1;">
+                        <div class="raw-shortage-name">
+                            <strong style="font-size:1rem;color:#0f172a;">{{ r.name }}</strong>
+                            <span class="raw-shortage-code">{{ r.code }}</span>
+                            {% if severity_text %}
+                            <span class="raw-shortage-badge" style="background:{{ severity_bg }};color:{{ severity_color }};">{{ severity_text }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="raw-shortage-meta" style="margin-top:0.6rem;">
+                            <div class="raw-shortage-meta-box">
+                                <div class="raw-shortage-meta-label">현재 수량</div>
+                                <div class="raw-shortage-meta-value">{{ "%.1f"|format(r.current_stock) }}{{ r.unit }}</div>
+                            </div>
+                            <div class="raw-shortage-meta-box">
+                                <div class="raw-shortage-meta-label">필요 수량</div>
+                                <div class="raw-shortage-meta-value">{{ "%.1f"|format(r.required_qty) }}{{ r.unit }}</div>
+                            </div>
+                            <div class="raw-shortage-meta-box">
+                                <div class="raw-shortage-meta-label">부족 수량</div>
+                                <div class="raw-shortage-meta-value" style="color:{{ badge_color }};">{{ "%.1f"|format(r.shortage_qty) }}{{ r.unit }}</div>
+                            </div>
+                            <div class="raw-shortage-meta-box">
+                                <div class="raw-shortage-meta-label">부족률</div>
+                                <div class="raw-shortage-meta-value" style="color:{{ badge_color }};">{{ "%.1f"|format(shortage_percent) }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="raw-shortage-badge" style="background:{{ badge_bg }};color:{{ badge_color }};">원초 부족</span>
+                </div>
+                {% set progress = 0 if r.required_qty <= 0 else [((r.current_stock / r.required_qty) * 100)|int, 100]|min %}
+                <div class="raw-shortage-progress">
+                    <div class="raw-shortage-progress-bar" style="width:{{ progress }}%;background:{{ bar_color }};"></div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% if raw_shortages|length > 6 %}
+    <div style="margin-top:0.9rem;font-size:0.82rem;color:#888;">+{{ raw_shortages|length - 6 }}건 더 있습니다.</div>
+    {% endif %}
+    {% else %}
+    <p class="dashboard-empty">예정 생산 기준 원초 재고 정상</p>
+    {% endif %}
+</div>
+
+<div class="dashboard-section-grid">
+    <div class="card">
+        <h2>최근 30일 생산</h2>
+        {% if production_stats %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>상품</th>
+                        <th>총 박스</th>
+                        <th>횟수</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in production_stats %}
+                    <tr>
+                        <td><strong>{{ s.name }}</strong></td>
+                        <td>{{ s.total_boxes or 0 }}</td>
+                        <td><span class="badge badge-info">{{ s.production_count }}회</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="dashboard-muted-empty">생산 기록이 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>진행 중 발주</h2>
+        {% if pending_orders %}
+            {% for r in pending_orders %}
+            <div style="padding:0.55rem 0;border-bottom:1px solid #f0f0f0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;gap:0.75rem;">
+                    <strong style="font-size:0.88rem;">{{ r.material_name }}</strong>
+                    {% if r.status == '발주필요' %}
+                    <span style="background:#fce4ec;color:#c62828;padding:0.12rem 0.48rem;border-radius:999px;font-size:0.72rem;font-weight:700;">필요</span>
+                    {% else %}
+                    <span style="background:#fff3e0;color:#e65100;padding:0.12rem 0.48rem;border-radius:999px;font-size:0.72rem;font-weight:700;">발주중</span>
+                    {% endif %}
+                </div>
+                <div style="font-size:0.78rem;color:#64748b;">
+                    {% if r.supplier_name %}{{ r.supplier_name }}{% endif %}
+                    {% if r.expected_delivery_date %} | 입고예정 {{ r.expected_delivery_date[5:] }}{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="dashboard-empty">진행 중 발주가 없습니다.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

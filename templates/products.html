@@ -1,0 +1,123 @@
+﻿{% extends "base.html" %}
+{% block title %}상품 관리{% endblock %}
+{% block extra_css %}
+<style>
+.cat-filters{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.cat-btn{padding:0.4rem 0.8rem;border-radius:20px;border:2px solid #e1e8ed;background:white;font-size:0.75rem;font-weight:600;color:#666;text-decoration:none;white-space:nowrap;}
+.cat-btn.active{background:#667eea;border-color:#667eea;color:white;}
+.cat-badge{display:inline-block;padding:0.2rem 0.5rem;border-radius:10px;font-size:0.7rem;font-weight:600;}
+@media (max-width: 768px) {
+    .cat-btn{padding:0.3rem 0.6rem;font-size:0.7rem;}
+}
+@media (max-width: 600px) {
+    .cat-filters{flex-wrap:nowrap;overflow-x:auto;gap:0.35rem;}
+    .cat-btn{flex:0 0 auto;}
+    .prod-toolbar{flex-direction:column;align-items:stretch;gap:0.5rem;}
+    .prod-toolbar form{width:100%;}
+    .prod-toolbar .search-input{min-width:0;width:100%;}
+    .prod-actions{width:100%;justify-content:flex-end;}
+}
+</style>
+{% endblock %}
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+
+<h1>📦 상품 관리</h1>
+{% set CATS = ['식탁','김밥','유기','도시락','전장','생김','세트'] %}
+
+{% if can_prod %}
+<div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:1rem;">
+    <h2>상품 추가</h2>
+    <form method="POST" action="/products/add">
+        <div class="grid grid-3">
+            <div class="form-group"><label>상품명 *</label><input type="text" name="name" required></div>
+            <div class="form-group"><label>코드</label><input type="text" name="code"></div>
+            <div class="form-group">
+                <label>분류 *</label>
+                <select name="category" required>
+                    <option value="">선택</option>
+                    {% for c in CATS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>박스당 낱봉 *</label><input type="number" name="box_quantity" value="100" required></div>
+            <div class="form-group"><label>매수 *</label><input type="number" name="sheets_per_pack" value="24" required></div>
+            <div class="form-group"><label>절단 *</label><input type="number" name="cuts_per_sheet" value="9" required></div>
+        </div>
+        <div style="text-align:right;margin-top:0.75rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('addForm').style.display='none'">취소</button>
+            <button type="submit" class="btn btn-small">추가</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="prod-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+        <h2 style="margin:0;">상품 목록</h2>
+        <div class="prod-actions" style="display:flex;gap:0.5rem;align-items:center;">
+            <form method="GET" action="{{ url_for('products.products') }}" style="display:flex;gap:0.5rem;align-items:center;">
+                {% if selected_category %}
+                <input type="hidden" name="category" value="{{ selected_category }}">
+                {% endif %}
+                <input class="search-input" type="text" name="search" value="{{ search_keyword }}" placeholder="상품명/코드 검색"
+                       style="padding:0.4rem 0.6rem;border:1px solid #e5e7eb;border-radius:8px;min-width:220px;">
+                <button type="submit" class="btn btn-small">검색</button>
+            </form>
+            {% if can_prod %}
+            <button class="btn btn-small" onclick="document.getElementById('addForm').style.display='block'">+ 추가</button>
+            {% endif %}
+        </div>
+    </div>
+    <div class="cat-filters">
+        <a href="/products" class="cat-btn {% if not selected_category %}active{% endif %}">전체</a>
+        {% for c in CATS %}
+        <a href="/products?category={{ c }}" class="cat-btn {% if selected_category == c %}active{% endif %}">{{ c }}</a>
+        {% endfor %}
+    </div>
+    {% if products %}
+    <div class="table-container">
+    <table>
+        <thead>
+            <tr><th>상품</th><th>분류</th><th>낱봉</th><th>BOM</th>
+            {% if can_prod %}<th>관리</th>{% endif %}</tr>
+        </thead>
+        <tbody>
+        {% for p in products %}
+        <tr>
+            <td><strong style="font-size:0.85rem;">{{ p.name }}</strong></td>
+            <td>
+                {% if p.category %}
+                <span class="cat-badge" style="background:
+                    {% if p.category=='식탁' %}#e8f5e9;color:#27ae60
+                    {% elif p.category=='김밥' %}#fff3e0;color:#e67e22
+                    {% elif p.category=='유기' %}#e3f2fd;color:#1976d2
+                    {% elif p.category=='전장' %}#f3e5f5;color:#7b1fa2
+                    {% elif p.category=='생김' %}#e0f2f1;color:#00796b
+                    {% elif p.category=='세트' %}#fce4ec;color:#c2185b
+                    {% else %}#f5f5f5;color:#666{% endif %}">{{ p.category }}</span>
+                {% else %}-{% endif %}
+            </td>
+            <td>{{ p.box_quantity }}</td>
+            <td><a href="/products/{{ p.id }}/bom" class="btn btn-small">BOM</a></td>
+            {% if can_prod %}
+            <td>
+                <form method="POST" action="/products/{{ p.id }}/delete" style="display:inline;"
+                      onsubmit="return confirm('{{ p.name }} 삭제?')">
+                    <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="text-align:center;color:#999;padding:2rem;font-size:0.85rem;">
+        {% if selected_category %}[{{ selected_category }}] 상품 없음{% else %}등록된 상품 없음{% endif %}
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
+

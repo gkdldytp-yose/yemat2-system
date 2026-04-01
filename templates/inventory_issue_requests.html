@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}불출 요청{% endblock %}
+{% block content %}
+<h1 style="margin-bottom:1rem;">📤 작업장 불출 요청</h1>
+<p style="color:#666;margin-bottom:1rem;">현재 작업장: <strong>{{ workplace }}</strong></p>
+
+<div class="card" style="margin-bottom:1rem;">
+    <h2>불출 요청 등록</h2>
+    <form method="POST" action="/inventory/requests/create">
+        <div class="table-container" style="margin-bottom:0.75rem;">
+            <table id="issueRowsTable">
+                <thead>
+                    <tr>
+                        <th style="width:52%;">부자재</th>
+                        <th style="width:16%;">요청수량</th>
+                        <th style="width:24%;">라인 비고</th>
+                        <th style="width:8%;">삭제</th>
+                    </tr>
+                </thead>
+                <tbody id="issueRowsBody">
+                    <tr class="issue-row">
+                        <td>
+                            <select name="material_id[]" required>
+                                <option value="">선택</option>
+                                {% for m in materials %}
+                                <option value="{{ m.id }}">[{{ m.category or '-' }}] {{ m.name }} ({{ m.code or '-' }})</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td><input type="number" step="0.1" min="0.1" name="requested_qty[]" required></td>
+                        <td><input type="text" name="item_note[]" placeholder="라인 비고"></td>
+                        <td><button type="button" class="btn btn-small btn-danger row-remove-btn">삭제</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 3fr auto auto;gap:0.6rem;align-items:end;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label>필요일</label>
+                <input type="date" name="need_date">
+            </div>
+            <div></div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>요청 공통 비고</label>
+                <input type="text" name="note" placeholder="예: 차주 스케줄 선출고">
+            </div>
+            <button type="button" class="btn btn-small" id="addIssueRowBtn">행 추가</button>
+            <button type="submit" class="btn btn-small">요청 등록</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2>요청 내역</h2>
+    {% if requests %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>요청번호</th>
+                    <th>상태</th>
+                    <th>필요일</th>
+                    <th>품목수</th>
+                    <th>총 요청</th>
+                    <th>총 출고</th>
+                    <th>요청자</th>
+                    <th>등록일</th>
+                    <th>품목 상세</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in requests %}
+                <tr>
+                    <td><strong>{{ r.request_no }}</strong></td>
+                    <td>{{ r.status }}</td>
+                    <td>{{ r.need_date or '-' }}</td>
+                    <td>{{ r.item_count or 0 }}</td>
+                    <td>{{ "%.1f"|format(r.total_requested or 0) }}</td>
+                    <td>{{ "%.1f"|format(r.total_issued or 0) }}</td>
+                    <td>{{ r.created_by or '-' }}</td>
+                    <td>{{ r.created_at[:16] if r.created_at else '-' }}</td>
+                    <td>
+                        <button type="button" class="btn btn-small toggle-items-btn" data-target="items_{{ r.id }}">보기</button>
+                    </td>
+                    <td>
+                        {% if r.status not in ['완료', '취소'] %}
+                        <button type="button" class="btn btn-small toggle-edit-btn" data-target="edit_{{ r.id }}">수정</button>
+                        <form method="POST" action="/inventory/requests/{{ r.id }}/cancel" style="display:inline-block;margin-left:0.25rem;">
+                            <button type="submit" class="btn btn-small btn-danger" onclick="return confirm('요청을 취소할까요?')">취소</button>
+                        </form>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr id="items_{{ r.id }}" style="display:none;background:#fafafa;">
+                    <td colspan="10" style="padding:0.75rem 1rem;">
+                        {% set req_items = items_by_request.get(r.id, []) %}
+                        {% if req_items %}
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>부자재</th>
+                                        <th>요청</th>
+                                        <th>출고</th>
+                                        <th>상태</th>
+                                        <th>비고</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for i in req_items %}
+                                    <tr>
+                                        <td><strong>{{ i.material_name }}</strong> <span style="color:#777;">({{ i.material_code or '-' }})</span></td>
+                                        <td>{{ "%.1f"|format(i.requested_qty or 0) }} {{ i.unit or '' }}</td>
+                                        <td>{{ "%.1f"|format(i.issued_qty or 0) }} {{ i.unit or '' }}</td>
+                                        <td>{{ i.status }}</td>
+                                        <td>{{ i.note or '-' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <span style="color:#888;">품목 정보 없음</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr id="edit_{{ r.id }}" style="display:none;background:#f6fbff;">
+                    <td colspan="10" style="padding:0.75rem 1rem;">
+                        {% if r.status not in ['완료', '취소'] %}
+                        <form method="POST" action="/inventory/requests/{{ r.id }}/update" class="issue-edit-form">
+                            <div class="table-container" style="margin-bottom:0.6rem;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>부자재</th>
+                                            <th>요청수량</th>
+                                            <th>라인 비고</th>
+                                            <th>삭제</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="edit-rows-body">
+                                        {% set req_items = items_by_request.get(r.id, []) %}
+                                        {% for i in req_items %}
+                                        <tr class="edit-row">
+                                            <td>
+                                                <select name="material_id[]" required>
+                                                    <option value="">선택</option>
+                                                    {% for m in materials %}
+                                                    <option value="{{ m.id }}" {% if m.id == i.material_id %}selected{% endif %}>
+                                                        [{{ m.category or '-' }}] {{ m.name }} ({{ m.code or '-' }})
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </td>
+                                            <td><input type="number" step="0.1" min="0.1" name="requested_qty[]" value="{{ i.requested_qty|round(1) }}" required></td>
+                                            <td><input type="text" name="item_note[]" value="{{ i.note or '' }}"></td>
+                                            <td><button type="button" class="btn btn-small btn-danger edit-row-remove-btn">삭제</button></td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% if not req_items %}
+                                        <tr class="edit-row">
+                                            <td>
+                                                <select name="material_id[]" required>
+                                                    <option value="">선택</option>
+                                                    {% for m in materials %}
+                                                    <option value="{{ m.id }}">[{{ m.category or '-' }}] {{ m.name }} ({{ m.code or '-' }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </td>
+                                            <td><input type="number" step="0.1" min="0.1" name="requested_qty[]" required></td>
+                                            <td><input type="text" name="item_note[]"></td>
+                                            <td><button type="button" class="btn btn-small btn-danger edit-row-remove-btn">삭제</button></td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 3fr auto auto;gap:0.6rem;align-items:end;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>필요일</label>
+                                    <input type="date" name="need_date" value="{{ r.need_date or '' }}">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>요청 공통 비고</label>
+                                    <input type="text" name="note" value="{{ r.note or '' }}">
+                                </div>
+                                <button type="button" class="btn btn-small edit-add-row-btn">행 추가</button>
+                                <button type="submit" class="btn btn-small">수정 저장</button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <span style="color:#666;">완료/취소된 요청은 수정할 수 없습니다.</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color:#777;">등록된 불출 요청이 없습니다.</p>
+    {% endif %}
+</div>
+<script>
+(() => {
+    const body = document.getElementById('issueRowsBody');
+    const addBtn = document.getElementById('addIssueRowBtn');
+    if (body && addBtn) {
+        const makeRow = () => {
+            const first = body.querySelector('tr.issue-row');
+            if (!first) return null;
+            const row = first.cloneNode(true);
+            row.querySelectorAll('input').forEach((el) => { el.value = ''; });
+            row.querySelectorAll('select').forEach((el) => { el.selectedIndex = 0; });
+            return row;
+        };
+        addBtn.addEventListener('click', () => {
+            const row = makeRow();
+            if (row) body.appendChild(row);
+        });
+        body.addEventListener('click', (e) => {
+            const btn = e.target.closest('.row-remove-btn');
+            if (!btn) return;
+            const rows = body.querySelectorAll('tr.issue-row');
+            if (rows.length <= 1) return;
+            btn.closest('tr.issue-row').remove();
+        });
+    }
+
+    document.querySelectorAll('.toggle-items-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const tr = document.getElementById(btn.dataset.target || '');
+            if (!tr) return;
+            const open = tr.style.display !== 'none';
+            tr.style.display = open ? 'none' : '';
+            btn.textContent = open ? '보기' : '숨기기';
+        });
+    });
+
+    document.querySelectorAll('.toggle-edit-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const tr = document.getElementById(btn.dataset.target || '');
+            if (!tr) return;
+            const open = tr.style.display !== 'none';
+            tr.style.display = open ? 'none' : '';
+            btn.textContent = open ? '수정' : '닫기';
+        });
+    });
+
+    document.querySelectorAll('.issue-edit-form').forEach((form) => {
+        const body = form.querySelector('.edit-rows-body');
+        const addBtn = form.querySelector('.edit-add-row-btn');
+        if (!body || !addBtn) return;
+        addBtn.addEventListener('click', () => {
+            const first = body.querySelector('.edit-row');
+            if (!first) return;
+            const row = first.cloneNode(true);
+            row.querySelectorAll('input').forEach((el) => { el.value = ''; });
+            row.querySelectorAll('select').forEach((el) => { el.selectedIndex = 0; });
+            body.appendChild(row);
+        });
+        body.addEventListener('click', (e) => {
+            const btn = e.target.closest('.edit-row-remove-btn');
+            if (!btn) return;
+            const rows = body.querySelectorAll('.edit-row');
+            if (rows.length <= 1) return;
+            btn.closest('.edit-row').remove();
+        });
+    });
+})();
+</script>
+{% endblock %}

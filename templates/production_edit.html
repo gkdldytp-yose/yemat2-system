@@ -1,0 +1,52 @@
+﻿{% extends "base.html" %}
+
+{% block title %}생산 수정 - 예맛 생산관리{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<h1 style="margin-bottom: 2rem; color: #2c3e50;">🏭 생산 수정</h1>
+
+<div class="card">
+    <h2>생산 정보 수정</h2>
+    
+    <form method="POST" action="/production/{{ production.id }}/edit">
+        <div class="form-group">
+            <label>상품</label>
+            <input type="text" value="{{ production.product_name }}" readonly 
+                   style="background: #f0f0f0; cursor: not-allowed;">
+        </div>
+        
+        <div class="form-group">
+            <label>생산일 *</label>
+            <input type="date" name="production_date" required 
+                   value="{{ production.production_date }}">
+        </div>
+        
+        <div class="form-group">
+            <label>계획 생산 박스 수 *</label>
+            <input type="number" name="planned_boxes" min="1" required 
+                   value="{{ production.planned_boxes }}">
+        </div>
+        
+        <div class="form-group">
+            <label>비고</label>
+            <textarea name="note" rows="3">{{ production.note or '' }}</textarea>
+        </div>
+        
+        <div class="alert alert-warning">
+            <strong>⚠️ 주의:</strong> 수정 시 예상 부자재 사용량이 다시 계산됩니다. (완료된 생산은 수정 불가)
+        </div>
+        
+        <div style="text-align: right; margin-top: 2rem;">
+            <a href="/production/{{ production.id }}" class="btn btn-secondary">취소</a>
+            <button type="submit" class="btn">저장</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+

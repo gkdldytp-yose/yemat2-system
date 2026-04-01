@@ -1,0 +1,79 @@
+﻿{% extends "base.html" %}
+{% block title %}엑셀 임포트 - 예맛 생산관리{% endblock %}
+{% block content %}
+<h1>엑셀 데이터 임포트</h1>
+<div class="card">
+    <h2>표준 양식 다운로드</h2>
+    <p style="color:#64748b;margin-bottom:1rem;">
+        흩어진 엑셀을 바로 읽기보다, 우리 프로그램이 가장 잘 인식할 수 있는 표준 양식으로 먼저 정리한 뒤 업로드하는 방식이 더 정확합니다.
+        특히 부자재는 <strong>물류(Hub) 재고</strong>와 <strong>작업장 재고</strong>를 한 행에 합치지 않고, 보유 위치별로 분리해서 작성해야 합니다.
+    </p>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <a href="/imports/templates/products.xlsx" class="btn btn-secondary">상품관리 양식</a>
+        <a href="/imports/templates/raw_materials.xlsx" class="btn btn-secondary">원초관리 양식</a>
+        <a href="/imports/templates/materials.xlsx" class="btn btn-secondary">부자재관리 양식</a>
+    </div>
+    <div style="margin-top:1rem;padding:.9rem 1rem;border:1px solid #dbe7ff;border-radius:14px;background:#f8fbff;color:#475569;">
+        <div style="font-weight:700;color:#1e3a8a;margin-bottom:.35rem;">부자재 작성 핵심 규칙</div>
+        <div>1. 같은 자재코드라도 <strong>보유 위치</strong>가 다르면 행을 분리합니다.</div>
+        <div>2. 같은 LOT라도 <strong>물류</strong>와 <strong>작업장</strong>이 동시에 보유하면 각각 별도 행으로 입력합니다.</div>
+        <div>3. 물류는 중간 허브이며, 작업장 재고와 합산해서 한 칸에 적지 않습니다.</div>
+    </div>
+</div>
+<div class="card">
+    <h2>업로드</h2>
+    <p style="color:#64748b;margin-bottom:1rem;">실데이터에 바로 반영하지 않고, 업로드 후 미리보기와 검증 단계를 거친 뒤 최종 반영합니다.</p>
+    {% if not import_runtime_ready %}
+    <div class="alert alert-danger" style="margin-bottom:1rem;">{{ import_runtime_message }}</div>
+    {% endif %}
+    <form method="POST" enctype="multipart/form-data" class="grid grid-2">
+        <div class="form-group">
+            <label>업로드 유형</label>
+            <select name="import_type" required>
+                <option value="">선택</option>
+                {% for key, label in import_type_labels.items() %}
+                <option value="{{ key }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>엑셀 파일 (.xlsx)</label>
+            <input type="file" name="file" accept=".xlsx" required>
+        </div>
+        <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:0.5rem;">
+            <a href="/imports/history" class="btn btn-secondary">업로드 이력</a>
+            <button type="submit" class="btn" {% if not import_runtime_ready %}disabled{% endif %}>업로드 후 검증</button>
+        </div>
+    </form>
+</div>
+<div class="card">
+    <h2>최근 배치</h2>
+    <div class="table-container">
+        <table>
+            <thead><tr><th>ID</th><th>유형</th><th>파일명</th><th>상태</th><th>업로드일</th><th>관리</th></tr></thead>
+            <tbody>
+            {% for batch in recent_batches %}
+            <tr>
+                <td>{{ batch.id }}</td>
+                <td>{{ import_type_labels.get(batch.import_type, batch.import_type) }}</td>
+                <td>{{ batch.file_name }}</td>
+                <td>{{ batch.status }}</td>
+                <td>{{ batch.uploaded_at }}</td>
+                <td>
+                    <div style="display:flex;gap:.35rem;justify-content:flex-end;flex-wrap:wrap;">
+                        <a class="btn btn-small" href="/imports/{{ batch.id }}">열기</a>
+                        <form method="POST" action="/imports/{{ batch.id }}/delete" onsubmit="return confirm('이 배치 이력과 staging 데이터를 삭제할까요? 이미 반영된 실데이터는 되돌리지 않습니다.');">
+                            <input type="hidden" name="next" value="/imports">
+                            <button type="submit" class="btn btn-small btn-danger">삭제</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;color:#94a3b8;">업로드 이력이 없습니다.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

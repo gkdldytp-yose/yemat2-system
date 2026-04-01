@@ -1,0 +1,1626 @@
+﻿{% extends "base.html" %}
+{% block title %}부자재 관리{% endblock %}
+{% block extra_css %}
+<style>
+.cat-filters{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.cat-btn{padding:0.35rem 0.9rem;border-radius:999px;border:1px solid #e5e7eb;background:white;font-size:0.8rem;font-weight:700;color:#374151;text-decoration:none;white-space:nowrap;transition:all 0.2s;}
+.cat-btn.active{background:#111827;border-color:#111827;color:white;box-shadow:0 6px 16px rgba(17,24,39,0.18);}
+.cat-btn:hover{border-color:#9ca3af;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:1rem;}
+.modal-box{background:white;border-radius:12px;padding:1.5rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;}
+@media (max-width: 768px) {
+    .modal-box{padding:1rem;border-radius:8px;}
+    .material-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
+}
+@media (max-width: 600px) {
+    .cat-filters{flex-wrap:nowrap;overflow-x:auto;gap:0.35rem;}
+    .cat-btn{flex:0 0 auto;}
+    .mat-toolbar{flex-direction:column;align-items:stretch;gap:0.5rem;}
+    .mat-toolbar form{width:100%;}
+    .mat-toolbar .search-input{min-width:0;width:100%;}
+    .mat-actions{width:100%;justify-content:flex-end;}
+    .lot-inline-form{grid-template-columns:1fr 1fr;}
+    .lot-inline-form .btn{width:100%;}
+}
+.btn-reset{display:inline-flex;align-items:center;padding:0 8px;color:#9ca3af;text-decoration:none;font-size:0.8rem;transition:color 0.2s;}
+.btn-reset:hover{color:#ef4444;}
+.mat-name-link{color:inherit;text-decoration:none;font-weight:700;cursor:pointer;}
+.mat-name-link:hover{text-decoration:underline;}
+.material-modal{max-width:1100px;padding:1.25rem;background:#f8fafc;border:1px solid #dbe5f0;}
+.material-modal-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;padding-bottom:0.6rem;border-bottom:1px solid #e2e8f0;}
+.material-header-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0.55rem;margin:0.75rem 0 1rem;}
+.material-header-item{background:#fff;border:1px solid #dbe5f0;border-radius:10px;padding:0.6rem 0.7rem;box-shadow:0 1px 2px rgba(15,23,42,0.04);}
+.material-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
+.material-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
+.material-detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.75rem;}
+.material-detail-tab{padding:0.46rem 0.95rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-weight:800;cursor:pointer;}
+.material-detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,0.2);}
+.material-panel{display:none;}
+.material-panel.active{display:block;}
+.material-panel table{font-size:0.88rem;background:#fff;border-radius:8px;overflow:hidden;}
+.material-panel thead th{position:sticky;top:0;background:#eef3f9;z-index:1;}
+.material-panel tbody tr:nth-child(even){background:#f8fafc;}
+.lot-actions{display:flex;gap:0.3rem;white-space:nowrap;}
+.lot-code{display:inline-block;font-family:Consolas,Monaco,monospace;font-size:0.78rem;background:#eef3f9;border:1px solid #d6e0ec;border-radius:6px;padding:0.2rem 0.35rem;color:#0f172a;}
+.lot-inline-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.55rem;align-items:end;margin:0.6rem 0 0.85rem;padding:0.9rem;border:1px solid #dbe5f0;border-radius:12px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 6px 18px rgba(15,23,42,0.06);}
+.lot-field label{display:block;font-size:0.74rem;font-weight:700;color:#475569;margin-bottom:0.22rem;}
+.lot-field{min-width:0;}
+.lot-inline-form input{width:100%;height:36px;border:1px solid #cfd8e3;border-radius:8px;padding:0 0.5rem;background:#fff;box-sizing:border-box;}
+.lot-inline-form input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.14);}
+.lot-inline-form .btn{white-space:nowrap;}
+.lot-inline-form .lot-submit{grid-column:1 / -1;justify-self:end;min-width:108px;}
+.material-section-title{font-size:0.86rem;font-weight:800;color:#1e293b;margin:0 0 0.45rem;}
+.req-tabs{display:flex;gap:0.55rem;margin-bottom:0.95rem;flex-wrap:wrap;}
+.req-tab-btn{
+    padding:0.56rem 1.02rem;
+    border:1px solid #94a3b8;
+    border-radius:999px;
+    background:#fff;
+    font-size:0.9rem;
+    font-weight:800;
+    color:#0f172a;
+    letter-spacing:0.01em;
+    cursor:pointer;
+    box-shadow:0 1px 2px rgba(15,23,42,0.06);
+    transition:all 0.15s ease;
+}
+.req-tab-btn:hover{border-color:#334155;background:#f8fafc;}
+.req-tab-btn.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 6px 14px rgba(15,23,42,0.22);}
+.req-tab-count,.issue-status-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 0.45rem;margin-left:0.38rem;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.74rem;font-weight:900;line-height:1;}
+.req-tab-btn.active .req-tab-count,.issue-status-btn.active .issue-status-count{background:rgba(255,255,255,0.18);color:#fff;}
+.req-pane{display:none;}
+.req-pane.active{display:block;}
+.issue-builder{display:grid;grid-template-columns:1fr 1.1fr;gap:1rem;margin-bottom:0.9rem;}
+@media (max-width: 980px){.issue-builder{grid-template-columns:1fr;}}
+.req-header-btn{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border:1px solid #94a3b8;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+    border-radius:12px;
+    padding:0.78rem 0.92rem;
+    font-size:0.95rem;
+    font-weight:900;
+    color:#0f172a;
+    letter-spacing:0.01em;
+    cursor:pointer;
+}
+.req-header-arrow{transition:transform 0.2s ease;}
+#requestCard.req-open .req-header-arrow{transform:rotate(180deg);}
+.req-body{display:none;margin-top:0.85rem;}
+#requestCard.req-open .req-body{display:block;}
+.req-pane h3{font-size:1rem;font-weight:900;color:#0f172a;}
+#requestCard .form-group label{font-size:0.85rem;font-weight:800;color:#1e293b;}
+#requestCard input,#requestCard select,#requestCard textarea{font-size:0.9rem;}
+#requestCard table{font-size:0.9rem;}
+#requestCard thead th{background:#eef2f7;font-weight:900;color:#0f172a;border-bottom:1px solid #cbd5e1;}
+#requestCard tbody td{border-bottom:1px solid #e2e8f0;vertical-align:middle;}
+#requestCard .btn{font-size:0.85rem;font-weight:800;}
+.request-builder-card{background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbe5f0;border-radius:18px;padding:1rem;box-shadow:0 12px 28px rgba(15,23,42,.06);}
+.request-builder-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;margin-bottom:0.85rem;}
+.request-builder-title{margin:0;font-size:1rem;font-weight:900;color:#0f172a;}
+.request-builder-caption{margin:0.2rem 0 0;font-size:0.82rem;color:#64748b;line-height:1.45;}
+.request-list-table{width:100%;border-collapse:separate;border-spacing:0 10px;}
+.request-list-table thead th{font-size:0.74rem;text-transform:uppercase;letter-spacing:.04em;background:transparent!important;border:none!important;color:#475569;padding:0 0.65rem 0.35rem;}
+.request-list-table tbody tr{background:#fff;box-shadow:0 10px 24px rgba(15,23,42,.05);}
+.request-list-table tbody td{padding:0.78rem 0.65rem;border-top:1px solid #e6edf5;border-bottom:1px solid #e6edf5;background:#fff;}
+.request-list-table tbody td:first-child{border-left:1px solid #e6edf5;border-top-left-radius:14px;border-bottom-left-radius:14px;}
+.request-list-table tbody td:last-child{border-right:1px solid #e6edf5;border-top-right-radius:14px;border-bottom-right-radius:14px;}
+.request-empty{padding:2rem 1rem!important;text-align:center;color:#94a3b8!important;background:linear-gradient(180deg,#ffffff,#f8fafc)!important;}
+.request-select{border-radius:14px;border:1px solid #d7deea;background:#fbfdff;padding:0.45rem;}
+.request-inline-actions{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;}
+.request-submit-bar{display:flex;justify-content:flex-end;gap:0.5rem;align-items:center;margin-top:0.85rem;}
+.issue-status-tabs{display:flex;gap:0.55rem;flex-wrap:wrap;margin:0.9rem 0 1rem;}
+.issue-status-btn{padding:0.55rem 1rem;border:1px solid #d7deea;border-radius:999px;background:linear-gradient(180deg,#ffffff,#f8fafc);font-size:0.82rem;font-weight:800;color:#0f172a;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,.05);}
+.issue-status-btn.active{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;border-color:#0f172a;box-shadow:0 10px 24px rgba(30,58,138,.18);}
+.issue-status-pane{display:none;}
+.issue-status-pane.active{display:block;}
+.issue-status-board{background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbe5f0;border-radius:18px;padding:0.85rem 0.95rem 1rem;box-shadow:0 12px 30px rgba(15,23,42,.06);}
+.issue-date-tabs{display:flex;gap:0.45rem;flex-wrap:wrap;margin:0.75rem 0 0.9rem;}
+.issue-date-btn{padding:0.42rem 0.8rem;border:1px solid #dbe5f0;border-radius:999px;background:#fff;font-size:0.77rem;font-weight:800;color:#334155;cursor:pointer;}
+.issue-date-btn.active{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+.issue-date-pane{display:none;}
+.issue-date-pane.active{display:block;}
+.issue-status-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.8rem;}
+.issue-status-title{font-size:1rem;font-weight:900;color:#0f172a;}
+.issue-status-caption{font-size:0.82rem;color:#64748b;margin-top:0.15rem;}
+.issue-status-table{width:100%;border-collapse:separate;border-spacing:0 10px;}
+.issue-status-table thead th{font-size:0.75rem;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.04em;padding:0 0.65rem 0.45rem;border:none;background:transparent;}
+.issue-status-table tbody tr{background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.05);}
+.issue-status-table tbody td{padding:0.9rem 0.65rem;border-top:1px solid #e6edf5;border-bottom:1px solid #e6edf5;vertical-align:middle;background:#fff;}
+.issue-status-table tbody td:first-child{border-left:1px solid #e6edf5;border-top-left-radius:14px;border-bottom-left-radius:14px;}
+.issue-status-table tbody td:last-child{border-right:1px solid #e6edf5;border-top-right-radius:14px;border-bottom-right-radius:14px;}
+.issue-meta-cell{min-width:116px;}
+.issue-date{font-weight:800;color:#0f172a;}
+.issue-subtext{font-size:0.76rem;color:#64748b;margin-top:0.18rem;}
+.issue-code-badge{display:inline-flex;align-items:center;padding:0.28rem 0.55rem;border-radius:999px;background:#e8f0ff;color:#1d4ed8;font-weight:900;font-size:0.78rem;letter-spacing:.02em;}
+.issue-name-cell{min-width:260px;}
+.issue-qty-main{font-weight:900;color:#0f172a;}
+.issue-qty-sub{display:block;margin-top:0.12rem;font-size:0.76rem;color:#64748b;}
+.issue-note-box{display:block;max-width:360px;padding:0.6rem 0.75rem;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;line-height:1.45;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;}
+.issue-state-badge{display:inline-flex;align-items:center;justify-content:center;min-width:72px;padding:0.38rem 0.7rem;border-radius:999px;font-size:0.76rem;font-weight:900;}
+.issue-state-badge.pending{background:#fff7ed;color:#c2410c;}
+.issue-state-badge.completed{background:#ecfdf5;color:#047857;}
+.issue-state-badge.rejected{background:#fef2f2;color:#b91c1c;}
+.issue-manage-stack{display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;}
+.issue-manage-stack form{display:inline-flex;gap:0.35rem;align-items:center;flex-wrap:wrap;margin:0;}
+.issue-manage-stack input[type="number"]{width:92px;}
+.issue-manage-stack input[type="text"]{width:130px;}
+.issue-empty{padding:2rem 1rem!important;text-align:center;color:#94a3b8!important;background:linear-gradient(180deg,#ffffff,#f8fafc)!important;}
+@media (max-width: 960px){
+  .issue-status-board{padding:0.75rem;}
+  .issue-status-table{min-width:860px;}
+  .issue-note-box{max-width:260px;}
+}
+
+</style>
+{% endblock %}
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_manage_material_master = (user is defined and user.is_admin) or (user is defined and user.role == 'logistics') -%}
+{%- set can_register_purchase = can_purch -%}
+{%- set can_manage_lots = is_logistics -%}
+{%- set is_logistics_role = _r == 'logistics' -%}
+
+<h1>🧰 부자재 관리</h1>
+{% set MAT_CATS = ['기름','소금','내포','외포','실리카','트레이','박스','뚜껑','각대','기타'] %}
+
+{% if can_manage_material_master %}
+<div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:1rem;">
+    <h2>부자재 추가</h2>
+    <form method="POST" action="/materials/add">
+        <div class="grid grid-3">
+            <div class="form-group">
+                <label>자재 코드 (미입력 시 자동생성)</label>
+                <input type="text" name="code" placeholder="예: P01A018" style="border: 1px solid #667eea; background-color: #f8faff;">
+            </div>
+
+            <div class="form-group">
+                <label>분류 *</label>
+                <select name="category" required>
+                    <option value="">선택</option>
+                    {% for c in MAT_CATS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>부자재명 *</label>
+                <input type="text" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label>단위 *</label>
+                <select name="unit">
+                    <option>개</option><option>kg</option><option>L</option>
+                    <option>g</option><option>ml</option><option>박스</option><option>롤</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>공급업체</label>
+                <select name="supplier_id">
+                    <option value="">없음</option>
+                    {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>현재 재고 (로트 합계 자동)</label>
+                <input type="number" name="current_stock" step="0.01" value="0" readonly style="background:#f1f5f9;color:#475569;">
+            </div>
+
+            <div class="form-group">
+                <label>최소 재고</label>
+                <input type="number" name="min_stock" step="0.01" value="0">
+            </div>
+            
+            <div class="form-group">
+                <label>규격 (선택)</label>
+                <input type="text" name="spec" placeholder="예: 100*200">
+            </div>
+        </div>
+
+        <div style="text-align:right;margin-top:0.75rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('addForm').style.display='none'">취소</button>
+            <button type="submit" class="btn btn-small">추가</button>
+        </div>
+    </form>
+</div>
+
+<div id="editModal" class="modal-bg">
+    <div class="modal-box">
+        <div style="display:flex;justify-content:flex-start;margin-bottom:0.5rem;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('editModal').style.display='none'">종료</button>
+        </div>
+        <h3 style="margin-bottom:1rem;">부자재 수정</h3>
+        <form method="POST" action="/materials/update">
+            <input type="hidden" name="material_id" id="edit_id">
+            
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>자재 코드</label>
+                    <input type="text" name="code" id="edit_code" required 
+                           style="background-color: #f8faff; border: 1px solid #667eea; font-weight: bold;">
+                </div>
+
+                <div class="form-group">
+                    <label>분류</label>
+                    <select name="category" id="edit_cat">
+                        {% for c in MAT_CATS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group"><label>부자재명</label><input type="text" name="name" id="edit_name" required></div>
+                <div class="form-group"><label>단위</label><input type="text" name="unit" id="edit_unit"></div>
+                <div class="form-group"><label>MOQ</label><input type="number" name="moq" id="edit_moq" step="0.01" min="0"></div>
+                <div class="form-group"><label>작업장 재고</label><input type="number" name="current_stock" id="edit_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
+                <div class="form-group"><label>물류 재고</label><input type="number" id="edit_logistics_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
+                <div class="form-group"><label>총재고</label><input type="number" id="edit_total_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
+                <div class="form-group"><label>최소 재고</label><input type="number" name="min_stock" id="edit_min" step="0.01"></div>
+                
+                <div class="form-group">
+                    <label>공급업체</label>
+                    <select name="supplier_id" id="edit_supplier">
+                        <option value="">없음</option>
+                        {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('editModal').style.display='none'">취소</button>
+                <button type="submit" class="btn btn-small">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div id="materialDetailModal" class="modal-bg">
+    <div class="modal-box material-modal">
+        <div class="material-modal-top">
+            <h3 style="margin:0;">부자재 상세 관리</h3>
+            <div style="display:flex;gap:0.5rem;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeMaterialDetailModal()">닫기</button>
+            </div>
+        </div>
+
+        <div class="material-header-grid">
+            <div class="material-header-item"><span class="label">코드</span><span class="value" id="md_code">-</span></div>
+            <div class="material-header-item"><span class="label">제품명</span><span class="value" id="md_name">-</span></div>
+            <div class="material-header-item"><span class="label">제조사(업체)</span><span class="value" id="md_supplier">-</span></div>
+            <div class="material-header-item"><span class="label">단위</span><span class="value" id="md_unit">-</span></div>
+            <div class="material-header-item"><span class="label">총수량</span><span class="value" id="md_total_qty">0</span></div>
+        </div>
+
+        <div class="material-detail-tabs">
+            <button type="button" class="material-detail-tab active" id="tabLotsBtn" onclick="switchMaterialPanel('lots')">{% if can_manage_lots %}로트 관리{% else %}로트 목록{% endif %}</button>
+            <button type="button" class="material-detail-tab" id="tabLogsBtn" onclick="switchMaterialPanel('logs')">사용 로그</button>
+        </div>
+
+        <div id="materialLotsPanel" class="material-panel active">
+            {% if can_manage_lots %}
+            <p class="material-section-title">신규 로트 등록</p>
+            <form id="addLotForm" class="lot-inline-form" onsubmit="submitAddLot(event)">
+                <div class="lot-field"><label>입고일</label><input type="date" name="receiving_date" required></div>
+                <div class="lot-field"><label>제조일</label><input type="date" name="manufacture_date"></div>
+                <div class="lot-field"><label>소비기한</label><input type="date" name="expiry_date"></div>
+                <div class="lot-field"><label>입고수량</label><input type="number" name="received_quantity" step="0.1" placeholder="0" required></div>
+                <div class="lot-field"><label>현재수량</label><input type="number" name="current_quantity" step="0.1" placeholder="0" required></div>
+                <div class="lot-field"><label>공급사LOT</label><input type="text" name="supplier_lot" placeholder="선택 입력"></div>
+                <button type="submit" class="btn btn-small lot-submit">로트 추가</button>
+            </form>
+            {% endif %}
+            <p class="material-section-title">로트 목록</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>보유 위치</th><th>로트</th><th>입고일</th><th>제조일</th><th>소비기한</th><th>입고수량</th><th>현재수량</th>{% if can_manage_lots %}<th>관리</th>{% endif %}</tr>
+                    </thead>
+                    <tbody id="lotTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="materialLogsPanel" class="material-panel">
+            <p class="material-section-title">부자재 사용 로그</p>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>사용일</th><th>생산번호</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
+                    <tbody id="usageLogTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card" id="materialsListCard">
+    <div class="mat-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+        <h2 style="margin:0;">부자재 목록</h2>
+
+        <div class="mat-actions" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+            {% if can_register_purchase %}
+            <button type="button" class="btn btn-small" id="togglePurchaseRegisterBtn" style="background:#f59e0b;">발주 등록</button>
+            {% endif %}
+            {% if can_manage_material_master %}
+            <button class="btn btn-small" onclick="document.getElementById('addForm').style.display='block'">+ 추가</button>
+            {% endif %}
+        </div>
+    </div>
+    <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
+        <form method="GET" action="{{ url_for('materials.materials') }}" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
+            <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="materialSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">검색 기준</label>
+                <select id="materialSearchField" name="material_search_field" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="all" {% if selected_material_search_field == 'all' %}selected{% endif %}>전체</option>
+                    <option value="code" {% if selected_material_search_field == 'code' %}selected{% endif %}>코드</option>
+                    <option value="name" {% if selected_material_search_field == 'name' %}selected{% endif %}>품명</option>
+                    <option value="supplier" {% if selected_material_search_field == 'supplier' %}selected{% endif %}>거래처</option>
+                    <option value="category" {% if selected_material_search_field == 'category' %}selected{% endif %}>분류</option>
+                    <option value="unit" {% if selected_material_search_field == 'unit' %}selected{% endif %}>단위</option>
+                </select>
+            </div>
+            <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="materialTypeFilter" style="font-size:0.82rem;color:#475569;font-weight:600;">대분류</label>
+                <select id="materialTypeFilter" name="material_type" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="all" {% if selected_material_type == 'all' %}selected{% endif %}>전체</option>
+                    <option value="raw_like" {% if selected_material_type == 'raw_like' %}selected{% endif %}>원재료성 자재</option>
+                    <option value="material_only" {% if selected_material_type == 'material_only' %}selected{% endif %}>일반 부자재</option>
+                </select>
+            </div>
+            <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="materialCategoryFilter" style="font-size:0.82rem;color:#475569;font-weight:600;">세부 분류</label>
+                <select id="materialCategoryFilter" name="category" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="">전체 분류</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="grid-column:span 3;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="productBomFilter" style="font-size:0.82rem;color:#475569;font-weight:600;">상품 BOM 필터</label>
+                <select id="productBomFilter" name="product_id" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="">전체 상품</option>
+                    {% for product in filter_products %}
+                    <option value="{{ product.id }}" {% if selected_product_id == (product.id|string) %}selected{% endif %}>{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="grid-column:span 3;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="materialSearchKeyword" style="font-size:0.82rem;color:#475569;font-weight:600;">키워드 검색</label>
+                <input id="materialSearchKeyword" type="text" name="search" class="search-input" placeholder="예: 박스 / 유기 / P03A008 / 영진물산" value="{{ search_keyword or '' }}">
+            </div>
+            <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;">
+                <button type="submit" class="btn btn-small" style="background:#2563eb;">적용</button>
+                <a href="{{ url_for('materials.materials') }}" class="btn btn-small btn-secondary">초기화</a>
+            </div>
+        </form>
+    </div>
+    {% if materials %}
+    <form method="POST" action="{{ url_for('materials.bulk_add_purchase_requests_from_materials') }}" id="bulkPurchaseForm">
+    <div id="bulkPurchasePanel" style="display:none;margin-bottom:0.9rem;padding:0.9rem 1rem;border:1px solid #fde68a;border-radius:14px;background:linear-gradient(135deg,#fff9db 0%, #fff7ed 100%);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.8rem;flex-wrap:wrap;">
+            <div>
+                <div style="font-weight:700;color:#92400e;margin-bottom:0.2rem;">발주 등록 모드</div>
+                <div style="font-size:0.82rem;color:#9a3412;">부자재를 체크하고 발주 수량을 입력한 뒤 등록하면 발주관리 &gt; 발주 현황에서 바로 확인할 수 있습니다.</div>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                <button type="submit" class="btn btn-small" style="background:#d97706;">발주 등록</button>
+                <button type="button" class="btn btn-small btn-secondary" id="cancelPurchaseRegisterBtn">취소</button>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.75rem;margin-top:0.9rem;">
+            <div style="display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="bulkPurchaseExpectedDate" style="font-size:0.82rem;color:#78350f;font-weight:600;">입고 예정일</label>
+                <input id="bulkPurchaseExpectedDate" type="date" name="expected_delivery_date" required style="padding:0.5rem 0.6rem;border:1px solid #fcd34d;border-radius:10px;background:#fff;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="bulkPurchaseNote" style="font-size:0.82rem;color:#78350f;font-weight:600;">메모</label>
+                <input id="bulkPurchaseNote" type="text" name="note" placeholder="발주 메모 입력" style="padding:0.5rem 0.6rem;border:1px solid #fcd34d;border-radius:10px;background:#fff;">
+            </div>
+        </div>
+    </div>
+    <div class="table-container">
+    <table id="materialsTable">
+        <thead>
+            <tr>
+                <th class="purchase-col" style="display:none;width:72px;text-align:center;">
+                    <label style="display:flex;align-items:center;justify-content:center;gap:0.35rem;font-size:0.76rem;color:#475569;">
+                        <input type="checkbox" id="purchaseSelectAll">
+                        전체
+                    </label>
+                </th>
+                <th>코드</th>
+                <th>부자재명</th>
+                <th>업체</th>
+                <th>단위</th>
+                <th>{{ current_workplace }} 재고</th>
+                <th>물류 재고</th>
+                <th>총재고</th>
+                <th>최소</th>
+                <th class="purchase-col" style="display:none;min-width:120px;">발주 수량</th>
+                <th>관리</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for m in materials %}
+        <tr>
+            <td class="purchase-col" style="display:none;text-align:center;">
+                <input type="checkbox" name="material_ids" value="{{ m.id }}" class="purchase-select-checkbox" data-material-id="{{ m.id }}">
+            </td>
+            <td>{{ m.code or '-' }}</td>
+            <td>
+                <a href="#" class="mat-name-link" style="font-size:0.85rem;" onclick="openMaterialDetailModal({{ m.id }}); return false;">{{ m.name }}</a>
+                {% if m.min_stock > 0 and m.workplace_stock < m.min_stock %}
+                <span style="background:#fce4ec;color:#c62828;padding:0.1rem 0.4rem;border-radius:8px;font-size:0.7rem;margin-left:0.25rem;">⚠️</span>
+                {% endif %}
+            </td>
+            <td>{{ m.supplier_name or '-' }}</td>
+            <td>{{ m.unit or '-' }}</td>
+            <td><strong style="color:{% if m.min_stock > 0 and m.workplace_stock < m.min_stock %}#e74c3c{% else %}#27ae60{% endif %}">{{ "%.1f"|format(m.workplace_stock) }} {{ m.unit or '' }}</strong></td>
+            <td>{{ "%.1f"|format(m.logistics_stock) }} {{ m.unit or '' }}</td>
+            <td>{{ "%.1f"|format(m.total_stock) }} {{ m.unit or '' }}</td>
+            <td>{{ "%.1f"|format(m.min_stock) }} {{ m.unit or '' }}</td>
+            <td class="purchase-col" style="display:none;">
+                <input type="number" min="0" step="0.1" name="qty_{{ m.id }}" class="purchase-qty-input" data-material-id="{{ m.id }}" placeholder="수량 입력" style="width:100%;padding:0.45rem 0.5rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+            </td>
+            <td style="white-space:nowrap;">
+            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="openMaterialDetailModal({{ m.id }});">상세</button>
+            {% if can_manage_material_master %}
+            <button
+                type="button"
+                class="btn btn-small js-open-edit"
+                data-id="{{ m.id }}"
+                data-code="{{ m.code or '' }}"
+                data-name="{{ m.name or '' }}"
+                data-category="{{ m.category or '' }}"
+                data-unit="{{ m.unit or '' }}"
+                data-workplace-stock="{{ m.workplace_stock }}"
+                data-logistics-stock="{{ m.logistics_stock }}"
+                data-total-stock="{{ m.total_stock }}"
+                data-min-stock="{{ m.min_stock }}"
+                data-supplier-id="{{ m.supplier_id or 0 }}"
+                data-moq="{{ m.moq if m.moq is not none else 0 }}"
+                data-workplace="{{ m.workplace or '' }}">
+                수정
+            </button>
+            <form method="POST" action="{{ url_for('materials.delete_material', material_id=m.id) }}" style="display:inline;" 
+                onsubmit="return confirm('{{ m.name }}을(를) 삭제하시겠습니까?\n\n※ BOM에 사용 중이거나 생산 기록이 있으면 삭제할 수 없습니다.')">
+                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+            </form>
+            {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    </form>
+    {% else %}
+    <p style="text-align:center;color:#999;padding:2rem;font-size:0.85rem;">
+        {% if selected_category %}[{{ selected_category }}] 부자재 없음{% else %}등록된 부자재 없음{% endif %}
+    </p>
+    {% endif %}
+</div>
+
+{% if not is_logistics_role %}
+<div class="card" id="requestCard" style="margin-top:1rem;">
+    <button type="button" class="req-header-btn" onclick="toggleRequestPanel()">
+        <span>불출 / 반출 요청</span>
+        <span class="req-header-arrow">▾</span>
+    </button>
+    <div class="req-body" id="reqBody">
+    <div class="req-tabs">
+        <button type="button" class="req-tab-btn" id="reqTabIssueBtn" onclick="switchReqTab('issue')">불출요청 탭 <span class="req-tab-count">{{ issue_requests_pending|length }}</span></button>
+        <button type="button" class="req-tab-btn" id="reqTabExportBtn" onclick="switchReqTab('export')">반출요청 탭 <span class="req-tab-count">{{ export_requests_pending|length }}</span></button>
+    </div>
+
+    <div id="reqPaneIssue" class="req-pane">
+        {% if not is_logistics_role %}
+        <div class="issue-builder">
+            <div class="request-builder-card">
+                <div class="request-builder-head">
+                    <div>
+                        <h3 class="request-builder-title">불출 자재 검색/추가</h3>
+                        <p class="request-builder-caption">필요한 자재를 선택해 요청 목록에 담고 한 번에 불출 요청을 등록합니다.</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>부자재 검색</label>
+                    <input type="text" id="issueSearch" placeholder="코드 또는 부자재명 검색" oninput="filterIssueMaterials()">
+                </div>
+                <div class="form-group">
+                    <label>부자재 목록</label>
+                    <select id="issueMaterialList" size="12" class="request-select" style="width:100%;" ondblclick="addIssueItemFromList()">
+                        {% for m in request_materials %}
+                        <option value="{{ m.id }}" data-code="{{ m.code or '-' }}" data-name="{{ m.name }}" data-unit="{{ m.unit or '' }}">
+                            [{{ m.code or '-' }}] {{ m.name }}{% if m.unit %} ({{ m.unit }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="request-inline-actions">
+                    <button type="button" class="btn btn-small" style="background:#0ea5e9;" onclick="addIssueItemFromList()">+추가</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="clearIssueItems()">전체 비우기</button>
+                </div>
+            </div>
+
+            <div class="request-builder-card">
+                <div class="request-builder-head">
+                    <div>
+                        <h3 class="request-builder-title">불출 요청 목록</h3>
+                        <p class="request-builder-caption">요청 수량과 비고를 정리한 뒤 선택 항목을 한 번에 전송합니다.</p>
+                    </div>
+                </div>
+                <form method="POST" action="/issue-requests/bulk-add" id="issueBulkForm">
+                    <div class="table-container" style="max-height:360px;overflow:auto;">
+                        <table class="request-list-table">
+                            <thead><tr><th>코드</th><th>자재명</th><th>단위</th><th>요청수량</th><th>비고</th><th></th></tr></thead>
+                            <tbody id="issueItemsBody">
+                                <tr id="issueEmptyRow"><td colspan="6" class="request-empty">추가된 요청 항목이 없습니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="request-submit-bar">
+                        <button type="submit" class="btn" style="background:#0ea5e9;">선택 항목 불출 요청</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        <div class="issue-status-tabs">
+            <button type="button" class="issue-status-btn" id="issueStatusPendingBtn" onclick="switchIssueStatusTab('pending')">불출 요청 중 <span class="issue-status-count">{{ issue_requests_pending|length }}</span></button>
+            <button type="button" class="issue-status-btn" id="issueStatusCompletedBtn" onclick="switchIssueStatusTab('completed')">불출 완료 <span class="issue-status-count">{{ issue_requests_completed|length }}</span></button>
+            <button type="button" class="issue-status-btn" id="issueStatusRejectedBtn" onclick="switchIssueStatusTab('rejected')">불출 반려 <span class="issue-status-count">{{ issue_requests_rejected|length }}</span></button>
+        </div>
+        <div id="issueStatusPendingPane" class="issue-status-pane">
+        <div class="issue-status-board">
+            <div class="issue-status-head">
+                <div>
+                    <div class="issue-status-title">불출 요청 중</div>
+                    <div class="issue-status-caption">현재 처리 대기 중인 불출 요청입니다.</div>
+                </div>
+                {% if not is_logistics_role and issue_requests_pending %}
+                <form method="POST" action="/issue-requests/delete-all-pending" onsubmit="return confirm('현재 작업장의 불출 요청 중 항목을 모두 삭제하시겠습니까?');">
+                    <button type="submit" class="btn btn-small btn-danger">전체 삭제</button>
+                </form>
+                {% endif %}
+            </div>
+        <div class="table-container">
+            <table class="issue-status-table">
+                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>지급수량</th><th>상태</th><th>비고</th><th>{% if is_logistics_role %}처리{% else %}관리{% endif %}</th></tr></thead>
+                <tbody>
+                {% if issue_requests_pending %}
+                    {% for r in issue_requests_pending %}
+                    <tr>
+                        <td class="issue-meta-cell">
+                            <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
+                            <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
+                        </td>
+                        <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
+                        <td class="issue-name-cell">{{ r.material_name }}</td>
+                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
+                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.approved_quantity or 0) }} {{ r.unit or '' }}</span></td>
+                        <td><span class="issue-state-badge pending">{{ r.status }}</span></td>
+                        <td><span class="issue-note-box">{{ (r.note or '-')|e }}</span></td>
+                        <td>
+                            <div class="issue-manage-stack">
+                            {% if is_logistics_role and r.status == '요청' %}
+                            <form method="POST" action="/issue-requests/{{ r.id }}/complete">
+                                <input type="number" name="approved_quantity" value="{{ r.requested_quantity }}" step="0.01" min="0.01">
+                                <input type="text" name="process_note" placeholder="메모">
+                                <button type="submit" class="btn btn-small" style="background:#0ea5e9;">완료</button>
+                            </form>
+                            {% elif not is_logistics_role and r.status == '요청' %}
+                            <form method="POST" action="/issue-requests/{{ r.id }}/update">
+                                <input type="number" name="requested_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
+                                <input type="text" name="note" value="{{ (r.note or '')|e }}" placeholder="비고">
+                                <button type="submit" class="btn btn-small" style="background:#2563eb;">수정</button>
+                            </form>
+                            <form method="POST" action="/issue-requests/{{ r.id }}/delete" onsubmit="return confirm('해당 불출 요청을 삭제하시겠습니까?');">
+                                <button type="submit" class="btn btn-small btn-danger">삭제</button>
+                            </form>
+                            {% else %}
+                            -
+                            {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="8" class="issue-empty">불출 요청 내역이 없습니다.</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+        </div>
+        </div>
+        <div id="issueStatusCompletedPane" class="issue-status-pane">
+        <div class="issue-status-board">
+            <div class="issue-status-head">
+                <div>
+                    <div class="issue-status-title">불출 완료</div>
+                    <div class="issue-status-caption">실제 지급이 끝난 불출 이력입니다.</div>
+                </div>
+            </div>
+        {% if issue_completed_groups %}
+        <div class="issue-date-tabs">
+            {% for group in issue_completed_groups %}
+            <button type="button" class="issue-date-btn {% if loop.first %}active{% endif %}" id="issueCompletedDateBtn{{ loop.index0 }}" onclick="switchIssueCompletedDate({{ loop.index0 }})">{{ group['date'] }} <span class="issue-status-count">{{ group['items']|length }}</span></button>
+            {% endfor %}
+        </div>
+            {% for group in issue_completed_groups %}
+            <div id="issueCompletedDatePane{{ loop.index0 }}" class="issue-date-pane {% if loop.first %}active{% endif %}">
+                <div class="table-container">
+                    <table class="issue-status-table">
+                        <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>지급수량</th><th>완료일</th><th>비고</th></tr></thead>
+                        <tbody>
+                        {% for r in group['items'] %}
+                        <tr>
+                            <td class="issue-meta-cell">
+                                <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
+                                <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
+                            </td>
+                            <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
+                            <td class="issue-name-cell">{{ r.material_name }}</td>
+                            <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
+                            <td><span class="issue-qty-main">{{ "%.1f"|format(r.approved_quantity or 0) }} {{ r.unit or '' }}</span><span class="issue-qty-sub">실지급</span></td>
+                            <td class="issue-meta-cell"><div class="issue-date">{{ r.processed_at[:16] if r.processed_at else '-' }}</div><div class="issue-subtext">처리 완료</div></td>
+                            <td><span class="issue-note-box">{{ (r.process_note or r.note or '-')|e }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="table-container">
+            <table class="issue-status-table">
+                <tbody><tr><td colspan="7" class="issue-empty">불출 완료 내역이 없습니다.</td></tr></tbody>
+            </table>
+        </div>
+        {% endif %}
+        </div>
+        </div>
+        <div id="issueStatusRejectedPane" class="issue-status-pane">
+        <div class="issue-status-board">
+            <div class="issue-status-head">
+                <div>
+                    <div class="issue-status-title">불출 반려</div>
+                    <div class="issue-status-caption">물류 확인 후 반려된 요청입니다.</div>
+                </div>
+            </div>
+        <div class="table-container">
+            <table class="issue-status-table">
+                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>반려일</th><th>반려사유</th></tr></thead>
+                <tbody>
+                {% if issue_requests_rejected %}
+                    {% for r in issue_requests_rejected %}
+                    <tr>
+                        <td class="issue-meta-cell">
+                            <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
+                            <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
+                        </td>
+                        <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
+                        <td class="issue-name-cell">{{ r.material_name }}</td>
+                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
+                        <td class="issue-meta-cell"><div class="issue-date">{{ r.rejected_at[:16] if r.rejected_at else (r.processed_at[:16] if r.processed_at else '-') }}</div><div class="issue-subtext">반려 처리</div></td>
+                        <td><span class="issue-note-box">{{ (r.rejected_reason or '-')|e }}</span></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="6" class="issue-empty">불출 반려 내역이 없습니다.</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+        </div>
+        </div>
+    </div>
+
+    <div id="reqPaneExport" class="req-pane">
+        {% if not is_logistics_role %}
+        <div class="issue-builder">
+            <div class="request-builder-card">
+                <div class="request-builder-head">
+                    <div>
+                        <h3 class="request-builder-title">반출 자재 검색/추가</h3>
+                        <p class="request-builder-caption">작업장에서 물류로 되돌릴 자재와 로트를 선택해 반출 요청을 구성합니다.</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>부자재 검색</label>
+                    <input type="text" id="exportSearch" placeholder="코드 또는 부자재명 검색" oninput="filterExportMaterials()">
+                </div>
+                <div class="form-group">
+                    <label>부자재 목록</label>
+                    <select id="exportMaterialList" size="12" class="request-select" style="width:100%;" onchange="syncExportLots()" ondblclick="addExportItemFromList()">
+                        {% for m in export_request_materials %}
+                        <option value="{{ m.id }}" data-code="{{ m.code or '-' }}" data-name="{{ m.name }}" data-unit="{{ m.unit or '' }}">
+                            [{{ m.code or '-' }}] {{ m.name }}{% if m.unit %} ({{ m.unit }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>로트</label>
+                    <select id="export_req_lot">
+                        <option value="">자재를 먼저 선택하세요</option>
+                    </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                    <div class="form-group" style="margin:0;">
+                        <label>반출수량</label>
+                        <input type="number" id="export_req_qty" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label>반출사유</label>
+                        <select id="export_req_reason" onchange="toggleReasonDetail()">
+                            <option value="">선택</option>
+                            <option value="정리">정리</option>
+                            <option value="불량">불량</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>상세사유</label>
+                    <input type="text" id="export_req_reason_detail" maxlength="200" placeholder="불량/기타 사유 입력" disabled>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>메모</label>
+                    <input type="text" id="export_req_note" maxlength="200" placeholder="선택 입력">
+                </div>
+                <div class="request-inline-actions">
+                    <button type="button" class="btn btn-small" style="background:#f97316;" onclick="addExportItemFromList()">+추가</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="clearExportItems()">전체 비우기</button>
+                </div>
+            </div>
+
+            <div class="request-builder-card">
+                <div class="request-builder-head">
+                    <div>
+                        <h3 class="request-builder-title">반출 요청 목록</h3>
+                        <p class="request-builder-caption">반출 수량, 사유, 메모를 검토한 뒤 선택 항목을 한 번에 요청합니다.</p>
+                    </div>
+                </div>
+                <form method="POST" action="/export-requests/bulk-add" id="exportBulkForm">
+                    <div class="table-container" style="max-height:360px;overflow:auto;">
+                        <table class="request-list-table">
+                            <thead><tr><th>코드</th><th>자재명</th><th>로트</th><th>수량</th><th>사유</th><th>상세사유</th><th>메모</th><th></th></tr></thead>
+                            <tbody id="exportItemsBody">
+                                <tr id="exportEmptyRow"><td colspan="8" class="request-empty">추가된 반출 항목이 없습니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="request-submit-bar">
+                        <button type="submit" class="btn" style="background:#f97316;">선택 항목 반출 요청</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        <div class="issue-status-tabs">
+            <button type="button" class="issue-status-btn" id="exportStatusPendingBtn" onclick="switchExportStatusTab('pending')">반출 요청 중 <span class="issue-status-count">{{ export_requests_pending|length }}</span></button>
+            <button type="button" class="issue-status-btn" id="exportStatusCompletedBtn" onclick="switchExportStatusTab('completed')">반출 완료 <span class="issue-status-count">{{ export_requests_completed|length }}</span></button>
+            <button type="button" class="issue-status-btn" id="exportStatusRejectedBtn" onclick="switchExportStatusTab('rejected')">반출 반려 <span class="issue-status-count">{{ export_requests_rejected|length }}</span></button>
+        </div>
+        <div id="exportStatusPendingPane" class="issue-status-pane">
+        <div class="issue-status-board">
+            <div class="issue-status-head">
+                <div>
+                    <div class="issue-status-title">반출 요청 중</div>
+                    <div class="issue-status-caption">현재 처리 대기 중인 반출 요청입니다.</div>
+                </div>
+            </div>
+        <div class="table-container">
+            <table class="issue-status-table">
+                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>상태</th><th>사유</th><th>메모</th></tr></thead>
+                <tbody>
+                {% if export_requests_pending %}
+                    {% for r in export_requests_pending %}
+                    <tr>
+                        <td class="issue-meta-cell">
+                            <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
+                            <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
+                        </td>
+                        <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
+                        <td class="issue-name-cell">{{ r.material_name }}</td>
+                        <td>{{ r.material_lot or '-' }}</td>
+                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
+                        <td><span class="issue-state-badge pending">{{ r.status }}</span></td>
+                        <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
+                        <td><span class="issue-note-box">{{ (r.note or '-')|e }}</span></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="8" class="issue-empty">반출 요청 내역이 없습니다.</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+        </div>
+        </div>
+        <div id="exportStatusCompletedPane" class="issue-status-pane">
+        <div class="issue-status-board">
+            <div class="issue-status-head">
+                <div>
+                    <div class="issue-status-title">반출 완료</div>
+                    <div class="issue-status-caption">물류 승인 후 반출이 완료된 이력입니다.</div>
+                </div>
+            </div>
+        {% if export_completed_groups %}
+        <div class="issue-date-tabs">
+            {% for group in export_completed_groups %}
+            <button type="button" class="issue-date-btn {% if loop.first %}active{% endif %}" id="exportCompletedDateBtn{{ loop.index0 }}" onclick="switchExportCompletedDate({{ loop.index0 }})">{{ group['date'] }} <span class="issue-status-count">{{ group['items']|length }}</span></button>
+            {% endfor %}
+        </div>
+            {% for group in export_completed_groups %}
+            <div id="exportCompletedDatePane{{ loop.index0 }}" class="issue-date-pane {% if loop.first %}active{% endif %}">
+                <div class="table-container">
+                    <table class="issue-status-table">
+                        <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>완료일</th><th>사유</th><th>메모</th></tr></thead>
+                        <tbody>
+                        {% for r in group['items'] %}
+                        <tr>
+                            <td class="issue-meta-cell">
+                                <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
+                                <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
+                            </td>
+                            <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
+                            <td class="issue-name-cell">{{ r.material_name }}</td>
+                            <td>{{ r.material_lot or '-' }}</td>
+                            <td><span class="issue-qty-main">{{ "%.1f"|format((r.approved_quantity or r.requested_quantity or 0)) }} {{ r.unit or '' }}</span></td>
+                            <td class="issue-meta-cell"><div class="issue-date">{{ r.processed_at[:16] if r.processed_at else '-' }}</div><div class="issue-subtext">처리 완료</div></td>
+                            <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
+                            <td><span class="issue-note-box">{{ (r.process_note or r.note or '-')|e }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="table-container">
+            <table class="issue-status-table">
+                <tbody><tr><td colspan="8" class="issue-empty">반출 완료 내역이 없습니다.</td></tr></tbody>
+            </table>
+        </div>
+        {% endif %}
+        </div>
+        </div>
+        <div id="exportStatusRejectedPane" class="issue-status-pane">
+        <div class="issue-status-board">
+            <div class="issue-status-head">
+                <div>
+                    <div class="issue-status-title">반출 반려</div>
+                    <div class="issue-status-caption">물류 확인 후 반려된 반출 요청입니다.</div>
+                </div>
+            </div>
+        <div class="table-container">
+            <table class="issue-status-table">
+                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>반려일</th><th>사유</th><th>반려사유</th></tr></thead>
+                <tbody>
+                {% if export_requests_rejected %}
+                    {% for r in export_requests_rejected %}
+                    <tr>
+                        <td class="issue-meta-cell">
+                            <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
+                            <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
+                        </td>
+                        <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
+                        <td class="issue-name-cell">{{ r.material_name }}</td>
+                        <td>{{ r.material_lot or '-' }}</td>
+                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
+                        <td class="issue-meta-cell"><div class="issue-date">{{ r.rejected_at[:16] if r.rejected_at else (r.processed_at[:16] if r.processed_at else '-') }}</div><div class="issue-subtext">반려 처리</div></td>
+                        <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
+                        <td><span class="issue-note-box">{{ (r.rejected_reason or '-')|e }}</span></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="8" class="issue-empty">반출 반려 내역이 없습니다.</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+        </div>
+        </div>
+    </div>
+    </div>
+</div>
+{% endif %}
+
+{% if can_manage_material_master %}
+<script>
+// 인자 순서: id, code, name, category, unit, workplaceStock, logisticsStock, totalStock, min, supplier, moq, workplace
+function openEdit(id, code, name, category, unit, workplaceStock, logisticsStock, totalStock, min, supplier, moq, workplace) {
+    // 1. 값 채우기
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_code').value = code; // 자동으로 코드를 불러옵니다.
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_cat').value = category;
+    document.getElementById('edit_unit').value = unit;
+    document.getElementById('edit_moq').value = Number.isFinite(moq) ? moq : 0;
+    document.getElementById('edit_stock').value = Number.isFinite(workplaceStock) ? workplaceStock.toFixed(1) : '0.0';
+    document.getElementById('edit_logistics_stock').value = Number.isFinite(logisticsStock) ? logisticsStock.toFixed(1) : '0.0';
+    document.getElementById('edit_total_stock').value = Number.isFinite(totalStock) ? totalStock.toFixed(1) : '0.0';
+    document.getElementById('edit_min').value = min;
+
+    // 2. 공급업체 설정 (0이면 '없음')
+    const supplierSelect = document.getElementById('edit_supplier');
+    supplierSelect.value = (supplier && supplier !== 0) ? supplier : "";
+
+    // 3. 모달 열기
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+document.getElementById('editModal').addEventListener('click',function(e){
+    if(e.target===this) this.style.display='none';
+});
+
+document.querySelectorAll('.js-open-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        const toNum = (v) => {
+            const n = Number(v);
+            return Number.isFinite(n) ? n : 0;
+        };
+        openEdit(
+            toNum(btn.dataset.id),
+            btn.dataset.code || '',
+            btn.dataset.name || '',
+            btn.dataset.category || '',
+            btn.dataset.unit || '',
+            toNum(btn.dataset.workplaceStock),
+            toNum(btn.dataset.logisticsStock),
+            toNum(btn.dataset.totalStock),
+            toNum(btn.dataset.minStock),
+            toNum(btn.dataset.supplierId),
+            toNum(btn.dataset.moq),
+            btn.dataset.workplace || ''
+        );
+    });
+});
+</script>
+{% endif %}
+<script>
+const CAN_PURCH = {{ 'true' if can_purch else 'false' }};
+const CAN_REGISTER_PURCHASE = {{ 'true' if can_register_purchase else 'false' }};
+const CAN_LOT_MANAGE = {{ 'true' if can_manage_lots else 'false' }};
+const MATERIAL_LOTS_BY_MATERIAL = {{ material_lots_by_material_json|safe }};
+let currentReqTab = {{ req_tab|tojson }};
+let currentIssueStatusTab = {{ issue_status_tab|tojson }};
+let currentExportStatusTab = {{ export_status_tab|tojson }};
+let currentIssueCompletedDateTab = 0;
+let currentExportCompletedDateTab = 0;
+const ISSUE_MATERIAL_ROWS = {{ request_materials|tojson }};
+const EXPORT_MATERIAL_ROWS = {{ export_request_materials|tojson }};
+let reqExpanded = false;
+let currentMaterialId = null;
+const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
+let ISSUE_MATERIAL_SOURCE = [];
+let EXPORT_MATERIAL_SOURCE = [];
+let purchaseRegisterMode = false;
+
+function setRequestPanelExpanded(expanded){
+    reqExpanded = Boolean(expanded);
+    const card = document.getElementById('requestCard');
+    if(!card) return;
+    card.classList.toggle('req-open', reqExpanded);
+    try {
+        localStorage.setItem(REQ_PANEL_STATE_KEY, reqExpanded ? '1' : '0');
+    } catch (e) {}
+}
+
+function toggleRequestPanel(){
+    setRequestPanelExpanded(!reqExpanded);
+}
+
+function switchReqTab(tab){
+    currentReqTab = (tab === 'export') ? 'export' : 'issue';
+    const issuePane = document.getElementById('reqPaneIssue');
+    const exportPane = document.getElementById('reqPaneExport');
+    const issueBtn = document.getElementById('reqTabIssueBtn');
+    const exportBtn = document.getElementById('reqTabExportBtn');
+    if(currentReqTab === 'export'){
+        issuePane.classList.remove('active');
+        exportPane.classList.add('active');
+        issueBtn.classList.remove('active');
+        exportBtn.classList.add('active');
+    }else{
+        exportPane.classList.remove('active');
+        issuePane.classList.add('active');
+        exportBtn.classList.remove('active');
+        issueBtn.classList.add('active');
+    }
+}
+
+function switchIssueStatusTab(tab){
+    currentIssueStatusTab = ['pending','completed','rejected'].includes(tab) ? tab : 'pending';
+    ['pending','completed','rejected'].forEach((name) => {
+        document.getElementById(`issueStatus${name.charAt(0).toUpperCase() + name.slice(1)}Pane`)?.classList.toggle('active', name === currentIssueStatusTab);
+        document.getElementById(`issueStatus${name.charAt(0).toUpperCase() + name.slice(1)}Btn`)?.classList.toggle('active', name === currentIssueStatusTab);
+    });
+}
+
+function switchExportStatusTab(tab){
+    currentExportStatusTab = ['pending','completed','rejected'].includes(tab) ? tab : 'pending';
+    ['pending','completed','rejected'].forEach((name) => {
+        document.getElementById(`exportStatus${name.charAt(0).toUpperCase() + name.slice(1)}Pane`)?.classList.toggle('active', name === currentExportStatusTab);
+        document.getElementById(`exportStatus${name.charAt(0).toUpperCase() + name.slice(1)}Btn`)?.classList.toggle('active', name === currentExportStatusTab);
+    });
+}
+
+function switchIssueCompletedDate(index){
+    currentIssueCompletedDateTab = index;
+    document.querySelectorAll('[id^="issueCompletedDatePane"]').forEach((pane, paneIndex) => {
+        pane.classList.toggle('active', paneIndex === currentIssueCompletedDateTab);
+    });
+    document.querySelectorAll('[id^="issueCompletedDateBtn"]').forEach((btn, btnIndex) => {
+        btn.classList.toggle('active', btnIndex === currentIssueCompletedDateTab);
+    });
+}
+
+function switchExportCompletedDate(index){
+    currentExportCompletedDateTab = index;
+    document.querySelectorAll('[id^="exportCompletedDatePane"]').forEach((pane, paneIndex) => {
+        pane.classList.toggle('active', paneIndex === currentExportCompletedDateTab);
+    });
+    document.querySelectorAll('[id^="exportCompletedDateBtn"]').forEach((btn, btnIndex) => {
+        btn.classList.toggle('active', btnIndex === currentExportCompletedDateTab);
+    });
+}
+
+function collectMaterialSource(selectEl){
+    if(!selectEl) return [];
+    return Array.from(selectEl.options).map((opt) => ({
+        value: String(opt.value || ''),
+        code: opt.dataset.code || '-',
+        name: opt.dataset.name || '',
+        unit: opt.dataset.unit || '',
+        label: opt.textContent || '',
+    }));
+}
+
+function mapMaterialRows(rows){
+    return (rows || []).map((row) => {
+        const code = row.code || '-';
+        const name = row.name || '';
+        const unit = row.unit || '';
+        const value = String(row.id || '');
+        return {
+            value,
+            code,
+            name,
+            unit,
+            label: `[${code}] ${name}${unit ? ` (${unit})` : ''}`,
+        };
+    });
+}
+
+function renderMaterialOptions(selectEl, rows, selectedValue){
+    if(!selectEl) return;
+    const before = String(selectedValue ?? selectEl.value ?? '');
+    const targetValue = before || '';
+    selectEl.innerHTML = '';
+    for(const row of rows){
+        const opt = document.createElement('option');
+        opt.value = row.value;
+        opt.dataset.code = row.code;
+        opt.dataset.name = row.name;
+        opt.dataset.unit = row.unit;
+        opt.textContent = row.label;
+        if(targetValue && row.value === targetValue){
+            opt.selected = true;
+        }
+        selectEl.appendChild(opt);
+    }
+    if(selectEl.options.length > 0 && !selectEl.value){
+        selectEl.selectedIndex = 0;
+    }
+}
+
+function filterIssueMaterials(){
+    const q = (document.getElementById('issueSearch')?.value || '').toLowerCase().trim();
+    const list = document.getElementById('issueMaterialList');
+    if(!list) return;
+    if(!ISSUE_MATERIAL_SOURCE.length){
+        ISSUE_MATERIAL_SOURCE = collectMaterialSource(list);
+    }
+    const filtered = !q
+        ? ISSUE_MATERIAL_SOURCE
+        : ISSUE_MATERIAL_SOURCE.filter((r) => {
+            const hay = `${r.code} ${r.name} ${r.unit} ${r.label}`.toLowerCase();
+            return hay.includes(q);
+        });
+    renderMaterialOptions(list, filtered, list.value);
+}
+
+function addIssueItemFromList(){
+    const list = document.getElementById('issueMaterialList');
+    const body = document.getElementById('issueItemsBody');
+    if(!list || !body || list.selectedIndex < 0) return;
+    const opt = list.options[list.selectedIndex];
+    if(opt.hidden) return;
+
+    const materialId = String(opt.value || '');
+    if(!materialId) return;
+    const code = opt.dataset.code || '-';
+    const name = opt.dataset.name || '';
+    const unit = opt.dataset.unit || '';
+    const rowId = `issue_item_${materialId}`;
+    if(document.getElementById(rowId)) return;
+
+    const empty = document.getElementById('issueEmptyRow');
+    if(empty) empty.remove();
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.innerHTML = `
+        <td>${code}<input type="hidden" name="material_id[]" value="${materialId}"></td>
+        <td>${name}</td>
+        <td>${unit}</td>
+        <td><input type="number" name="requested_quantity[]" step="0.01" min="0.01" required style="width:100px;"></td>
+        <td><input type="text" name="note[]" placeholder="비고" style="width:100%;"></td>
+        <td><button type="button" class="btn btn-small btn-secondary" onclick="removeIssueItem('${rowId}')">삭제</button></td>
+    `;
+    body.appendChild(tr);
+}
+
+function removeIssueItem(rowId){
+    const row = document.getElementById(rowId);
+    if(row) row.remove();
+    const body = document.getElementById('issueItemsBody');
+    if(body && body.children.length === 0){
+        body.innerHTML = '<tr id="issueEmptyRow"><td colspan="6" style="text-align:center;color:#94a3b8;">추가된 요청 항목이 없습니다.</td></tr>';
+    }
+}
+
+function clearIssueItems(){
+    const body = document.getElementById('issueItemsBody');
+    if(!body) return;
+    body.innerHTML = '<tr id="issueEmptyRow"><td colspan="6" style="text-align:center;color:#94a3b8;">추가된 요청 항목이 없습니다.</td></tr>';
+}
+
+function filterExportMaterials(){
+    const q = (document.getElementById('exportSearch')?.value || '').toLowerCase().trim();
+    const list = document.getElementById('exportMaterialList');
+    if(!list) return;
+    if(!EXPORT_MATERIAL_SOURCE.length){
+        EXPORT_MATERIAL_SOURCE = collectMaterialSource(list);
+    }
+    const filtered = !q
+        ? EXPORT_MATERIAL_SOURCE
+        : EXPORT_MATERIAL_SOURCE.filter((r) => {
+            const hay = `${r.code} ${r.name} ${r.unit} ${r.label}`.toLowerCase();
+            return hay.includes(q);
+        });
+    renderMaterialOptions(list, filtered, list.value);
+    syncExportLots();
+}
+
+function syncExportLots(){
+    const matId = Number((document.getElementById('exportMaterialList') || {}).value || 0);
+    const lotSelect = document.getElementById('export_req_lot');
+    if(!lotSelect) return;
+    const lots = MATERIAL_LOTS_BY_MATERIAL[String(matId)] || MATERIAL_LOTS_BY_MATERIAL[matId] || [];
+    if(!lots.length){
+        lotSelect.innerHTML = '<option value="">선택 가능한 로트 없음</option>';
+        return;
+    }
+    lotSelect.innerHTML = '<option value="">선택</option>' + lots.map((lot) => {
+        const qty = Number(lot.current_quantity || 0).toFixed(1);
+        const dateText = lot.receiving_date ? ` / 입고:${lot.receiving_date}` : '';
+        return `<option value="${lot.id}">${lot.lot} / 잔량:${qty}${dateText}</option>`;
+    }).join('');
+}
+
+function toggleReasonDetail(){
+    const reasonEl = document.getElementById('export_req_reason');
+    const detailEl = document.getElementById('export_req_reason_detail');
+    if(!reasonEl || !detailEl) return;
+    const reason = reasonEl.value;
+    const needDetail = (reason === '불량' || reason === '기타');
+    detailEl.disabled = !needDetail;
+    detailEl.required = needDetail;
+    if(!needDetail) detailEl.value = '';
+}
+
+function addExportItemFromList(){
+    const list = document.getElementById('exportMaterialList');
+    const lotSel = document.getElementById('export_req_lot');
+    const qtyEl = document.getElementById('export_req_qty');
+    const reasonEl = document.getElementById('export_req_reason');
+    const detailEl = document.getElementById('export_req_reason_detail');
+    const noteEl = document.getElementById('export_req_note');
+    const body = document.getElementById('exportItemsBody');
+    if(!list || !lotSel || !qtyEl || !reasonEl || !detailEl || !noteEl || !body || list.selectedIndex < 0) return;
+
+    const opt = list.options[list.selectedIndex];
+    if(opt.hidden) return;
+    const materialId = String(opt.value || '');
+    const lotId = String(lotSel.value || '');
+    const lotText = lotSel.options[lotSel.selectedIndex]?.text || '';
+    const qty = Number(qtyEl.value || 0);
+    const reason = reasonEl.value || '';
+    const reasonDetail = (detailEl.value || '').trim();
+    const note = (noteEl.value || '').trim();
+    if(!materialId || !lotId || qty <= 0 || !reason){
+        alert('자재/로트/수량/사유를 입력해주세요.');
+        return;
+    }
+    if((reason === '불량' || reason === '기타') && !reasonDetail){
+        alert('불량/기타 사유는 상세사유를 입력해주세요.');
+        return;
+    }
+
+    const rowId = `export_item_${materialId}_${lotId}`;
+    if(document.getElementById(rowId)){
+        alert('같은 자재/로트 항목이 이미 추가되어 있습니다.');
+        return;
+    }
+
+    const empty = document.getElementById('exportEmptyRow');
+    if(empty) empty.remove();
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.innerHTML = `
+        <td>${opt.dataset.code || '-'}<input type="hidden" name="material_id[]" value="${materialId}"></td>
+        <td>${opt.dataset.name || ''}</td>
+        <td>${lotText}<input type="hidden" name="material_lot_id[]" value="${lotId}"></td>
+        <td>${qty.toFixed(1)}<input type="hidden" name="requested_quantity[]" value="${qty}"></td>
+        <td>${reason}<input type="hidden" name="reason[]" value="${reason}"></td>
+        <td>${reasonDetail || '-'}<input type="hidden" name="reason_detail[]" value="${reasonDetail}"></td>
+        <td>${note || '-'}<input type="hidden" name="note[]" value="${note}"></td>
+        <td><button type="button" class="btn btn-small btn-secondary" onclick="removeExportItem('${rowId}')">삭제</button></td>
+    `;
+    body.appendChild(tr);
+
+    qtyEl.value = '';
+    noteEl.value = '';
+}
+
+function removeExportItem(rowId){
+    const row = document.getElementById(rowId);
+    if(row) row.remove();
+    const body = document.getElementById('exportItemsBody');
+    if(body && body.children.length === 0){
+        body.innerHTML = '<tr id="exportEmptyRow"><td colspan="8" style="text-align:center;color:#94a3b8;">추가된 반출 항목이 없습니다.</td></tr>';
+    }
+}
+
+function clearExportItems(){
+    const body = document.getElementById('exportItemsBody');
+    if(!body) return;
+    body.innerHTML = '<tr id="exportEmptyRow"><td colspan="8" style="text-align:center;color:#94a3b8;">추가된 반출 항목이 없습니다.</td></tr>';
+}
+
+switchReqTab(currentReqTab);
+switchIssueStatusTab(currentIssueStatusTab);
+switchExportStatusTab(currentExportStatusTab);
+switchIssueCompletedDate(currentIssueCompletedDateTab);
+switchExportCompletedDate(currentExportCompletedDateTab);
+toggleReasonDetail();
+syncExportLots();
+let reqExpandedDefault = true;
+try {
+    const savedReqPanelState = localStorage.getItem(REQ_PANEL_STATE_KEY);
+    if(savedReqPanelState !== null){
+        reqExpandedDefault = savedReqPanelState === '1';
+    }
+} catch (e) {}
+setRequestPanelExpanded(reqExpandedDefault);
+const requestCard = document.getElementById('requestCard');
+const materialsListCard = document.getElementById('materialsListCard');
+if(requestCard && materialsListCard && materialsListCard.parentNode){
+    materialsListCard.parentNode.insertBefore(requestCard, materialsListCard);
+}
+ISSUE_MATERIAL_SOURCE = mapMaterialRows(ISSUE_MATERIAL_ROWS);
+EXPORT_MATERIAL_SOURCE = mapMaterialRows(EXPORT_MATERIAL_ROWS);
+renderMaterialOptions(document.getElementById('issueMaterialList'), ISSUE_MATERIAL_SOURCE);
+renderMaterialOptions(document.getElementById('exportMaterialList'), EXPORT_MATERIAL_SOURCE);
+
+const issueBulkForm = document.getElementById('issueBulkForm');
+if(issueBulkForm){
+    issueBulkForm.addEventListener('submit', function(e){
+        const rows = Array.from(document.querySelectorAll('#issueItemsBody tr')).filter((tr) => tr.id !== 'issueEmptyRow');
+        if(rows.length === 0){
+            e.preventDefault();
+            alert('불출 요청할 항목을 추가해주세요.');
+            return;
+        }
+        const invalidQty = rows.some((tr) => {
+            const qtyInput = tr.querySelector('input[name="requested_quantity[]"]');
+            return !qtyInput || Number(qtyInput.value || 0) <= 0;
+        });
+        if(invalidQty){
+            e.preventDefault();
+            alert('요청 수량을 모두 입력해주세요.');
+        }
+    });
+}
+
+const exportBulkForm = document.getElementById('exportBulkForm');
+if(exportBulkForm){
+    exportBulkForm.addEventListener('submit', function(e){
+        const rows = Array.from(document.querySelectorAll('#exportItemsBody tr')).filter((tr) => tr.id !== 'exportEmptyRow');
+        if(rows.length === 0){
+            e.preventDefault();
+            alert('반출 요청할 항목을 추가해주세요.');
+        }
+    });
+}
+
+function setPurchaseRegisterMode(enabled){
+    purchaseRegisterMode = Boolean(enabled);
+    const panel = document.getElementById('bulkPurchasePanel');
+    const toggleBtn = document.getElementById('togglePurchaseRegisterBtn');
+    const purchaseCols = document.querySelectorAll('.purchase-col');
+    if(panel) panel.style.display = purchaseRegisterMode ? 'block' : 'none';
+    purchaseCols.forEach((el) => {
+        el.style.display = purchaseRegisterMode ? '' : 'none';
+    });
+    if(toggleBtn){
+        toggleBtn.textContent = purchaseRegisterMode ? '발주 등록 모드 사용 중' : '발주 등록';
+        toggleBtn.style.background = purchaseRegisterMode ? '#b45309' : '#f59e0b';
+    }
+    if(purchaseSelectAll){
+        purchaseSelectAll.checked = false;
+        purchaseSelectAll.indeterminate = false;
+    }
+    if(!purchaseRegisterMode){
+        document.querySelectorAll('.purchase-select-checkbox').forEach((el) => { el.checked = false; });
+        document.querySelectorAll('.purchase-qty-input').forEach((el) => { el.value = ''; });
+    }
+}
+
+const togglePurchaseRegisterBtn = document.getElementById('togglePurchaseRegisterBtn');
+if(CAN_REGISTER_PURCHASE && togglePurchaseRegisterBtn){
+    togglePurchaseRegisterBtn.addEventListener('click', () => setPurchaseRegisterMode(true));
+}
+
+const cancelPurchaseRegisterBtn = document.getElementById('cancelPurchaseRegisterBtn');
+if(cancelPurchaseRegisterBtn){
+    cancelPurchaseRegisterBtn.addEventListener('click', () => setPurchaseRegisterMode(false));
+}
+
+const purchaseSelectAll = document.getElementById('purchaseSelectAll');
+if(purchaseSelectAll){
+    purchaseSelectAll.addEventListener('change', function(){
+        if(!purchaseRegisterMode) return;
+        document.querySelectorAll('.purchase-select-checkbox').forEach((checkbox) => {
+            checkbox.checked = this.checked;
+        });
+    });
+}
+
+document.querySelectorAll('.purchase-select-checkbox').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+        if(!purchaseSelectAll) return;
+        const all = Array.from(document.querySelectorAll('.purchase-select-checkbox'));
+        const checked = all.filter((el) => el.checked);
+        purchaseSelectAll.checked = all.length > 0 && checked.length === all.length;
+        purchaseSelectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+    });
+});
+
+document.querySelectorAll('.purchase-qty-input').forEach((input) => {
+    input.addEventListener('keydown', (e) => {
+        if(e.key !== 'Tab') return;
+        const visibleInputs = Array.from(document.querySelectorAll('.purchase-qty-input'))
+            .filter((el) => purchaseRegisterMode && el.offsetParent !== null);
+        const currentIndex = visibleInputs.indexOf(input);
+        if(currentIndex === -1) return;
+        const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1;
+        if(nextIndex < 0 || nextIndex >= visibleInputs.length) return;
+        e.preventDefault();
+        visibleInputs[nextIndex].focus();
+        visibleInputs[nextIndex].select();
+    });
+});
+
+const bulkPurchaseForm = document.getElementById('bulkPurchaseForm');
+if(bulkPurchaseForm){
+    bulkPurchaseForm.addEventListener('submit', function(e){
+        if(!purchaseRegisterMode){
+            e.preventDefault();
+            return;
+        }
+        const selected = Array.from(document.querySelectorAll('.purchase-select-checkbox:checked'));
+        if(selected.length === 0){
+            e.preventDefault();
+            alert('발주 등록할 부자재를 선택해 주세요.');
+            return;
+        }
+        const invalid = selected.some((checkbox) => {
+            const qtyInput = document.querySelector(`.purchase-qty-input[data-material-id="${checkbox.dataset.materialId}"]`);
+            return !qtyInput || Number(qtyInput.value || 0) <= 0;
+        });
+        if(invalid){
+            e.preventDefault();
+            alert('선택한 부자재의 발주 수량을 입력해 주세요.');
+        }
+    });
+}
+
+function closeMaterialDetailModal(){
+    document.getElementById('materialDetailModal').style.display = 'none';
+}
+
+function switchMaterialPanel(type){
+    const lotsPanel = document.getElementById('materialLotsPanel');
+    const logsPanel = document.getElementById('materialLogsPanel');
+    const lotBtn = document.getElementById('tabLotsBtn');
+    const logBtn = document.getElementById('tabLogsBtn');
+    if(type === 'logs' || !lotsPanel || !lotBtn){
+        if(lotsPanel) lotsPanel.classList.remove('active');
+        if(logsPanel) logsPanel.classList.add('active');
+        if(lotBtn) lotBtn.classList.remove('active');
+        if(logBtn) logBtn.classList.add('active');
+    } else {
+        if(logsPanel) logsPanel.classList.remove('active');
+        lotsPanel.classList.add('active');
+        if(logBtn) logBtn.classList.remove('active');
+        lotBtn.classList.add('active');
+    }
+}
+
+function renderLotRows(lots){
+    const tbody = document.getElementById('lotTableBody');
+    if(!tbody) return;
+    if(!lots || lots.length === 0){
+        tbody.innerHTML = `<tr><td colspan="${CAN_LOT_MANAGE ? 8 : 7}" style="text-align:center;color:#64748b;">등록된 로트가 없습니다.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = lots.map(lot => `
+        <tr>
+            <td>${lot.location_name || '-'}<input type="hidden" value="${lot.location_id || ''}" id="lot_location_${lot.id}"></td>
+            <td><span class="lot-code">${lot.lot || '-'}</span></td>
+            <td>${CAN_LOT_MANAGE ? `<input type="date" value="${lot.receiving_date || ''}" id="lot_receiving_${lot.id}" style="width:100%;" disabled>` : (lot.receiving_date || '-')}</td>
+            <td>${CAN_LOT_MANAGE ? `<input type="date" value="${lot.manufacture_date || ''}" id="lot_manufacture_${lot.id}" style="width:100%;" disabled>` : (lot.manufacture_date || '-')}</td>
+            <td>${CAN_LOT_MANAGE ? `<input type="date" value="${lot.expiry_date || ''}" id="lot_expiry_${lot.id}" style="width:100%;" disabled>` : (lot.expiry_date || '-')}</td>
+            <td>${CAN_LOT_MANAGE ? `<input type="number" step="0.1" value="${Number(lot.received_quantity || lot.quantity || 0).toFixed(1)}" id="lot_received_quantity_${lot.id}" style="width:100%;" disabled>` : Number(lot.received_quantity || lot.quantity || 0).toFixed(1)}</td>
+            <td>${CAN_LOT_MANAGE ? `<input type="number" step="0.1" value="${Number(lot.location_quantity || 0).toFixed(1)}" id="lot_current_quantity_${lot.id}" style="width:100%;" disabled>` : Number(lot.location_quantity || 0).toFixed(1)}</td>
+            <input type="hidden" value="${lot.supplier_lot || ''}" id="lot_supplier_lot_${lot.id}">
+            ${CAN_LOT_MANAGE ? `<td class="lot-actions">
+                <button type="button" class="btn btn-small" id="lot_edit_btn_${lot.id}" data-mode="view" style="background:#4f46e5;" onclick="toggleLotEdit(${lot.id})">수정</button>
+                <button type="button" class="btn btn-small" style="background:#e74c3c;" onclick="submitDeleteLot(${lot.id})">폐기</button>
+            </td>` : ''}
+        </tr>
+    `).join('');
+}
+
+function setLotInputsEditable(lotId, editable){
+    const ids = [
+        `lot_receiving_${lotId}`,
+        `lot_manufacture_${lotId}`,
+        `lot_expiry_${lotId}`,
+        `lot_received_quantity_${lotId}`,
+        `lot_current_quantity_${lotId}`,
+    ];
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if(el) el.disabled = !editable;
+    });
+}
+
+async function toggleLotEdit(lotId){
+    if(!CAN_LOT_MANAGE) return;
+    const btn = document.getElementById(`lot_edit_btn_${lotId}`);
+    if(!btn) return;
+    const mode = btn.dataset.mode || 'view';
+    if(mode === 'view'){
+        setLotInputsEditable(lotId, true);
+        btn.dataset.mode = 'edit';
+        btn.textContent = '수정 완료';
+        btn.style.background = '#16a34a';
+        return;
+    }
+    await submitUpdateLot(lotId);
+}
+
+function renderUsageRows(logs){
+    const tbody = document.getElementById('usageLogTableBody');
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.use_date || '-').toString().slice(0,10)}</td>
+            <td>${log.production_no || '-'}</td>
+            <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
+            <td>${Number(log.remaining_quantity || 0).toFixed(1)}</td>
+            <td>${log.user_name || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadMaterialDetail(materialId){
+    const res = await fetch(`/materials/${materialId}/detail`);
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '상세 조회 실패');
+        return false;
+    }
+    const m = payload.material || {};
+    document.getElementById('md_code').textContent = m.code || '-';
+    document.getElementById('md_name').textContent = m.name || '-';
+    document.getElementById('md_supplier').textContent = m.supplier_name || '-';
+    document.getElementById('md_unit').textContent = m.unit || '-';
+    document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
+    renderLotRows(payload.lots || []);
+    renderUsageRows(payload.usage_logs || []);
+    return true;
+}
+
+async function openMaterialDetailModal(materialId){
+    currentMaterialId = materialId;
+    switchMaterialPanel('lots');
+    const ok = await loadMaterialDetail(materialId);
+    if(ok){
+        document.getElementById('materialDetailModal').style.display = 'flex';
+    }
+}
+
+async function submitAddLot(e){
+    e.preventDefault();
+    if(!CAN_LOT_MANAGE || !currentMaterialId) return;
+    const form = document.getElementById('addLotForm');
+    const formData = new FormData(form);
+    formData.append('material_id', currentMaterialId);
+    const res = await fetch('/materials/material-lots/add', { method: 'POST', body: formData });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '로트 추가 실패');
+        return;
+    }
+    form.reset();
+    await loadMaterialDetail(currentMaterialId);
+}
+
+async function submitUpdateLot(lotId){
+    if(!CAN_LOT_MANAGE) return;
+    const formData = new FormData();
+    formData.append('receiving_date', document.getElementById(`lot_receiving_${lotId}`).value);
+    formData.append('manufacture_date', document.getElementById(`lot_manufacture_${lotId}`).value);
+    formData.append('expiry_date', document.getElementById(`lot_expiry_${lotId}`).value);
+    formData.append('received_quantity', document.getElementById(`lot_received_quantity_${lotId}`).value);
+    formData.append('current_quantity', document.getElementById(`lot_current_quantity_${lotId}`).value);
+    formData.append('supplier_lot', document.getElementById(`lot_supplier_lot_${lotId}`).value);
+    formData.append('location_id', document.getElementById(`lot_location_${lotId}`)?.value || '');
+    const res = await fetch(`/materials/material-lots/${lotId}/update`, { method: 'POST', body: formData });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '로트 수정 실패');
+        return;
+    }
+    const btn = document.getElementById(`lot_edit_btn_${lotId}`);
+    if(btn){
+        btn.dataset.mode = 'view';
+        btn.textContent = '수정';
+        btn.style.background = '#4f46e5';
+    }
+    await loadMaterialDetail(currentMaterialId);
+}
+
+async function submitDeleteLot(lotId){
+    if(!CAN_LOT_MANAGE) return;
+    if(!confirm('해당 로트를 폐기 처리하시겠습니까?')) return;
+    const res = await fetch(`/materials/material-lots/${lotId}/delete`, { method: 'POST' });
+    const payload = await res.json();
+    if(!payload.ok){
+        alert(payload.message || '로트 삭제 실패');
+        return;
+    }
+    await loadMaterialDetail(currentMaterialId);
+}
+
+document.getElementById('materialDetailModal').addEventListener('click',function(e){
+    if(e.target===this) this.style.display='none';
+});
+</script>
+{% endblock %}

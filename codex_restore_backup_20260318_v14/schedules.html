@@ -1,0 +1,2360 @@
+﻿{% extends "base.html" %}
+
+{% block title %}생산 스케줄 - 예맛 생산관리{% endblock %}
+
+{% block extra_css %}
+<style>
+/* 페이지 타이틀 */
+.schedule-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 0.5rem;
+}
+.schedule-page-sub {
+    color: #6b7280;
+    font-size: 0.95rem;
+}
+
+/* 모달 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+}
+.modal-content {
+    background: white;
+    margin: 4% auto;
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+}
+.modal-content h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.35rem;
+    color: #1a1a2e;
+    border: none;
+    padding: 0;
+}
+.close {
+    float: right;
+    font-size: 1.5rem;
+    font-weight: 300;
+    cursor: pointer;
+    color: #9ca3af;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.close:hover {
+    color: #374151;
+}
+
+/* 캘린더 */
+.calendar {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07);
+}
+.calendar-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0ea5e9 140%);
+    color: white;
+    padding: 1.25rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.calendar-nav {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+.calendar-nav button {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+.calendar-nav button:hover {
+    background: rgba(255,255,255,0.22);
+}
+.calendar-month {
+    font-size: 1.4rem;
+    font-weight: 700;
+    min-width: 140px;
+    text-align: center;
+}
+.calendar-header a {
+    background: rgba(255,255,255,0.95) !important;
+    color: #1a1a2e !important;
+    padding: 0.6rem 1.25rem !important;
+    border-radius: 10px !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    transition: all 0.2s !important;
+}
+.calendar-header a:hover {
+    background: white !important;
+    transform: translateY(-1px);
+}
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7칸을 정확히 1/7씩 나눔 */
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    table-layout: fixed; /* 너비 고정 효과 */
+}
+.calendar-weekday {
+    padding: 0.85rem 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+}
+.calendar-weekday:first-child { color: #ef4444; }
+.calendar-weekday:last-child { color: #3b82f6; }
+/* 날짜 칸 */
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 요일 헤더와 동일하게 1/7씩 나눔 */
+    gap: 0px; /* 갭 때문에 어긋날 수 있으므로 0이나 고정 px 권장 */
+    background: #e2e8f0;
+}
+.calendar-day {
+    background: white;
+    min-height: 120px;
+    width: 100%;        /* 너비가 부모 그리드를 벗어나지 않게 함 */
+    box-sizing: border-box;
+    overflow: hidden;   /* 내용이 넘쳐도 칸 너비를 침범하지 못하게 함 */
+    border: 0.5px solid #e2e8f0; /* gap 대신 border로 구분하면 더 정확함 */
+}
+.calendar-day:hover {
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 2px #e2e8f0;
+}
+.calendar-day.other-month {
+    background: #f8fafc;
+    color: #94a3b8;
+}
+.calendar-day.today {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    box-shadow: inset 0 0 0 2px #f59e0b;
+}
+.calendar-day.today .day-number {
+    color: #b45309;
+    font-weight: 700;
+}
+.day-number {
+    font-size: 1.4rem !important; /* 기존보다 훨씬 크게 (약 22px) */
+    font-weight: 800;             /* 아주 두껍게 */
+    color: #334155;
+    margin-bottom: 0;             /* 헤더 내부 정렬을 위해 마진 제거 */
+    line-height: 1;
+}
+.day-schedules {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+.schedule-count{
+    display:none;
+    margin-left:auto;
+    font-size:0.7rem;
+    font-weight:700;
+    background:#0f172a;
+    color:#fff;
+    padding:2px 6px;
+    border-radius:999px;
+}
+
+@media (max-width: 600px) {
+    .calendar-weekday{padding:0.5rem 0.25rem;font-size:0.75rem;}
+    .calendar-day{min-height:90px;}
+    .day-number{font-size:1.05rem !important;}
+    .day-schedules{max-height:62px;overflow:hidden;}
+    .schedule-item{padding:0.25rem 0.35rem;margin:4px auto;width:92%;font-size:0.7rem;}
+    .schedule-info{display:none;}
+    .schedule-item button{display:none;}
+    .schedule-count{display:inline-flex;}
+}
+/*.schedule-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3b82f6;
+    padding: 0.4rem;
+    margin: 0.3rem 0;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column; /* 세로로 배치 */
+    /*gap: 2px;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}*/
+
+.schedule-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3b82f6;
+    
+    /* 내부 여백 증가로 가독성 향상 */
+    padding: 0.5rem 0.6rem; 
+    
+    /* 외부 여백 */
+    margin: 5px auto;
+    
+    /* 너비 */
+    width: 94%;        
+    
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;          /* 내부 요소 간격 증가 */
+    
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+.schedule-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+}
+.calendar-copy-btn,
+.calendar-delete-btn {
+    position: absolute;
+    top: 4px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    line-height: 1;
+    cursor: pointer;
+}
+.calendar-copy-btn {
+    right: 4px;
+    background: rgba(255,255,255,0.9);
+}
+.calendar-delete-btn {
+    right: 4px;
+    background: rgba(254, 226, 226, 0.95);
+    color: #b91c1c;
+}
+.calendar-delete-btn:disabled {
+    cursor: not-allowed;
+    background: rgba(226, 232, 240, 0.9);
+    color: #94a3b8;
+}
+.schedule-item.done {
+    border-left-color: #16a34a;
+    background: #f0fdf4;
+}
+.done-badge {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.schedule-name {
+    font-size: 0.95rem;           /* 폰트 크기 증가 */
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.3;             /* 줄 높이 추가 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.schedule-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;            /* 정보 폰트도 약간 증가 */
+}
+
+.line-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.line-tag {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+}
+
+/* 날짜 번호와 상태를 한 줄에 배치 ------------------------------------------*/
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+/* 근무 상태 태그 스타일 */
+.work-status-tag {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #fff;
+}
+
+/* 상태별 색상 (배경색과 대비되는 텍스트 색상 유지) */
+.tag-work { background-color: #4caf50; }     /* 근무 - 녹색 */
+.tag-holiday { background-color: #f44336; }  /* 휴무 - 적색 */
+.tag-overtime { background-color: #ff9800; } /* 잔업 - 주황 */
+.tag-extra { background-color: #2196f3; }    /* 특근 - 파랑 */
+
+/* -------------------------------------------------------------------*/
+
+/* 검색 및 모달 폼 */
+.search-box { position: relative; margin-bottom: 1rem; }
+.search-box input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+.search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+.search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+.product-list {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    margin-top: 0.5rem;
+}
+.product-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.product-item:hover {
+    background: #f0f9ff;
+}
+.product-item:last-child { border-bottom: none; }
+
+/* 뷰 전환 버튼 */
+.schedule-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.view-toggle {
+    display: flex;
+    gap: 0.45rem;
+}
+.view-toggle button {
+    padding: 0.6rem 1.15rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    box-shadow: 0 6px 14px rgba(15,23,42,0.06);
+}
+.view-toggle button:hover {
+    border-color: #c7d2fe;
+    color: #0f172a;
+}
+.view-toggle button.active {
+    background: linear-gradient(135deg,#0f172a,#2563eb);
+    color: white;
+    border-color: #1e3a8a;
+    box-shadow: 0 10px 24px rgba(30,64,175,0.25);
+}
+
+/* 목록 뷰 테이블 */
+#listView .card { padding: 0; overflow: hidden; }
+#listView .list-month-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0 1.5rem 1rem;
+}
+#listView .list-month-nav .nav-left,
+#listView .list-month-nav .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+#listView .list-month-nav .nav-btn {
+    border: 1px solid #dbe3f0;
+    background: #f8fafc;
+    color: #0f172a;
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+#listView .list-month-nav .month-pill {
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+#listView .list-month-nav .month-picker {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+}
+#listView .status-tabs {
+    display: flex;
+    gap: 0.45rem;
+    margin-left: 0.65rem;
+    padding: 0;
+    align-items: center;
+}
+#listView .status-tab-btn {
+    border: 1px solid #dbe3f0;
+    background: #f8fafc;
+    color: #0f172a;
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+#listView .status-tab-btn.active {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+#listView tr.list-row-hidden {
+    display: none !important;
+}
+#listView table {
+    margin: 0;
+    border: none;
+}
+#listView thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+#listView tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+}
+#listView tbody tr {
+    transition: background 0.2s;
+}
+#listView tbody tr:hover {
+    background: #f8fafc;
+}
+#listView .product-link {
+    color: #0f172a;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px dotted #94a3b8;
+}
+#listView .product-link:hover {
+    color: #1d4ed8;
+    border-bottom-color: #1d4ed8;
+}
+#listView .line-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background: #fff7ed;
+    color: #ea580c;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0.1rem;
+}
+#listView .btn-delete {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+#listView .btn-delete:hover {
+    background: #dc2626;
+    color: white;
+}
+#listView .btn-delete:disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* 필요 원,부자재 체크 뷰 */
+#requirementsView {
+    padding: 1.2rem 1.4rem 1.6rem;
+}
+.req-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+.req-actions {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+}
+.req-refresh-btn {
+    border: 1px solid #1e3a8a;
+    background: linear-gradient(135deg, #1d4ed8, #0f172a);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.42rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(30, 64, 175, 0.25);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.req-refresh-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(30, 64, 175, 0.32);
+}
+.req-refresh-btn.loading {
+    opacity: 0.72;
+    pointer-events: none;
+}
+.req-order-btn {
+    border: 1px solid #065f46;
+    background: linear-gradient(135deg, #059669, #065f46);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.42rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(6, 95, 70, 0.22);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.req-order-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(6, 95, 70, 0.3);
+}
+.req-order-btn.loading {
+    opacity: 0.72;
+    pointer-events: none;
+}
+.req-tabs {
+    display: flex;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+}
+.req-tab-btn {
+    border: 1px solid #dbe3f0;
+    background: #f8fafc;
+    color: #0f172a;
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.req-tab-btn.active {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+.req-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 0.85rem;
+    overflow: hidden;
+    background: #fff;
+}
+.req-section h3 {
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.95rem;
+}
+.req-title {
+    color: #0f172a;
+}
+.req-title-raw {
+    background: linear-gradient(90deg, #ecfdf3, #f8fafc) !important;
+    border-left: 5px solid #16a34a;
+}
+.req-title-base {
+    background: linear-gradient(90deg, #fff7ed, #f8fafc) !important;
+    border-left: 5px solid #ea580c;
+}
+.req-title-sub {
+    background: linear-gradient(90deg, #eff6ff, #f8fafc) !important;
+    border-left: 5px solid #2563eb;
+}
+.req-subgroup {
+    border-top: 1px solid #edf2f7;
+    overflow-x: auto;
+}
+.req-subgroup:first-child {
+    border-top: none;
+}
+.req-subgroup h4 {
+    margin: 0;
+    padding: 0.55rem 0.9rem;
+    background: #fcfdff;
+    color: #334155;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+.req-subgroup[data-sub="box"] h4 {
+    background: #fff7ed;
+    color: #9a3412;
+}
+.req-subgroup[data-sub="inner"] h4 {
+    background: #eff6ff;
+    color: #1e3a8a;
+}
+.req-subgroup[data-sub="outer"] h4 {
+    background: #ecfeff;
+    color: #155e75;
+}
+.req-subgroup[data-sub="silica"] h4 {
+    background: #f5f3ff;
+    color: #5b21b6;
+}
+.req-subgroup[data-sub="tray"] h4 {
+    background: #f0fdf4;
+    color: #166534;
+}
+.req-subgroup[data-sub="etc"] h4 {
+    background: #f8fafc;
+    color: #334155;
+}
+.req-table {
+    width: fit-content;
+    min-width: 760px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+.req-table th, .req-table td {
+    border-bottom: 1px solid #edf2f7;
+    padding: 0.5rem 0.55rem;
+    font-size: 0.83rem;
+    vertical-align: middle;
+}
+.req-table th {
+    background: #fcfdff;
+    color: #334155;
+    font-weight: 700;
+    text-align: left;
+}
+.req-table th.num-head {
+    text-align: right;
+}
+.req-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.req-table th:first-child,
+.req-table td:first-child {
+    white-space: nowrap;
+    color: #475569;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.79rem;
+}
+.req-shortage {
+    color: #dc2626;
+    font-weight: 700;
+}
+.req-product-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 0.9rem;
+    background: #fff;
+    overflow-x: auto;
+}
+.req-product-tabs {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+}
+.req-product-tab-btn {
+    border: 1px solid #dbe3f0;
+    background: #f8fafc;
+    color: #0f172a;
+    border-radius: 8px;
+    padding: 0.32rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.req-product-tab-btn.active {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff;
+}
+.req-product-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0.85rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+.req-muted {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+/* 프린트 스타일 */
+@media print {
+    /* 모든 상단 요소 완전히 숨기기 */
+    header,
+    .navbar,
+    .top-nav,
+    nav,
+    .no-print,
+    .schedule-toolbar,
+    .modal,
+    .page-header,
+    .container > h1,
+    .container > p,
+    .schedule-page-title,
+    .schedule-page-sub,
+    button:not(.no-hide-print),
+    .view-toggle,
+    a[href*="work_days"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* 복사 버튼 숨기기 */
+    .schedule-item button {
+        display: none !important;
+    }
+    
+    /* 프린트 전용 요소 표시 */
+    .print-only {
+        display: block !important;
+    }
+    
+    /* 컨테이너 여백 제거 */
+    .container {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* 프린트 헤더 스타일 - 간결하게 */
+    .print-header {
+        background: white;
+        border-bottom: 1px solid #333;
+        margin-bottom: 0.2cm;
+        padding: 0 !important;
+    }
+    
+    .print-header h1 {
+        font-size: 1.1rem !important;
+        margin: 0 !important;
+        padding: 0.2cm 0 0.05cm 0 !important;
+        font-weight: bold;
+    }
+    
+    .print-header h2 {
+        font-size: 0.95rem !important;
+        margin: 0 !important;
+        padding: 0 0 0.15cm 0 !important;
+    }
+    
+    /* 페이지 설정 - 여백 최소화 */
+    @page {
+        size: A4 portrait;
+        margin: 0.45cm 0.45cm;
+    }
+    
+    html, body {
+        background: white;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100%;
+        height: 100%;
+    }
+    
+    /* 캘린더 컨테이너 - 전체 페이지 사용 */
+    .calendar {
+        box-shadow: none;
+        border: 2px solid #333;
+        page-break-inside: avoid;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: calc(100vh - 1.5cm) !important;
+    }
+    
+    .calendar-header {
+        display: none !important;
+    }
+    
+    /* 요일 헤더 - 높이 축소 */
+    .calendar-weekdays {
+        background: #f0f0f0;
+        border-bottom: 2px solid #333;
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+    }
+    
+    .calendar-weekday {
+        border-right: 1px solid #ccc;
+        font-weight: bold;
+        color: #000 !important;
+        padding: 0.15cm 0.1cm !important;
+        font-size: 0.85rem !important;
+        text-align: center;
+    }
+    
+    /* 캘린더 그리드 - 최대 공간 활용 */
+    .calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-auto-rows: 1fr;
+        gap: 0;
+        background: #e2e8f0;
+        padding: 0;
+        height: calc(100% - 1cm);
+    }
+    
+    /* 날짜 셀 - 최적화 */
+    .calendar-day {
+        border: 1px solid #999;
+        background: white;
+        padding: 0.08cm;
+        overflow: hidden;
+        page-break-inside: avoid;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .calendar-day:hover {
+        background: white;
+    }
+    
+    /* 날짜 헤더 부분 */
+    .day-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.05cm;
+    }
+    
+    /* 날짜 번호 */
+    .day-number {
+        font-weight: bold;
+        color: #000;
+        font-size: 0.75rem;
+        line-height: 1;
+    }
+    
+    /* 근무일 상태 태그 */
+    .work-status-tag {
+        font-size: 0.45rem !important;
+        padding: 1px 2px !important;
+        line-height: 1;
+    }
+    
+    /* 스케줄 컨테이너 */
+    .day-schedules {
+        flex: 1;
+        overflow: hidden;
+    }
+    
+    /* 스케줄 항목 - 크기 최적화 */
+    .schedule-item {
+        background: white !important;
+        border: 1px solid #bbb !important;
+        border-left: 2px solid #3b82f6 !important;
+        color: #000 !important;
+        font-size: 0.48rem !important;
+        padding: 0.04cm !important;
+        margin: 0.04cm 0 !important;
+        line-height: 1.1;
+        overflow: hidden;
+    }
+    
+    .schedule-name {
+        color: #000 !important;
+        font-weight: bold;
+        font-size: 0.52rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.02cm;
+    }
+    
+    .schedule-info {
+        color: #333 !important;
+        font-size: 0.48rem !important;
+        display: flex;
+        gap: 0.08cm;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
+    .line-container {
+        display: flex;
+        gap: 0.04cm;
+        flex-wrap: wrap;
+    }
+    
+    .line-tag {
+        background: #e0e0e0 !important;
+        color: #000 !important;
+        border: 1px solid #999 !important;
+        font-size: 0.42rem !important;
+        padding: 0px 2px !important;
+        border-radius: 2px;
+        white-space: nowrap;
+        line-height: 1;
+    }
+    
+    /* 근무일 배경색을 프린트에도 표시 */
+    .calendar-day[style*="background"] {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    /* 오늘 표시 */
+    .today {
+        background: #f5f5f5 !important;
+        border: 2px solid #000 !important;
+    }
+    
+    /* 다른 달 날짜 */
+    .other-month {
+        background: #fafafa !important;
+        opacity: 0.5;
+    }
+
+    /* 목록 월별 출력 모드 */
+    body.printing-list #calendarView {
+        display: none !important;
+    }
+    body.printing-list #listView {
+        display: block !important;
+        box-shadow: none !important;
+        border: 1px solid #333 !important;
+    }
+    body.printing-list #listView .list-month-nav {
+        display: none !important;
+    }
+    body.printing-list #listView .table-container {
+        overflow: visible !important;
+        transform-origin: top left !important;
+        transform: scale(var(--list-print-scale, 1)) !important;
+        width: calc(100% / var(--list-print-scale, 1)) !important;
+    }
+    body.printing-list #listView table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 0 !important;
+    }
+    body.printing-list #listView th,
+    body.printing-list #listView td {
+        border: 1px solid #d1d5db !important;
+        padding: 0.14cm 0.12cm !important;
+        font-size: 0.68rem !important;
+        color: #111 !important;
+        background: #fff !important;
+        line-height: 1.15 !important;
+    }
+    body.printing-list #listView thead th {
+        background: #f3f4f6 !important;
+        font-weight: 700 !important;
+    }
+    body.printing-list #listView th:nth-child(10),
+    body.printing-list #listView td:nth-child(10) {
+        display: none !important;
+    }
+}
+
+/* 기본적으로 프린트 전용 요소 숨기기 */
+.print-only {
+    display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
+{%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_purch = _r in ['admin','purchase','logistics'] -%}
+{%- set can_raw   = _r in ['admin','rawmat'] -%}
+{%- set is_admin  = _r == 'admin' -%}
+<div style="margin-bottom: 1.5rem;">
+    <h1 class="schedule-page-title">📅 생산 스케줄</h1>
+    <p class="schedule-page-sub">월별 생산 계획을 캘린더 또는 목록으로 확인할 수 있습니다</p>
+</div>
+
+<!-- 툴바 -->
+<div class="schedule-toolbar">
+    <div class="view-toggle">
+        <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
+        <button data-view="list" onclick="switchView('list')">📋 목록</button>
+        <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
+    </div>
+    {% if can_prod %}
+    <button class="btn" onclick="openAddModal()">+ 스케줄 추가</button>
+    {% endif %}
+</div>
+
+<!-- 캘린더 뷰 -->
+<div id="calendarView" class="card calendar">
+    <div class="calendar-header no-print">
+        <div class="calendar-nav">
+            <button onclick="changeMonth(-1)">◀ 이전</button>
+            <span class="calendar-month" id="currentMonth">{{ month_start.strftime('%Y년 %m월') }}</span>
+            <button onclick="changeMonth(1)">다음 ▶</button>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button onclick="printCalendar()" style="background: rgba(255,255,255,0.95); color: #1a1a2e; padding: 0.6rem 1.25rem; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+                🖨️ 인쇄
+            </button>
+            <a href="{{ url_for('production.work_days', year=month_start.year, month=month_start.month) }}">
+                📅 근무일 관리
+            </a>
+        </div>
+    </div>
+    
+    <!-- 프린트용 헤더 (화면에는 숨김) -->
+    <div class="print-only print-header">
+        <h1 style="text-align: center; margin: 0; padding: 1rem 0;">생산 스케줄</h1>
+        <h2 style="text-align: center; margin: 0; padding-bottom: 1rem;" id="printMonth"></h2>
+    </div>
+    
+    <div class="calendar-weekdays">
+        <div class="calendar-weekday" style = "font-size: x-large;" 
+        style="color: #dc3545;" >일</div>
+        <div class="calendar-weekday" style="font-size: x-large;">월</div>
+        <div class="calendar-weekday" style="font-size: x-large;">화</div>
+        <div class="calendar-weekday" style="font-size: x-large;">수</div>
+        <div class="calendar-weekday" style="font-size: x-large;">목</div>
+        <div class="calendar-weekday" style="font-size: x-large;">금</div>
+        <div class="calendar-weekday" style = "font-size: x-large;"
+        style="color: #007bff;">토</div>
+    </div>
+    
+    <div class="calendar-days" id="calendarDays">
+        <!-- JavaScript로 생성 -->
+    </div>
+</div>
+
+<!-- 필요 원,부자재 체크 뷰 -->
+<div id="requirementsView" class="card" style="display: none;">
+    <div class="req-topbar">
+        <div>
+            <h2 style="margin:0;">필요 원,부자재 체크</h2>
+            <div class="req-muted">등록된 모든 예정 스케줄 기준으로 필요량을 계산합니다.</div>
+        </div>
+        <div class="req-actions">
+            {% if can_prod %}
+            <button type="button" id="reqAutoOrderBtn" class="req-order-btn" onclick="autoCreatePurchaseRequests()">📝 부족분 자동 발주등록</button>
+            {% endif %}
+            <button type="button" id="reqRefreshBtn" class="req-refresh-btn" onclick="loadRequirementsData(true)">↻ 새로고침</button>
+        </div>
+    </div>
+    <div class="req-tabs">
+        <button type="button" class="req-tab-btn active" data-req-tab="summary" onclick="switchRequirementsTab('summary')">종합</button>
+        <button type="button" class="req-tab-btn" data-req-tab="products" onclick="switchRequirementsTab('products')">상품별 리스트</button>
+    </div>
+    <div id="reqSummaryPanel">
+        <div class="req-section">
+            <h3 class="req-title req-title-raw">■ 원초 항목</h3>
+            <div id="reqRawWrap"></div>
+        </div>
+        <div class="req-section">
+            <h3 class="req-title req-title-base">■ 원자재 (기름, 소금)</h3>
+            <div id="reqBaseWrap"></div>
+        </div>
+        <div class="req-section">
+            <h3 class="req-title req-title-sub">■ 부자재 항목</h3>
+            <div id="reqSubWrap"></div>
+        </div>
+    </div>
+    <div id="reqProductsPanel" style="display:none;">
+        <div id="reqProductTabs" class="req-product-tabs"></div>
+        <div id="reqProductsWrap"></div>
+    </div>
+</div>
+
+<!-- 목록 뷰 -->
+<div id="listView" class="card" style="display: none;">
+    <div class="print-only print-header">
+        <h1 style="text-align: center; margin: 0; padding: 1rem 0;">생산 스케줄 목록</h1>
+        <h2 style="text-align: center; margin: 0; padding-bottom: 1rem;" id="printListMonth"></h2>
+    </div>
+    <h2 style="margin-bottom: 1.25rem; padding: 0 1.5rem; padding-top: 1.5rem;">{{ month_start.strftime('%Y년 %m월') }} 생산 스케줄</h2>
+    <div class="list-month-nav">
+        <div class="nav-left">
+            <button type="button" class="nav-btn" onclick="changeMonth(-1)">◀ 이전 달</button>
+            <span class="month-pill">{{ month_start.strftime('%Y년 %m월') }}</span>
+            <button type="button" class="nav-btn" onclick="changeMonth(1)">다음 달 ▶</button>
+            <div class="status-tabs">
+                <button type="button" class="status-tab-btn active" data-filter="all" onclick="setListStatusFilter('all')">전체</button>
+                <button type="button" class="status-tab-btn" data-filter="planned" onclick="setListStatusFilter('planned')">예정</button>
+                <button type="button" class="status-tab-btn" data-filter="completed" onclick="setListStatusFilter('completed')">완료</button>
+            </div>
+        </div>
+        <div class="nav-right">
+            <input type="month" class="month-picker" value="{{ month_start.strftime('%Y-%m') }}" onchange="goToListMonth(this.value)">
+            <button type="button" class="nav-btn" onclick="goToCurrentMonth()">이번 달</button>
+            <button type="button" class="nav-btn" onclick="printListMonthly()">🖨️ 출력</button>
+        </div>
+    </div>
+    
+    {% if schedules %}
+    <div class="table-container"><table>
+        <thead>
+            <tr>
+                <th>예정일</th>
+                <th>요일</th>
+                <th>근무</th>
+                <th>상품명</th>
+                <th>계획 박스</th>
+                <th>생산 라인</th>
+                <th>상태</th>
+                <th>비고</th>
+                <th>작업</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for schedule in schedules %}
+            <tr data-status="{{ schedule.status or '' }}">
+                <td><strong>{{ schedule.scheduled_date }}</strong></td>
+                <td>{{ schedule.display_weekday }}</td>
+                <td>
+                    {% if schedule.display_work_type == '잔업' %}
+                    <span class="badge badge-warning">잔업</span>
+                    {% elif schedule.display_work_type == '특근' %}
+                    <span class="badge badge-info">특근</span>
+                    {% elif schedule.display_work_type == '휴무' %}
+                    <span class="badge badge-danger">휴무</span>
+                    {% else %}
+                    <span class="badge badge-success">일반</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if schedule.linked_production_id %}
+                    <a class="product-link" href="{{ url_for('production.production_detail', production_id=schedule.linked_production_id) }}">{{ schedule.product_name }}</a>
+                    {% else %}
+                    <a class="product-link" href="{{ url_for('production.schedule_detail', date=schedule.scheduled_date) }}">{{ schedule.product_name }}</a>
+                    {% endif %}
+                </td>
+                <td><span style="font-weight: 600; color: #1e40af;">{{ schedule.planned_boxes }}</span> BOX</td>
+                <td>
+                    {% if schedule.line %}
+                    {% for line_num in schedule.line.split(',') %}
+                    <span class="line-badge">라인 {{ line_num }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <span style="color: #94a3b8;">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if schedule.status == '예정' %}
+                    <span class="badge badge-info">{{ schedule.status }}</span>
+                    {% elif schedule.status == '진행중' %}
+                    <span class="badge badge-warning">{{ schedule.status }}</span>
+                    {% elif schedule.status == '완료' %}
+                    <span class="badge badge-success">{{ schedule.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="color: #64748b;">{{ schedule.note or '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('production.delete_schedule', schedule_id=schedule.id) }}" 
+                          onsubmit="return confirm('정말 삭제하시겠습니까?');" style="display: inline;">
+                        <button type="submit" class="btn-delete" {% if schedule.status == '완료' %}disabled title="완료 건은 삭제할 수 없습니다."{% endif %}>삭제</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% else %}
+    <div style="text-align: center; padding: 4rem 2rem; color: #64748b;">
+        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📭</div>
+        <p>이번 달 등록된 생산 스케줄이 없습니다.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 스케줄 추가 모달 -->
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2 style="margin-bottom: 1.5rem;">스케줄 추가</h2>
+        
+        <form method="POST" action="/schedules/add" id="scheduleForm">
+            <!-- 상품 검색 -->
+            <div class="form-group">
+                <label>상품 선택 * (검색해서 선택하세요)</label>
+                
+                <!-- 검색 입력 -->
+                <div class="search-box">
+                    <input type="text" id="productSearch" 
+                           placeholder="🔍 상품명 키워드로 검색 (예: 김, 100g, 코스트코...)" 
+                           autocomplete="off" 
+                           oninput="searchProducts()"
+                           onfocus="showAllProducts()">
+                    <span class="search-icon">🔍</span>
+                </div>
+                
+                <!-- 검색 결과 리스트 -->
+                <div class="product-list" id="productList" style="display: none;">
+                    <!-- JavaScript로 동적 생성 -->
+                </div>
+                
+                <!-- 선택된 상품 표시 -->
+                <div id="selectedProduct" style="display: none; margin-top: 0.75rem; padding: 1rem; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #155724;">✓ 선택된 상품:</strong>
+                            <span id="selectedProductName" style="margin-left: 0.5rem; font-weight: 600;"></span>
+                        </div>
+                        <button type="button" onclick="clearSelection()" 
+                                style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                            취소
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Hidden input for product_id -->
+                <input type="hidden" name="product_id" id="productId" required>
+            </div>
+            
+            <div class="form-group">
+                <label>예정일 * (여러 날짜 선택 가능)</label>
+                <div style="margin-bottom: 0.5rem;">
+                    <button type="button" onclick="toggleDateSelectMode()" id="dateSelectModeBtn" 
+                            style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        📅 여러 날짜 선택 모드
+                    </button>
+                    <span id="selectedDatesCount" style="margin-left: 1rem; color: #666; font-weight: 600;"></span>
+                </div>
+                
+                <!-- 캘린더 미니 버전 -->
+                <div id="datePickerCalendar" style="display: none; border: 2px solid #e5e7eb; border-radius: 10px; padding: 1rem; margin-top: 0.5rem; background: #f8fafc;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <button type="button" onclick="changeDatePickerMonth(-1)" style="background: white; border: 1px solid #cbd5e1; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer;">◀</button>
+                        <span id="datePickerMonth" style="font-weight: 600; font-size: 0.95rem;"></span>
+                        <button type="button" onclick="changeDatePickerMonth(1)" style="background: white; border: 1px solid #cbd5e1; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer;">▶</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 0.5rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: #64748b;">
+                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                    </div>
+                    <div id="datePickerDays" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                        <!-- JavaScript로 생성 -->
+                    </div>
+                    <div style="margin-top: 0.75rem; text-align: right;">
+                        <button type="button" onclick="clearDateSelection()" style="background: #ef4444; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                            선택 초기화
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 선택된 날짜들 (hidden inputs) -->
+                <div id="selectedDatesContainer"></div>
+                
+                <!-- 기본 단일 날짜 입력 (여러 날짜 모드가 아닐 때) -->
+                <input type="date" name="scheduled_dates" id="singleDateInput" required>
+            </div>
+            
+            <div class="form-group">
+                <label>계획 박스 수 *</label>
+                <input type="number" name="planned_boxes" min="1" required placeholder="예: 100">
+            </div>
+            
+            <div class="form-group">
+                <label>생산 라인 * (중복 선택 가능)</label>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                    {% for line in range(1, 13) %}
+                    <label style="display: flex; align-items: center; padding: 0.5rem; border: 2px solid #dee2e6; border-radius: 4px; cursor: pointer; background: white;">
+                        <input type="checkbox" name="production_lines" value="{{ line }}" 
+                               style="margin-right: 0.5rem; width: 18px; height: 18px; cursor: pointer;">
+                        <span style="font-weight: 600;">라인 {{ line }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div style="font-size: 0.85rem; color: #7f8c8d; margin-top: 0.5rem;">
+                    💡 생산할 라인을 선택하세요 (여러 개 선택 가능)
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>비고</label>
+                <textarea name="note" rows="2" placeholder="특이사항 입력"></textarea>
+            </div>
+            
+            <div style="text-align: right; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">취소</button>
+                <button type="submit" class="btn">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 스케줄 복사 모달 -->
+<div id="copyModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCopyModal()">&times;</span>
+        <h2 style="margin-bottom: 1.5rem;">📋 스케줄 복사</h2>
+        
+        <form method="POST" action="/schedules/copy" id="copyForm">
+            <input type="hidden" name="schedule_id" id="copyScheduleId">
+            
+            <!-- 복사할 스케줄 정보 표시 -->
+            <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">복사할 스케줄:</div>
+                <div id="copyScheduleInfo" style="color: #334155;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>복사할 날짜 선택 * (여러 날짜 선택 가능)</label>
+                
+                <!-- 캘린더 -->
+                <div style="border: 2px solid #e5e7eb; border-radius: 10px; padding: 1rem; background: #f8fafc;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <button type="button" onclick="changeCopyMonth(-1)" style="background: white; border: 1px solid #cbd5e1; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer;">◀</button>
+                        <span id="copyMonth" style="font-weight: 600; font-size: 0.95rem;"></span>
+                        <button type="button" onclick="changeCopyMonth(1)" style="background: white; border: 1px solid #cbd5e1; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer;">▶</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 0.5rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: #64748b;">
+                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                    </div>
+                    <div id="copyDays" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                        <!-- JavaScript로 생성 -->
+                    </div>
+                    <div style="margin-top: 0.75rem;">
+                        <span id="copySelectedCount" style="font-weight: 600; color: #3b82f6;">선택된 날짜: 0개</span>
+                        <button type="button" onclick="clearCopySelection()" style="float: right; background: #ef4444; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                            선택 초기화
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 선택된 날짜들 (hidden inputs) -->
+                <div id="copyDatesContainer"></div>
+            </div>
+            
+            <div style="text-align: right; margin-top: 1.5rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeCopyModal()">취소</button>
+                <button type="submit" class="btn">복사 실행</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 스케줄 데이터 (서버에서 전달)
+const schedules = {{ schedules_json|safe }};
+const allProducts = {{ products_json|safe }};
+const workDays = {{ work_days_json|safe }};
+let currentYear = {{ month_start.year }};
+let currentMonth = {{ month_start.month }};
+let currentListStatusFilter = 'all';
+let requirementsLoadedKey = '';
+let requirementsProductsCache = [];
+let currentReqProductId = null;
+
+function getActiveView() {
+    const params = new URLSearchParams(window.location.search);
+    const view = (params.get('view') || 'calendar').toLowerCase();
+    if (view === 'list') return 'list';
+    if (view === 'requirements') return 'requirements';
+    return 'calendar';
+}
+
+function setViewQuery(view) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('view', view);
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', nextUrl);
+}
+
+function buildScheduleMonthUrl(year, month) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('year', year);
+    params.set('month', month);
+    params.set('view', getActiveView());
+    return `/schedules?${params.toString()}`;
+}
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function deleteScheduleFromCalendar(scheduleId, isCompleted) {
+    if (isCompleted) return;
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/schedules/delete/${scheduleId}`;
+    form.style.display = 'none';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+async function autoCreatePurchaseRequests() {
+    const btn = document.getElementById('reqAutoOrderBtn');
+    if (btn && btn.classList.contains('loading')) return;
+    if (!confirm('부족한 원/부자재를 자동 발주등록 하시겠습니까?\n(원초는 제외됩니다)')) return;
+
+    if (btn) btn.classList.add('loading');
+    try {
+        const res = await fetch('/schedules/requirements-auto-purchase', { method: 'POST' });
+        const payload = await res.json();
+        if (!res.ok || !payload.ok) {
+            throw new Error(payload.message || '자동 발주등록 처리 중 오류가 발생했습니다.');
+        }
+
+        const createdCount = Number(payload.created_count || 0);
+        const skippedCount = Number(payload.skipped_count || 0);
+        let msg = `자동 발주등록 완료: ${createdCount}건 등록`;
+        if (skippedCount > 0) {
+            msg += `\n중복 제외: ${skippedCount}건`;
+            msg += '\n이미 발주 등록 처리된 코드가 있어 제외했습니다.';
+            msg += '\n추가 불출 필요 시 발주관리 기능 사용 필요합니다.';
+        }
+        alert(msg);
+        loadRequirementsData(true);
+    } catch (err) {
+        alert(err.message || '자동 발주등록 처리 중 오류가 발생했습니다.');
+    } finally {
+        if (btn) btn.classList.remove('loading');
+    }
+}
+
+// 캘린더 렌더링
+function renderCalendar() {
+    const firstDay = new Date(currentYear, currentMonth - 1, 1);
+    const lastDay = new Date(currentYear, currentMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const calendarDays = document.getElementById('calendarDays');
+    calendarDays.innerHTML = '';
+    
+    // 이전 달 빈 칸
+    for (let i = 0; i < startingDayOfWeek; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day other-month';
+        calendarDays.appendChild(emptyDay);
+    }
+    
+    // 이번 달 날짜
+    const today = new Date();
+    for (let day = 1; day <= daysInMonth; day++) {
+    const dayElement = document.createElement('div');
+    dayElement.className = 'calendar-day';
+    
+    const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    dayElement.onclick = function() { openAddModal(dateStr); };
+
+    // [수정 포인트 1: 날짜와 상태를 담을 헤더 생성]
+    const dayHeader = document.createElement('div');
+    dayHeader.className = 'day-header';
+    dayHeader.style.display = 'flex';
+    dayHeader.style.justifyContent = 'space-between';
+    dayHeader.style.alignItems = 'center';
+
+    const dayNumber = document.createElement('div');
+    dayNumber.className = 'day-number';
+    dayNumber.textContent = day;
+    dayHeader.appendChild(dayNumber);
+
+    // [수정 포인트 2: 근무일 데이터(workDays) 정보 표시]
+    if (workDays[dateStr]) {
+        const workData = workDays[dateStr];
+        const statusTag = document.createElement('span');
+        statusTag.className = 'work-status-tag';
+        
+        // 배지 스타일 강제 적용 (CSS에 추가 안 했을 경우 대비)
+        statusTag.style.fontSize = '1rem';
+        statusTag.style.padding = '2px 6px';
+        statusTag.style.borderRadius = '4px';
+        statusTag.style.color = 'white';
+        statusTag.style.fontWeight = 'bold';
+
+        let typeText = '';
+        if (workData.type === 'work') { typeText = '근무'; statusTag.style.backgroundColor = '#4caf50'; }
+        else if (workData.type === 'holiday') { typeText = '휴무'; statusTag.style.backgroundColor = '#f44336'; }
+        else if (workData.type === 'overtime') { 
+            typeText = workData.hours ? `잔업(${workData.hours}h)` : '잔업'; 
+            statusTag.style.backgroundColor = '#ff9800'; 
+        }
+        else if (workData.type === 'extra') { typeText = '특근'; statusTag.style.backgroundColor = '#2196f3'; }
+
+        statusTag.textContent = typeText;
+        dayHeader.appendChild(statusTag);
+
+        // 배경색 적용 (기존 배경 로직 유지)
+       if (workData.type === 'work') dayElement.style.background = 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)';
+        else if (workData.type === 'holiday') dayElement.style.background = 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
+        else if (workData.type === 'overtime') dayElement.style.background = 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)';
+        else if (workData.type === 'extra') dayElement.style.background = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+    }
+
+    dayElement.appendChild(dayHeader); // 기존 dayNumber 대신 dayHeader를 추가
+
+    // --- 이후 스케줄 아이템 생성 로직(daySchedules.filter 등)은 그대로 유지 ---
+    const daySchedules = schedules.filter(s => s.scheduled_date === dateStr);
+    if (daySchedules.length > 0) {
+        const countBadge = document.createElement('span');
+        countBadge.className = 'schedule-count';
+        countBadge.textContent = `${daySchedules.length}건`;
+        dayHeader.appendChild(countBadge);
+    }
+    // ... (이하 생략)--------------------------------------------------------------------------------------//   
+        
+        if (daySchedules.length > 0) {
+            const schedulesContainer = document.createElement('div');
+            schedulesContainer.className = 'day-schedules';
+            
+            daySchedules.forEach(schedule => {
+    const scheduleItem = document.createElement('div');
+    scheduleItem.className = 'schedule-item';
+    if (schedule.is_completed) {
+        scheduleItem.classList.add('done');
+    }
+    
+    // 1. 상품명 (상단)
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'schedule-name';
+    nameDiv.textContent = schedule.product_name;
+    scheduleItem.appendChild(nameDiv);
+    if (schedule.is_completed) {
+        const doneBadge = document.createElement('span');
+        doneBadge.className = 'done-badge';
+        doneBadge.textContent = '완료';
+        scheduleItem.appendChild(doneBadge);
+    }
+
+    // 2. 하단 정보 컨테이너 (박스 수 + 라인)
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'schedule-info';
+    
+    // 박스 수
+    const boxesSpan = document.createElement('span');
+    boxesSpan.style.color = '#3b82f6';
+    if (schedule.is_completed) {
+        boxesSpan.textContent = `실제 ${schedule.actual_boxes || 0}박스`;
+    } else {
+        boxesSpan.textContent = `계획 ${schedule.planned_boxes}박스`;
+    }
+    infoDiv.appendChild(boxesSpan);
+
+    // 라인 배지들
+    if (schedule.line) {
+        const lineContainer = document.createElement('div');
+        lineContainer.className = 'line-container';
+        
+        schedule.line.split(',').forEach(l => {
+            const tag = document.createElement('span');
+            tag.className = 'line-tag';
+            tag.textContent = `L${l}`; // 공간 절약을 위해 '라인' 대신 'L' 사용
+            lineContainer.appendChild(tag);
+        });
+        infoDiv.appendChild(lineContainer);
+    }
+
+    scheduleItem.appendChild(infoDiv);
+
+    // 툴팁 설정 (기존과 동일)
+    let tooltip = `${schedule.product_name} - ${schedule.planned_boxes}박스`;
+    if (schedule.line) tooltip += `\n라인: ${schedule.line}`;
+    scheduleItem.title = tooltip;
+    scheduleItem.style.cursor = 'pointer';
+    scheduleItem.onclick = function(e) {
+        e.stopPropagation();
+        if (schedule.production_id) {
+            window.location.href = `/production/${schedule.production_id}`;
+        } else {
+            window.location.href = `/schedules/${schedule.scheduled_date}`;
+        }
+    };
+    
+    // 삭제 버튼 추가 (완료 건은 비활성화)
+    const deleteBtn = document.createElement('button');
+    const isCompleted = Boolean(schedule.is_completed) || (String(schedule.status || '').trim() === '완료');
+    deleteBtn.innerHTML = '🗑';
+    deleteBtn.className = 'calendar-delete-btn';
+    deleteBtn.disabled = isCompleted;
+    deleteBtn.title = isCompleted ? '완료 건은 삭제할 수 없습니다.' : '삭제';
+    deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        deleteScheduleFromCalendar(schedule.id, isCompleted);
+    };
+
+    scheduleItem.style.position = 'relative';
+    scheduleItem.appendChild(deleteBtn);
+    
+    schedulesContainer.appendChild(scheduleItem);
+});
+            
+            dayElement.appendChild(schedulesContainer);
+        }
+        
+        calendarDays.appendChild(dayElement);
+    }
+    
+    // 월 표시 업데이트
+    document.getElementById('currentMonth').textContent = `${currentYear}년 ${currentMonth}월`;
+}
+
+// 월 변경
+function changeMonth(delta) {
+    currentMonth += delta;
+    if (currentMonth < 1) {
+        currentMonth = 12;
+        currentYear--;
+    } else if (currentMonth > 12) {
+        currentMonth = 1;
+        currentYear++;
+    }
+    
+    // 서버에서 새 데이터 가져오기
+    window.location.href = buildScheduleMonthUrl(currentYear, currentMonth);
+}
+
+function goToCurrentMonth() {
+    const today = new Date();
+    window.location.href = buildScheduleMonthUrl(today.getFullYear(), today.getMonth() + 1);
+}
+
+function goToListMonth(monthValue) {
+    if (!monthValue) return;
+    const parts = monthValue.split('-');
+    if (parts.length !== 2) return;
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return;
+    window.location.href = buildScheduleMonthUrl(y, m);
+}
+
+// 프린트 함수
+function printCalendar() {
+    // 프린트용 헤더 업데이트
+    document.getElementById('printMonth').textContent = `${currentYear}년 ${currentMonth}월`;
+    
+    // 프린트 실행
+    window.print();
+}
+
+function getPrintableListRows(filter) {
+    const rows = Array.from(document.querySelectorAll('#listView tbody tr'));
+    if (filter === 'completed') {
+        return rows.filter((r) => (r.dataset.status || '') === '완료');
+    }
+    if (filter === 'planned') {
+        return rows.filter((r) => (r.dataset.status || '').trim() === '예정');
+    }
+    return rows;
+}
+
+function setListStatusFilter(filter) {
+    currentListStatusFilter = filter;
+    const rows = Array.from(document.querySelectorAll('#listView tbody tr'));
+    rows.forEach((row) => row.classList.add('list-row-hidden'));
+    getPrintableListRows(filter).forEach((row) => row.classList.remove('list-row-hidden'));
+
+    document.querySelectorAll('#listView .status-tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+}
+
+function printListMonthly() {
+    const listMonthEl = document.getElementById('printListMonth');
+    if (listMonthEl) {
+        listMonthEl.textContent = `${currentYear}년 ${currentMonth}월`;
+    }
+
+    const rows = getPrintableListRows(currentListStatusFilter);
+    const rowCount = rows.length;
+    if (rowCount === 0) {
+        alert('선택한 조건에 맞는 출력 대상이 없습니다.');
+        return;
+    }
+
+    // 월 스케줄 건수가 많을 때 한 페이지에 맞추기 위해 자동 축소
+    let scale = 1;
+    if (rowCount > 18) {
+        scale = Math.max(0.58, 18 / rowCount);
+    }
+    document.documentElement.style.setProperty('--list-print-scale', String(scale));
+    document.body.classList.add('printing-list');
+    window.print();
+}
+
+// 뷰 전환
+function switchView(view) {
+    const calendarView = document.getElementById('calendarView');
+    const listView = document.getElementById('listView');
+    const requirementsView = document.getElementById('requirementsView');
+    const buttons = document.querySelectorAll('.view-toggle button[data-view]');
+
+    buttons.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
+
+    calendarView.style.display = 'none';
+    listView.style.display = 'none';
+    if (requirementsView) requirementsView.style.display = 'none';
+
+    if (view === 'calendar') {
+        calendarView.style.display = 'block';
+    } else if (view === 'list') {
+        listView.style.display = 'block';
+    } else if (view === 'requirements') {
+        if (requirementsView) requirementsView.style.display = 'block';
+        loadRequirementsData();
+    }
+    setViewQuery(view);
+}
+
+function switchRequirementsTab(tab) {
+    const summaryPanel = document.getElementById('reqSummaryPanel');
+    const productsPanel = document.getElementById('reqProductsPanel');
+    if (!summaryPanel || !productsPanel) return;
+    summaryPanel.style.display = tab === 'summary' ? 'block' : 'none';
+    productsPanel.style.display = tab === 'products' ? 'block' : 'none';
+    document.querySelectorAll('.req-tab-btn[data-req-tab]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.reqTab === tab);
+    });
+}
+
+function formatReqNumber(value, asInteger = false) {
+    const num = Number(value || 0);
+    if (asInteger) return String(Math.round(num));
+    return num.toFixed(1);
+}
+
+function normalizeReqUnit(unit) {
+    const raw = String(unit || '').trim();
+    if (!raw) return '';
+    const key = raw.toLowerCase().replace(/\s+/g, '');
+    if (key === '1kg') return 'kg';
+    if (key === '1g') return 'g';
+    if (key === '1l') return 'L';
+    if (key === '1ml') return 'ml';
+    if (key === '1ea') return 'ea';
+    return raw;
+}
+
+function formatReqNumberWithUnit(value, unit, asInteger = false) {
+    const text = formatReqNumber(value, asInteger);
+    const unitText = normalizeReqUnit(unit);
+    return unitText ? `${text} ${escapeHtml(unitText)}` : text;
+}
+
+function renderReqTableRows(rows, options = {}) {
+    const rawInteger = Boolean(options.rawInteger);
+    if (!rows || rows.length === 0) {
+        return '<div class="req-muted" style="padding:0.75rem 0.9rem;">데이터가 없습니다.</div>';
+    }
+    return `
+    <table class="req-table">
+        <colgroup>
+            <col style="width:110px;" />
+            <col style="width:360px;" />
+            <col style="width:110px;" />
+            <col style="width:110px;" />
+            <col style="width:110px;" />
+        </colgroup>
+        <thead>
+            <tr><th>코드</th><th>품목명</th><th class="num-head">보유량</th><th class="num-head">필요량</th><th class="num-head">부족량</th></tr>
+        </thead>
+        <tbody>
+            ${rows.map((r) => `
+                <tr>
+                    <td>${escapeHtml(r.code || '-')}</td>
+                    <td>${escapeHtml(r.name)}</td>
+                    <td class="num">${formatReqNumberWithUnit(r.stock, r.unit, rawInteger)}</td>
+                    <td class="num">${formatReqNumberWithUnit(r.required, r.unit, rawInteger)}</td>
+                    <td class="num ${Number(r.shortage || 0) > 0 ? 'req-shortage' : ''}">${formatReqNumberWithUnit(r.shortage, r.unit, rawInteger)}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>`;
+}
+
+function renderSubGroupTables(groups) {
+    const keyOrder = [
+        ['box', '박스'],
+        ['inner', '내포'],
+        ['outer', '외포'],
+        ['silica', '실리카'],
+        ['tray', '트레이'],
+        ['etc', '기타'],
+    ];
+    return keyOrder.map(([key, label]) => `
+        <div class="req-subgroup" data-sub="${key}">
+            <h4>${label}</h4>
+            ${renderReqTableRows((groups && groups[key]) || [], { rawInteger: key === 'box' })}
+        </div>
+    `).join('');
+}
+
+function renderReqProductDetail(product) {
+    if (!product) {
+        return '<div class="req-muted" style="padding:0.75rem 0.9rem;">표시할 상품이 없습니다.</div>';
+    }
+    return `
+        <div class="req-product-card">
+            <div class="req-product-head">
+                <strong>${escapeHtml(product.product_name)}</strong>
+                <span class="req-muted">예정 박스: ${Number(product.planned_boxes || 0).toFixed(2)}</span>
+            </div>
+            <div class="req-section" style="margin:0;border:none;border-radius:0;">
+                <h3 class="req-title req-title-raw">원초</h3>
+                ${renderReqTableRows(product.raw_items || [], { rawInteger: true })}
+            </div>
+            <div class="req-section" style="margin:0;border:none;border-radius:0;">
+                <h3 class="req-title req-title-base">원자재 (기름, 소금)</h3>
+                ${renderReqTableRows(product.base_items || [])}
+            </div>
+            <div class="req-section" style="margin:0;border:none;border-radius:0;">
+                <h3 class="req-title req-title-sub">부자재</h3>
+                ${renderReqTableRows(product.sub_items || [])}
+            </div>
+        </div>
+    `;
+}
+
+function selectReqProductTab(productId) {
+    currentReqProductId = Number(productId);
+    const tabsEl = document.getElementById('reqProductTabs');
+    const wrap = document.getElementById('reqProductsWrap');
+    if (!tabsEl || !wrap) return;
+
+    tabsEl.querySelectorAll('.req-product-tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.dataset.productId) === currentReqProductId);
+    });
+
+    const target = requirementsProductsCache.find((p) => Number(p.product_id) === currentReqProductId);
+    wrap.innerHTML = renderReqProductDetail(target || null);
+}
+
+function renderReqProductTabs(products) {
+    const tabsEl = document.getElementById('reqProductTabs');
+    const wrap = document.getElementById('reqProductsWrap');
+    if (!tabsEl || !wrap) return;
+
+    if (!products || products.length === 0) {
+        tabsEl.innerHTML = '';
+        wrap.innerHTML = '<div class="req-muted" style="padding:0.75rem 0.9rem;">예정 생산건이 없습니다.</div>';
+        currentReqProductId = null;
+        return;
+    }
+
+    if (!products.some((p) => Number(p.product_id) === Number(currentReqProductId))) {
+        currentReqProductId = Number(products[0].product_id);
+    }
+
+    tabsEl.innerHTML = products.map((p) => `
+        <button type="button"
+                class="req-product-tab-btn ${Number(p.product_id) === Number(currentReqProductId) ? 'active' : ''}"
+                data-product-id="${Number(p.product_id)}"
+                onclick="selectReqProductTab(${Number(p.product_id)})">
+            ${escapeHtml(p.product_name)}
+        </button>
+    `).join('');
+
+    selectReqProductTab(currentReqProductId);
+}
+
+async function loadRequirementsData(forceReload = false) {
+    const key = 'all-planned';
+    if (!forceReload && requirementsLoadedKey === key) return;
+    const rawWrap = document.getElementById('reqRawWrap');
+    const baseWrap = document.getElementById('reqBaseWrap');
+    const subWrap = document.getElementById('reqSubWrap');
+    const productsWrap = document.getElementById('reqProductsWrap');
+    const refreshBtn = document.getElementById('reqRefreshBtn');
+    if (!rawWrap || !baseWrap || !subWrap || !productsWrap) return;
+    if (refreshBtn) refreshBtn.classList.add('loading');
+
+    rawWrap.innerHTML = '<div class="req-muted" style="padding:0.75rem 0.9rem;">불러오는 중...</div>';
+    baseWrap.innerHTML = '<div class="req-muted" style="padding:0.75rem 0.9rem;">불러오는 중...</div>';
+    subWrap.innerHTML = '<div class="req-muted" style="padding:0.75rem 0.9rem;">불러오는 중...</div>';
+    productsWrap.innerHTML = '<div class="req-muted" style="padding:0.75rem 0.9rem;">불러오는 중...</div>';
+
+    try {
+        const url = '/schedules/requirements-data';
+        const res = await fetch(url);
+        const payload = await res.json();
+        if (!res.ok || !payload.ok) {
+            throw new Error(payload.message || '필요량 데이터를 불러오지 못했습니다.');
+        }
+        const summary = payload.summary || {};
+        rawWrap.innerHTML = renderReqTableRows(summary.raw || [], { rawInteger: true });
+        baseWrap.innerHTML = renderReqTableRows(summary.base || []);
+        subWrap.innerHTML = renderSubGroupTables(summary.sub_groups || {});
+        requirementsProductsCache = payload.products || [];
+        renderReqProductTabs(requirementsProductsCache);
+        requirementsLoadedKey = key;
+    } catch (err) {
+        const msg = `<div class="req-muted" style="padding:0.75rem 0.9rem;color:#dc2626;">${escapeHtml(err.message || '오류가 발생했습니다.')}</div>`;
+        rawWrap.innerHTML = msg;
+        baseWrap.innerHTML = msg;
+        subWrap.innerHTML = msg;
+        const tabsEl = document.getElementById('reqProductTabs');
+        if (tabsEl) tabsEl.innerHTML = '';
+        productsWrap.innerHTML = msg;
+        requirementsProductsCache = [];
+        currentReqProductId = null;
+    } finally {
+        if (refreshBtn) refreshBtn.classList.remove('loading');
+    }
+}
+
+// 모달 관리
+function openAddModal(selectedDate = null) {
+    document.getElementById('addModal').style.display = 'block';
+    const singleDateInput = document.getElementById('singleDateInput');
+    if (singleDateInput) {
+        singleDateInput.value = selectedDate || '';
+        singleDateInput.setAttribute('required', 'required');
+        singleDateInput.style.display = 'block';
+        singleDateInput.disabled = false;
+    }
+    dateSelectMode = false;
+    const calendar = document.getElementById('datePickerCalendar');
+    if (calendar) calendar.style.display = 'none';
+    const countSpan = document.getElementById('selectedDatesCount');
+    if (countSpan) countSpan.textContent = '';
+    const modeBtn = document.getElementById('dateSelectModeBtn');
+    if (modeBtn) {
+        modeBtn.textContent = '📅 여러 날짜 선택 모드';
+        modeBtn.style.background = '#3b82f6';
+    }
+    clearDateSelection();
+    // 모달 열 때 포커스
+    setTimeout(() => {
+        document.getElementById('productSearch').focus();
+    }, 100);
+}
+
+function closeModal() {
+    document.getElementById('addModal').style.display = 'none';
+    clearSelection();
+}
+
+// 모든 상품 보기 (검색창 포커스 시)
+function showAllProducts() {
+    const searchInput = document.getElementById('productSearch');
+    if (searchInput.value.trim() === '') {
+        renderProductList(allProducts);
+    }
+}
+
+// 상품 리스트 렌더링
+function renderProductList(products) {
+    const productList = document.getElementById('productList');
+    productList.innerHTML = '';
+    
+    if (products.length === 0) {
+        productList.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #7f8c8d; background: #f8f9fa; border-radius: 4px;">❌ 검색 결과가 없습니다.<br><small>다른 키워드로 검색해보세요.</small></div>';
+        productList.style.display = 'block';
+        return;
+    }
+    
+    products.forEach(product => {
+        const productItem = document.createElement('div');
+        productItem.className = 'product-item';
+        productItem.dataset.id = product.id;
+        productItem.dataset.name = product.name;
+        productItem.innerHTML = `<strong>${product.name}</strong> <span style="color: #7f8c8d; font-size: 0.85rem;">(ID: ${product.id})</span>`;
+        productItem.onclick = function() {
+            selectProduct(product.id, product.name);
+        };
+        productList.appendChild(productItem);
+    });
+    
+    productList.style.display = 'block';
+}
+
+// 상품 검색
+function searchProducts() {
+    const searchInput = document.getElementById('productSearch');
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    
+    if (searchTerm.length === 0) {
+        // 검색어가 없으면 전체 상품 표시
+        renderProductList(allProducts);
+        return;
+    }
+    
+    // 검색어 포함하는 상품 필터링 (부분 일치)
+    const filteredProducts = allProducts.filter(product => 
+        product.name.toLowerCase().includes(searchTerm)
+    );
+    
+    // 필터링된 상품 렌더링
+    renderProductList(filteredProducts);
+}
+
+// 상품 선택
+function selectProduct(id, name) {
+    document.getElementById('productId').value = id;
+    document.getElementById('selectedProductName').textContent = name;
+    document.getElementById('selectedProduct').style.display = 'block';
+    document.getElementById('productList').style.display = 'none';
+    document.getElementById('productSearch').value = '';
+    
+    // 선택 후 다음 입력으로 포커스 이동
+    document.querySelector('input[name="scheduled_date"]').focus();
+}
+
+// 선택 취소
+function clearSelection() {
+    document.getElementById('productId').value = '';
+    document.getElementById('selectedProduct').style.display = 'none';
+    document.getElementById('productSearch').value = '';
+    document.getElementById('productList').style.display = 'none';
+}
+
+document.getElementById('scheduleForm').addEventListener('submit', function(event) {
+    const productId = document.getElementById('productId').value.trim();
+    if (!productId) {
+        event.preventDefault();
+        alert('상품을 선택해 주세요.');
+        document.getElementById('productSearch').focus();
+        return;
+    }
+});
+
+// 페이지 로드 시 캘린더 렌더링
+document.addEventListener('DOMContentLoaded', function() {
+    renderCalendar();
+    setListStatusFilter('all');
+    if (getActiveView() === 'list') {
+        switchView('list');
+    }
+});
+
+// 모달 외부 클릭 시 닫기
+window.onclick = function(event) {
+    const addModal = document.getElementById('addModal');
+    const copyModal = document.getElementById('copyModal');
+    
+    if (event.target == addModal) {
+        closeModal();
+    }
+    if (event.target == copyModal) {
+        closeCopyModal();
+    }
+}
+
+window.addEventListener('afterprint', function() {
+    document.body.classList.remove('printing-list');
+    document.documentElement.style.removeProperty('--list-print-scale');
+});
+
+// ========== 여러 날짜 선택 기능 ==========
+let dateSelectMode = false;
+let selectedDates = new Set();
+let datePickerYear = currentYear;
+let datePickerMonth = currentMonth;
+
+function toggleDateSelectMode() {
+    dateSelectMode = !dateSelectMode;
+    const btn = document.getElementById('dateSelectModeBtn');
+    const calendar = document.getElementById('datePickerCalendar');
+    const singleInput = document.getElementById('singleDateInput');
+    
+    if (dateSelectMode) {
+        btn.textContent = '✓ 선택 모드 활성화';
+        btn.style.background = '#10b981';
+        calendar.style.display = 'block';
+        singleInput.style.display = 'none';
+        singleInput.disabled = true;
+        singleInput.removeAttribute('required');
+        renderDatePickerCalendar();
+    } else {
+        btn.textContent = '📅 여러 날짜 선택 모드';
+        btn.style.background = '#3b82f6';
+        calendar.style.display = 'none';
+        singleInput.style.display = 'block';
+        singleInput.disabled = false;
+        singleInput.setAttribute('required', 'required');
+        clearDateSelection();
+    }
+}
+
+function renderDatePickerCalendar() {
+    const firstDay = new Date(datePickerYear, datePickerMonth - 1, 1);
+    const lastDay = new Date(datePickerYear, datePickerMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const container = document.getElementById('datePickerDays');
+    container.innerHTML = '';
+    
+    document.getElementById('datePickerMonth').textContent = `${datePickerYear}년 ${datePickerMonth}월`;
+    
+    for (let i = 0; i < startingDayOfWeek; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.style.padding = '0.5rem';
+        container.appendChild(emptyDay);
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${datePickerYear}-${String(datePickerMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayElement = document.createElement('div');
+        dayElement.textContent = day;
+        dayElement.style.padding = '0.5rem';
+        dayElement.style.textAlign = 'center';
+        dayElement.style.cursor = 'pointer';
+        dayElement.style.borderRadius = '6px';
+        dayElement.style.fontWeight = '600';
+        dayElement.style.fontSize = '0.85rem';
+        
+        if (selectedDates.has(dateStr)) {
+            dayElement.style.background = '#3b82f6';
+            dayElement.style.color = 'white';
+        } else {
+            dayElement.style.background = 'white';
+            dayElement.style.color = '#334155';
+        }
+        
+        dayElement.onclick = function() {
+            toggleDateSelection(dateStr);
+        };
+        
+        container.appendChild(dayElement);
+    }
+    
+    updateSelectedDatesDisplay();
+}
+
+function toggleDateSelection(dateStr) {
+    if (selectedDates.has(dateStr)) {
+        selectedDates.delete(dateStr);
+    } else {
+        selectedDates.add(dateStr);
+    }
+    renderDatePickerCalendar();
+}
+
+function updateSelectedDatesDisplay() {
+    const container = document.getElementById('selectedDatesContainer');
+    const countSpan = document.getElementById('selectedDatesCount');
+    
+    container.innerHTML = '';
+    selectedDates.forEach(date => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'scheduled_dates';
+        input.value = date;
+        container.appendChild(input);
+    });
+    
+    countSpan.textContent = selectedDates.size > 0 ? `선택된 날짜: ${selectedDates.size}개` : '';
+}
+
+function clearDateSelection() {
+    selectedDates.clear();
+    renderDatePickerCalendar();
+}
+
+function changeDatePickerMonth(delta) {
+    datePickerMonth += delta;
+    if (datePickerMonth < 1) {
+        datePickerMonth = 12;
+        datePickerYear--;
+    } else if (datePickerMonth > 12) {
+        datePickerMonth = 1;
+        datePickerYear++;
+    }
+    renderDatePickerCalendar();
+}
+
+// ========== 스케줄 복사 기능 ==========
+let copyYear = currentYear;
+let copyMonth = currentMonth;
+let copySelectedDates = new Set();
+
+function openCopyModal(scheduleId) {
+    const schedule = schedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    
+    document.getElementById('copyScheduleId').value = scheduleId;
+    document.getElementById('copyScheduleInfo').innerHTML = `
+        <div><strong>상품:</strong> ${schedule.product_name}</div>
+        <div><strong>박스 수:</strong> ${schedule.planned_boxes}박스</div>
+        ${schedule.line ? `<div><strong>생산 라인:</strong> ${schedule.line.split(',').map(l => '라인' + l).join(', ')}</div>` : ''}
+        ${schedule.note ? `<div><strong>비고:</strong> ${schedule.note}</div>` : ''}
+    `;
+    
+    copyYear = currentYear;
+    copyMonth = currentMonth;
+    copySelectedDates.clear();
+    
+    renderCopyCalendar();
+    document.getElementById('copyModal').style.display = 'block';
+}
+
+function closeCopyModal() {
+    document.getElementById('copyModal').style.display = 'none';
+    copySelectedDates.clear();
+}
+
+function renderCopyCalendar() {
+    const firstDay = new Date(copyYear, copyMonth - 1, 1);
+    const lastDay = new Date(copyYear, copyMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const container = document.getElementById('copyDays');
+    container.innerHTML = '';
+    
+    document.getElementById('copyMonth').textContent = `${copyYear}년 ${copyMonth}월`;
+    
+    for (let i = 0; i < startingDayOfWeek; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.style.padding = '0.5rem';
+        container.appendChild(emptyDay);
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${copyYear}-${String(copyMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayElement = document.createElement('div');
+        dayElement.textContent = day;
+        dayElement.style.padding = '0.5rem';
+        dayElement.style.textAlign = 'center';
+        dayElement.style.cursor = 'pointer';
+        dayElement.style.borderRadius = '6px';
+        dayElement.style.fontWeight = '600';
+        dayElement.style.fontSize = '0.85rem';
+        
+        if (copySelectedDates.has(dateStr)) {
+            dayElement.style.background = '#10b981';
+            dayElement.style.color = 'white';
+        } else {
+            dayElement.style.background = 'white';
+            dayElement.style.color = '#334155';
+        }
+        
+        dayElement.onclick = function() {
+            toggleCopyDate(dateStr);
+        };
+        
+        container.appendChild(dayElement);
+    }
+    
+    updateCopyDatesDisplay();
+}
+
+function toggleCopyDate(dateStr) {
+    if (copySelectedDates.has(dateStr)) {
+        copySelectedDates.delete(dateStr);
+    } else {
+        copySelectedDates.add(dateStr);
+    }
+    renderCopyCalendar();
+}
+
+function updateCopyDatesDisplay() {
+    const container = document.getElementById('copyDatesContainer');
+    const countSpan = document.getElementById('copySelectedCount');
+    
+    container.innerHTML = '';
+    copySelectedDates.forEach(date => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'target_dates';
+        input.value = date;
+        container.appendChild(input);
+    });
+    
+    countSpan.textContent = `선택된 날짜: ${copySelectedDates.size}개`;
+}
+
+function clearCopySelection() {
+    copySelectedDates.clear();
+    renderCopyCalendar();
+}
+
+function changeCopyMonth(delta) {
+    copyMonth += delta;
+    if (copyMonth < 1) {
+        copyMonth = 12;
+        copyYear--;
+    } else if (copyMonth > 12) {
+        copyMonth = 1;
+        copyYear++;
+    }
+    renderCopyCalendar();
+}
+</script>
+{% endblock %}
+

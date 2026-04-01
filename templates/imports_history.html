@@ -1,0 +1,43 @@
+﻿{% extends "base.html" %}
+{% block title %}임포트 이력 - 예맛 생산관리{% endblock %}
+{% block content %}
+<h1>임포트 이력</h1>
+<div class="card">
+    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+        <h2 style="margin:0;">배치 목록</h2>
+        <a href="/imports" class="btn">새 업로드</a>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead><tr><th>ID</th><th>유형</th><th>파일명</th><th>상태</th><th>전체</th><th>OK</th><th>WARNING</th><th>ERROR</th><th>업로드자</th><th>업로드일</th><th>관리</th></tr></thead>
+            <tbody>
+            {% for batch in batches %}
+            <tr>
+                <td>{{ batch.id }}</td>
+                <td>{{ import_type_labels.get(batch.import_type, batch.import_type) }}</td>
+                <td>{{ batch.file_name }}</td>
+                <td>{{ batch.status }}</td>
+                <td>{{ batch.total_rows or 0 }}</td>
+                <td>{{ batch.ok_rows or 0 }}</td>
+                <td>{{ batch.warning_rows or 0 }}</td>
+                <td>{{ batch.error_rows or 0 }}</td>
+                <td>{{ batch.uploaded_by or '-' }}</td>
+                <td>{{ batch.uploaded_at }}</td>
+                <td>
+                    <div style="display:flex;gap:.35rem;justify-content:flex-end;flex-wrap:wrap;">
+                        <a href="/imports/{{ batch.id }}" class="btn btn-small">상세</a>
+                        <form method="POST" action="/imports/{{ batch.id }}/delete" onsubmit="return confirm('이 배치 이력과 staging 데이터를 삭제할까요? 이미 반영된 실데이터는 되돌리지 않습니다.');">
+                            <input type="hidden" name="next" value="/imports/history">
+                            <button type="submit" class="btn btn-small btn-danger">삭제</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="11" style="text-align:center;color:#94a3b8;">임포트 이력이 없습니다.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,149 @@
+﻿{% extends "base.html" %}
+
+{% block title %}발주 등록 - 예맛 생산관리{% endblock %}
+
+{% block extra_css %}
+<style>
+.item-row {
+    border: 1px solid #e0e0e0;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    background: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem; color: #2c3e50;">🛒 발주 등록</h1>
+
+<div class="card">
+    <h2>발주 정보</h2>
+    
+    <form method="POST" action="/purchase-orders/add" id="orderForm">
+        <div class="form-group">
+            <label>업체 선택 *</label>
+            <select name="supplier_id" id="supplier_id" required onchange="loadMaterials()">
+                <option value="">-- 업체를 선택하세요 --</option>
+                {% for supplier in suppliers %}
+                <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>발주일 *</label>
+            <input type="date" name="order_date" required>
+        </div>
+        
+        <div class="form-group">
+            <label>입고예정일</label>
+            <input type="date" name="expected_delivery_date">
+        </div>
+        
+        <div class="form-group">
+            <label>발주요청자 *</label>
+            <input type="text" name="requester" value="{{ user.username }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>비고</label>
+            <textarea name="note" rows="2"></textarea>
+        </div>
+        
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem;">발주 항목</h3>
+        
+        <div id="items">
+            <div class="item-row">
+                <div class="form-group">
+                    <label>부자재</label>
+                    <select name="material_id[]" class="material-select" onchange="updatePrice(this)">
+                        <option value="">-- 업체를 먼저 선택하세요 --</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>수량</label>
+                        <input type="number" name="quantity[]" step="0.01" class="quantity-input" oninput="calculateTotal(this)">
+                    </div>
+                    <div class="form-group">
+                        <label>단가</label>
+                        <input type="number" name="unit_price[]" step="0.01" class="price-input" oninput="calculateTotal(this)">
+                    </div>
+                    <div class="form-group">
+                        <label>합계</label>
+                        <input type="text" class="total-display" readonly style="background: #e9ecef;">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button type="button" class="btn btn-secondary btn-small" onclick="addItem()">+ 항목 추가</button>
+        
+        <div style="text-align: right; margin-top: 2rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
+            <a href="/purchase-orders" class="btn btn-secondary">취소</a>
+            <button type="submit" class="btn">발주 등록</button>
+        </div>
+    </form>
+</div>
+
+<script>
+let materialsData = {};
+
+async function loadMaterials() {
+    const supplierId = document.getElementById('supplier_id').value;
+    if (!supplierId) return;
+    
+    const response = await fetch(`/api/materials/by-supplier/${supplierId}`);
+    materialsData = await response.json();
+    
+    updateAllMaterialSelects();
+}
+
+function updateAllMaterialSelects() {
+    document.querySelectorAll('.material-select').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- 부자재 선택 --</option>';
+        
+        materialsData.forEach(m => {
+            const option = document.createElement('option');
+            option.value = m.id;
+            option.textContent = `${m.name} (${m.unit})`;
+            option.dataset.price = m.unit_price;
+            select.appendChild(option);
+        });
+        
+        if (currentValue) select.value = currentValue;
+    });
+}
+
+function updatePrice(select) {
+    const selectedOption = select.options[select.selectedIndex];
+    const price = selectedOption.dataset.price || 0;
+    const row = select.closest('.item-row');
+    row.querySelector('.price-input').value = price;
+    calculateTotal(row.querySelector('.quantity-input'));
+}
+
+function calculateTotal(input) {
+    const row = input.closest('.item-row');
+    const qty = parseFloat(row.querySelector('.quantity-input').value) || 0;
+    const price = parseFloat(row.querySelector('.price-input').value) || 0;
+    const total = qty * price;
+    row.querySelector('.total-display').value = total.toLocaleString() + '원';
+}
+
+function addItem() {
+    const itemsDiv = document.getElementById('items');
+    const newItem = itemsDiv.firstElementChild.cloneNode(true);
+    
+    newItem.querySelectorAll('input').forEach(input => input.value = '');
+    newItem.querySelector('.material-select').selectedIndex = 0;
+    
+    itemsDiv.appendChild(newItem);
+    updateAllMaterialSelects();
+}
+</script>
+
+{% endblock %}
+
