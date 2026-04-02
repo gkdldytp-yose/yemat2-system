@@ -279,31 +279,64 @@ def _material_required_info_fields(category):
     return ['manufacture_date']
 
 
-def _material_missing_info_fields(category, manufacture_date, expiry_date):
-    missing = []
-    required = _material_required_info_fields(category)
-    if 'manufacture_date' in required and not (manufacture_date or '').strip():
-        missing.append('manufacture_date')
-    if 'expiry_date' in required and not (expiry_date or '').strip():
-        missing.append('expiry_date')
-    return missing
+def _has_material_info(value, unknown_flag=0):
+    text = (value or '').strip()
+    return bool(text) or text == '없음' or bool(int(unknown_flag or 0))
 
 
-def _get_material_info_gap(cursor, material_id, category):
-    cursor.execute(
-        '''
-        SELECT id, lot, receiving_date, manufacture_date, expiry_date,
-               COALESCE(current_quantity, quantity, 0) AS available_qty
-        FROM material_lots
-        WHERE material_id = ?
-          AND COALESCE(is_disposed, 0) = 0
-          AND COALESCE(current_quantity, quantity, 0) > 0
-        ORDER BY receiving_date ASC, lot_seq ASC, id ASC
-        ''',
-        (material_id,),
-    )
+def _material_missing_info_fields(category, manufacture_date, expiry_date, manufacture_unknown=0, expiry_unknown=0):
+    has_manufacture = _has_material_info(manufacture_date, manufacture_unknown)
+    has_expiry = _has_material_info(expiry_date, expiry_unknown)
+    if has_manufacture or has_expiry:
+        return []
+    return list(_material_required_info_fields(category))
+
+
+def _get_material_info_gap(cursor, material_id, category, workplace=None):
+    workplace_location_id = _get_inventory_location_id(cursor, workplace) if workplace else None
+    if workplace_location_id:
+        cursor.execute(
+            '''
+            SELECT
+                ml.id,
+                ml.lot,
+                ml.receiving_date,
+                ml.manufacture_date,
+                ml.manufacture_date_unknown,
+                ml.expiry_date,
+                ml.expiry_date_unknown,
+                COALESCE(b.qty, 0) AS available_qty
+            FROM inv_material_lot_balances b
+            JOIN material_lots ml ON ml.id = b.material_lot_id
+            WHERE b.location_id = ?
+              AND ml.material_id = ?
+              AND COALESCE(ml.is_disposed, 0) = 0
+              AND COALESCE(b.qty, 0) > 0
+            ORDER BY ml.receiving_date ASC, ml.lot_seq ASC, ml.id ASC
+            ''',
+            (workplace_location_id, material_id),
+        )
+    else:
+        cursor.execute(
+            '''
+            SELECT id, lot, receiving_date, manufacture_date, manufacture_date_unknown, expiry_date, expiry_date_unknown,
+                   COALESCE(current_quantity, quantity, 0) AS available_qty
+            FROM material_lots
+            WHERE material_id = ?
+              AND COALESCE(is_disposed, 0) = 0
+              AND COALESCE(current_quantity, quantity, 0) > 0
+            ORDER BY receiving_date ASC, lot_seq ASC, id ASC
+            ''',
+            (material_id,),
+        )
     for row in cursor.fetchall():
-        missing = _material_missing_info_fields(category, row['manufacture_date'], row['expiry_date'])
+        missing = _material_missing_info_fields(
+            category,
+            row['manufacture_date'],
+            row['expiry_date'],
+            row['manufacture_date_unknown'],
+            row['expiry_date_unknown'],
+        )
         if missing:
             return {
                 'lot_id': int(row['id']),
@@ -315,17 +348,44 @@ def _get_material_info_gap(cursor, material_id, category):
     return None
 
 
-def _apply_missing_material_info_to_last_lot(cursor, consumed_lots, category, receiving_date, manufacture_date, expiry_date):
+def _apply_missing_material_info_to_last_lot(
+    cursor,
+    consumed_lots,
+    category,
+    receiving_date,
+    manufacture_date,
+    expiry_date,
+    manufacture_none=False,
+    expiry_none=False,
+):
     if not consumed_lots:
         return
     last_lot_id = int(consumed_lots[-1]['lot_id'])
-    _apply_missing_material_info_to_lot(cursor, last_lot_id, category, receiving_date, manufacture_date, expiry_date)
+    _apply_missing_material_info_to_lot(
+        cursor,
+        last_lot_id,
+        category,
+        receiving_date,
+        manufacture_date,
+        expiry_date,
+        manufacture_none,
+        expiry_none,
+    )
 
 
-def _apply_missing_material_info_to_lot(cursor, lot_id, category, receiving_date, manufacture_date, expiry_date):
+def _apply_missing_material_info_to_lot(
+    cursor,
+    lot_id,
+    category,
+    receiving_date,
+    manufacture_date,
+    expiry_date,
+    manufacture_none=False,
+    expiry_none=False,
+):
     lot = cursor.execute(
         '''
-        SELECT id, lot, receiving_date, manufacture_date, expiry_date, material_id
+        SELECT id, lot, receiving_date, manufacture_date, manufacture_date_unknown, expiry_date, expiry_date_unknown, material_id
         FROM material_lots
         WHERE id = ?
         ''',
@@ -336,8 +396,16 @@ def _apply_missing_material_info_to_lot(cursor, lot_id, category, receiving_date
 
     current_receiving = (lot['receiving_date'] or '').strip()
     current_manufacture = (lot['manufacture_date'] or '').strip()
+    current_manufacture_unknown = int(lot['manufacture_date_unknown'] or 0)
     current_expiry = (lot['expiry_date'] or '').strip()
-    missing = _material_missing_info_fields(category, current_manufacture, current_expiry)
+    current_expiry_unknown = int(lot['expiry_date_unknown'] or 0)
+    missing = _material_missing_info_fields(
+        category,
+        current_manufacture,
+        current_expiry,
+        current_manufacture_unknown,
+        current_expiry_unknown,
+    )
     if not missing:
         receiving_input = (receiving_date or '').strip()
         if receiving_input and receiving_input != current_receiving:
@@ -365,21 +433,36 @@ def _apply_missing_material_info_to_lot(cursor, lot_id, category, receiving_date
     receiving_input = (receiving_date or '').strip()
     manufacture_input = (manufacture_date or '').strip()
     expiry_input = (expiry_date or '').strip()
-    if 'manufacture_date' in missing and not manufacture_input:
-        raise ValueError('정보미흡 부자재는 제조일을 입력해야 합니다.')
-    if 'expiry_date' in missing and not expiry_input:
-        raise ValueError('기름/소금류 정보미흡 부자재는 소비기한을 입력해야 합니다.')
+    manufacture_none = bool(manufacture_none)
+    expiry_none = bool(expiry_none)
+    manufacture_supplied = bool(manufacture_input or manufacture_none)
+    expiry_supplied = bool(expiry_input or expiry_none)
+    if missing == ['manufacture_date'] and not manufacture_supplied:
+        raise ValueError('???? ???? ???? ????? ???? ???? ???.')
+    if missing == ['expiry_date'] and not expiry_supplied:
+        raise ValueError('???? ???? ????? ????? ???? ???? ???.')
+    if 'manufacture_date' in missing and 'expiry_date' in missing and not (manufacture_supplied or expiry_supplied):
+        raise ValueError('??? ?? ???? ? ??? ????? ???? ???? ???.')
 
     final_receiving = receiving_input or current_receiving
     final_manufacture = current_manufacture or manufacture_input
     final_expiry = current_expiry or expiry_input
+    final_manufacture_unknown = 0 if final_manufacture else (1 if (current_manufacture_unknown or manufacture_none) else 0)
+    final_expiry_unknown = 0 if final_expiry else (1 if (current_expiry_unknown or expiry_none) else 0)
     cursor.execute(
         '''
         UPDATE material_lots
-        SET receiving_date = ?, manufacture_date = ?, expiry_date = ?
+        SET receiving_date = ?, manufacture_date = ?, manufacture_date_unknown = ?, expiry_date = ?, expiry_date_unknown = ?
         WHERE id = ?
         ''',
-        (final_receiving or None, final_manufacture or None, final_expiry or None, lot_id),
+        (
+            final_receiving or None,
+            final_manufacture or None,
+            final_manufacture_unknown,
+            final_expiry or None,
+            final_expiry_unknown,
+            lot_id,
+        ),
     )
     cursor.execute(
         '''
@@ -846,7 +929,7 @@ def schedule_requirements_data():
 @bp.route('/schedules/requirements-auto-purchase', methods=['POST'])
 @role_required('production', 'purchase')
 def schedule_requirements_auto_purchase():
-    """?? ???? ?? ???? ?? ?? ??? ?? ??? ????."""
+    """??? ?? ?? ???? ?? ?? ???? ????."""
     payload = request.get_json(silent=True) or {}
     workplace = (payload.get('workplace') or request.form.get('workplace') or get_workplace() or '').strip()
     conn = get_db()
@@ -863,7 +946,7 @@ def schedule_requirements_auto_purchase():
         planned_rows = []
         for raw_row in cursor.fetchall():
             row = dict(raw_row)
-            if _normalize_production_status(row.get('status')) == '예정':
+            if _normalize_production_status(row.get('status')) == '??':
                 planned_rows.append(row)
 
         product_box_map = {}
@@ -883,7 +966,7 @@ def schedule_requirements_auto_purchase():
                 'issue_created_count': 0,
                 'purchase_created_count': 0,
                 'skipped_count': 0,
-                'message': '예정 생산건이 없습니다.',
+                'message': '?? ???? ????.',
             })
 
         product_ids = list(product_box_map.keys())
@@ -896,10 +979,7 @@ def schedule_requirements_auto_purchase():
                 COALESCE(b.quantity_per_box, 0) as quantity_per_box,
                 m.code as material_code,
                 m.name as material_name,
-                COALESCE(m.moq, '') as moq,
-                COALESCE(m.unit, '') as unit,
-                COALESCE(m.category, '') as category,
-                m.workplace as material_workplace
+                COALESCE(m.unit, '') as unit
             FROM bom b
             JOIN materials m ON m.id = b.material_id
             WHERE b.product_id IN ({placeholders})
@@ -938,11 +1018,6 @@ def schedule_requirements_auto_purchase():
                 )
                 workplace_stock_map = {int(r['material_id']): float(r['qty'] or 0) for r in cursor.fetchall()}
 
-        logistics_stock_map = {}
-        cursor.execute('SELECT material_code, COALESCE(quantity, 0) as quantity FROM logistics_stocks')
-        for row in cursor.fetchall():
-            logistics_stock_map[(row['material_code'] or '').strip()] = float(row['quantity'] or 0)
-
         req_map = {}
         for row in bom_rows:
             pid = int(row.get('product_id') or 0)
@@ -958,28 +1033,15 @@ def schedule_requirements_auto_purchase():
                 req_map[mid] = {
                     'material_id': mid,
                     'code': (row.get('material_code') or f'M{mid:05d}'),
-                    'name': row.get('material_name') or f'자재 {mid}',
-                    'moq': row.get('moq'),
+                    'name': row.get('material_name') or f'??? {mid}',
                     'unit': row.get('unit') or '',
-                    'category': (row.get('category') or '').strip(),
-                    'material_workplace': row.get('material_workplace'),
                     'required': 0.0,
                 }
             req_map[mid]['required'] += need_qty
 
-        def _to_float_or_zero(value):
-            try:
-                raw = str(value).strip().replace(',', '')
-                if not raw:
-                    return 0.0
-                return float(raw)
-            except Exception:
-                return 0.0
-
         req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username') or 'system'
         req_username = session.get('user', {}).get('username')
         issue_created = []
-        purchase_created = []
         skipped = []
 
         for item in req_map.values():
@@ -992,141 +1054,71 @@ def schedule_requirements_auto_purchase():
             if shortage <= 0:
                 continue
 
-            logistics_stock = float(logistics_stock_map.get(code, 0.0))
-            if abs(logistics_stock) <= 0.000001:
-                logistics_stock = 0.0
-            auto_issue_qty = min(shortage, logistics_stock)
-            purchase_shortage = max(shortage - auto_issue_qty, 0.0)
+            cursor.execute(
+                '''
+                SELECT id
+                FROM logistics_issue_requests
+                WHERE material_id = ?
+                  AND requester_workplace = ?
+                  AND COALESCE(request_type, 'ISSUE') = 'ISSUE'
+                  AND status = '??'
+                LIMIT 1
+                ''',
+                (mid, workplace),
+            )
+            existing_issue = cursor.fetchone()
+            if existing_issue:
+                skipped.append({'type': 'issue', 'material_id': mid, 'code': code, 'name': item['name']})
+                continue
 
-            if auto_issue_qty > 1e-9:
-                cursor.execute(
-                    '''
-                    SELECT id
-                    FROM logistics_issue_requests
-                    WHERE material_id = ?
-                      AND requester_workplace = ?
-                      AND COALESCE(request_type, 'ISSUE') = 'ISSUE'
-                      AND status = '요청'
-                    LIMIT 1
-                    ''',
-                    (mid, workplace),
-                )
-                existing_issue = cursor.fetchone()
-                if existing_issue:
-                    skipped.append({'type': 'issue', 'material_id': mid, 'code': code, 'name': item['name']})
-                else:
-                    issue_note = (
-                        f"[자동불출] 필요 원,부자재 체크 기반 등록 "
-                        f"(부족:{round(shortage, 2)}{unit}, 물류:{round(logistics_stock, 2)}{unit})"
-                    )
-                    cursor.execute(
-                        '''
-                        INSERT INTO logistics_issue_requests
-                        (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, request_type, note, requested_by, requester_username)
-                        VALUES (?, ?, ?, ?, ?, ?, 'ISSUE', ?, ?, ?)
-                        ''',
-                        (mid, code, item['name'], unit, workplace, round(max(auto_issue_qty, 0.0), 2), issue_note, req_user, req_username),
-                    )
-                    issue_id = cursor.lastrowid
-                    audit_log(
-                        conn,
-                        'create',
-                        'logistics_issue_request',
-                        issue_id,
-                        {
-                            'material_id': mid,
-                            'material_code': code,
-                            'material_name': item['name'],
-                            'requester_workplace': workplace,
-                            'requested_quantity': round(max(auto_issue_qty, 0.0), 2),
-                            'request_type': 'ISSUE',
-                            'note': issue_note,
-                            'requested_by': req_user,
-                            'requester_username': req_username,
-                            'source': 'schedule_requirements_auto_purchase',
-                        },
-                    )
-                    issue_created.append({
-                        'request_id': issue_id,
-                        'material_id': mid,
-                        'code': code,
-                        'name': item['name'],
-                        'requested_qty': round(max(auto_issue_qty, 0.0), 2),
-                        'unit': unit,
-                    })
-
-            if purchase_shortage > 0:
-                moq = _to_float_or_zero(item.get('moq'))
-                order_qty = math.ceil(purchase_shortage / moq) * moq if moq > 0 else purchase_shortage
-                target_workplace = (
-                    SHARED_WORKPLACE
-                    if item['category'] in SHARED_MATERIAL_CATEGORIES or item.get('material_workplace') in (None, SHARED_WORKPLACE)
-                    else workplace
-                )
-                cursor.execute(
-                    '''
-                    SELECT id
-                    FROM purchase_requests
-                    WHERE material_id = ?
-                      AND workplace = ?
-                      AND status != '입고완료'
-                    LIMIT 1
-                    ''',
-                    (mid, target_workplace),
-                )
-                existing_purchase = cursor.fetchone()
-                if existing_purchase:
-                    skipped.append({'type': 'purchase', 'material_id': mid, 'code': code, 'name': item['name']})
-                    continue
-
-                note = (
-                    f"[자동발주] 필요 원,부자재 체크 기반 등록 "
-                    f"(부족:{round(shortage, 2)}{unit}, 불출:{round(auto_issue_qty, 2)}{unit}, "
-                    f"발주:{round(purchase_shortage, 2)}{unit}, MOQ:{item.get('moq') or '-'})"
-                )
-                cursor.execute(
-                    '''
-                    INSERT INTO purchase_requests
-                    (material_id, status, requested_quantity, ordered_quantity, note, workplace)
-                    VALUES (?, '발주필요', ?, 0, ?, ?)
-                    ''',
-                    (mid, round(order_qty, 2), note, target_workplace),
-                )
-                purchase_id = cursor.lastrowid
-                audit_log(
-                    conn,
-                    'create',
-                    'purchase_request',
-                    purchase_id,
-                    {
-                        'material_id': mid,
-                        'status': '발주필요',
-                        'requested_quantity': round(order_qty, 2),
-                        'ordered_quantity': 0,
-                        'note': note,
-                        'workplace': target_workplace,
-                        'source': 'schedule_requirements_auto_purchase',
-                    },
-                )
-                purchase_created.append({
-                    'request_id': purchase_id,
+            issue_qty = round(shortage, 2)
+            issue_note = f"[????] ?? ???? ?? ?? ?? (?? {issue_qty}{unit})"
+            cursor.execute(
+                '''
+                INSERT INTO logistics_issue_requests
+                (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, request_type, note, requested_by, requester_username)
+                VALUES (?, ?, ?, ?, ?, ?, 'ISSUE', ?, ?, ?)
+                ''',
+                (mid, code, item['name'], unit, workplace, issue_qty, issue_note, req_user, req_username),
+            )
+            issue_id = cursor.lastrowid
+            audit_log(
+                conn,
+                'create',
+                'logistics_issue_request',
+                issue_id,
+                {
                     'material_id': mid,
-                    'code': code,
-                    'name': item['name'],
-                    'order_qty': round(order_qty, 2),
-                    'unit': unit,
-                })
+                    'material_code': code,
+                    'material_name': item['name'],
+                    'requester_workplace': workplace,
+                    'requested_quantity': issue_qty,
+                    'request_type': 'ISSUE',
+                    'note': issue_note,
+                    'requested_by': req_user,
+                    'requester_username': req_username,
+                    'source': 'schedule_requirements_auto_purchase',
+                },
+            )
+            issue_created.append({
+                'request_id': issue_id,
+                'material_id': mid,
+                'code': code,
+                'name': item['name'],
+                'requested_qty': issue_qty,
+                'unit': unit,
+            })
 
         conn.commit()
         return jsonify(
             {
                 'ok': True,
-                'created_count': len(issue_created) + len(purchase_created),
+                'created_count': len(issue_created),
                 'issue_created_count': len(issue_created),
-                'purchase_created_count': len(purchase_created),
+                'purchase_created_count': 0,
                 'skipped_count': len(skipped),
                 'issue_created': issue_created,
-                'purchase_created': purchase_created,
+                'purchase_created': [],
                 'skipped': skipped,
             }
         )
@@ -2103,10 +2095,11 @@ def production_detail(production_id):
         (production_id,),
     )
     material_usage = [dict(row) for row in cursor.fetchall()]
+    current_workplace = (production.get('workplace') or get_workplace() or session.get('workplace') or '').strip()
     for row in material_usage:
         material_id = row.get('material_id')
         if material_id:
-            gap = _get_material_info_gap(cursor, int(material_id), row.get('category'))
+            gap = _get_material_info_gap(cursor, int(material_id), row.get('category'), current_workplace)
             row['lot_info_gap'] = gap
             row['has_lot_info_gap'] = bool(gap)
         else:
@@ -2183,7 +2176,7 @@ def update_production_usage(production_id):
                 conn.execute('ROLLBACK')
                 return "<script>alert('정보를 적용할 부자재 항목을 찾을 수 없습니다.'); window.history.back();</script>"
 
-            gap = _get_material_info_gap(cursor, int(usage_row['material_id']), usage_row['category'])
+            gap = _get_material_info_gap(cursor, int(usage_row['material_id']), usage_row['category'], current_workplace)
             if not gap:
                 cursor.execute('COMMIT')
                 return _detail_redirect()
@@ -2195,6 +2188,8 @@ def update_production_usage(production_id):
                 request.form.get(f'mat_info_receiving_{apply_usage_id}') or '',
                 request.form.get(f'mat_info_manufacture_{apply_usage_id}') or '',
                 request.form.get(f'mat_info_expiry_{apply_usage_id}') or '',
+                (request.form.get(f'mat_info_manufacture_none_{apply_usage_id}') or '').strip() == '1',
+                (request.form.get(f'mat_info_expiry_none_{apply_usage_id}') or '').strip() == '1',
             )
             cursor.execute('COMMIT')
             return _detail_redirect()
@@ -2696,6 +2691,8 @@ def update_production_usage(production_id):
                         request.form.get(f'mat_info_receiving_{usage_id}') or '',
                         request.form.get(f'mat_info_manufacture_{usage_id}') or '',
                         request.form.get(f'mat_info_expiry_{usage_id}') or '',
+                        (request.form.get(f'mat_info_manufacture_none_{usage_id}') or '').strip() == '1',
+                        (request.form.get(f'mat_info_expiry_none_{usage_id}') or '').strip() == '1',
                     )
                     touched_material_ids.add(row['material_id'])
 

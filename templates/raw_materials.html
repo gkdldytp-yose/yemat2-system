@@ -47,6 +47,42 @@
         </div>
     </div>
 
+    <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
+        <form method="GET" action="/raw-materials" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
+            <input type="hidden" name="tab" value="{{ request.args.get('tab', 'active') }}">
+            {% if selected_month %}
+            <input type="hidden" name="month" value="{{ selected_month }}">
+            {% endif %}
+            <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="rawSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">&#xAC80;&#xC0C9; &#xAE30;&#xC900;</label>
+                <select id="rawSearchField" name="raw_search_field" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="all" {% if selected_raw_search_field == 'all' %}selected{% endif %}>&#xC804;&#xCCB4;</option>
+                    <option value="code" {% if selected_raw_search_field == 'code' %}selected{% endif %}>&#xCF54;&#xB4DC;</option>
+                    <option value="name" {% if selected_raw_search_field == 'name' %}selected{% endif %}>&#xC6D0;&#xCD08;&#xBA85;</option>
+                    <option value="car_number" {% if selected_raw_search_field == 'car_number' %}selected{% endif %}>&#xC790;&#xD638;</option>
+                    <option value="receiving_date" {% if selected_raw_search_field == 'receiving_date' %}selected{% endif %}>&#xC785;&#xACE0;&#xC77C;</option>
+                </select>
+            </div>
+            <div style="grid-column:span 3;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="rawNameFilter" style="font-size:0.82rem;color:#475569;font-weight:600;">&#xC6D0;&#xCD08; &#xC885;&#xB958;</label>
+                <select id="rawNameFilter" name="raw_name" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <option value="">&#xC804;&#xCCB4; &#xC6D0;&#xCD08;</option>
+                    {% for raw_name in raw_name_options %}
+                    <option value="{{ raw_name }}" {% if selected_raw_name == raw_name %}selected{% endif %}>{{ raw_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="grid-column:span 5;display:flex;flex-direction:column;gap:0.35rem;">
+                <label for="rawSearchKeyword" style="font-size:0.82rem;color:#475569;font-weight:600;">&#xD0A4;&#xC6CC;&#xB4DC; &#xAC80;&#xC0C9;</label>
+                <input id="rawSearchKeyword" type="text" name="raw_search_keyword" class="search-input" placeholder="&#xC608;: RM00001 / &#xACF1;&#xCC3D;&#xB3CC;&#xAE40; / 12&#xAC00;3456 / 2026-04" value="{{ raw_search_keyword or '' }}" style="width:100%;">
+            </div>
+            <div style="grid-column:span 2;display:flex;gap:0.5rem;justify-content:flex-end;align-items:end;flex-wrap:wrap;">
+                <button type="submit" class="btn btn-small" style="background:#2563eb;">&#xC801;&#xC6A9;</button>
+                <a href="/raw-materials?tab={{ request.args.get('tab', 'active') }}{% if selected_month %}&month={{ selected_month|urlencode }}{% endif %}" class="btn btn-small btn-secondary">&#xCD08;&#xAE30;&#xD654;</a>
+            </div>
+        </form>
+    </div>
+
     <!-- 탭 -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('active')" id="tab_active">
@@ -112,7 +148,7 @@
     <div class="subtabs">
         <a href="/raw-materials?tab=done" class="subtab-btn {% if not selected_month %}active{% endif %}">전체</a>
         {% for m in months %}
-        <a href="/raw-materials?tab=done&month={{ m }}" class="subtab-btn {% if selected_month == m %}active{% endif %}">{{ m }}</a>
+        <a href="/raw-materials?tab=done&month={{ m }}{% if raw_search_keyword %}&raw_search_keyword={{ raw_search_keyword|urlencode }}{% endif %}{% if selected_raw_search_field and selected_raw_search_field != 'all' %}&raw_search_field={{ selected_raw_search_field|urlencode }}{% endif %}" class="subtab-btn {% if selected_month == m %}active{% endif %}">{{ m }}</a>
         {% endfor %}
     </div>
     

@@ -148,6 +148,32 @@
 .issue-manage-stack form{display:inline-flex;gap:0.35rem;align-items:center;flex-wrap:wrap;margin:0;}
 .issue-manage-stack input[type="number"]{width:92px;}
 .issue-manage-stack input[type="text"]{width:130px;}
+.receipt-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.56);z-index:900;align-items:center;justify-content:center;padding:1rem;}
+.receipt-modal-bg.open{display:flex;}
+.receipt-modal{width:min(720px,96vw);background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbe5f0;border-radius:24px;box-shadow:0 28px 70px rgba(15,23,42,.24);overflow:hidden;}
+.receipt-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:1.1rem 1.2rem;border-bottom:1px solid #e6edf5;background:linear-gradient(135deg,#eff6ff,#f8fafc);}
+.receipt-modal-title{margin:0;font-size:1.08rem;font-weight:900;color:#0f172a;}
+.receipt-modal-caption{margin:.25rem 0 0;font-size:.83rem;color:#64748b;line-height:1.45;}
+.receipt-modal-close{border:none;background:#e2e8f0;color:#334155;width:34px;height:34px;border-radius:999px;font-size:1rem;font-weight:900;cursor:pointer;}
+.receipt-modal-body{padding:1.1rem 1.2rem 1.2rem;}
+.receipt-modal-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;margin-bottom:1rem;}
+.receipt-summary-item{padding:.78rem .85rem;border:1px solid #dbe5f0;border-radius:16px;background:#fff;}
+.receipt-summary-label{font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:.24rem;}
+.receipt-summary-value{font-size:.95rem;font-weight:900;color:#0f172a;word-break:break-word;}
+.receipt-modal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;}
+.receipt-field{display:flex;flex-direction:column;gap:.38rem;}
+.receipt-field-head{display:flex;align-items:center;justify-content:space-between;gap:.45rem;}
+.receipt-field-head.receiving{padding-top:.78rem;}
+.receipt-field label{font-size:.8rem;font-weight:800;color:#1e293b;}
+.receipt-field input{width:100%;height:42px;padding:0 .75rem;border:1px solid #cfd8e3;border-radius:12px;background:#fff;box-sizing:border-box;}
+.receipt-field input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.14);}
+.receipt-none-btn{display:inline-flex;align-items:center;justify-content:center;padding:.34rem .68rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-size:.74rem;font-weight:800;color:#475569;cursor:pointer;}
+.receipt-none-btn.active{background:#0f172a;border-color:#0f172a;color:#fff;}
+.receipt-help{grid-column:1 / -1;padding:.8rem .9rem;border:1px dashed #cbd5e1;border-radius:14px;background:#fff;color:#64748b;font-size:.79rem;line-height:1.5;}
+.receipt-modal-actions{display:flex;justify-content:flex-end;gap:.55rem;margin-top:1rem;}
+@media (max-width: 760px){
+  .receipt-modal-summary,.receipt-modal-grid{grid-template-columns:1fr;}
+}
 .issue-empty{padding:2rem 1rem!important;text-align:center;color:#94a3b8!important;background:linear-gradient(180deg,#ffffff,#f8fafc)!important;}
 @media (max-width: 960px){
   .issue-status-board{padding:0.75rem;}
@@ -385,7 +411,7 @@
             </div>
             <div style="grid-column:span 3;display:flex;flex-direction:column;gap:0.35rem;">
                 <label for="materialSearchKeyword" style="font-size:0.82rem;color:#475569;font-weight:600;">키워드 검색</label>
-                <input id="materialSearchKeyword" type="text" name="search" class="search-input" placeholder="예: 박스 / 유기 / P03A008 / 영진물산" value="{{ search_keyword or '' }}">
+                <input id="materialSearchKeyword" type="text" name="search" class="search-input" placeholder="예: 박스,유기,P03A008 (쉼표 구분 AND 검색)" value="{{ search_keyword or '' }}">
             </div>
             <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;">
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">적용</button>
@@ -484,7 +510,7 @@
                 </div>
                 <div class="form-group">
                     <label>부자재 검색</label>
-                    <input type="text" id="issueSearch" placeholder="코드 또는 부자재명 검색" oninput="filterIssueMaterials()">
+                    <input type="text" id="issueSearch" lang="ko" style="ime-mode: active;" placeholder="코드 또는 부자재명 검색, 쉼표 구분 AND 검색" onfocus="prepareKoreanInput(this)" oninput="filterIssueMaterials()">
                 </div>
                 <div class="form-group">
                     <label>부자재 목록</label>
@@ -563,11 +589,20 @@
                         <td>
                             <div class="issue-manage-stack">
                             {% if r.status == '요청' %}
-                            <form method="POST" action="/issue-requests/{{ r.id }}/complete" onsubmit="return confirm('실제 받은 수량으로 불출 완료 처리하시겠습니까?');">
-                                <input type="number" name="actual_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
-                                <input type="text" name="process_note" placeholder="실입고 메모">
-                                <button type="submit" class="btn btn-small" style="background:#0ea5e9;">입고 완료</button>
-                            </form>
+                            <button
+                                type="button"
+                                class="btn btn-small js-open-receipt-complete"
+                                style="background:#0ea5e9;"
+                                data-req-id="{{ r.id }}"
+                                data-qty="{{ "%.2f"|format(r.requested_quantity or 0) }}"
+                                data-unit="{{ r.unit or '' }}"
+                                data-code="{{ r.material_code or '-' }}"
+                                data-name="{{ r.material_name or '' }}"
+                                data-receiving-date="{{ r.receipt_lot_defaults.receiving_date if r.receipt_lot_defaults else '' }}"
+                                data-manufacture-date="{{ r.receipt_lot_defaults.manufacture_date if r.receipt_lot_defaults else '' }}"
+                                data-expiry-date="{{ r.receipt_lot_defaults.expiry_date if r.receipt_lot_defaults else '' }}"
+                                data-manufacture-unknown="{{ r.receipt_lot_defaults.manufacture_date_unknown if r.receipt_lot_defaults else 0 }}"
+                                data-expiry-unknown="{{ r.receipt_lot_defaults.expiry_date_unknown if r.receipt_lot_defaults else 0 }}">입고 완료</button>
                             <form method="POST" action="/issue-requests/{{ r.id }}/delete" onsubmit="return confirm('해당 불출 요청을 삭제하시겠습니까?');">
                                 <button type="submit" class="btn btn-small btn-danger">삭제</button>
                             </form>
@@ -682,7 +717,7 @@
                 </div>
                 <div class="form-group">
                     <label>부자재 검색</label>
-                    <input type="text" id="exportSearch" placeholder="코드 또는 부자재명 검색" oninput="filterExportMaterials()">
+                    <input type="text" id="exportSearch" lang="ko" style="ime-mode: active;" placeholder="코드 또는 부자재명 검색, 쉼표 구분 AND 검색" onfocus="prepareKoreanInput(this)" oninput="filterExportMaterials()">
                 </div>
                 <div class="form-group">
                     <label>부자재 목록</label>
@@ -892,6 +927,74 @@
 </div>
 {% endif %}
 
+<div id="receiptCompleteModal" class="receipt-modal-bg" onclick="closeReceiptCompleteModal(event)">
+    <div class="receipt-modal" onclick="event.stopPropagation()">
+        <div class="receipt-modal-head">
+            <div>
+                <h3 class="receipt-modal-title">불출 입고 완료</h3>
+                <p class="receipt-modal-caption">실제 받은 수량과 lot 정보를 확인한 뒤 완료 처리합니다. 입고일은 필수이며 제조일, 소비기한은 선택하거나 없음으로 표시할 수 있습니다.</p>
+            </div>
+            <button type="button" class="receipt-modal-close" onclick="closeReceiptCompleteModal()">×</button>
+        </div>
+        <form id="receiptCompleteForm" method="POST">
+            <div class="receipt-modal-body">
+                <div class="receipt-modal-summary">
+                    <div class="receipt-summary-item">
+                        <div class="receipt-summary-label">자재명</div>
+                        <div class="receipt-summary-value" id="receiptSummaryName">-</div>
+                    </div>
+                    <div class="receipt-summary-item">
+                        <div class="receipt-summary-label">코드</div>
+                        <div class="receipt-summary-value" id="receiptSummaryCode">-</div>
+                    </div>
+                    <div class="receipt-summary-item">
+                        <div class="receipt-summary-label">실입고수량</div>
+                        <div class="receipt-summary-value"><input type="number" id="receiptActualQty" name="actual_quantity" step="0.01" min="0.01" required style="width:100%;height:40px;border:1px solid #cfd8e3;border-radius:12px;padding:0 .7rem;"></div>
+                    </div>
+                </div>
+                <div class="receipt-modal-grid">
+                    <div class="receipt-field">
+                        <div class="receipt-field-head receiving">
+                            <label for="receiptReceivingDate">입고일 *</label>
+                            <span style="display:inline-block;min-width:48px;"></span>
+                        </div>
+                        <input type="date" id="receiptReceivingDate" name="receiving_date" required>
+                    </div>
+                    <div class="receipt-field">
+                        <div class="receipt-field-head">
+                            <label for="receiptManufactureDate">제조일</label>
+                            <button type="button" class="receipt-none-btn" id="receiptManufactureNoneBtn" onclick="toggleReceiptNone('manufacture')">없음</button>
+                        </div>
+                        <input type="hidden" id="receiptManufactureUnknown" name="manufacture_date_unknown" value="0">
+                        <input type="date" id="receiptManufactureDate" name="manufacture_date" oninput="document.getElementById('receiptManufactureUnknown').value='0'; syncReceiptNoneState('manufacture');">
+                    </div>
+                    <div class="receipt-field">
+                        <div class="receipt-field-head">
+                            <label for="receiptExpiryDate">소비기한</label>
+                            <button type="button" class="receipt-none-btn" id="receiptExpiryNoneBtn" onclick="toggleReceiptNone('expiry')">없음</button>
+                        </div>
+                        <input type="hidden" id="receiptExpiryUnknown" name="expiry_date_unknown" value="0">
+                        <input type="date" id="receiptExpiryDate" name="expiry_date" oninput="document.getElementById('receiptExpiryUnknown').value='0'; syncReceiptNoneState('expiry');">
+                    </div>
+                    <div class="receipt-field" style="grid-column:1 / -1;">
+                        <div class="receipt-field-head">
+                            <label for="receiptProcessNote">메모</label>
+                        </div>
+                        <input type="text" id="receiptProcessNote" name="process_note" placeholder="실입고 메모 입력">
+                    </div>
+                    <div class="receipt-help">
+                        같은 작업장에서 마지막으로 등록된 lot의 입고일, 제조일, 소비기한을 기본값으로 불러옵니다. 필요한 정보만 확인 후 바로 완료할 수 있습니다.
+                    </div>
+                </div>
+                <div class="receipt-modal-actions">
+                    <button type="button" class="btn btn-small btn-secondary" onclick="closeReceiptCompleteModal()">취소</button>
+                    <button type="submit" class="btn btn-small" style="background:#0ea5e9;">입고 완료 처리</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% if can_manage_material_master %}
 <script>
 // 인자 순서: id, code, name, category, unit, workplaceStock, logisticsStock, totalStock, min, supplier, moq, workplace
@@ -1077,17 +1180,20 @@ function renderMaterialOptions(selectEl, rows, selectedValue){
 }
 
 function filterIssueMaterials(){
-    const q = (document.getElementById('issueSearch')?.value || '').toLowerCase().trim();
+    const input = document.getElementById('issueSearch');
+    if(!input) return;
+    const q = (input.value || '').toLowerCase().trim();
     const list = document.getElementById('issueMaterialList');
     if(!list) return;
     if(!ISSUE_MATERIAL_SOURCE.length){
         ISSUE_MATERIAL_SOURCE = collectMaterialSource(list);
     }
+    const keywords = q.split(',').map((token) => token.trim()).filter(Boolean);
     const filtered = !q
         ? ISSUE_MATERIAL_SOURCE
         : ISSUE_MATERIAL_SOURCE.filter((r) => {
             const hay = `${r.code} ${r.name} ${r.unit} ${r.label}`.toLowerCase();
-            return hay.includes(q);
+            return keywords.every((keyword) => hay.includes(keyword));
         });
     renderMaterialOptions(list, filtered, list.value);
 }
@@ -1138,21 +1244,91 @@ function clearIssueItems(){
 }
 
 function filterExportMaterials(){
-    const q = (document.getElementById('exportSearch')?.value || '').toLowerCase().trim();
+    const input = document.getElementById('exportSearch');
+    if(!input) return;
+    const q = (input.value || '').toLowerCase().trim();
     const list = document.getElementById('exportMaterialList');
     if(!list) return;
     if(!EXPORT_MATERIAL_SOURCE.length){
         EXPORT_MATERIAL_SOURCE = collectMaterialSource(list);
     }
+    const keywords = q.split(',').map((token) => token.trim()).filter(Boolean);
     const filtered = !q
         ? EXPORT_MATERIAL_SOURCE
         : EXPORT_MATERIAL_SOURCE.filter((r) => {
             const hay = `${r.code} ${r.name} ${r.unit} ${r.label}`.toLowerCase();
-            return hay.includes(q);
+            return keywords.every((keyword) => hay.includes(keyword));
         });
     renderMaterialOptions(list, filtered, list.value);
     syncExportLots();
 }
+
+function prepareKoreanInput(input){
+    if(!input) return;
+    input.setAttribute('lang', 'ko');
+    input.style.imeMode = 'active';
+}
+
+function syncReceiptNoneState(kind){
+    const isManufacture = kind === 'manufacture';
+    const input = document.getElementById(isManufacture ? 'receiptManufactureDate' : 'receiptExpiryDate');
+    const hidden = document.getElementById(isManufacture ? 'receiptManufactureUnknown' : 'receiptExpiryUnknown');
+    const btn = document.getElementById(isManufacture ? 'receiptManufactureNoneBtn' : 'receiptExpiryNoneBtn');
+    if(!input || !hidden || !btn) return;
+    const isNone = hidden.value === '1';
+    btn.classList.toggle('active', isNone);
+    input.disabled = isNone;
+    if(isNone) input.value = '';
+}
+
+function toggleReceiptNone(kind){
+    const hidden = document.getElementById(kind === 'manufacture' ? 'receiptManufactureUnknown' : 'receiptExpiryUnknown');
+    if(!hidden) return;
+    hidden.value = hidden.value === '1' ? '0' : '1';
+    syncReceiptNoneState(kind);
+}
+
+function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, manufactureDate, expiryDate, manufactureUnknown, expiryUnknown){
+    const modal = document.getElementById('receiptCompleteModal');
+    const form = document.getElementById('receiptCompleteForm');
+    if(!modal || !form) return;
+    form.action = `/issue-requests/${reqId}/complete`;
+    document.getElementById('receiptSummaryName').textContent = name || '-';
+    document.getElementById('receiptSummaryCode').textContent = code || '-';
+    document.getElementById('receiptActualQty').value = Number(qty || 0).toFixed(1);
+    document.getElementById('receiptReceivingDate').value = receivingDate || '';
+    document.getElementById('receiptManufactureDate').value = manufactureDate || '';
+    document.getElementById('receiptExpiryDate').value = expiryDate || '';
+    document.getElementById('receiptManufactureUnknown').value = String(manufactureUnknown || '0') === '1' ? '1' : '0';
+    document.getElementById('receiptExpiryUnknown').value = String(expiryUnknown || '0') === '1' ? '1' : '0';
+    document.getElementById('receiptProcessNote').value = '';
+    syncReceiptNoneState('manufacture');
+    syncReceiptNoneState('expiry');
+    modal.classList.add('open');
+}
+
+function closeReceiptCompleteModal(event){
+    if(event && event.target && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('receiptCompleteModal');
+    if(modal) modal.classList.remove('open');
+}
+
+document.querySelectorAll('.js-open-receipt-complete').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        openReceiptCompleteModal(
+            btn.dataset.reqId || '',
+            btn.dataset.qty || '0',
+            btn.dataset.unit || '',
+            btn.dataset.code || '-',
+            btn.dataset.name || '',
+            btn.dataset.receivingDate || '',
+            btn.dataset.manufactureDate || '',
+            btn.dataset.expiryDate || '',
+            btn.dataset.manufactureUnknown || '0',
+            btn.dataset.expiryUnknown || '0',
+        );
+    });
+});
 
 function syncExportLots(){
     const matId = Number((document.getElementById('exportMaterialList') || {}).value || 0);

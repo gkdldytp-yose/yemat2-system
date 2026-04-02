@@ -563,7 +563,9 @@ def _ensure_material_lot_schema(conn):
                 lot_seq INTEGER DEFAULT 1,
                 receiving_date TEXT,
                 manufacture_date TEXT,
+                manufacture_date_unknown INTEGER DEFAULT 0,
                 expiry_date TEXT,
+                expiry_date_unknown INTEGER DEFAULT 0,
                 unit_price REAL DEFAULT 0,
                 received_quantity REAL DEFAULT 0,
                 current_quantity REAL DEFAULT 0,
@@ -620,6 +622,10 @@ def _ensure_material_lot_schema(conn):
             conn.execute("ALTER TABLE material_lots ADD COLUMN received_quantity REAL DEFAULT 0")
         if 'current_quantity' not in cols:
             conn.execute("ALTER TABLE material_lots ADD COLUMN current_quantity REAL DEFAULT 0")
+        if 'manufacture_date_unknown' not in cols:
+            conn.execute("ALTER TABLE material_lots ADD COLUMN manufacture_date_unknown INTEGER DEFAULT 0")
+        if 'expiry_date_unknown' not in cols:
+            conn.execute("ALTER TABLE material_lots ADD COLUMN expiry_date_unknown INTEGER DEFAULT 0")
         if 'supplier_lot' not in cols:
             conn.execute("ALTER TABLE material_lots ADD COLUMN supplier_lot TEXT")
         if 'is_disposed' not in cols:
