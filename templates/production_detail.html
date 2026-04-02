@@ -45,9 +45,13 @@
 .lot-gap-meta span{display:inline-flex;align-items:center;padding:.28rem .55rem;border-radius:999px;background:#fff;border:1px solid #fed7aa;color:#9a3412;font-size:.75rem;font-weight:700;}
 .lot-gap-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;align-content:start;}
 .lot-gap-field{min-width:0;}
+.lot-gap-field-head{display:flex;align-items:center;justify-content:space-between;gap:.45rem;margin-bottom:.28rem;}
+.lot-gap-field-head.receiving{padding-top:.55rem;}
 .lot-gap-fields label{display:block;font-size:.74rem;color:#9a3412;font-weight:800;margin-bottom:.28rem;}
 .lot-gap-fields input{width:100%;padding:.62rem .7rem;border:1px solid #fdba74;border-radius:12px;min-height:42px;background:#fff;box-sizing:border-box;font-size:.88rem;}
 .lot-gap-fields input:focus{outline:none;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.14);}
+.lot-gap-none{display:inline-flex;align-items:center;justify-content:center;padding:.34rem .65rem;border:1px solid #fdba74;border-radius:999px;background:#fff7ed;color:#c2410c;font-size:.74rem;font-weight:800;cursor:pointer;}
+.lot-gap-none.active{background:#f97316;color:#fff;border-color:#f97316;}
 .lot-gap-hint{grid-column:1 / -1;font-size:.76rem;color:#9a3412;background:rgba(255,255,255,.72);border:1px dashed #fdba74;border-radius:10px;padding:.55rem .7rem;}
 .lot-gap-actions{grid-column:1 / -1;display:flex;justify-content:flex-end;gap:.6rem;margin-top:.1rem;}
 .lot-gap-apply{display:inline-flex;align-items:center;justify-content:center;padding:.62rem .95rem;border:none;border-radius:11px;background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);color:#fff;font-weight:800;font-size:.83rem;cursor:pointer;box-shadow:0 10px 18px rgba(234,88,12,.18);}
@@ -286,18 +290,29 @@
                     </div>
                     <div class="lot-gap-fields">
                         <div class="lot-gap-field">
-                            <label for="mat_info_receiving_{{ u.id }}">입고일</label>
+                            <div class="lot-gap-field-head receiving">
+                                <label for="mat_info_receiving_{{ u.id }}">입고일</label>
+                                <span style="display:inline-block;min-width:52px;"></span>
+                            </div>
                             <input id="mat_info_receiving_{{ u.id }}" type="date" name="mat_info_receiving_{{ u.id }}" value="{{ u.lot_info_gap.receiving_date or '' }}">
                         </div>
                         {% if 'manufacture_date' in u.lot_info_gap.missing_fields %}
                         <div class="lot-gap-field">
-                            <label for="mat_info_manufacture_{{ u.id }}">제조일 입력</label>
+                            <div class="lot-gap-field-head">
+                                <label for="mat_info_manufacture_{{ u.id }}">제조일 입력</label>
+                                <button type="button" class="lot-gap-none" data-none-toggle="mat_info_manufacture_{{ u.id }}" data-none-hidden="mat_info_manufacture_none_{{ u.id }}">없음</button>
+                            </div>
+                            <input type="hidden" id="mat_info_manufacture_none_{{ u.id }}" name="mat_info_manufacture_none_{{ u.id }}" value="0">
                             <input id="mat_info_manufacture_{{ u.id }}" type="date" name="mat_info_manufacture_{{ u.id }}" value="">
                         </div>
                         {% endif %}
                         {% if 'expiry_date' in u.lot_info_gap.missing_fields %}
                         <div class="lot-gap-field">
-                            <label for="mat_info_expiry_{{ u.id }}">소비기한 입력</label>
+                            <div class="lot-gap-field-head">
+                                <label for="mat_info_expiry_{{ u.id }}">소비기한 입력</label>
+                                <button type="button" class="lot-gap-none" data-none-toggle="mat_info_expiry_{{ u.id }}" data-none-hidden="mat_info_expiry_none_{{ u.id }}">없음</button>
+                            </div>
+                            <input type="hidden" id="mat_info_expiry_none_{{ u.id }}" name="mat_info_expiry_none_{{ u.id }}" value="0">
                             <input id="mat_info_expiry_{{ u.id }}" type="date" name="mat_info_expiry_{{ u.id }}" value="">
                         </div>
                         {% endif %}
@@ -357,18 +372,29 @@
                     </div>
                     <div class="lot-gap-fields">
                         <div class="lot-gap-field">
-                            <label for="mat_info_receiving_{{ u.id }}">입고일</label>
+                            <div class="lot-gap-field-head receiving">
+                                <label for="mat_info_receiving_{{ u.id }}">입고일</label>
+                                <span style="display:inline-block;min-width:52px;"></span>
+                            </div>
                             <input id="mat_info_receiving_{{ u.id }}" type="date" name="mat_info_receiving_{{ u.id }}" value="{{ u.lot_info_gap.receiving_date or '' }}">
                         </div>
                         {% if 'manufacture_date' in u.lot_info_gap.missing_fields %}
                         <div class="lot-gap-field">
-                            <label for="mat_info_manufacture_{{ u.id }}">제조일 입력</label>
+                            <div class="lot-gap-field-head">
+                                <label for="mat_info_manufacture_{{ u.id }}">제조일 입력</label>
+                                <button type="button" class="lot-gap-none" data-none-toggle="mat_info_manufacture_{{ u.id }}" data-none-hidden="mat_info_manufacture_none_{{ u.id }}">없음</button>
+                            </div>
+                            <input type="hidden" id="mat_info_manufacture_none_{{ u.id }}" name="mat_info_manufacture_none_{{ u.id }}" value="0">
                             <input id="mat_info_manufacture_{{ u.id }}" type="date" name="mat_info_manufacture_{{ u.id }}" value="">
                         </div>
                         {% endif %}
                         {% if 'expiry_date' in u.lot_info_gap.missing_fields %}
                         <div class="lot-gap-field">
-                            <label for="mat_info_expiry_{{ u.id }}">소비기한 입력</label>
+                            <div class="lot-gap-field-head">
+                                <label for="mat_info_expiry_{{ u.id }}">소비기한 입력</label>
+                                <button type="button" class="lot-gap-none" data-none-toggle="mat_info_expiry_{{ u.id }}" data-none-hidden="mat_info_expiry_none_{{ u.id }}">없음</button>
+                            </div>
+                            <input type="hidden" id="mat_info_expiry_none_{{ u.id }}" name="mat_info_expiry_none_{{ u.id }}" value="0">
                             <input id="mat_info_expiry_{{ u.id }}" type="date" name="mat_info_expiry_{{ u.id }}" value="">
                         </div>
                         {% endif %}
@@ -449,7 +475,10 @@ const PLANNED = {{ production.planned_boxes }};
 const DEFAULT_BOXES = {{ production.actual_boxes or production.planned_boxes }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
 
-window.onload = () => recalcAll();
+window.onload = () => {
+    recalcAll();
+    initLotGapNoneButtons();
+};
 
 function getActualBoxes(){
     const el = document.getElementById('actualBoxes');
@@ -568,6 +597,37 @@ function calcLoss(uid, val, expOverride){
             yc.innerHTML = `<strong style="color:${col}">${yr.toFixed(1)}%</strong>`;
         }
     }
+}
+
+function initLotGapNoneButtons(){
+    document.querySelectorAll('[data-none-toggle]').forEach(btn => {
+        const input = document.getElementById(btn.dataset.noneToggle);
+        const hidden = document.getElementById(btn.dataset.noneHidden);
+        if(!input || !hidden) return;
+
+        const syncState = () => {
+            const isNone = hidden.value === '1';
+            btn.classList.toggle('active', isNone);
+            if(isNone){
+                input.value = '';
+            }
+            input.disabled = isNone;
+        };
+
+        btn.addEventListener('click', () => {
+            hidden.value = hidden.value === '1' ? '0' : '1';
+            syncState();
+        });
+
+        input.addEventListener('input', () => {
+            if(input.value){
+                hidden.value = '0';
+                syncState();
+            }
+        });
+
+        syncState();
+    });
 }
 
 function closeMaterialShortageModal(){

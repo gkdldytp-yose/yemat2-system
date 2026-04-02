@@ -1110,7 +1110,7 @@
         </div>
         <div class="req-actions">
             {% if can_prod %}
-            <button type="button" id="reqAutoOrderBtn" class="req-order-btn" onclick="autoCreatePurchaseRequests()">📝 자동 불출 및 발주등록</button>
+            <button type="button" id="reqAutoOrderBtn" class="req-order-btn" onclick="autoCreatePurchaseRequests()">📝 자동 불출 등록</button>
             {% endif %}
             <button type="button" id="reqRefreshBtn" class="req-refresh-btn" onclick="loadRequirementsData(true)">↻ 새로고침</button>
         </div>
@@ -1469,7 +1469,7 @@ function deleteScheduleFromCalendar(scheduleId, isCompleted) {
 async function autoCreatePurchaseRequests() {
     const btn = document.getElementById('reqAutoOrderBtn');
     if (btn && btn.classList.contains('loading')) return;
-    if (!confirm('부족한 원/부자재를 자동 불출 및 발주등록 하시겠습니까?\n물류 재고가 있으면 자동 불출 요청,\n부족분은 MOQ 기준으로 자동 발주 등록됩니다.\n(원초는 제외됩니다)')) return;
+    if (!confirm('부족한 부자재를 자동 불출 요청으로 등록하시겠습니까?\n현재 작업장 재고 기준 부족 수량만 자동 등록됩니다.\n(원초는 제외됩니다)')) return;
 
     if (btn) btn.classList.add('loading');
     try {
@@ -1480,19 +1480,17 @@ async function autoCreatePurchaseRequests() {
         });
         const payload = await res.json();
         if (!res.ok || !payload.ok) {
-            throw new Error(payload.message || '자동 불출/발주 등록 처리 중 오류가 발생했습니다.');
+            throw new Error(payload.message || '자동 불출 등록 처리 중 오류가 발생했습니다.');
         }
 
         const createdCount = Number(payload.created_count || 0);
         const issueCreatedCount = Number(payload.issue_created_count || 0);
-        const purchaseCreatedCount = Number(payload.purchase_created_count || 0);
         const skippedCount = Number(payload.skipped_count || 0);
         let msg = `자동 처리 완료: ${createdCount}건 등록`;
         msg += `\n- 자동 불출 요청: ${issueCreatedCount}건`;
-        msg += `\n- 자동 발주 요청: ${purchaseCreatedCount}건`;
         if (skippedCount > 0) {
             msg += `\n- 이미 등록된 요청으로 건너뜀: ${skippedCount}건`;
-            msg += '\n같은 자재의 미처리 불출/발주 요청이 이미 있으면 신규 등록하지 않습니다.';
+            msg += '\n같은 자재의 미처리 불출 요청이 이미 있으면 신규 등록하지 않습니다.';
         }
         if (createdCount === 0 && skippedCount > 0) {
             msg += '\n\n이번 실행은 새로 만든 건이 없고, 기존 미처리 요청만 확인되었습니다.';
@@ -1500,7 +1498,7 @@ async function autoCreatePurchaseRequests() {
         alert(msg);
         loadRequirementsData(true);
     } catch (err) {
-        alert(err.message || '자동 불출/발주 등록 처리 중 오류가 발생했습니다.');
+        alert(err.message || '자동 불출 등록 처리 중 오류가 발생했습니다.');
     } finally {
         if (btn) btn.classList.remove('loading');
     }

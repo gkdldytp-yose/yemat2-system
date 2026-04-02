@@ -240,10 +240,8 @@
     <button class="tab-btn {% if tab == 'materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=materials'">🧰 부자재</button>
     <button class="tab-btn {% if tab == 'productions' %}active{% endif %}" onclick="location.href='/integrated-management?tab=productions'">🏭 생산관리</button>
     <button class="tab-btn {% if tab == 'requirements_calculator' %}active{% endif %}" onclick="location.href='/integrated-management?tab=requirements_calculator'">🧮 원부자재 계산기</button>
-    <button class="tab-btn {% if tab == 'stats' %}active{% endif %}" onclick="location.href='/integrated-management?tab=stats'">📈 통계</button>
     <button class="tab-btn {% if tab == 'inventory_audit' %}active{% endif %}" onclick="location.href='/integrated-management?tab=inventory_audit'">📊 재고 조사</button>
     <button class="tab-btn" onclick="location.href='/imports'">📥 엑셀 임포트</button>
-    <button class="tab-btn {% if tab == 'audit_logs' %}active{% endif %}" onclick="location.href='/integrated-management?tab=audit_logs'">🧾 감사로그</button>
     <button class="tab-btn {% if tab == 'db_backups' %}active{% endif %}" onclick="location.href='/integrated-management?tab=db_backups'">💾 DB 백업</button>
 </div>
 
@@ -283,9 +281,7 @@
                 {% elif tab == 'materials' %}전체 부자재 관리
                 {% elif tab == 'productions' %}전체 생산 관리
                 {% elif tab == 'requirements_calculator' %}원부자재 계산기
-                {% elif tab == 'stats' %}통합 생산 통계
                 {% elif tab == 'inventory_audit' %}전체 재고 조사 현황
-                {% elif tab == 'audit_logs' %}전체 감사 로그
                 {% elif tab == 'db_backups' %}전체 DB 백업 관리
                 {% endif %}
                 {% if tab != 'requirements_calculator' %}
@@ -335,24 +331,11 @@
                 {% if tab == 'db_backups' %}
                 <input type="hidden" name="keep_count" value="{{ backup_keep_count or 10 }}">
                 {% endif %}
-                {% if tab not in ['inventory_audit', 'stats', 'requirements_calculator'] %}
+                {% if tab not in ['inventory_audit', 'requirements_calculator'] %}
                 <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="키워드 검색">
                 <button type="submit" class="btn btn-small">검색</button>
                 {% endif %}
             </form>
-            {% if tab == 'stats' %}
-            <form method="GET" action="/integrated-management" style="display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;">
-                <input type="hidden" name="tab" value="stats">
-                <input type="hidden" name="wp" value="{{ wp_filter }}">
-                <input type="hidden" name="stat_view" value="{{ stat_view or 'table' }}">
-                <select name="stat_period" style="padding:0.42rem 0.55rem;border:1px solid #cbd5e1;border-radius:8px;">
-                    <option value="month" {% if stat_period == 'month' %}selected{% endif %}>월간</option>
-                    <option value="week" {% if stat_period == 'week' %}selected{% endif %}>주간</option>
-                </select>
-                <input type="date" name="stat_anchor" value="{{ stat_anchor or '' }}" style="padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;">
-                <button type="submit" class="btn btn-small" style="background:#2563eb;">적용</button>
-            </form>
-            {% endif %}
             {% if tab == 'materials' %}
             <button type="button" id="materialBulkAssignToggleBtn" class="btn btn-small" style="background:#2563eb;" onclick="toggleMaterialBulkAssignMode()">작업장 일괄 변경</button>
             <form method="POST" action="/integrated-management/materials/reset-stock" style="margin-left:auto;" onsubmit="return confirm('부자재 재고를 모두 0으로 초기화할까요?\\n(로트 현재수량, 위치별 잔량, 수불 이력, 발주 데이터까지 함께 초기화됩니다.)');">
@@ -380,7 +363,7 @@
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">지금 백업</button>
             </form>
             {% endif %}
-            {% if tab not in ['audit_logs', 'db_backups', 'inventory_audit', 'stats', 'requirements_calculator', 'productions'] %}
+            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'productions'] %}
             <button class="btn btn-small" onclick="openAddModal()">+ 추가</button>
             {% endif %}
             </div>

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, abort
 import sqlite3
 from datetime import datetime
 import json
@@ -313,6 +313,32 @@ def _upsert_material_lot_balance(cursor, location_id, material_lot_id, qty):
             ''',
             (location_id, material_lot_id, qty_value),
         )
+
+
+def _increase_material_lot_balance(cursor, location_id, material_lot_id, qty):
+    qty_value = float(qty or 0)
+    if qty_value <= 0:
+        return
+    existing = cursor.execute(
+        '''
+        SELECT id
+        FROM inv_material_lot_balances
+        WHERE location_id = ? AND material_lot_id = ?
+        LIMIT 1
+        ''',
+        (location_id, material_lot_id),
+    ).fetchone()
+    if existing:
+        cursor.execute(
+            '''
+            UPDATE inv_material_lot_balances
+            SET qty = COALESCE(qty, 0) + ?, updated_at = CURRENT_TIMESTAMP
+            WHERE location_id = ? AND material_lot_id = ?
+            ''',
+            (qty_value, location_id, material_lot_id),
+        )
+    else:
+        _upsert_material_lot_balance(cursor, location_id, material_lot_id, qty_value)
 
 
 def _move_lot_balance_between_locations(cursor, material_lot_id, from_location_id, to_location_id, qty):
@@ -678,6 +704,54 @@ def _next_lot_seq(cursor, material_id, receiving_date):
     return int(row['next_seq'] or 1) if row else 1
 
 
+def _next_unique_material_lot(cursor, material_id, material_code, receiving_date):
+    lot_seq = _next_lot_seq(cursor, material_id, receiving_date)
+    while True:
+        lot = _build_material_lot(material_code, receiving_date, lot_seq)
+        cursor.execute('SELECT 1 FROM material_lots WHERE lot = ? LIMIT 1', (lot,))
+        if not cursor.fetchone():
+            return lot, lot_seq
+        lot_seq += 1
+
+
+def _find_matching_material_lot(
+    cursor,
+    material_id,
+    receiving_date,
+    manufacture_date=None,
+    expiry_date=None,
+    manufacture_date_unknown=0,
+    expiry_date_unknown=0,
+    supplier_lot='',
+):
+    cursor.execute(
+        '''
+        SELECT id, lot, lot_seq
+        FROM material_lots
+        WHERE material_id = ?
+          AND COALESCE(receiving_date, '') = COALESCE(?, '')
+          AND COALESCE(manufacture_date, '') = COALESCE(?, '')
+          AND COALESCE(expiry_date, '') = COALESCE(?, '')
+          AND COALESCE(manufacture_date_unknown, 0) = ?
+          AND COALESCE(expiry_date_unknown, 0) = ?
+          AND COALESCE(supplier_lot, '') = COALESCE(?, '')
+          AND COALESCE(is_disposed, 0) = 0
+        ORDER BY id DESC
+        LIMIT 1
+        ''',
+        (
+            material_id,
+            receiving_date or '',
+            manufacture_date or '',
+            expiry_date or '',
+            int(manufacture_date_unknown or 0),
+            int(expiry_date_unknown or 0),
+            supplier_lot or '',
+        ),
+    )
+    return cursor.fetchone()
+
+
 def _sync_material_stock_with_lots(conn, material_id=None):
     cursor = conn.cursor()
     if material_id is not None:
@@ -715,22 +789,83 @@ def _sync_material_stock_with_lots(conn, material_id=None):
     )
 
 
-def _create_request_receipt_lot(cursor, material_id, material_code, quantity, workplace):
-    receiving_date = datetime.now().strftime('%Y-%m-%d')
-    lot_seq = _next_lot_seq(cursor, int(material_id), receiving_date)
-    lot = _build_material_lot(material_code, receiving_date, lot_seq)
-    cursor.execute(
-        '''
-        INSERT INTO material_lots
-        (material_id, lot, lot_seq, receiving_date, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
-        VALUES (?, ?, ?, ?, 0, ?, ?, '', ?)
-        ''',
-        (material_id, lot, lot_seq, receiving_date, quantity, quantity, quantity),
+def _create_request_receipt_lot(
+    cursor,
+    material_id,
+    material_code,
+    quantity,
+    workplace,
+    receiving_date=None,
+    manufacture_date=None,
+    expiry_date=None,
+    manufacture_date_unknown=0,
+    expiry_date_unknown=0,
+):
+    receiving_date = (receiving_date or '').strip() or datetime.now().strftime('%Y-%m-%d')
+    manufacture_date = (manufacture_date or '').strip() or None
+    expiry_date = (expiry_date or '').strip() or None
+    matched_lot = _find_matching_material_lot(
+        cursor,
+        int(material_id),
+        receiving_date,
+        manufacture_date=manufacture_date,
+        expiry_date=expiry_date,
+        manufacture_date_unknown=manufacture_date_unknown,
+        expiry_date_unknown=expiry_date_unknown,
+        supplier_lot='',
     )
-    lot_id = cursor.lastrowid
+    if matched_lot:
+        lot_id = int(matched_lot['id'])
+        lot = matched_lot['lot']
+        cursor.execute(
+            '''
+            UPDATE material_lots
+            SET received_quantity = COALESCE(received_quantity, 0) + ?,
+                current_quantity = COALESCE(current_quantity, 0) + ?,
+                quantity = COALESCE(quantity, 0) + ?,
+                manufacture_date = COALESCE(manufacture_date, ?),
+                expiry_date = COALESCE(expiry_date, ?),
+                manufacture_date_unknown = CASE WHEN ? != 0 THEN 1 ELSE COALESCE(manufacture_date_unknown, 0) END,
+                expiry_date_unknown = CASE WHEN ? != 0 THEN 1 ELSE COALESCE(expiry_date_unknown, 0) END
+            WHERE id = ?
+            ''',
+            (
+                quantity,
+                quantity,
+                quantity,
+                manufacture_date,
+                expiry_date,
+                int(manufacture_date_unknown or 0),
+                int(expiry_date_unknown or 0),
+                lot_id,
+            ),
+        )
+    else:
+        lot, lot_seq = _next_unique_material_lot(cursor, int(material_id), material_code, receiving_date)
+        cursor.execute(
+            '''
+            INSERT INTO material_lots
+            (material_id, lot, lot_seq, receiving_date, manufacture_date, manufacture_date_unknown, expiry_date, expiry_date_unknown, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, '', ?)
+            ''',
+            (
+                material_id,
+                lot,
+                lot_seq,
+                receiving_date,
+                manufacture_date,
+                int(manufacture_date_unknown or 0),
+                expiry_date,
+                int(expiry_date_unknown or 0),
+                quantity,
+                quantity,
+                quantity,
+            ),
+        )
+        lot_id = cursor.lastrowid
     location_id = _get_inventory_location_id(cursor, workplace)
     if location_id:
-        _upsert_material_lot_balance(cursor, location_id, lot_id, quantity)
+        _increase_material_lot_balance(cursor, location_id, lot_id, quantity)
     cursor.execute(
         '''
         INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
@@ -739,6 +874,67 @@ def _create_request_receipt_lot(cursor, material_id, material_code, quantity, wo
         (lot_id, material_id, quantity, f'{workplace} 실입고 확인'),
     )
     return lot_id, lot
+
+
+def _get_latest_workplace_lot_defaults(cursor, material_id, workplace):
+    location_id = _get_inventory_location_id(cursor, workplace)
+    if location_id:
+        row = cursor.execute(
+            '''
+            SELECT
+                ml.receiving_date,
+                ml.manufacture_date,
+                COALESCE(ml.manufacture_date_unknown, 0) AS manufacture_date_unknown,
+                ml.expiry_date,
+                COALESCE(ml.expiry_date_unknown, 0) AS expiry_date_unknown
+            FROM inv_material_lot_balances b
+            JOIN material_lots ml ON ml.id = b.material_lot_id
+            WHERE ml.material_id = ?
+              AND b.location_id = ?
+              AND COALESCE(ml.is_disposed, 0) = 0
+            ORDER BY
+                CASE WHEN COALESCE(ml.receiving_date, '') = '' THEN 1 ELSE 0 END,
+                ml.receiving_date DESC,
+                ml.id DESC
+            LIMIT 1
+            ''',
+            (material_id, location_id),
+        ).fetchone()
+        if row:
+            return {
+                'receiving_date': row['receiving_date'] or '',
+                'manufacture_date': row['manufacture_date'] or '',
+                'manufacture_date_unknown': int(row['manufacture_date_unknown'] or 0),
+                'expiry_date': row['expiry_date'] or '',
+                'expiry_date_unknown': int(row['expiry_date_unknown'] or 0),
+            }
+
+    row = cursor.execute(
+        '''
+        SELECT
+            receiving_date,
+            manufacture_date,
+            COALESCE(manufacture_date_unknown, 0) AS manufacture_date_unknown,
+            expiry_date,
+            COALESCE(expiry_date_unknown, 0) AS expiry_date_unknown
+        FROM material_lots
+        WHERE material_id = ?
+          AND COALESCE(is_disposed, 0) = 0
+        ORDER BY
+            CASE WHEN COALESCE(receiving_date, '') = '' THEN 1 ELSE 0 END,
+            receiving_date DESC,
+            id DESC
+        LIMIT 1
+        ''',
+        (material_id,),
+    ).fetchone()
+    return {
+        'receiving_date': row['receiving_date'] if row else '',
+        'manufacture_date': row['manufacture_date'] if row else '',
+        'manufacture_date_unknown': int((row['manufacture_date_unknown'] if row else 0) or 0),
+        'expiry_date': row['expiry_date'] if row else '',
+        'expiry_date_unknown': int((row['expiry_date_unknown'] if row else 0) or 0),
+    }
 
 
 @bp.route('/suppliers')
@@ -800,6 +996,7 @@ def materials():
     is_logistics_role = False
     selected_category = request.args.get('category', '')
     search_keyword = request.args.get('search', '').strip()
+    search_keywords = [token.strip() for token in search_keyword.split(',') if token.strip()]
     selected_product_id = (request.args.get('product_id') or '').strip()
     selected_material_search_field = (request.args.get('material_search_field') or 'all').strip() or 'all'
     selected_material_type = (request.args.get('material_type') or 'all').strip() or 'all'
@@ -901,26 +1098,27 @@ def materials():
     elif selected_material_type == 'material_only':
         query += " AND COALESCE(m.category, '') NOT IN ('기름', '소금')"
 
-    if search_keyword:
-        search_pattern = f"%{search_keyword}%"
-        if selected_material_search_field == 'code':
-            query += " AND COALESCE(m.code, '') LIKE ?"
-            params.append(search_pattern)
-        elif selected_material_search_field == 'name':
-            query += " AND COALESCE(m.name, '') LIKE ?"
-            params.append(search_pattern)
-        elif selected_material_search_field == 'supplier':
-            query += " AND COALESCE(s.name, '') LIKE ?"
-            params.append(search_pattern)
-        elif selected_material_search_field == 'category':
-            query += " AND COALESCE(m.category, '') LIKE ?"
-            params.append(search_pattern)
-        elif selected_material_search_field == 'unit':
-            query += " AND COALESCE(m.unit, '') LIKE ?"
-            params.append(search_pattern)
-        else:
-            query += " AND (COALESCE(m.name, '') LIKE ? OR COALESCE(m.code, '') LIKE ? OR COALESCE(s.name, '') LIKE ? OR COALESCE(m.category, '') LIKE ?)"
-            params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
+    if search_keywords:
+        for keyword in search_keywords:
+            search_pattern = f"%{keyword}%"
+            if selected_material_search_field == 'code':
+                query += " AND COALESCE(m.code, '') LIKE ?"
+                params.append(search_pattern)
+            elif selected_material_search_field == 'name':
+                query += " AND COALESCE(m.name, '') LIKE ?"
+                params.append(search_pattern)
+            elif selected_material_search_field == 'supplier':
+                query += " AND COALESCE(s.name, '') LIKE ?"
+                params.append(search_pattern)
+            elif selected_material_search_field == 'category':
+                query += " AND COALESCE(m.category, '') LIKE ?"
+                params.append(search_pattern)
+            elif selected_material_search_field == 'unit':
+                query += " AND COALESCE(m.unit, '') LIKE ?"
+                params.append(search_pattern)
+            else:
+                query += " AND (COALESCE(m.name, '') LIKE ? OR COALESCE(m.code, '') LIKE ? OR COALESCE(s.name, '') LIKE ? OR COALESCE(m.category, '') LIKE ?)"
+                params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
 
     if selected_product_id:
         query += '''
@@ -1064,7 +1262,7 @@ def materials():
             ORDER BY lir.requested_at ASC
             '''
         )
-        all_issue_requests = cursor.fetchall()
+        all_issue_requests = [dict(r) for r in cursor.fetchall()]
         cursor.execute(
             '''
             SELECT lir.*, ml.lot as material_lot
@@ -1075,7 +1273,7 @@ def materials():
             LIMIT 100
             '''
         )
-        export_requests = cursor.fetchall()
+        export_requests = [dict(r) for r in cursor.fetchall()]
     else:
         cursor.execute(
             '''
@@ -1088,7 +1286,7 @@ def materials():
             ''',
             (workplace,),
         )
-        all_issue_requests = cursor.fetchall()
+        all_issue_requests = [dict(r) for r in cursor.fetchall()]
         cursor.execute(
             '''
             SELECT lir.*, ml.lot as material_lot
@@ -1100,7 +1298,7 @@ def materials():
             ''',
             (workplace,),
         )
-        export_requests = cursor.fetchall()
+        export_requests = [dict(r) for r in cursor.fetchall()]
 
     issue_requests_pending = [row for row in all_issue_requests if (row['status'] or '') == ISSUE_STATUS_REQUESTED]
     issue_requests_completed = [row for row in all_issue_requests if (row['status'] or '') == ISSUE_STATUS_COMPLETED]
@@ -1110,6 +1308,10 @@ def materials():
     export_requests_rejected = [row for row in export_requests if (row['status'] or '') == ISSUE_STATUS_REJECTED]
     issue_completed_groups = _group_request_rows_by_date(issue_requests_completed, 'processed_at')
     export_completed_groups = _group_request_rows_by_date(export_requests_completed, 'processed_at')
+    if not is_logistics_role:
+        for row in issue_requests_pending:
+            defaults = _get_latest_workplace_lot_defaults(cursor, int(row['material_id']), row['requester_workplace'])
+            row['receipt_lot_defaults'] = defaults
 
     conn.close()
 
@@ -1874,42 +2076,88 @@ def delete_material(material_id):
 @bp.route('/raw-materials')
 @login_required
 def raw_materials():
-    """원초 관리 목록"""
+    """?? ?? ??"""
     workplace = get_workplace()
     is_logistics = False
+    selected_raw_search_field = (request.args.get('raw_search_field') or 'all').strip() or 'all'
+    if selected_raw_search_field not in ('all', 'code', 'name', 'car_number', 'receiving_date'):
+        selected_raw_search_field = 'all'
+    raw_search_keyword = (request.args.get('raw_search_keyword') or '').strip()
+    selected_raw_name = (request.args.get('raw_name') or '').strip()
     conn = get_db()
     cursor = conn.cursor()
 
-    # 월별 필터 (사용완료 탭용)
+    # ?? ?? (???? ??)
     month_param = request.args.get('month', '')
-    logistics_workplace_filter = (request.args.get('logistics_workplace') or '전체').strip() if is_logistics else '전체'
-    logistics_workplace_tabs = ['전체'] + [wp for wp in WORKPLACES if wp != LOGISTICS_WORKPLACE]
+    logistics_workplace_filter = (request.args.get('logistics_workplace') or '??').strip() if is_logistics else '??'
+    logistics_workplace_tabs = ['??'] + [wp for wp in WORKPLACES if wp != LOGISTICS_WORKPLACE]
+
+    raw_query = '''
+        SELECT * FROM raw_materials
+        WHERE 1=1
+    '''
+    raw_params = []
+    if not is_logistics:
+        raw_query += ' AND workplace = ?'
+        raw_params.append(workplace)
+    if selected_raw_name:
+        raw_query += " AND COALESCE(name, '') = ?"
+        raw_params.append(selected_raw_name)
+    if raw_search_keyword:
+        like_q = f'%{raw_search_keyword}%'
+        if selected_raw_search_field == 'code':
+            raw_query += " AND COALESCE(code, '') LIKE ?"
+            raw_params.append(like_q)
+        elif selected_raw_search_field == 'name':
+            raw_query += " AND COALESCE(name, '') LIKE ?"
+            raw_params.append(like_q)
+        elif selected_raw_search_field == 'car_number':
+            raw_query += " AND COALESCE(COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')), '') LIKE ?"
+            raw_params.append(like_q)
+        elif selected_raw_search_field == 'receiving_date':
+            raw_query += " AND COALESCE(receiving_date, '') LIKE ?"
+            raw_params.append(like_q)
+        else:
+            raw_query += '''
+                AND (
+                    COALESCE(name, '') LIKE ?
+                    OR COALESCE(code, '') LIKE ?
+                    OR COALESCE(COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')), '') LIKE ?
+                    OR COALESCE(receiving_date, '') LIKE ?
+                )
+            '''
+            raw_params.extend([like_q, like_q, like_q, like_q])
+    raw_query += '''
+        ORDER BY
+            name COLLATE NOCASE ASC,
+            CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
+            receiving_date ASC,
+            id ASC
+    '''
+    cursor.execute(raw_query, raw_params)
+    raw_materials = cursor.fetchall()
 
     if is_logistics:
         cursor.execute(
             '''
-            SELECT * FROM raw_materials
-            ORDER BY
-                name COLLATE NOCASE ASC,
-                CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
-                receiving_date ASC,
-                id ASC
-            '''
+            SELECT DISTINCT TRIM(COALESCE(name, '')) AS name
+            FROM raw_materials
+            WHERE TRIM(COALESCE(name, '')) <> ''
+            ORDER BY name COLLATE NOCASE ASC
+        '''
         )
     else:
         cursor.execute(
             '''
-            SELECT * FROM raw_materials
+            SELECT DISTINCT TRIM(COALESCE(name, '')) AS name
+            FROM raw_materials
             WHERE workplace = ?
-            ORDER BY
-                name COLLATE NOCASE ASC,
-                CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
-                receiving_date ASC,
-                id ASC
+              AND TRIM(COALESCE(name, '')) <> ''
+            ORDER BY name COLLATE NOCASE ASC
         ''',
             (workplace,),
         )
-    raw_materials = cursor.fetchall()
+    raw_name_options = [row['name'] for row in cursor.fetchall()]
 
     if is_logistics:
         cursor.execute(
@@ -1945,7 +2193,7 @@ def raw_materials():
         )
     raw_code_profiles = [dict(r) for r in cursor.fetchall()]
 
-    # 최근 6개월 목록 생성
+    # ?? 6?? ?? ??
     today = datetime.now()
     month_anchor = today.replace(day=1)
     months = []
@@ -1966,6 +2214,12 @@ def raw_materials():
         raw_code_profiles_json=json.dumps(raw_code_profiles, ensure_ascii=False),
         months=months,
         selected_month=month_param,
+        selected_raw_search_field=selected_raw_search_field,
+        raw_search_keyword=raw_search_keyword,
+        selected_raw_name=selected_raw_name,
+        raw_name_options=raw_name_options,
+        logistics_workplace_filter=logistics_workplace_filter,
+        logistics_workplace_tabs=logistics_workplace_tabs,
         workplaces=WORKPLACES,
         current_workplace=workplace,
     )
@@ -2571,9 +2825,6 @@ def purchase_orders():
     """?? ?? - ???? ??"""
     workplace = get_workplace()
     is_logistics = False
-    user = session.get('user') or {}
-    if user.get('role') == 'logistics':
-        return redirect(url_for('materials.logistics_materials'))
     return _render_purchase_orders_page(
         workplace=workplace,
         is_logistics=is_logistics,
@@ -2587,18 +2838,8 @@ def purchase_orders():
 
 @bp.route('/logistics-materials')
 @login_required
-@role_required('logistics')
 def logistics_materials():
-    workplace = get_workplace()
-    return _render_purchase_orders_page(
-        workplace=workplace,
-        is_logistics=True,
-        page_title='\ubd80\uc790\uc7ac \uc218\ubd88 \uad00\ub9ac',
-        page_mode='logistics',
-        show_logistics_hub=True,
-        show_low_stock_tab=False,
-        disable_purchase_actions=True,
-    )
+    return redirect(url_for('materials.materials', req_tab='issue'))
 
 
 def _render_purchase_orders_page(
@@ -3438,7 +3679,7 @@ def add_purchase_request():
         logistics_users,
         f"{change_label}: {mat_name}",
         f"{target_workplace} / \uc218\ub7c9 {float(quantity or 0):g}{mat_unit} / \uc785\uace0\uc608\uc815 {expected_date}",
-        '/logistics-materials',
+        '/purchase-orders',
     )
     conn.commit()
     conn.close()
@@ -3602,13 +3843,6 @@ def add_issue_request():
                 'requester_username': req_username,
             },
         )
-        _notify_users(
-            conn,
-            get_usernames_for_notification(conn, roles=['logistics'], include_admin=True),
-            f"새 불출 요청: {mat['name']}",
-            f"{workplace} / 요청 {requested_qty:g}{mat['unit'] or ''}",
-            '/logistics-materials',
-        )
         conn.commit()
     finally:
         conn.close()
@@ -3683,14 +3917,6 @@ def bulk_add_issue_request():
                     'requester_username': req_username,
                     'bulk': True,
                 },
-            )
-        if created_count > 0:
-            _notify_users(
-                conn,
-                get_usernames_for_notification(conn, roles=['logistics'], include_admin=True),
-                f"새 불출 요청 {created_count}건",
-                f"{workplace} 작업장에서 다중 불출 요청을 등록했습니다.",
-                '/logistics-materials',
             )
         conn.commit()
     finally:
@@ -3981,8 +4207,15 @@ def delete_all_pending_issue_requests():
 def complete_issue_request(req_id):
     approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
+    receiving_date = (request.form.get('receiving_date') or '').strip()
+    manufacture_date = (request.form.get('manufacture_date') or '').strip()
+    expiry_date = (request.form.get('expiry_date') or '').strip()
+    manufacture_date_unknown = 1 if (request.form.get('manufacture_date_unknown') or '').strip() == '1' else 0
+    expiry_date_unknown = 1 if (request.form.get('expiry_date_unknown') or '').strip() == '1' else 0
     if approved_qty <= 0:
         return "<script>alert('실제 입고 수량을 확인해 주세요.'); history.back();</script>"
+    if not receiving_date:
+        return "<script>alert('입고일은 필수입니다.'); history.back();</script>"
 
     conn = get_db()
     cursor = conn.cursor()
@@ -4006,6 +4239,11 @@ def complete_issue_request(req_id):
             req_row['material_code'],
             approved_qty,
             req_row['requester_workplace'],
+            receiving_date,
+            manufacture_date,
+            expiry_date,
+            manufacture_date_unknown,
+            expiry_date_unknown,
         )
         _sync_material_stock_with_lots(conn, int(req_row['material_id']))
         cursor.execute(
@@ -4270,7 +4508,7 @@ def reject_export_request(req_id):
     finally:
         conn.close()
 
-    return redirect(url_for('materials.logistics_materials'))
+    return redirect(url_for('materials.purchase_orders'))
 
 @bp.route('/purchase-requests/<int:req_id>/reschedule', methods=['POST'])
 @role_required('purchase')
@@ -4328,7 +4566,7 @@ def reschedule_purchase_request(req_id):
     finally:
         conn.close()
     if next_page == 'logistics':
-        return redirect(url_for('materials.logistics_materials'))
+        return redirect(url_for('materials.purchase_orders'))
     return redirect(url_for('materials.purchase_orders'))
 
 @bp.route('/purchase-requests/<int:req_id>/reject-close', methods=['POST'])
@@ -4374,7 +4612,7 @@ def reject_close_purchase_request(req_id):
         conn.close()
 
     if next_page == 'logistics':
-        return redirect(url_for('materials.logistics_materials'))
+        return redirect(url_for('materials.purchase_orders'))
     return redirect(url_for('materials.purchase_orders'))
 
 
@@ -4427,7 +4665,7 @@ def finalize_purchase_requests_by_date():
     finally:
         conn.close()
     if next_page == 'logistics':
-        return redirect(url_for('materials.logistics_materials'))
+        return redirect(url_for('materials.purchase_orders'))
     return redirect(url_for('materials.purchase_orders'))
 
 
@@ -4500,18 +4738,43 @@ def receive_purchase_request(req_id):
             )
 
         supplier_lot = (request.form.get('supplier_lot') or '').strip()
-        lot_seq = _next_lot_seq(cursor, int(row['material_id']), receiving_date)
-        lot = _build_material_lot(row['material_code'], receiving_date, lot_seq)
-        cursor.execute(
-            '''
-            INSERT INTO material_lots
-            (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''',
-            (row['material_id'], lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_qty, received_qty, supplier_lot, received_qty),
+        matched_lot = _find_matching_material_lot(
+            cursor,
+            int(row['material_id']),
+            receiving_date,
+            manufacture_date=manufacture_date,
+            expiry_date=expiry_date,
+            supplier_lot=supplier_lot,
         )
-        lot_id = cursor.lastrowid
-        lot_action = 'create'
+        if matched_lot:
+            lot_id = int(matched_lot['id'])
+            lot = matched_lot['lot']
+            cursor.execute(
+                '''
+                UPDATE material_lots
+                SET unit_price = ?,
+                    received_quantity = COALESCE(received_quantity, 0) + ?,
+                    current_quantity = COALESCE(current_quantity, 0) + ?,
+                    quantity = COALESCE(quantity, 0) + ?,
+                    manufacture_date = COALESCE(manufacture_date, ?),
+                    expiry_date = COALESCE(expiry_date, ?)
+                WHERE id = ?
+                ''',
+                (unit_price, received_qty, received_qty, received_qty, manufacture_date, expiry_date, lot_id),
+            )
+            lot_action = 'update'
+        else:
+            lot, lot_seq = _next_unique_material_lot(cursor, int(row['material_id']), row['material_code'], receiving_date)
+            cursor.execute(
+                '''
+                INSERT INTO material_lots
+                (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (row['material_id'], lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_qty, received_qty, supplier_lot, received_qty),
+            )
+            lot_id = cursor.lastrowid
+            lot_action = 'create'
 
         cursor.execute(
             '''
@@ -4523,7 +4786,7 @@ def receive_purchase_request(req_id):
 
         logistics_location_id = _get_inventory_location_id(cursor, '\ubb3c\ub958\ucc3d\uace0')
         if logistics_location_id:
-            _upsert_material_lot_balance(cursor, logistics_location_id, lot_id, received_qty)
+            _increase_material_lot_balance(cursor, logistics_location_id, lot_id, received_qty)
 
         audit_log(
             conn,
@@ -4553,7 +4816,7 @@ def receive_purchase_request(req_id):
     conn.commit()
     conn.close()
     if next_page == 'logistics':
-        return redirect(url_for('materials.logistics_materials'))
+        return redirect(url_for('materials.purchase_orders'))
     return redirect(url_for('materials.purchase_orders'))
 
 @bp.route('/purchase-requests/<int:req_id>/delete', methods=['POST'])

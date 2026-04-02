@@ -124,7 +124,7 @@
 <div class="workplace-filter-tabs">
     {% for wp_tab in logistics_workplace_tabs %}
     <a
-        href="/logistics-materials?logistics_workplace={{ wp_tab|urlencode }}{% if selected_month %}&month={{ selected_month|urlencode }}{% endif %}"
+        href="/purchase-orders?logistics_workplace={{ wp_tab|urlencode }}{% if selected_month %}&month={{ selected_month|urlencode }}{% endif %}"
         class="workplace-filter-tab {% if logistics_workplace_filter == wp_tab %}active{% endif %}"
     >
         {{ wp_tab }}
@@ -380,9 +380,9 @@
 <div id="pane_done" style="display:none;">
 <!-- 월별 필터 -->
 <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;background:white;padding:0.75rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-    <a href="{{ '/logistics-materials' if page_mode == 'logistics' else '/purchase-orders' }}?tab=done" class="btn btn-small {% if not selected_month %}active{% endif %}" style="{% if not selected_month %}background:#667eea;color:white;{% endif %}">전체</a>
+    <a href="/purchase-orders?tab=done" class="btn btn-small {% if not selected_month %}active{% endif %}" style="{% if not selected_month %}background:#667eea;color:white;{% endif %}">전체</a>
     {% for m in months %}
-    <a href="{{ '/logistics-materials' if page_mode == 'logistics' else '/purchase-orders' }}?tab=done&month={{ m }}" class="btn btn-small {% if selected_month == m %}active{% endif %}" style="{% if selected_month == m %}background:#667eea;color:white;{% endif %}">{{ m }}</a>
+    <a href="/purchase-orders?tab=done&month={{ m }}" class="btn btn-small {% if selected_month == m %}active{% endif %}" style="{% if selected_month == m %}background:#667eea;color:white;{% endif %}">{{ m }}</a>
     {% endfor %}
 </div>
 
