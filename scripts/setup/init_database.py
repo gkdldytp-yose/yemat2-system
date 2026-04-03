@@ -47,6 +47,8 @@ def create_tables(conn):
         category TEXT,
         spec TEXT,
         unit TEXT,
+        upper_unit TEXT,
+        upper_unit_qty REAL,
         moq TEXT,
         lead_time TEXT,
         unit_price REAL DEFAULT 0,

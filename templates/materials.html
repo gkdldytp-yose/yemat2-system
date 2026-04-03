@@ -112,6 +112,10 @@
 .request-select{border-radius:14px;border:1px solid #d7deea;background:#fbfdff;padding:0.45rem;}
 .request-inline-actions{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;}
 .request-submit-bar{display:flex;justify-content:flex-end;gap:0.5rem;align-items:center;margin-top:0.85rem;}
+.issue-qty-entry{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;}
+.issue-unit-toggle{border:1px solid #0ea5e9;background:#eff6ff;color:#0369a1;border-radius:999px;padding:0.28rem 0.7rem;font-size:0.78rem;font-weight:900;cursor:pointer;line-height:1;}
+.issue-unit-toggle.base{border-color:#94a3b8;background:#f8fafc;color:#334155;}
+.issue-converted-hint{font-size:0.78rem;font-weight:800;color:#0f172a;}
 .issue-status-tabs{display:flex;gap:0.55rem;flex-wrap:wrap;margin:0.9rem 0 1rem;}
 .issue-status-btn{padding:0.55rem 1rem;border:1px solid #d7deea;border-radius:999px;background:linear-gradient(180deg,#ffffff,#f8fafc);font-size:0.82rem;font-weight:800;color:#0f172a;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,.05);}
 .issue-status-btn.active{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;border-color:#0f172a;box-shadow:0 10px 24px rgba(30,58,138,.18);}
@@ -191,6 +195,7 @@
 
 <h1>🧰 부자재 관리</h1>
 {% set MAT_CATS = ['기름','소금','내포','외포','실리카','트레이','박스','뚜껑','각대','기타'] %}
+{% set UPPER_UNITS = ['CAN','P','포대','BOX'] %}
 
 {% if can_manage_material_master %}
 <div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:1rem;">
@@ -221,6 +226,19 @@
                     <option>개</option><option>kg</option><option>L</option>
                     <option>g</option><option>ml</option><option>박스</option><option>롤</option>
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label>상위 단위</label>
+                <select name="upper_unit">
+                    <option value="">없음</option>
+                    {% for u in UPPER_UNITS %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>상위 단위 환산값</label>
+                <input type="number" name="upper_unit_qty" step="0.01" min="0" placeholder="예: 18">
             </div>
 
             <div class="form-group">
@@ -262,7 +280,8 @@
         <h3 style="margin-bottom:1rem;">부자재 수정</h3>
         <form method="POST" action="/materials/update">
             <input type="hidden" name="material_id" id="edit_id">
-            
+            <input type="hidden" name="return_url" id="edit_return_url" value="{{ current_view_url or url_for('materials.materials') }}">
+             
             <div class="grid grid-2">
                 <div class="form-group">
                     <label>자재 코드</label>
@@ -279,6 +298,14 @@
 
                 <div class="form-group"><label>부자재명</label><input type="text" name="name" id="edit_name" required></div>
                 <div class="form-group"><label>단위</label><input type="text" name="unit" id="edit_unit"></div>
+                <div class="form-group">
+                    <label>상위 단위</label>
+                    <select name="upper_unit" id="edit_upper_unit">
+                        <option value="">없음</option>
+                        {% for u in UPPER_UNITS %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group"><label>상위 단위 환산값</label><input type="number" name="upper_unit_qty" id="edit_upper_unit_qty" step="0.01" min="0"></div>
                 <div class="form-group"><label>MOQ</label><input type="number" name="moq" id="edit_moq" step="0.01" min="0"></div>
                 <div class="form-group"><label>작업장 재고</label><input type="number" name="current_stock" id="edit_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
                 <div class="form-group"><label>총재고</label><input type="number" id="edit_total_stock" step="0.01" readonly style="background:#f1f5f9;color:#475569;"></div>
@@ -460,6 +487,8 @@
                 data-name="{{ m.name or '' }}"
                 data-category="{{ m.category or '' }}"
                 data-unit="{{ m.unit or '' }}"
+                data-upper-unit="{{ m.upper_unit or '' }}"
+                data-upper-unit-qty="{{ m.upper_unit_qty if m.upper_unit_qty is not none else '' }}"
                 data-workplace-stock="{{ m.workplace_stock }}"
                 data-total-stock="{{ m.total_stock }}"
                 data-min-stock="{{ m.min_stock }}"
@@ -516,7 +545,7 @@
                     <label>부자재 목록</label>
                     <select id="issueMaterialList" size="12" class="request-select" style="width:100%;" ondblclick="addIssueItemFromList()">
                         {% for m in request_materials %}
-                        <option value="{{ m.id }}" data-code="{{ m.code or '-' }}" data-name="{{ m.name }}" data-unit="{{ m.unit or '' }}">
+                        <option value="{{ m.id }}" data-code="{{ m.code or '-' }}" data-name="{{ m.name }}" data-unit="{{ m.unit or '' }}" data-upper-unit="{{ m.upper_unit or '' }}" data-upper-unit-qty="{{ m.upper_unit_qty if m.upper_unit_qty is not none else '' }}">
                             [{{ m.code or '-' }}] {{ m.name }}{% if m.unit %} ({{ m.unit }}){% endif %}
                         </option>
                         {% endfor %}
@@ -538,9 +567,9 @@
                 <form method="POST" action="/issue-requests/bulk-add" id="issueBulkForm">
                     <div class="table-container" style="max-height:360px;overflow:auto;">
                         <table class="request-list-table">
-                            <thead><tr><th>코드</th><th>자재명</th><th>단위</th><th>요청수량</th><th>비고</th><th></th></tr></thead>
+                            <thead><tr><th>코드</th><th>자재명</th><th>단위</th><th>요청수량</th><th>환산수량</th><th>비고</th><th></th></tr></thead>
                             <tbody id="issueItemsBody">
-                                <tr id="issueEmptyRow"><td colspan="6" class="request-empty">추가된 요청 항목이 없습니다.</td></tr>
+                                <tr id="issueEmptyRow"><td colspan="7" class="request-empty">추가된 요청 항목이 없습니다.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -997,14 +1026,16 @@
 
 {% if can_manage_material_master %}
 <script>
-// 인자 순서: id, code, name, category, unit, workplaceStock, logisticsStock, totalStock, min, supplier, moq, workplace
-function openEdit(id, code, name, category, unit, workplaceStock, logisticsStock, totalStock, min, supplier, moq, workplace) {
+function openEdit(id, code, name, category, unit, upperUnit, upperUnitQty, workplaceStock, totalStock, min, supplier, moq, workplace) {
     // 1. 값 채우기
     document.getElementById('edit_id').value = id;
+    document.getElementById('edit_return_url').value = `${window.location.pathname}${window.location.search}`;
     document.getElementById('edit_code').value = code; // 자동으로 코드를 불러옵니다.
     document.getElementById('edit_name').value = name;
     document.getElementById('edit_cat').value = category;
     document.getElementById('edit_unit').value = unit;
+    document.getElementById('edit_upper_unit').value = upperUnit || '';
+    document.getElementById('edit_upper_unit_qty').value = upperUnitQty === '' ? '' : (Number.isFinite(upperUnitQty) ? upperUnitQty : '');
     document.getElementById('edit_moq').value = Number.isFinite(moq) ? moq : 0;
     document.getElementById('edit_stock').value = Number.isFinite(workplaceStock) ? workplaceStock.toFixed(1) : '0.0';
     document.getElementById('edit_total_stock').value = Number.isFinite(totalStock) ? totalStock.toFixed(1) : '0.0';
@@ -1034,6 +1065,8 @@ document.querySelectorAll('.js-open-edit').forEach((btn) => {
             btn.dataset.name || '',
             btn.dataset.category || '',
             btn.dataset.unit || '',
+            btn.dataset.upperUnit || '',
+            btn.dataset.upperUnitQty === '' ? '' : toNum(btn.dataset.upperUnitQty),
             toNum(btn.dataset.workplaceStock),
             toNum(btn.dataset.totalStock),
             toNum(btn.dataset.minStock),
@@ -1146,12 +1179,16 @@ function mapMaterialRows(rows){
         const code = row.code || '-';
         const name = row.name || '';
         const unit = row.unit || '';
+        const upperUnit = row.upper_unit || '';
+        const upperUnitQty = Number(row.upper_unit_qty || 0);
         const value = String(row.id || '');
         return {
             value,
             code,
             name,
             unit,
+            upperUnit,
+            upperUnitQty: Number.isFinite(upperUnitQty) ? upperUnitQty : 0,
             label: `[${code}] ${name}${unit ? ` (${unit})` : ''}`,
         };
     });
@@ -1168,6 +1205,8 @@ function renderMaterialOptions(selectEl, rows, selectedValue){
         opt.dataset.code = row.code;
         opt.dataset.name = row.name;
         opt.dataset.unit = row.unit;
+        opt.dataset.upperUnit = row.upperUnit || '';
+        opt.dataset.upperUnitQty = row.upperUnitQty || '';
         opt.textContent = row.label;
         if(targetValue && row.value === targetValue){
             opt.selected = true;
@@ -1210,6 +1249,9 @@ function addIssueItemFromList(){
     const code = opt.dataset.code || '-';
     const name = opt.dataset.name || '';
     const unit = opt.dataset.unit || '';
+    const upperUnit = opt.dataset.upperUnit || '';
+    const upperUnitQty = Number(opt.dataset.upperUnitQty || 0);
+    const hasUpperUnit = !!upperUnit && Number.isFinite(upperUnitQty) && upperUnitQty > 0;
     const rowId = `issue_item_${materialId}`;
     if(document.getElementById(rowId)) return;
 
@@ -1217,15 +1259,76 @@ function addIssueItemFromList(){
     if(empty) empty.remove();
     const tr = document.createElement('tr');
     tr.id = rowId;
+    const qtyInputHtml = hasUpperUnit
+        ? `<div class="issue-qty-entry">
+                <input type="number" class="js-issue-qty-input" step="0.01" min="0.01" value="1" required style="width:100px;" oninput="syncIssueConvertedQty(this)">
+                <button type="button" class="issue-unit-toggle js-issue-unit-toggle" data-mode="upper" data-unit="${upperUnit}" data-base-unit="${unit}" data-upper-unit="${upperUnit}" data-factor="${upperUnitQty}" onclick="toggleIssueUnitMode(this)">${upperUnit}</button>
+           </div>
+           <input type="hidden" name="requested_quantity[]" class="js-issue-converted-value" value="${upperUnitQty}">
+           <input type="hidden" class="js-issue-upper-unit-qty" value="${upperUnitQty}">`
+        : `<div class="issue-qty-entry"><input type="number" name="requested_quantity[]" step="0.01" min="0.01" required style="width:100px;"><span>${unit}</span></div>`;
+    const convertedQtyHtml = hasUpperUnit
+        ? `<div><strong class="js-issue-converted-label issue-converted-hint">${upperUnitQty.toFixed(2)} ${unit}</strong></div>`
+        : `<span style="color:#94a3b8;">-</span>`;
     tr.innerHTML = `
         <td>${code}<input type="hidden" name="material_id[]" value="${materialId}"></td>
         <td>${name}</td>
         <td>${unit}</td>
-        <td><input type="number" name="requested_quantity[]" step="0.01" min="0.01" required style="width:100px;"></td>
+        <td>${qtyInputHtml}</td>
+        <td>${convertedQtyHtml}</td>
         <td><input type="text" name="note[]" placeholder="비고" style="width:100%;"></td>
         <td><button type="button" class="btn btn-small btn-secondary" onclick="removeIssueItem('${rowId}')">삭제</button></td>
     `;
     body.appendChild(tr);
+}
+
+function syncIssueConvertedQty(inputEl){
+    const row = inputEl ? inputEl.closest('tr') : null;
+    if(!row) return;
+    const factorInput = row.querySelector('.js-issue-upper-unit-qty');
+    const hiddenInput = row.querySelector('.js-issue-converted-value');
+    const label = row.querySelector('.js-issue-converted-label');
+    const toggleBtn = row.querySelector('.js-issue-unit-toggle');
+    if(!hiddenInput) return;
+    if(!factorInput || !label || !toggleBtn) return;
+    const factor = Number(factorInput.value || 0);
+    const inputQty = Number(inputEl.value || 0);
+    const mode = toggleBtn.dataset.mode || 'upper';
+    const converted = mode === 'upper'
+        ? (factor > 0 && inputQty > 0 ? inputQty * factor : 0)
+        : (inputQty > 0 ? inputQty : 0);
+    hiddenInput.value = converted > 0 ? String(converted) : '';
+    const unitCell = row.children[2];
+    const unit = unitCell ? unitCell.textContent.trim() : '';
+    label.textContent = converted > 0 ? `${converted.toFixed(2)} ${unit}` : `0.00 ${unit}`;
+}
+
+function toggleIssueUnitMode(btn){
+    const row = btn ? btn.closest('tr') : null;
+    if(!row) return;
+    const input = row.querySelector('.js-issue-qty-input');
+    const label = row.querySelector('.js-issue-converted-label');
+    const factorInput = row.querySelector('.js-issue-upper-unit-qty');
+    if(!input || !label || !factorInput) return;
+    const factor = Number(factorInput.value || 0);
+    const currentMode = btn.dataset.mode || 'upper';
+    const upperUnit = btn.dataset.upperUnit || '';
+    const baseUnit = btn.dataset.baseUnit || '';
+    const currentValue = Number(input.value || 0);
+    if(currentMode === 'upper'){
+        const converted = factor > 0 ? currentValue * factor : currentValue;
+        input.value = converted > 0 ? converted.toFixed(2).replace(/\.00$/, '') : '';
+        btn.dataset.mode = 'base';
+        btn.textContent = baseUnit || '-';
+        btn.classList.add('base');
+    } else {
+        const converted = factor > 0 ? currentValue / factor : currentValue;
+        input.value = converted > 0 ? converted.toFixed(2).replace(/\.00$/, '') : '';
+        btn.dataset.mode = 'upper';
+        btn.textContent = upperUnit || '-';
+        btn.classList.remove('base');
+    }
+    syncIssueConvertedQty(input);
 }
 
 function removeIssueItem(rowId){
@@ -1233,14 +1336,14 @@ function removeIssueItem(rowId){
     if(row) row.remove();
     const body = document.getElementById('issueItemsBody');
     if(body && body.children.length === 0){
-        body.innerHTML = '<tr id="issueEmptyRow"><td colspan="6" style="text-align:center;color:#94a3b8;">추가된 요청 항목이 없습니다.</td></tr>';
+        body.innerHTML = '<tr id="issueEmptyRow"><td colspan="7" style="text-align:center;color:#94a3b8;">추가된 요청 항목이 없습니다.</td></tr>';
     }
 }
 
 function clearIssueItems(){
     const body = document.getElementById('issueItemsBody');
     if(!body) return;
-    body.innerHTML = '<tr id="issueEmptyRow"><td colspan="6" style="text-align:center;color:#94a3b8;">추가된 요청 항목이 없습니다.</td></tr>';
+    body.innerHTML = '<tr id="issueEmptyRow"><td colspan="7" style="text-align:center;color:#94a3b8;">추가된 요청 항목이 없습니다.</td></tr>';
 }
 
 function filterExportMaterials(){

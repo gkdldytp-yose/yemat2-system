@@ -1179,7 +1179,7 @@ def materials():
     # 불출 요청용 목록은 작업장과 무관하게 전체 부자재를 대상으로 검색한다.
     cursor.execute(
         '''
-        SELECT id, code, name, unit
+        SELECT id, code, name, unit, upper_unit, upper_unit_qty
         FROM materials
         ORDER BY category, name
         '''
@@ -1196,7 +1196,9 @@ def materials():
                 m.id,
                 m.code,
                 m.name,
-                m.unit
+                m.unit,
+                m.upper_unit,
+                m.upper_unit_qty
             FROM inv_material_lot_balances b
             JOIN material_lots ml ON ml.id = b.material_lot_id
             JOIN materials m ON m.id = ml.material_id
@@ -1314,6 +1316,7 @@ def materials():
             row['receipt_lot_defaults'] = defaults
 
     conn.close()
+    current_view_url = request.full_path[:-1] if request.full_path.endswith('?') else request.full_path
 
     return render_template(
         'materials.html',
@@ -1346,6 +1349,7 @@ def materials():
         req_tab=req_tab,
         issue_status_tab=issue_status_tab,
         export_status_tab=export_status_tab,
+        current_view_url=current_view_url,
     )
 
 
@@ -1365,12 +1369,22 @@ def add_material():
     category_clean = (category or '').strip()
     spec = request.form.get('spec')
     unit = request.form.get('unit')
+    upper_unit = (request.form.get('upper_unit') or '').strip()
+    upper_unit_qty_raw = (request.form.get('upper_unit_qty') or '').strip()
 
     moq = int(request.form.get('moq') or 0)
     lead_time = int(request.form.get('lead_time') or 0)
     unit_price = float(request.form.get('unit_price') or 0)
     current_stock = 0.0
     min_stock = float(request.form.get('min_stock') or 0)
+    upper_unit_qty = None
+    if upper_unit:
+        try:
+            upper_unit_qty = float(upper_unit_qty_raw or 0)
+        except ValueError:
+            return "<script>alert('상위 단위 환산값은 숫자로 입력해 주세요.'); history.back();</script>"
+        if upper_unit_qty <= 0:
+            return "<script>alert('상위 단위 환산값은 0보다 커야 합니다.'); history.back();</script>"
 
     conn = get_db()
     cursor = conn.cursor()
@@ -1381,9 +1395,9 @@ def add_material():
         cursor.execute(
             '''
             INSERT INTO materials 
-            (supplier_id, name, category, spec, unit, moq, lead_time, 
+            (supplier_id, name, category, spec, unit, upper_unit, upper_unit_qty, moq, lead_time, 
              unit_price, current_stock, min_stock, workplace)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
             (
                 supplier_id,
@@ -1391,6 +1405,8 @@ def add_material():
                 category_clean,
                 spec,
                 unit,
+                upper_unit or None,
+                upper_unit_qty,
                 moq,
                 lead_time,
                 unit_price,
@@ -1426,6 +1442,8 @@ def add_material():
                 'name': name,
                 'category': category_clean,
                 'unit': unit,
+                'upper_unit': upper_unit or None,
+                'upper_unit_qty': upper_unit_qty,
                 'current_stock': current_stock,
                 'min_stock': min_stock,
                 'workplace': target_workplace,
@@ -1444,6 +1462,15 @@ def add_material():
     finally:
         conn.close()
 
+    return_url = (request.form.get('return_url') or '').strip()
+    if return_url.startswith('/materials'):
+        return redirect(return_url)
+    return_url = (request.form.get('return_url') or '').strip()
+    if return_url.startswith('/materials'):
+        return redirect(return_url)
+    return_url = (request.form.get('return_url') or '').strip()
+    if return_url.startswith('/materials'):
+        return redirect(return_url)
     return redirect(url_for('materials.materials'))
 
 
@@ -1460,6 +1487,8 @@ def update_material():
     category = request.form.get('category')
     category_clean = (category or '').strip()
     unit = request.form.get('unit')
+    upper_unit = (request.form.get('upper_unit') or '').strip()
+    upper_unit_qty_raw = (request.form.get('upper_unit_qty') or '').strip()
     supplier_id = request.form.get('supplier_id') or None
     moq = request.form.get('moq') or 0
 
@@ -1468,8 +1497,11 @@ def update_material():
         min_stock = float(request.form.get('min_stock') or 0)
         unit_price = float(request.form.get('unit_price') or 0)
         moq_value = float(moq or 0)
+        upper_unit_qty = float(upper_unit_qty_raw or 0) if upper_unit else None
     except ValueError:
-        return "<script>alert('재고와 단가는 숫자 형식이어야 합니다.'); history.back();</script>"
+        return "<script>alert('????? ???????? ?????????????'); history.back();</script>"
+    if upper_unit and (upper_unit_qty is None or upper_unit_qty <= 0):
+        return "<script>alert('?? ?? ???? 0?? ?? ???.'); history.back();</script>"
 
     workplace = get_workplace()
     conn = get_db()
@@ -1483,7 +1515,7 @@ def update_material():
         cursor.execute(
             '''
             UPDATE materials 
-            SET code = ?, name = ?, category = ?, unit = ?, 
+            SET code = ?, name = ?, category = ?, unit = ?, upper_unit = ?, upper_unit_qty = ?,
                 min_stock = ?, unit_price = ?, supplier_id = ?, moq = ?, workplace = ?
             WHERE id = ?
         ''',
@@ -1492,6 +1524,8 @@ def update_material():
                 name,
                 category_clean,
                 unit,
+                upper_unit or None,
+                upper_unit_qty,
                 min_stock,
                 unit_price,
                 supplier_id,
@@ -1513,6 +1547,8 @@ def update_material():
                     'name': name,
                     'category': category_clean,
                     'unit': unit,
+                    'upper_unit': upper_unit or None,
+                    'upper_unit_qty': upper_unit_qty,
                     'min_stock': min_stock,
                     'unit_price': unit_price,
                     'supplier_id': supplier_id,
@@ -1532,6 +1568,9 @@ def update_material():
     finally:
         conn.close()
 
+    return_url = (request.form.get('return_url') or '').strip()
+    if return_url.startswith('/materials'):
+        return redirect(return_url)
     return redirect(url_for('materials.materials'))
 
 
