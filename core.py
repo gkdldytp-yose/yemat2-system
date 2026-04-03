@@ -12,6 +12,7 @@ SHARED_MATERIAL_CATEGORIES = {'기름', '소금', '실리카', '트레이'}
 
 _user_schema_checked = False
 _purchase_schema_checked = False
+_materials_schema_checked = False
 _materials_shared_checked = False
 _audit_schema_checked = False
 _production_schema_checked = False
@@ -45,6 +46,7 @@ def get_db():
 
     _ensure_user_schema(conn)
     _ensure_purchase_schema(conn)
+    _ensure_materials_schema(conn)
     _ensure_audit_schema(conn)
     _ensure_shared_materials(conn)
     _ensure_production_schema(conn)
@@ -352,6 +354,21 @@ def _ensure_shared_materials(conn):
     except Exception:
         pass
     _materials_shared_checked = True
+
+
+def _ensure_materials_schema(conn):
+    global _materials_schema_checked
+    if _materials_schema_checked:
+        return
+    try:
+        cols = [row['name'] for row in conn.execute("PRAGMA table_info(materials)").fetchall()]
+        if 'upper_unit' not in cols:
+            conn.execute("ALTER TABLE materials ADD COLUMN upper_unit TEXT")
+        if 'upper_unit_qty' not in cols:
+            conn.execute("ALTER TABLE materials ADD COLUMN upper_unit_qty REAL")
+    except Exception:
+        pass
+    _materials_schema_checked = True
 
 
 def _ensure_purchase_schema(conn):
