@@ -112,7 +112,14 @@
 .request-select{border-radius:14px;border:1px solid #d7deea;background:#fbfdff;padding:0.45rem;}
 .request-inline-actions{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;}
 .request-submit-bar{display:flex;justify-content:flex-end;gap:0.5rem;align-items:center;margin-top:0.85rem;}
-.issue-qty-entry{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;}
+.issue-qty-entry{display:flex;align-items:center;gap:0.45rem;flex-wrap:nowrap;}
+.request-qty-box{display:flex;align-items:center;gap:0.45rem;padding:0.4rem 0.45rem;border:1px solid #dbe5f0;border-radius:14px;background:linear-gradient(180deg,#ffffff,#f8fbff);box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
+.request-qty-input{width:96px!important;height:38px;border:1px solid #cbd5e1;border-radius:10px;padding:0 0.7rem;background:#fff;color:#0f172a;font-size:0.95rem;font-weight:800;text-align:right;box-shadow:0 2px 8px rgba(15,23,42,.05);}
+.request-qty-input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.request-qty-unit{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:34px;padding:0 0.7rem;border-radius:999px;background:#f8fafc;border:1px solid #dbe5f0;color:#475569;font-size:0.78rem;font-weight:900;letter-spacing:.02em;}
+.request-note-input{width:100%;height:38px;border:1px solid #cbd5e1;border-radius:12px;padding:0 0.8rem;background:linear-gradient(180deg,#ffffff,#f8fbff);color:#0f172a;font-size:0.9rem;box-shadow:0 2px 8px rgba(15,23,42,.05);}
+.request-note-input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.request-note-chip{display:inline-flex;align-items:center;max-width:220px;padding:0.45rem 0.7rem;border-radius:12px;background:#f8fafc;border:1px solid #dbe5f0;color:#334155;font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .issue-unit-toggle{border:1px solid #0ea5e9;background:#eff6ff;color:#0369a1;border-radius:999px;padding:0.28rem 0.7rem;font-size:0.78rem;font-weight:900;cursor:pointer;line-height:1;}
 .issue-unit-toggle.base{border-color:#94a3b8;background:#f8fafc;color:#334155;}
 .issue-converted-hint{font-size:0.78rem;font-weight:800;color:#0f172a;}
@@ -563,6 +570,7 @@
                         <h3 class="request-builder-title">불출 요청 목록</h3>
                         <p class="request-builder-caption">요청 수량과 비고를 정리한 뒤 선택 항목을 한 번에 전송합니다.</p>
                     </div>
+                    <button type="button" class="btn btn-small btn-danger" onclick="clearIssueItems(true)">전체 삭제</button>
                 </div>
                 <form method="POST" action="/issue-requests/bulk-add" id="issueBulkForm">
                     <div class="table-container" style="max-height:360px;overflow:auto;">
@@ -767,7 +775,10 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
                     <div class="form-group" style="margin:0;">
                         <label>반출수량</label>
-                        <input type="number" id="export_req_qty" step="0.01" min="0.01">
+                        <div class="request-qty-box">
+                            <input type="number" id="export_req_qty" class="request-qty-input" step="0.01" min="0.01">
+                            <span class="request-qty-unit" id="export_req_qty_unit">수량</span>
+                        </div>
                     </div>
                     <div class="form-group" style="margin:0;">
                         <label>반출사유</label>
@@ -785,7 +796,7 @@
                 </div>
                 <div class="form-group" style="margin:0;">
                     <label>메모</label>
-                    <input type="text" id="export_req_note" maxlength="200" placeholder="선택 입력">
+                    <input type="text" id="export_req_note" class="request-note-input" maxlength="200" placeholder="메모 입력">
                 </div>
                 <div class="request-inline-actions">
                     <button type="button" class="btn btn-small" style="background:#f97316;" onclick="addExportItemFromList()">+추가</button>
@@ -828,6 +839,11 @@
                     <div class="issue-status-title">반출 요청 중</div>
                     <div class="issue-status-caption">요청자가 실제 반출 수량을 확인하고 완료 처리할 수 있는 반출 요청입니다.</div>
                 </div>
+                {% if not is_logistics_role and export_requests_pending %}
+                <form method="POST" action="/export-requests/delete-all-pending" onsubmit="return confirm('현재 작업장의 반출 요청 중 항목을 모두 삭제하시겠습니까?');">
+                    <button type="submit" class="btn btn-small btn-danger">전체 삭제</button>
+                </form>
+                {% endif %}
             </div>
         <div class="table-container">
             <table class="issue-status-table">
@@ -1260,13 +1276,13 @@ function addIssueItemFromList(){
     const tr = document.createElement('tr');
     tr.id = rowId;
     const qtyInputHtml = hasUpperUnit
-        ? `<div class="issue-qty-entry">
-                <input type="number" class="js-issue-qty-input" step="0.01" min="0.01" value="1" required style="width:100px;" oninput="syncIssueConvertedQty(this)">
+        ? `<div class="issue-qty-entry request-qty-box">
+                <input type="number" class="js-issue-qty-input request-qty-input" step="0.01" min="0.01" value="1" required oninput="syncIssueConvertedQty(this)">
                 <button type="button" class="issue-unit-toggle js-issue-unit-toggle" data-mode="upper" data-unit="${upperUnit}" data-base-unit="${unit}" data-upper-unit="${upperUnit}" data-factor="${upperUnitQty}" onclick="toggleIssueUnitMode(this)">${upperUnit}</button>
            </div>
            <input type="hidden" name="requested_quantity[]" class="js-issue-converted-value" value="${upperUnitQty}">
            <input type="hidden" class="js-issue-upper-unit-qty" value="${upperUnitQty}">`
-        : `<div class="issue-qty-entry"><input type="number" name="requested_quantity[]" step="0.01" min="0.01" required style="width:100px;"><span>${unit}</span></div>`;
+        : `<div class="issue-qty-entry request-qty-box"><input type="number" name="requested_quantity[]" class="request-qty-input" step="0.01" min="0.01" required><span class="request-qty-unit">${unit}</span></div>`;
     const convertedQtyHtml = hasUpperUnit
         ? `<div><strong class="js-issue-converted-label issue-converted-hint">${upperUnitQty.toFixed(2)} ${unit}</strong></div>`
         : `<span style="color:#94a3b8;">-</span>`;
@@ -1276,7 +1292,7 @@ function addIssueItemFromList(){
         <td>${unit}</td>
         <td>${qtyInputHtml}</td>
         <td>${convertedQtyHtml}</td>
-        <td><input type="text" name="note[]" placeholder="비고" style="width:100%;"></td>
+        <td><input type="text" name="note[]" class="request-note-input" placeholder="비고 입력"></td>
         <td><button type="button" class="btn btn-small btn-secondary" onclick="removeIssueItem('${rowId}')">삭제</button></td>
     `;
     body.appendChild(tr);
@@ -1340,7 +1356,8 @@ function removeIssueItem(rowId){
     }
 }
 
-function clearIssueItems(){
+function clearIssueItems(withConfirm = false){
+    if(withConfirm && !confirm('불출 요청 목록의 항목을 모두 삭제하시겠습니까?')) return;
     const body = document.getElementById('issueItemsBody');
     if(!body) return;
     body.innerHTML = '<tr id="issueEmptyRow"><td colspan="7" style="text-align:center;color:#94a3b8;">추가된 요청 항목이 없습니다.</td></tr>';
@@ -1436,6 +1453,11 @@ document.querySelectorAll('.js-open-receipt-complete').forEach((btn) => {
 function syncExportLots(){
     const matId = Number((document.getElementById('exportMaterialList') || {}).value || 0);
     const lotSelect = document.getElementById('export_req_lot');
+    const unitChip = document.getElementById('export_req_qty_unit');
+    const matSelect = document.getElementById('exportMaterialList');
+    if(unitChip && matSelect && matSelect.selectedIndex >= 0){
+        unitChip.textContent = matSelect.options[matSelect.selectedIndex].dataset.unit || '수량';
+    }
     if(!lotSelect) return;
     const lots = MATERIAL_LOTS_BY_MATERIAL[String(matId)] || MATERIAL_LOTS_BY_MATERIAL[matId] || [];
     if(!lots.length){
@@ -1502,10 +1524,10 @@ function addExportItemFromList(){
         <td>${opt.dataset.code || '-'}<input type="hidden" name="material_id[]" value="${materialId}"></td>
         <td>${opt.dataset.name || ''}</td>
         <td>${lotText}<input type="hidden" name="material_lot_id[]" value="${lotId}"></td>
-        <td>${qty.toFixed(1)}<input type="hidden" name="requested_quantity[]" value="${qty}"></td>
-        <td>${reason}<input type="hidden" name="reason[]" value="${reason}"></td>
-        <td>${reasonDetail || '-'}<input type="hidden" name="reason_detail[]" value="${reasonDetail}"></td>
-        <td>${note || '-'}<input type="hidden" name="note[]" value="${note}"></td>
+        <td><div class="request-qty-box" style="display:inline-flex;"><span class="request-qty-input" style="display:inline-flex;align-items:center;justify-content:flex-end;background:#fff;">${qty.toFixed(1)}</span><span class="request-qty-unit">${opt.dataset.unit || ''}</span></div><input type="hidden" name="requested_quantity[]" value="${qty}"></td>
+        <td><span class="request-note-chip">${reason}</span><input type="hidden" name="reason[]" value="${reason}"></td>
+        <td><span class="request-note-chip">${reasonDetail || '-'}</span><input type="hidden" name="reason_detail[]" value="${reasonDetail}"></td>
+        <td><span class="request-note-chip">${note || '-'}</span><input type="hidden" name="note[]" value="${note}"></td>
         <td><button type="button" class="btn btn-small btn-secondary" onclick="removeExportItem('${rowId}')">삭제</button></td>
     `;
     body.appendChild(tr);

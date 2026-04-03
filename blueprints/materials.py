@@ -4241,6 +4241,54 @@ def delete_all_pending_issue_requests():
     return redirect(url_for('materials.materials', req_tab='issue', issue_status_tab='pending'))
 
 
+@bp.route('/export-requests/delete-all-pending', methods=['POST'])
+@login_required
+def delete_all_pending_export_requests():
+    workplace = get_workplace()
+    if workplace == LOGISTICS_WORKPLACE:
+        return "<script>alert('물류 작업장에서는 반출 요청 일괄 삭제를 할 수 없습니다.'); history.back();</script>"
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            '''
+            SELECT id
+            FROM logistics_issue_requests
+            WHERE requester_workplace = ?
+              AND COALESCE(request_type, 'ISSUE') = 'RETURN'
+              AND status = ?
+              AND processed_at IS NULL
+            ORDER BY id
+            ''',
+            (workplace, ISSUE_STATUS_REQUESTED),
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            return "<script>alert('삭제할 반출 요청이 없습니다.'); history.back();</script>"
+
+        ids = [int(row['id']) for row in rows]
+        placeholders = ','.join(['?'] * len(ids))
+        cursor.execute(f'DELETE FROM logistics_issue_requests WHERE id IN ({placeholders})', ids)
+        audit_log(
+            conn,
+            'delete',
+            'logistics_return_request',
+            None,
+            {
+                'requester_workplace': workplace,
+                'deleted_count': len(ids),
+                'deleted_ids': ids,
+                'deleted_by': session.get('user', {}).get('name') or session.get('user', {}).get('username'),
+            },
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return redirect(url_for('materials.materials', req_tab='export', export_status_tab='pending'))
+
+
 @bp.route('/issue-requests/<int:req_id>/complete', methods=['POST'])
 @login_required
 def complete_issue_request(req_id):
