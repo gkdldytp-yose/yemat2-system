@@ -764,6 +764,7 @@ def schedule_requirements_data():
                 b.product_id,
                 b.raw_material_id,
                 b.material_id,
+                COALESCE(p.sok_per_box, b.quantity_per_box, 0) as raw_qty_per_box,
                 COALESCE(b.quantity_per_box, 0) as quantity_per_box,
                 rm.name as raw_name,
                 COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code,
@@ -772,6 +773,7 @@ def schedule_requirements_data():
                 COALESCE(m.category, '') as material_category,
                 COALESCE(NULLIF(TRIM(m.unit), ''), '개') as material_unit
             FROM bom b
+            LEFT JOIN products p ON p.id = b.product_id
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
             LEFT JOIN materials m ON m.id = b.material_id
             WHERE b.product_id IN ({placeholders})
@@ -825,15 +827,10 @@ def schedule_requirements_data():
                 }
             target[key]['required'] += float(required or 0)
 
+        seen_product_raw_keys = set()
         for row in bom_rows:
             pid = int(row.get('product_id') or 0)
             if pid <= 0 or pid not in product_box_map:
-                continue
-            qty_per_box = float(row.get('quantity_per_box') or 0)
-            if qty_per_box <= 0:
-                continue
-            need_qty = qty_per_box * float(product_box_map.get(pid) or 0)
-            if need_qty <= 0:
                 continue
 
             if pid not in product_detail:
@@ -848,11 +845,29 @@ def schedule_requirements_data():
 
             if row.get('raw_material_id'):
                 code = str(row.get('raw_code') or '')
+                if not code:
+                    continue
+                dedupe_key = (pid, code)
+                if dedupe_key in seen_product_raw_keys:
+                    continue
+                seen_product_raw_keys.add(dedupe_key)
+                qty_per_box = float(row.get('raw_qty_per_box') or row.get('quantity_per_box') or 0)
+                if qty_per_box <= 0:
+                    continue
+                need_qty = qty_per_box * float(product_box_map.get(pid) or 0)
+                if need_qty <= 0:
+                    continue
                 name = row.get('raw_name') or code or '원초'
                 stock = raw_stock_map.get(code, 0.0)
                 _upsert_item(summary_raw, code or name, code, name, '속', stock, need_qty)
                 _upsert_item(product_detail[pid]['raw_map'], code or name, code, name, '속', stock, need_qty)
             elif row.get('material_id'):
+                qty_per_box = float(row.get('quantity_per_box') or 0)
+                if qty_per_box <= 0:
+                    continue
+                need_qty = qty_per_box * float(product_box_map.get(pid) or 0)
+                if need_qty <= 0:
+                    continue
                 mid = int(row.get('material_id') or 0)
                 code = str(row.get('material_code') or f'M{mid:05d}')
                 name = row.get('material_name') or code
@@ -1729,7 +1744,34 @@ def production_list():
     active_rows = [r for r in all_rows if r.get('status') != '완료']
     done_count = len(done_rows)
     active_count = len(active_rows)
+    if tab_param == 'active' and not active_rows and done_rows:
+        tab_param = 'done'
     productions = done_rows if tab_param == 'done' else active_rows
+
+    cursor.execute(
+        '''
+        SELECT production_date, status
+        FROM productions
+        WHERE workplace = ?
+          AND production_date IS NOT NULL
+          AND production_date != ''
+        ORDER BY production_date DESC
+        ''',
+        (workplace,),
+    )
+    all_nav_rows = [dict(r) for r in cursor.fetchall()]
+    available_calendar_dates = []
+    seen_calendar_dates = set()
+    for row in all_nav_rows:
+        normalized_status = _normalize_production_status(row.get('status'))
+        include_row = normalized_status == '완료' if tab_param == 'done' else normalized_status != '완료'
+        if not include_row:
+            continue
+        production_date = (row.get('production_date') or '').strip()
+        if not production_date or production_date in seen_calendar_dates:
+            continue
+        seen_calendar_dates.add(production_date)
+        available_calendar_dates.append(production_date)
     conn.close()
 
     return render_template(
@@ -1744,6 +1786,7 @@ def production_list():
         current_tab=tab_param,
         active_count=active_count,
         done_count=done_count,
+        available_calendar_dates_json=json.dumps(available_calendar_dates, ensure_ascii=False),
         search_start=(dt.today() - timedelta(days=90)).strftime('%Y-%m-%d'),
         search_end=dt.today().strftime('%Y-%m-%d'),
     )

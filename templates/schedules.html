@@ -82,24 +82,33 @@
     align-items: center;
 }
 .calendar-nav button {
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.3);
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 10px;
+    padding: 0.75rem 1.35rem;
+    border-radius: 14px;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s;
+    font-weight: 800;
+    font-size: 1rem;
+    line-height: 1;
+    min-width: 120px;
+    min-height: 52px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+    transition: all 0.2s ease;
 }
 .calendar-nav button:hover {
-    background: rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.28);
+    transform: translateY(-1px);
+}
+.calendar-nav button:active {
+    transform: translateY(0);
 }
 .calendar-month {
-    font-size: 1.4rem;
-    font-weight: 700;
-    min-width: 140px;
+    font-size: 1.65rem;
+    font-weight: 800;
+    min-width: 170px;
     text-align: center;
+    letter-spacing: -0.02em;
 }
 .calendar-header a {
     background: rgba(255,255,255,0.95) !important;
@@ -183,6 +192,9 @@
 }
 
 @media (max-width: 600px) {
+    .calendar-nav{width:100%;justify-content:space-between;gap:0.5rem;}
+    .calendar-nav button{min-width:0;flex:1;padding:0.7rem 0.8rem;font-size:0.95rem;min-height:48px;}
+    .calendar-month{min-width:auto;font-size:1.2rem;}
     .calendar-weekday{padding:0.5rem 0.25rem;font-size:0.75rem;}
     .calendar-day{min-height:90px;}
     .day-number{font-size:1.05rem !important;}

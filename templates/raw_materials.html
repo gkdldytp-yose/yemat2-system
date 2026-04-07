@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block title %}원초 관리{% endblock %}
 {% block content %}
+<style>
+.material-detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.75rem;flex-wrap:wrap;}
+.material-detail-tab{padding:0.46rem 0.95rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-weight:800;cursor:pointer;}
+.material-detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,0.2);}
+.material-panel{display:none;}
+.material-panel.active{display:block;}
+</style>
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
 {%- set can_prod  = _r in ['admin','production'] -%}
 {%- set can_purch = _r in ['admin','purchase','logistics'] -%}
@@ -128,7 +135,7 @@
         </td>
         <td onclick="event.stopPropagation()">
             {% if can_raw %}
-            <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">입고</button>
+            <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}','{{ rm.receiving_date or "" }}')">입고</button>
             <button class="btn btn-small" onclick="showExport({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">반출</button>
             <button class="btn btn-small" onclick="showAdjust({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }})">조정</button>
             <form method="POST" action="/raw-materials/{{ rm.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n※ 생산 기록에 사용된 적이 있으면 삭제할 수 없습니다.\n※ BOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
@@ -176,11 +183,9 @@
         <td><span style="background:#e8f5e9;color:#27ae60;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;">소진완료</span></td>
         <td onclick="event.stopPropagation()">
             {% if can_raw %}
-            <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">입고</button>
-            <button class="btn btn-small" onclick="showAdjust({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }})">조정</button>
-            <form method="POST" action="/raw-materials/{{ rm.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n※ 생산 기록에 사용된 적이 있으면 삭제할 수 없습니다.\n※ BOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
-                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
-            </form>
+            <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">입고</button>
+            <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">조정</button>
+            <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">삭제</button>
             {% endif %}
         </td>
     </tr>
@@ -193,32 +198,59 @@
 <div id="rawLotDetailModal" class="modal" style="display:none;">
     <div class="modal-content raw-lot-modal">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
-            <h2 style="margin:0;">Raw Lot Detail</h2>
-            <button type="button" class="btn btn-secondary btn-small" onclick="closeRawLotModal()">Close</button>
+            <h2 style="margin:0;">원초 상세</h2>
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeRawLotModal()">닫기</button>
         </div>
         <div class="raw-lot-header-grid">
-            <div class="raw-lot-header-item"><span class="label">Raw Name</span><span class="value" id="rd_name">-</span></div>
-            <div class="raw-lot-header-item"><span class="label">Code</span><span class="value" id="rd_code">-</span></div>
-            <div class="raw-lot-header-item"><span class="label">Workplace</span><span class="value" id="rd_workplace">-</span></div>
-            <div class="raw-lot-header-item"><span class="label">Total Stock Sum</span><span class="value" id="rd_total_stock">0</span></div>
-            <div class="raw-lot-header-item"><span class="label">Current Stock Sum</span><span class="value" id="rd_current_stock">0</span></div>
+            <div class="raw-lot-header-item"><span class="label">원초명</span><span class="value" id="rd_name">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">코드</span><span class="value" id="rd_code">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">작업장</span><span class="value" id="rd_workplace">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">총재고 합계</span><span class="value" id="rd_total_stock">0</span></div>
+            <div class="raw-lot-header-item"><span class="label">현재고 합계</span><span class="value" id="rd_current_stock">0</span></div>
         </div>
+        <div class="material-detail-tabs" style="margin-top:0.9rem;">
+            <button type="button" class="material-detail-tab active" id="rawTabLotsBtn" onclick="switchRawDetailPanel('lots')">로트 목록</button>
+            <button type="button" class="material-detail-tab" id="rawTabUsageBtn" onclick="switchRawDetailPanel('usage')">사용 로그</button>
+            <button type="button" class="material-detail-tab" id="rawTabReceiveBtn" onclick="switchRawDetailPanel('receive')">입고 로그</button>
+        </div>
+        <div id="rawLotsPanel" class="material-panel active">
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th>Lot</th>
-                        <th>Receiving Date</th>
-                        <th>Ja-ho</th>
-                        <th>Sheets/Box</th>
-                        <th>Total Stock</th>
-                        <th>Current Stock</th>
-                        <th>Used Qty</th>
-                        <th>Manage</th>
+                        <th>로트</th>
+                        <th>입고일</th>
+                        <th>자호</th>
+                        <th>1박스당 속수</th>
+                        <th>총재고</th>
+                        <th>현재고</th>
+                        <th>사용량</th>
+                        <th>관리</th>
                     </tr>
                 </thead>
                 <tbody id="rawLotTableBody"></tbody>
             </table>
+        </div>
+        </div>
+        <div id="rawUsagePanel" class="material-panel">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>사용일</th><th>상품명</th><th>사용수량</th><th>입고일</th><th>자호</th><th>비고</th></tr>
+                    </thead>
+                    <tbody id="rawUsageLogTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="rawReceivePanel" class="material-panel">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>입고일</th><th>입고수량</th><th>자호</th><th>비고</th></tr>
+                    </thead>
+                    <tbody id="rawReceiveLogTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -288,7 +320,8 @@
             
             <div class="form-group">
                 <label>입고일</label>
-                <input type="date" name="receiving_date" id="receivingDate">
+                <input type="hidden" name="receiving_date" id="receivingDate">
+                <input type="date" id="receivingDateDisplay" readonly disabled style="background:#f0f0f0;color:#475569;">
             </div>
             
             <div class="form-group">
@@ -471,7 +504,7 @@ function getTodayDate() {
     return `${year}-${month}-${day}`;
 }
 
-function showReceive(id,name,stock,carNumber){
+function showReceive(id,name,stock,carNumber,receivingDate){
     currentStock = stock;
     document.getElementById('receiveId').value=id;
     document.getElementById('receiveName').textContent=name;
@@ -479,7 +512,10 @@ function showReceive(id,name,stock,carNumber){
     document.getElementById('receiveQty').value='';
     document.getElementById('receiveNewStock').value='';
     document.getElementById('receiveHiddenStock').value='';
-    document.getElementById('receivingDate').value=getTodayDate();
+    const fixedReceivingDate = receivingDate || getTodayDate();
+    document.getElementById('receivingDate').value=fixedReceivingDate;
+    const receivingDateDisplay = document.getElementById('receivingDateDisplay');
+    if(receivingDateDisplay) receivingDateDisplay.value = fixedReceivingDate;
     document.getElementById('receiveCarNumber').value=carNumber||'-';
     document.getElementById('receiveModal').style.display='block';
 }
@@ -616,6 +652,29 @@ function closeRawLotModal(){
     if(modal) modal.style.display = 'none';
 }
 
+function switchRawDetailPanel(type){
+    const lotsPanel = document.getElementById('rawLotsPanel');
+    const usagePanel = document.getElementById('rawUsagePanel');
+    const receivePanel = document.getElementById('rawReceivePanel');
+    const lotsBtn = document.getElementById('rawTabLotsBtn');
+    const usageBtn = document.getElementById('rawTabUsageBtn');
+    const receiveBtn = document.getElementById('rawTabReceiveBtn');
+    [lotsPanel, usagePanel, receivePanel].forEach(panel => panel && panel.classList.remove('active'));
+    [lotsBtn, usageBtn, receiveBtn].forEach(btn => btn && btn.classList.remove('active'));
+    if(type === 'usage'){
+        if(usagePanel) usagePanel.classList.add('active');
+        if(usageBtn) usageBtn.classList.add('active');
+        return;
+    }
+    if(type === 'receive'){
+        if(receivePanel) receivePanel.classList.add('active');
+        if(receiveBtn) receiveBtn.classList.add('active');
+        return;
+    }
+    if(lotsPanel) lotsPanel.classList.add('active');
+    if(lotsBtn) lotsBtn.classList.add('active');
+}
+
 function setRawLotInputsEditable(lotId, editable){
     const ids = [
         `raw_lot_receiving_${lotId}`,
@@ -634,7 +693,7 @@ function renderRawLotRows(lots){
     const tbody = document.getElementById('rawLotTableBody');
     if(!tbody) return;
     if(!lots || lots.length === 0){
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">No lots found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">등록된 로트가 없습니다.</td></tr>';
         return;
     }
     tbody.innerHTML = lots.map((lot) => {
@@ -648,9 +707,45 @@ function renderRawLotRows(lots){
             <td><input type="number" step="0.01" id="raw_lot_total_${lot.id}" value="${Number(lot.total_stock || 0)}" style="width:100%;" disabled></td>
             <td><input type="number" step="0.01" id="raw_lot_current_${lot.id}" value="${Number(lot.current_stock || 0)}" style="width:100%;" disabled></td>
             <td>${usedQty.toFixed(1)}</td>
-            <td><button type="button" class="btn btn-small" id="raw_lot_edit_btn_${lot.id}" data-mode="view" style="background:#4f46e5;" onclick="toggleRawLotEdit(${lot.id})">Edit</button></td>
+            <td><button type="button" class="btn btn-small" id="raw_lot_edit_btn_${lot.id}" data-mode="view" style="background:#4f46e5;" onclick="toggleRawLotEdit(${lot.id})">수정</button></td>
         </tr>`;
     }).join('');
+}
+
+function renderRawUsageLogs(logs){
+    const tbody = document.getElementById('rawUsageLogTableBody');
+    if(!tbody) return;
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.log_date || '-').toString().slice(0,10)}</td>
+            <td>${escapeHtml(log.product_name || '-')}</td>
+            <td>${Number(log.quantity || 0).toFixed(1)}</td>
+            <td>${(log.receiving_date || '-').toString().slice(0,10)}</td>
+            <td>${escapeHtml(log.car_number || '-')}</td>
+            <td>${escapeHtml(log.note || '-')}</td>
+        </tr>
+    `).join('');
+}
+
+function renderRawReceiveLogs(logs){
+    const tbody = document.getElementById('rawReceiveLogTableBody');
+    if(!tbody) return;
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;">입고 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.receive_date || '-').toString().slice(0,10)}</td>
+            <td>${Number(log.quantity || 0).toFixed(1)}</td>
+            <td>${escapeHtml(log.car_number || '-')}</td>
+            <td>${escapeHtml(log.note || '-')}</td>
+        </tr>
+    `).join('');
 }
 
 async function loadRawLotDetail(rawMaterialId){
@@ -659,11 +754,11 @@ async function loadRawLotDetail(rawMaterialId){
         const res = await fetch(`/raw-materials/${rawMaterialId}/detail`);
         payload = await res.json();
     } catch (err){
-        alert('Failed to load raw lot detail.');
+        alert('원초 상세 정보를 불러오지 못했습니다.');
         return;
     }
     if(!payload.ok){
-        alert(payload.message || 'Raw lot update failed');
+        alert(payload.message || '원초 상세 조회에 실패했습니다.');
         return;
     }
     const rd = payload.raw_material || {};
@@ -673,12 +768,15 @@ async function loadRawLotDetail(rawMaterialId){
     document.getElementById('rd_total_stock').textContent = Number(rd.total_stock_sum || 0).toFixed(1);
     document.getElementById('rd_current_stock').textContent = Number(rd.current_stock_sum || 0).toFixed(1);
     renderRawLotRows(payload.lots || []);
+    renderRawUsageLogs(payload.usage_logs || []);
+    renderRawReceiveLogs(payload.receive_logs || []);
 }
 
 async function openRawLotModal(rawMaterialId){
     currentRawLotId = rawMaterialId;
     const modal = document.getElementById('rawLotDetailModal');
     if(modal) modal.style.display = 'block';
+    switchRawDetailPanel('lots');
     await loadRawLotDetail(rawMaterialId);
 }
 
@@ -689,7 +787,7 @@ async function toggleRawLotEdit(lotId){
     if(mode === 'view'){
         setRawLotInputsEditable(lotId, true);
         btn.dataset.mode = 'edit';
-        btn.textContent = 'Save';
+        btn.textContent = '저장';
         btn.style.background = '#16a34a';
         return;
     }
@@ -706,13 +804,13 @@ async function submitRawLotUpdate(lotId){
     const res = await fetch(`/raw-material-lots/${lotId}/update`, { method: 'POST', body: formData });
     const payload = await res.json();
     if(!payload.ok){
-        alert(payload.message || 'Raw lot update failed');
+        alert(payload.message || '원초 로트 수정에 실패했습니다.');
         return;
     }
     const btn = document.getElementById(`raw_lot_edit_btn_${lotId}`);
     if(btn){
         btn.dataset.mode = 'view';
-        btn.textContent = 'Edit';
+        btn.textContent = '수정';
         btn.style.background = '#4f46e5';
     }
     if(currentRawLotId){

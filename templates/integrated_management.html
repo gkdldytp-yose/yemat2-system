@@ -135,6 +135,35 @@
 .material-name-cell{
   cursor:pointer;
 }
+.integrated-materials-table{table-layout:fixed;}
+.integrated-materials-table th,
+.integrated-materials-table td{vertical-align:middle;}
+.integrated-materials-table th:nth-child(1),
+.integrated-materials-table td:nth-child(1){width:90px;}
+.integrated-materials-table th:nth-child(2),
+.integrated-materials-table td:nth-child(2){width:130px;}
+.integrated-materials-table th:nth-child(3),
+.integrated-materials-table td:nth-child(3){width:260px;}
+.integrated-materials-table th:nth-child(4),
+.integrated-materials-table td:nth-child(4){width:92px;text-align:center;}
+.integrated-materials-table th:nth-child(5),
+.integrated-materials-table td:nth-child(5){width:170px;}
+.integrated-materials-table th:nth-child(6),
+.integrated-materials-table td:nth-child(6){width:70px;text-align:center;}
+.integrated-materials-table th:nth-child(7),
+.integrated-materials-table td:nth-child(7),
+.integrated-materials-table th:nth-child(8),
+.integrated-materials-table td:nth-child(8),
+.integrated-materials-table th:nth-child(9),
+.integrated-materials-table td:nth-child(9),
+.integrated-materials-table th:nth-child(10),
+.integrated-materials-table td:nth-child(10),
+.integrated-materials-table th:nth-child(11),
+.integrated-materials-table td:nth-child(11){width:92px;text-align:center;white-space:nowrap;}
+.integrated-materials-table th:nth-child(12),
+.integrated-materials-table td:nth-child(12){width:74px;text-align:center;white-space:nowrap;}
+.integrated-materials-table th:nth-child(13),
+.integrated-materials-table td:nth-child(13){width:120px;text-align:center;white-space:nowrap;}
 .material-section-title{font-size:0.86rem;font-weight:800;color:#1e293b;margin:0 0 0.45rem;}
 .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:0.8rem;margin-bottom:1rem;}
 .stats-card{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border:1px solid #dbe7f3;border-radius:16px;padding:0.95rem 1rem;box-shadow:0 10px 24px rgba(15,23,42,0.06);}
@@ -710,7 +739,7 @@
     <div class="stats-table-wrap">
         <div class="stats-table-card">
             <h3>제품 생산 통계</h3>
-            <table>
+            <table {% if tab == 'materials' %}class="integrated-materials-table"{% endif %}>
                 <thead>
                     <tr>
                         <th>제품코드</th>
@@ -1028,7 +1057,6 @@
                     <th>1동 자반</th>
                     <th>2동 신관 1층</th>
                     <th>2동 신관 2층</th>
-                    <th>기타</th>
                     <th>총수량</th>
                     <th>로트수</th>
                     {% elif tab == 'productions' %}
@@ -1135,7 +1163,6 @@
                     <td>{{ "%.1f"|format(item.stock_by_workplace.get('1동 자반', 0) if item.stock_by_workplace else 0) }}</td>
                     <td>{{ "%.1f"|format(item.stock_by_workplace.get('2동 신관 1층', 0) if item.stock_by_workplace else 0) }}</td>
                     <td>{{ "%.1f"|format(item.stock_by_workplace.get('2동 신관 2층', 0) if item.stock_by_workplace else 0) }}</td>
-                    <td>{{ "%.1f"|format(item.stock_by_workplace.get('기타', 0) if item.stock_by_workplace else 0) }}</td>
                     <td><strong>{{ "%.1f"|format(item.total_stock if item.total_stock is not none else 0) }}</strong></td>
                     <td>{{ item.lot_count or 0 }}</td>
                     
@@ -1609,6 +1636,7 @@
         <div class="material-detail-tabs">
             <button type="button" class="material-detail-tab active" id="tabLotsBtn" onclick="switchMaterialPanel('lots')">{% if can_manage_material_lots %}로트 관리{% else %}로트 목록{% endif %}</button>
             <button type="button" class="material-detail-tab" id="tabLogsBtn" onclick="switchMaterialPanel('logs')">사용 로그</button>
+            <button type="button" class="material-detail-tab" id="tabReceiveBtn" onclick="switchMaterialPanel('receive')">입고 로그</button>
         </div>
 
         <div id="materialLotsPanel" class="material-panel active">
@@ -1670,12 +1698,32 @@
                         <tr>
                             <th>사용일</th>
                             <th>생산번호</th>
+                            <th>상품명</th>
+                            <th>사용 로트</th>
                             <th>사용수량</th>
                             <th>남은수량</th>
                             <th>사용자</th>
                         </tr>
                     </thead>
                     <tbody id="usageLogTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="materialReceivePanel" class="material-panel">
+            <p class="material-section-title">부자재 입고 로그</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>입고일</th>
+                            <th>제조일</th>
+                            <th>소비기한</th>
+                            <th>입고수량</th>
+                            <th>구분</th>
+                            <th>비고</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiveLogTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -1697,23 +1745,64 @@
             <div class="material-header-item"><span class="label">총재고 합계</span><span class="value" id="rd_total_stock">0</span></div>
             <div class="material-header-item"><span class="label">현재고 합계</span><span class="value" id="rd_current_stock">0</span></div>
         </div>
-        <p class="material-section-title">로트 목록</p>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>로트</th>
-                        <th>입고일</th>
-                        <th>자호</th>
-                        <th>1박스당 속수</th>
-                        <th>총재고</th>
-                        <th>현재고</th>
-                        <th>사용량</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody id="rawLotTableBody"></tbody>
-            </table>
+        <div class="material-detail-tabs">
+            <button type="button" class="material-detail-tab active" id="rawTabLotsBtn" onclick="switchRawDetailPanel('lots')">로트 목록</button>
+            <button type="button" class="material-detail-tab" id="rawTabUsageBtn" onclick="switchRawDetailPanel('usage')">사용 로그</button>
+            <button type="button" class="material-detail-tab" id="rawTabReceiveBtn" onclick="switchRawDetailPanel('receive')">입고 로그</button>
+        </div>
+        <div id="rawLotsPanel" class="material-panel active">
+            <p class="material-section-title">로트 목록</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>로트</th>
+                            <th>입고일</th>
+                            <th>자호</th>
+                            <th>1박스당 속수</th>
+                            <th>총재고</th>
+                            <th>현재고</th>
+                            <th>사용량</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rawLotTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="rawUsagePanel" class="material-panel">
+            <p class="material-section-title">원초 사용 로그</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>사용일</th>
+                            <th>상품명</th>
+                            <th>사용수량</th>
+                            <th>입고일</th>
+                            <th>자호</th>
+                            <th>비고</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rawUsageLogTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="rawReceivePanel" class="material-panel">
+            <p class="material-section-title">원초 입고 로그</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>입고일</th>
+                            <th>입고수량</th>
+                            <th>자호</th>
+                            <th>비고</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rawReceiveLogTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -3149,19 +3238,28 @@ function closeMaterialDetailModal(){
 function switchMaterialPanel(type){
     const lotsPanel = document.getElementById('materialLotsPanel');
     const logsPanel = document.getElementById('materialLogsPanel');
+    const receivePanel = document.getElementById('materialReceivePanel');
     const lotBtn = document.getElementById('tabLotsBtn');
     const logBtn = document.getElementById('tabLogsBtn');
+    const receiveBtn = document.getElementById('tabReceiveBtn');
+    if(lotsPanel) lotsPanel.classList.remove('active');
+    if(logsPanel) logsPanel.classList.remove('active');
+    if(receivePanel) receivePanel.classList.remove('active');
+    if(lotBtn) lotBtn.classList.remove('active');
+    if(logBtn) logBtn.classList.remove('active');
+    if(receiveBtn) receiveBtn.classList.remove('active');
     if(type === 'logs' || !lotsPanel || !lotBtn){
-        if(lotsPanel) lotsPanel.classList.remove('active');
         if(logsPanel) logsPanel.classList.add('active');
-        if(lotBtn) lotBtn.classList.remove('active');
         if(logBtn) logBtn.classList.add('active');
-    } else {
-        if(logsPanel) logsPanel.classList.remove('active');
-        lotsPanel.classList.add('active');
-        if(logBtn) logBtn.classList.remove('active');
-        lotBtn.classList.add('active');
+        return;
     }
+    if(type === 'receive'){
+        if(receivePanel) receivePanel.classList.add('active');
+        if(receiveBtn) receiveBtn.classList.add('active');
+        return;
+    }
+    lotsPanel.classList.add('active');
+    lotBtn.classList.add('active');
 }
 
 function renderLotRows(lots){
@@ -3221,16 +3319,37 @@ async function toggleLotEdit(lotId){
 function renderUsageRows(logs){
     const tbody = document.getElementById('usageLogTableBody');
     if(!logs || logs.length === 0){
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
         return;
     }
     tbody.innerHTML = logs.map(log => `
         <tr>
             <td>${(log.use_date || '-').toString().slice(0,10)}</td>
             <td>${log.production_no || '-'}</td>
+            <td>${log.product_name || '-'}</td>
+            <td>${log.lot || '-'}</td>
             <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
             <td>${Number(log.remaining_quantity || 0).toFixed(1)}</td>
             <td>${log.user_name || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+function renderReceiveRows(logs){
+    const tbody = document.getElementById('receiveLogTableBody');
+    if(!tbody) return;
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">입고 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.receive_date || '-').toString().slice(0,10)}</td>
+            <td>${(log.manufacture_date || '-').toString().slice(0,10)}</td>
+            <td>${(log.expiry_date || '-').toString().slice(0,10)}</td>
+            <td>${Number(log.received_quantity || 0).toFixed(1)}</td>
+            <td>${log.action_label || '-'}</td>
+            <td>${log.note || '-'}</td>
         </tr>
     `).join('');
 }
@@ -3256,6 +3375,7 @@ async function loadMaterialDetail(materialId){
     document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
     renderLotRows(payload.lots || []);
     renderUsageRows(payload.usage_logs || []);
+    renderReceiveRows(payload.receive_logs || []);
 }
 
 async function openMaterialDetailModal(materialId){
@@ -3323,6 +3443,29 @@ function closeRawLotModal(){
     document.getElementById('rawLotDetailModal').style.display = 'none';
 }
 
+function switchRawDetailPanel(type){
+    const lotsPanel = document.getElementById('rawLotsPanel');
+    const usagePanel = document.getElementById('rawUsagePanel');
+    const receivePanel = document.getElementById('rawReceivePanel');
+    const lotsBtn = document.getElementById('rawTabLotsBtn');
+    const usageBtn = document.getElementById('rawTabUsageBtn');
+    const receiveBtn = document.getElementById('rawTabReceiveBtn');
+    [lotsPanel, usagePanel, receivePanel].forEach(panel => panel && panel.classList.remove('active'));
+    [lotsBtn, usageBtn, receiveBtn].forEach(btn => btn && btn.classList.remove('active'));
+    if(type === 'usage'){
+        if(usagePanel) usagePanel.classList.add('active');
+        if(usageBtn) usageBtn.classList.add('active');
+        return;
+    }
+    if(type === 'receive'){
+        if(receivePanel) receivePanel.classList.add('active');
+        if(receiveBtn) receiveBtn.classList.add('active');
+        return;
+    }
+    if(lotsPanel) lotsPanel.classList.add('active');
+    if(lotsBtn) lotsBtn.classList.add('active');
+}
+
 function setRawLotInputsEditable(lotId, editable){
     const ids = [
         `raw_lot_receiving_${lotId}`,
@@ -3361,6 +3504,42 @@ function renderRawLotRows(lots){
     }).join('');
 }
 
+function renderRawUsageLogs(logs){
+    const tbody = document.getElementById('rawUsageLogTableBody');
+    if(!tbody) return;
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.log_date || '-').toString().slice(0,10)}</td>
+            <td>${escapeHtml(log.product_name || '-')}</td>
+            <td>${Number(log.quantity || 0).toFixed(1)}</td>
+            <td>${(log.receiving_date || '-').toString().slice(0,10)}</td>
+            <td>${escapeHtml(log.car_number || '-')}</td>
+            <td>${escapeHtml(log.note || '-')}</td>
+        </tr>
+    `).join('');
+}
+
+function renderRawReceiveLogs(logs){
+    const tbody = document.getElementById('rawReceiveLogTableBody');
+    if(!tbody) return;
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;">입고 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.receive_date || '-').toString().slice(0,10)}</td>
+            <td>${Number(log.quantity || 0).toFixed(1)}</td>
+            <td>${escapeHtml(log.car_number || '-')}</td>
+            <td>${escapeHtml(log.note || '-')}</td>
+        </tr>
+    `).join('');
+}
+
 async function loadRawLotDetail(rawMaterialId){
     let payload;
     try{
@@ -3381,11 +3560,14 @@ async function loadRawLotDetail(rawMaterialId){
     document.getElementById('rd_total_stock').textContent = Number(rd.total_stock_sum || 0).toFixed(1);
     document.getElementById('rd_current_stock').textContent = Number(rd.current_stock_sum || 0).toFixed(1);
     renderRawLotRows(payload.lots || []);
+    renderRawUsageLogs(payload.usage_logs || []);
+    renderRawReceiveLogs(payload.receive_logs || []);
 }
 
 async function openRawLotModal(rawMaterialId){
     currentRawLotId = rawMaterialId;
     document.getElementById('rawLotDetailModal').style.display = 'flex';
+    switchRawDetailPanel('lots');
     await loadRawLotDetail(rawMaterialId);
 }
 

@@ -255,6 +255,18 @@ def _ensure_logistics_schema(conn):
             '''
         )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_user_notifications_username ON user_notifications(username, is_read, created_at DESC)")
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS user_dynamic_notification_reads (
+                username TEXT NOT NULL,
+                notification_key TEXT NOT NULL,
+                signature TEXT NOT NULL,
+                read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (username, notification_key)
+            )
+            '''
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_user_dynamic_notification_reads_username ON user_dynamic_notification_reads(username)")
     except Exception:
         pass
     _logistics_schema_checked = True

@@ -876,6 +876,57 @@ def _create_request_receipt_lot(
     return lot_id, lot
 
 
+def _build_receipt_split_rows(form, total_qty):
+    split_enabled = (form.get('split_enabled') or '').strip() == '1'
+    if not split_enabled:
+        return [
+            {
+                'quantity': float(total_qty or 0),
+                'receiving_date': (form.get('receiving_date') or '').strip(),
+                'manufacture_date': (form.get('manufacture_date') or '').strip(),
+                'expiry_date': (form.get('expiry_date') or '').strip(),
+                'manufacture_date_unknown': 1 if (form.get('manufacture_date_unknown') or '').strip() == '1' else 0,
+                'expiry_date_unknown': 1 if (form.get('expiry_date_unknown') or '').strip() == '1' else 0,
+            }
+        ]
+
+    qty_list = form.getlist('split_quantity[]')
+    receiving_list = form.getlist('split_receiving_date[]')
+    manufacture_list = form.getlist('split_manufacture_date[]')
+    expiry_list = form.getlist('split_expiry_date[]')
+    manufacture_unknown_list = form.getlist('split_manufacture_unknown[]')
+    expiry_unknown_list = form.getlist('split_expiry_unknown[]')
+    row_count = max(
+        len(qty_list),
+        len(receiving_list),
+        len(manufacture_list),
+        len(expiry_list),
+        len(manufacture_unknown_list),
+        len(expiry_unknown_list),
+    )
+    rows = []
+    for idx in range(row_count):
+        qty = float((qty_list[idx] if idx < len(qty_list) and qty_list[idx] else 0) or 0)
+        receiving_date = (receiving_list[idx] if idx < len(receiving_list) else '').strip()
+        manufacture_date = (manufacture_list[idx] if idx < len(manufacture_list) else '').strip()
+        expiry_date = (expiry_list[idx] if idx < len(expiry_list) else '').strip()
+        manufacture_unknown = 1 if (manufacture_unknown_list[idx] if idx < len(manufacture_unknown_list) else '0').strip() == '1' else 0
+        expiry_unknown = 1 if (expiry_unknown_list[idx] if idx < len(expiry_unknown_list) else '0').strip() == '1' else 0
+        if qty <= 0 and not receiving_date and not manufacture_date and not expiry_date:
+            continue
+        rows.append(
+            {
+                'quantity': qty,
+                'receiving_date': receiving_date,
+                'manufacture_date': manufacture_date,
+                'expiry_date': expiry_date,
+                'manufacture_date_unknown': manufacture_unknown,
+                'expiry_date_unknown': expiry_unknown,
+            }
+        )
+    return rows
+
+
 def _get_latest_workplace_lot_defaults(cursor, material_id, workplace):
     location_id = _get_inventory_location_id(cursor, workplace)
     if location_id:
@@ -997,6 +1048,22 @@ def materials():
     selected_category = request.args.get('category', '')
     search_keyword = request.args.get('search', '').strip()
     search_keywords = [token.strip() for token in search_keyword.split(',') if token.strip()]
+    shortage_ids_raw = (request.args.get('shortage_ids') or '').strip()
+    shortage_material_ids = []
+    if shortage_ids_raw:
+        seen_shortage_ids = set()
+        for token in shortage_ids_raw.split(','):
+            token = token.strip()
+            if not token:
+                continue
+            try:
+                material_id = int(token)
+            except Exception:
+                continue
+            if material_id <= 0 or material_id in seen_shortage_ids:
+                continue
+            seen_shortage_ids.add(material_id)
+            shortage_material_ids.append(material_id)
     selected_product_id = (request.args.get('product_id') or '').strip()
     selected_material_search_field = (request.args.get('material_search_field') or 'all').strip() or 'all'
     selected_material_type = (request.args.get('material_type') or 'all').strip() or 'all'
@@ -1004,7 +1071,7 @@ def materials():
     if req_tab not in ('issue', 'export'):
         req_tab = 'issue'
     issue_status_tab = (request.args.get('issue_status') or 'pending').strip().lower()
-    if issue_status_tab not in ('pending', 'completed', 'rejected'):
+    if issue_status_tab not in ('pending', 'completed'):
         issue_status_tab = 'pending'
     export_status_tab = (request.args.get('export_status') or 'pending').strip().lower()
     if export_status_tab not in ('pending', 'completed', 'rejected'):
@@ -1130,6 +1197,11 @@ def materials():
             )
         '''
         params.append(selected_product_id)
+
+    if shortage_material_ids:
+        placeholders = ','.join(['?'] * len(shortage_material_ids))
+        query += f" AND m.id IN ({placeholders})"
+        params.extend(shortage_material_ids)
 
     query += """
         GROUP BY m.id
@@ -1317,6 +1389,7 @@ def materials():
 
     conn.close()
     current_view_url = request.full_path[:-1] if request.full_path.endswith('?') else request.full_path
+    dashboard_issue_prefill = session.pop('dashboard_issue_prefill', [])
 
     return render_template(
         'materials.html',
@@ -1349,6 +1422,7 @@ def materials():
         req_tab=req_tab,
         issue_status_tab=issue_status_tab,
         export_status_tab=export_status_tab,
+        dashboard_issue_prefill_json=json.dumps(dashboard_issue_prefill, ensure_ascii=False),
         current_view_url=current_view_url,
     )
 
@@ -1716,11 +1790,16 @@ def material_detail(material_id):
 
         cursor.execute(
             """
-            SELECT
+SELECT
                 COALESCE(p.production_date, substr(pmu.created_at, 1, 10)) as use_date,
                 ('PROD-' || pmu.production_id) as production_no,
-                COALESCE(pmu.actual_quantity, 0) as used_quantity,
-                COALESCE(m.current_stock, 0) as remaining_quantity,
+                COALESCE(prd.name, '-') as product_name,
+                COALESCE(ml.lot, '-') as lot,
+                COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as used_quantity,
+                CASE
+                    WHEN pmlu.id IS NOT NULL THEN COALESCE(ml.current_quantity, 0)
+                    ELSE COALESCE(m.current_stock, 0)
+                END as remaining_quantity,
                 COALESCE(
                     (
                         SELECT NULLIF(al.name, '')
@@ -1742,21 +1821,56 @@ def material_detail(material_id):
                 ) as user_name
             FROM production_material_usage pmu
             LEFT JOIN productions p ON p.id = pmu.production_id
+            LEFT JOIN products prd ON prd.id = p.product_id
             LEFT JOIN materials m ON m.id = pmu.material_id
+            LEFT JOIN production_material_lot_usage pmlu
+              ON pmlu.production_usage_id = pmu.id
+             AND pmlu.material_id = pmu.material_id
+            LEFT JOIN material_lots ml ON ml.id = pmlu.material_lot_id
             WHERE pmu.material_id = ?
               AND COALESCE(pmu.actual_quantity, 0) > 0
               AND COALESCE(p.status, '') = '완료'
-            ORDER BY COALESCE(p.production_date, pmu.created_at) DESC
+            ORDER BY
+                COALESCE(p.production_date, pmu.created_at) DESC,
+                pmu.id DESC,
+                COALESCE(pmlu.id, 0) DESC
             LIMIT 200
             """,
             (material_id,),
         )
         usage_logs = [dict(row) for row in cursor.fetchall()]
 
+        cursor.execute(
+            """
+            SELECT
+                COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) as receive_date,
+                COALESCE(ml.manufacture_date, '-') as manufacture_date,
+                COALESCE(ml.expiry_date, '-') as expiry_date,
+                COALESCE(mll.quantity, 0) as received_quantity,
+                CASE COALESCE(mll.action, '')
+                    WHEN 'create' THEN '신규 입고'
+                    WHEN 'issue_request_complete' THEN '불출 입고 완료'
+                    ELSE COALESCE(mll.action, '-')
+                END as action_label,
+                COALESCE(mll.note, '-') as note
+            FROM material_lot_logs mll
+            LEFT JOIN material_lots ml ON ml.id = mll.material_lot_id
+            WHERE mll.material_id = ?
+              AND COALESCE(mll.action, '') IN ('create', 'issue_request_complete')
+              AND COALESCE(mll.quantity, 0) > 0
+            ORDER BY
+                COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) DESC,
+                mll.id DESC
+            LIMIT 200
+            """,
+            (material_id,),
+        )
+        receive_logs = [dict(row) for row in cursor.fetchall()]
+
         payload = dict(material)
         payload['total_quantity'] = sum(float(row.get('location_quantity') or 0) for row in lots)
         payload['can_manage_lots'] = bool(is_logistics)
-        return jsonify({'ok': True, 'material': payload, 'lots': lots, 'usage_logs': usage_logs})
+        return jsonify({'ok': True, 'material': payload, 'lots': lots, 'usage_logs': usage_logs, 'receive_logs': receive_logs})
     finally:
         conn.close()
 
@@ -2410,6 +2524,7 @@ def raw_material_detail(raw_material_id):
                         COALESCE(used_quantity, 0) as used_quantity
                     FROM raw_materials
                     WHERE TRIM(COALESCE(code, '')) = TRIM(COALESCE(?, ''))
+                      AND COALESCE(current_stock, 0) > 0
                     ORDER BY
                         CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                         receiving_date ASC,
@@ -2430,6 +2545,7 @@ def raw_material_detail(raw_material_id):
                     FROM raw_materials
                     WHERE workplace = ?
                       AND TRIM(COALESCE(code, '')) = TRIM(COALESCE(?, ''))
+                      AND COALESCE(current_stock, 0) > 0
                     ORDER BY
                         CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                         receiving_date ASC,
@@ -2450,6 +2566,7 @@ def raw_material_detail(raw_material_id):
                 FROM raw_materials
                 WHERE workplace = ?
                   AND TRIM(COALESCE(name, '')) = TRIM(COALESCE(?, ''))
+                  AND COALESCE(current_stock, 0) > 0
                 ORDER BY
                     CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     receiving_date ASC,
@@ -2458,12 +2575,60 @@ def raw_material_detail(raw_material_id):
                 (workplace, base['name']),
             )
         lots = [dict(row) for row in cursor.fetchall()]
+        raw_ids = [int(row['id']) for row in lots if row.get('id')]
+        usage_logs = []
+        receive_logs = []
+        if raw_ids:
+            placeholders = ','.join(['?'] * len(raw_ids))
+            cursor.execute(
+                f'''
+                SELECT
+                    COALESCE(rml.created_at, '') as log_date,
+                    COALESCE(pr.name, '-') as product_name,
+                    COALESCE(p.production_date, substr(rml.created_at, 1, 10)) as production_date,
+                    COALESCE(rm.receiving_date, '-') as receiving_date,
+                    COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '-') as car_number,
+                    COALESCE(ABS(rml.quantity), 0) as quantity,
+                    CASE
+                        WHEN COALESCE(pr.name, '') <> '' THEN pr.name || ' 생산 (' || COALESCE(p.production_date, substr(rml.created_at, 1, 10)) || ')'
+                        ELSE COALESCE(rml.note, '-')
+                    END as note
+                FROM raw_material_logs rml
+                LEFT JOIN raw_materials rm ON rm.id = rml.raw_material_id
+                LEFT JOIN productions p ON rml.production_id = p.id
+                LEFT JOIN products pr ON p.product_id = pr.id
+                WHERE rml.raw_material_id IN ({placeholders})
+                  AND COALESCE(rml.type, '') = 'production'
+                ORDER BY rml.created_at DESC, rml.id DESC
+                LIMIT 200
+                ''',
+                raw_ids,
+            )
+            usage_logs = [dict(row) for row in cursor.fetchall()]
+
+            cursor.execute(
+                f'''
+                SELECT
+                    COALESCE(rm.receiving_date, substr(rml.created_at, 1, 10)) as receive_date,
+                    COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '-') as car_number,
+                    COALESCE(ABS(rml.quantity), 0) as quantity,
+                    COALESCE(rml.note, '-') as note
+                FROM raw_material_logs rml
+                LEFT JOIN raw_materials rm ON rm.id = rml.raw_material_id
+                WHERE rml.raw_material_id IN ({placeholders})
+                  AND COALESCE(rml.type, '') = 'receive'
+                ORDER BY COALESCE(rm.receiving_date, substr(rml.created_at, 1, 10)) DESC, rml.id DESC
+                LIMIT 200
+                ''',
+                raw_ids,
+            )
+            receive_logs = [dict(row) for row in cursor.fetchall()]
         payload = dict(base)
         payload['lot_count'] = len(lots)
         payload['total_stock_sum'] = sum(float(row.get('total_stock') or 0) for row in lots)
         payload['current_stock_sum'] = sum(float(row.get('current_stock') or 0) for row in lots)
         payload['used_quantity_sum'] = sum(float(row.get('used_quantity') or 0) for row in lots)
-        return jsonify({'ok': True, 'raw_material': payload, 'lots': lots})
+        return jsonify({'ok': True, 'raw_material': payload, 'lots': lots, 'usage_logs': usage_logs, 'receive_logs': receive_logs})
     finally:
         conn.close()
 
@@ -2765,11 +2930,25 @@ def raw_material_logs_data(raw_material_id):
         log_dict = dict(log)
         log_dict['type_text'] = type_map.get(log['type'], log['type'])
 
-        # 노트 생성
-        if log['type'] == 'production' and log['product_name']:
-            log_dict['note'] = f"{log['product_name']} 생산 ({log['production_date']})"
-        elif not log_dict.get('note'):
-            log_dict['note'] = '-'
+        note_text = (log_dict.get('note') or '').strip()
+        if log['type'] == 'production':
+            if log['product_name']:
+                log_dict['note'] = f"{log['product_name']} 생산 ({log['production_date']})"
+            else:
+                log_dict['note'] = f"생산 차감 ({log['production_date']})" if log['production_date'] else '생산 차감'
+        elif note_text == 'production_edit:fifo rollback':
+            log_dict['note'] = '생산 수정: FIFO 재계산 복원'
+        elif note_text.startswith('생산 삭제:'):
+            log_dict['note'] = note_text
+        elif not note_text or '??' in note_text or '�' in note_text:
+            fallback_map = {
+                'receive': '입고',
+                'export': '반출',
+                'adjustment': '재고 조정',
+            }
+            log_dict['note'] = fallback_map.get(log['type'], '-')
+        else:
+            log_dict['note'] = note_text
 
         logs_data.append(log_dict)
 
@@ -4294,15 +4473,19 @@ def delete_all_pending_export_requests():
 def complete_issue_request(req_id):
     approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
-    receiving_date = (request.form.get('receiving_date') or '').strip()
-    manufacture_date = (request.form.get('manufacture_date') or '').strip()
-    expiry_date = (request.form.get('expiry_date') or '').strip()
-    manufacture_date_unknown = 1 if (request.form.get('manufacture_date_unknown') or '').strip() == '1' else 0
-    expiry_date_unknown = 1 if (request.form.get('expiry_date_unknown') or '').strip() == '1' else 0
     if approved_qty <= 0:
-        return "<script>alert('실제 입고 수량을 확인해 주세요.'); history.back();</script>"
-    if not receiving_date:
-        return "<script>alert('입고일은 필수입니다.'); history.back();</script>"
+        return "<script>alert('?? ?? ??? ??? ???.'); history.back();</script>"
+    split_rows = _build_receipt_split_rows(request.form, approved_qty)
+    if not split_rows:
+        return "<script>alert('?? lot ??? ??? ???.'); history.back();</script>"
+    total_split_qty = round(sum(float(row.get('quantity') or 0) for row in split_rows), 4)
+    if abs(total_split_qty - approved_qty) > 0.01:
+        return "<script>alert('?? ?? ?? ??? ?????? ????.'); history.back();</script>"
+    for row in split_rows:
+        if float(row.get('quantity') or 0) <= 0:
+            return "<script>alert('? lot? ????? ??? ???.'); history.back();</script>"
+        if not (row.get('receiving_date') or '').strip():
+            return "<script>alert('? lot? ???? ?????.'); history.back();</script>"
 
     conn = get_db()
     cursor = conn.cursor()
@@ -4320,18 +4503,19 @@ def complete_issue_request(req_id):
         if (req_row['requester_username'] or '') != current_username:
             return "<script>alert('요청을 등록한 사용자만 실입고 완료 처리할 수 있습니다.'); history.back();</script>"
 
-        _create_request_receipt_lot(
-            cursor,
-            int(req_row['material_id']),
-            req_row['material_code'],
-            approved_qty,
-            req_row['requester_workplace'],
-            receiving_date,
-            manufacture_date,
-            expiry_date,
-            manufacture_date_unknown,
-            expiry_date_unknown,
-        )
+        for row in split_rows:
+            _create_request_receipt_lot(
+                cursor,
+                int(req_row['material_id']),
+                req_row['material_code'],
+                float(row.get('quantity') or 0),
+                req_row['requester_workplace'],
+                row.get('receiving_date'),
+                row.get('manufacture_date'),
+                row.get('expiry_date'),
+                int(row.get('manufacture_date_unknown') or 0),
+                int(row.get('expiry_date_unknown') or 0),
+            )
         _sync_material_stock_with_lots(conn, int(req_row['material_id']))
         cursor.execute(
             '''
@@ -4355,11 +4539,24 @@ def complete_issue_request(req_id):
                 'requester_workplace': req_row['requester_workplace'],
             },
         )
+        cursor.execute(
+            '''
+            SELECT COUNT(*) AS cnt
+            FROM logistics_issue_requests
+            WHERE request_type = 'ISSUE'
+              AND status = ?
+              AND requester_workplace = ?
+            ''',
+            (ISSUE_STATUS_REQUESTED, req_row['requester_workplace']),
+        )
+        pending_row = cursor.fetchone()
+        remaining_pending_count = int(pending_row['cnt'] or 0) if pending_row else 0
         conn.commit()
     finally:
         conn.close()
 
-    return redirect(url_for('materials.materials', req_tab='issue', issue_status='completed'))
+    next_issue_status = 'pending' if remaining_pending_count > 0 else 'completed'
+    return redirect(url_for('materials.materials', req_tab='issue', issue_status=next_issue_status))
 
 
 @bp.route('/issue-requests/<int:req_id>/reject', methods=['POST'])
@@ -4421,7 +4618,7 @@ def reject_issue_request(req_id):
     finally:
         conn.close()
 
-    return redirect(url_for('materials.materials', req_tab='issue', issue_status='rejected'))
+    return redirect(url_for('materials.materials', req_tab='issue', issue_status='pending'))
 
 
 @bp.route('/export-requests/<int:req_id>/complete', methods=['POST'])

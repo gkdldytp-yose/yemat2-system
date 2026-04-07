@@ -1,10 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
 import hashlib
+import json
 from datetime import datetime, date, timedelta
 
 from core import get_db, login_required, get_workplace, SHARED_WORKPLACE
 
 bp = Blueprint('main', __name__)
+
+LOW_STOCK_MATERIAL_GROUP_ORDER = ['내포', '외포', '박스', '실리카', '트레이']
 
 
 def _normalize_dashboard_schedule_status(status_value):
@@ -19,6 +22,46 @@ def _normalize_dashboard_schedule_status(status_value):
         return '예정'
     return s
 
+
+def _low_stock_material_group_rank(name_value):
+    name = (name_value or '').strip()
+    for idx, keyword in enumerate(LOW_STOCK_MATERIAL_GROUP_ORDER):
+        if keyword in name:
+            return idx
+    return len(LOW_STOCK_MATERIAL_GROUP_ORDER)
+
+
+@bp.route('/dashboard/prefill-shortage-issues', methods=['POST'])
+@login_required
+def prefill_shortage_issues():
+    material_ids = request.form.getlist('material_id[]')
+    shortage_qtys = request.form.getlist('shortage_qty[]')
+    material_names = request.form.getlist('material_name[]')
+    material_units = request.form.getlist('material_unit[]')
+
+    items = []
+    for idx, raw_id in enumerate(material_ids):
+        try:
+            material_id = int(raw_id or 0)
+        except Exception:
+            material_id = 0
+        try:
+            shortage_qty = float(shortage_qtys[idx] if idx < len(shortage_qtys) else 0)
+        except Exception:
+            shortage_qty = 0
+        if material_id <= 0 or shortage_qty <= 0:
+            continue
+        items.append({
+            'material_id': material_id,
+            'requested_quantity': round(shortage_qty, 2),
+            'material_name': (material_names[idx] if idx < len(material_names) else '').strip(),
+            'unit': (material_units[idx] if idx < len(material_units) else '').strip(),
+            'note': '대시보드 부족 부자재 일괄 추가',
+        })
+
+    session['dashboard_issue_prefill'] = items
+    return redirect(url_for('materials.materials', req_tab='issue', issue_status='pending'))
+
 @bp.route('/')
 @login_required
 def index():
@@ -26,24 +69,6 @@ def index():
     workplace = get_workplace()
     conn = get_db()
     cursor = conn.cursor()
-
-    # 발주 필요 부자재
-    cursor.execute('''
-        SELECT m.id, m.name, m.category, m.unit, m.current_stock, m.min_stock, s.name as supplier_name
-        FROM materials m
-        LEFT JOIN suppliers s ON m.supplier_id = s.id
-        WHERE m.current_stock <= m.min_stock
-          AND EXISTS (
-              SELECT 1
-              FROM bom b
-              JOIN products p ON p.id = b.product_id
-              WHERE b.material_id = m.id
-                AND p.workplace = ?
-          )
-        ORDER BY m.category, m.name
-        LIMIT 10
-    ''', (workplace,))
-    low_stock_materials = cursor.fetchall()
 
     # 금주 생산 스케줄
     today = date.today()
@@ -79,6 +104,7 @@ def index():
             continue
         product_box_map[product_id] = product_box_map.get(product_id, 0.0) + planned_boxes
 
+    low_stock_materials = []
     raw_shortages = []
     if product_box_map:
         product_ids = list(product_box_map.keys())
@@ -87,11 +113,102 @@ def index():
             f'''
             SELECT
                 b.product_id,
+                b.material_id,
+                COALESCE(b.quantity_per_box, 0) as quantity_per_box,
+                m.name as material_name,
+                COALESCE(m.code, printf('M%05d', m.id)) as material_code,
+                COALESCE(m.unit, '') as unit
+            FROM bom b
+            JOIN materials m ON m.id = b.material_id
+            WHERE b.product_id IN ({placeholders})
+              AND b.material_id IS NOT NULL
+            ''',
+            product_ids,
+        )
+        material_bom_rows = cursor.fetchall()
+
+        material_ids = sorted({int(row['material_id'] or 0) for row in material_bom_rows if int(row['material_id'] or 0) > 0})
+        workplace_material_stock_map = {}
+        if material_ids:
+            workplace_location = cursor.execute(
+                '''
+                SELECT id
+                FROM inv_locations
+                WHERE name = ? OR workplace_code = ?
+                ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id
+                LIMIT 1
+                ''',
+                (workplace, workplace, workplace),
+            ).fetchone()
+            if workplace_location:
+                material_placeholders = ','.join(['?'] * len(material_ids))
+                cursor.execute(
+                    f'''
+                    SELECT ml.material_id, COALESCE(SUM(b.qty), 0) as qty
+                    FROM inv_material_lot_balances b
+                    JOIN material_lots ml ON ml.id = b.material_lot_id
+                    WHERE b.location_id = ?
+                      AND ml.material_id IN ({material_placeholders})
+                      AND COALESCE(ml.is_disposed, 0) = 0
+                    GROUP BY ml.material_id
+                    ''',
+                    [int(workplace_location['id']), *material_ids],
+                )
+                workplace_material_stock_map = {int(r['material_id']): float(r['qty'] or 0) for r in cursor.fetchall()}
+
+        material_need_map = {}
+        for row in material_bom_rows:
+            product_id = int(row['product_id'] or 0)
+            material_id = int(row['material_id'] or 0)
+            if product_id <= 0 or material_id <= 0 or product_id not in product_box_map:
+                continue
+            qty_per_box = float(row['quantity_per_box'] or 0)
+            if qty_per_box <= 0:
+                continue
+            required_qty = qty_per_box * float(product_box_map.get(product_id) or 0)
+            if required_qty <= 0:
+                continue
+            if material_id not in material_need_map:
+                material_need_map[material_id] = {
+                    'id': material_id,
+                    'code': row['material_code'] or f'M{material_id:05d}',
+                    'name': row['material_name'] or f'자재 {material_id}',
+                    'unit': row['unit'] or '',
+                    'current_stock': float(workplace_material_stock_map.get(material_id, 0.0) or 0.0),
+                    'required_qty': 0.0,
+                }
+            material_need_map[material_id]['required_qty'] += required_qty
+
+        for item in material_need_map.values():
+            current_stock = float(item['current_stock'] or 0)
+            required_qty = float(item['required_qty'] or 0)
+            shortage_qty = required_qty - current_stock
+            if shortage_qty > 0:
+                item['current_stock'] = round(current_stock, 1)
+                item['required_qty'] = round(required_qty, 1)
+                item['shortage_qty'] = round(shortage_qty, 1)
+                low_stock_materials.append(item)
+
+        low_stock_materials.sort(
+            key=lambda x: (
+                _low_stock_material_group_rank(x.get('name')),
+                x.get('name') or '',
+                x.get('code') or '',
+                -float(x.get('shortage_qty') or 0),
+            )
+        )
+
+        cursor.execute(
+            f'''
+            SELECT
+                b.product_id,
                 b.raw_material_id,
+                COALESCE(p.sok_per_box, b.quantity_per_box, 0) as raw_qty_per_box,
                 COALESCE(b.quantity_per_box, 0) as quantity_per_box,
                 rm.name as raw_name,
                 COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
             FROM bom b
+            JOIN products p ON p.id = b.product_id
             JOIN raw_materials rm ON rm.id = b.raw_material_id
             WHERE b.product_id IN ({placeholders})
               AND b.raw_material_id IS NOT NULL
@@ -115,15 +232,20 @@ def index():
         raw_stock_map = {str(r['raw_code']): float(r['current_stock'] or 0) for r in cursor.fetchall()}
 
         raw_need_map = {}
+        seen_product_raw_keys = set()
         for row in bom_rows:
             product_id = int(row['product_id'] or 0)
             if product_id not in product_box_map:
                 continue
-            qty_per_box = float(row['quantity_per_box'] or 0)
-            if qty_per_box <= 0:
-                continue
             raw_code = str(row['raw_code'] or '').strip()
             if not raw_code:
+                continue
+            dedupe_key = (product_id, raw_code)
+            if dedupe_key in seen_product_raw_keys:
+                continue
+            seen_product_raw_keys.add(dedupe_key)
+            qty_per_box = float(row['raw_qty_per_box'] or row['quantity_per_box'] or 0)
+            if qty_per_box <= 0:
                 continue
             required_qty = qty_per_box * float(product_box_map.get(product_id) or 0)
             if required_qty <= 0:
@@ -163,18 +285,26 @@ def index():
     ''', (days_ago_30.isoformat(), workplace))
     production_stats = cursor.fetchall()
 
-    # 대기중인 발주 (purchase_requests 기준)
+    # 진행 중 불출 요청
     cursor.execute('''
-        SELECT pr.id, pr.status, pr.ordered_quantity, pr.expected_delivery_date,
-               m.name as material_name, s.name as supplier_name
-        FROM purchase_requests pr
-        JOIN materials m ON pr.material_id = m.id
-        LEFT JOIN suppliers s ON m.supplier_id = s.id
-        WHERE pr.status IN ('발주필요','발주중') AND pr.workplace = ?
-        ORDER BY pr.requested_at DESC
+        SELECT
+            lir.id,
+            lir.status,
+            lir.requested_quantity,
+            lir.requested_at,
+            lir.note,
+            lir.requester_workplace,
+            m.name as material_name,
+            m.unit as material_unit
+        FROM logistics_issue_requests lir
+        JOIN materials m ON lir.material_id = m.id
+        WHERE lir.request_type = 'ISSUE'
+          AND lir.status = '요청'
+          AND lir.requester_workplace = ?
+        ORDER BY lir.requested_at DESC, lir.id DESC
         LIMIT 5
     ''', (workplace,))
-    pending_orders = cursor.fetchall()
+    pending_issues = cursor.fetchall()
 
     conn.close()
 
@@ -182,10 +312,12 @@ def index():
                          user=session['user'],
                          workplace=workplace,
                          low_stock_materials=low_stock_materials,
+                         low_stock_material_ids_json=json.dumps([int(item['id']) for item in low_stock_materials], ensure_ascii=False),
+                         low_stock_material_ids_csv=','.join(str(int(item['id'])) for item in low_stock_materials),
                          raw_shortages=raw_shortages,
                          schedules=schedules,
                          production_stats=production_stats,
-                         pending_orders=pending_orders,
+                         pending_issues=pending_issues,
                          today=today)
 
 
@@ -234,10 +366,35 @@ def mark_notification_read(notification_id):
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 
+@bp.route('/notifications/dynamic-read', methods=['POST'])
+@login_required
+def mark_dynamic_notification_read():
+    username = (session.get('user') or {}).get('username')
+    notification_key = (request.form.get('notification_key') or '').strip()
+    signature = (request.form.get('signature') or '').strip()
+    if username and notification_key and signature:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(username, notification_key)
+            DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
+            ''',
+            (username, notification_key, signature),
+        )
+        conn.commit()
+        conn.close()
+    return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+
 @bp.route('/notifications/read-all', methods=['POST'])
 @login_required
 def mark_all_notifications_read():
     username = (session.get('user') or {}).get('username')
+    dynamic_keys = request.form.getlist('dynamic_notification_key[]')
+    dynamic_signatures = request.form.getlist('dynamic_signature[]')
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
@@ -248,6 +405,20 @@ def mark_all_notifications_read():
         ''',
         (username,),
     )
+    for idx, key in enumerate(dynamic_keys):
+        notification_key = (key or '').strip()
+        signature = (dynamic_signatures[idx] if idx < len(dynamic_signatures) else '').strip()
+        if not notification_key or not signature:
+            continue
+        cursor.execute(
+            '''
+            INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(username, notification_key)
+            DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
+            ''',
+            (username, notification_key, signature),
+        )
     conn.commit()
     conn.close()
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))

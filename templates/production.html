@@ -2,14 +2,209 @@
 {% block title %}생산 관리{% endblock %}
 {% block extra_css %}
 <style>
-.month-nav{display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(135deg,#f8fafc,#eef2ff);padding:0.8rem 1rem;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 8px 20px rgba(30,64,175,0.08);max-width:440px;margin:1rem auto;}
-.nav-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid #e5e7eb;background:#fff;border-radius:50%;cursor:pointer;transition:all 0.2s ease;color:#0f172a;font-size:1.1rem;}
-.nav-btn:hover{background:#0f172a;color:white;border-color:#0f172a;transform:translateY(-1px);box-shadow:0 6px 16px rgba(2,6,23,0.2);}
-.nav-btn:active{transform:scale(0.96);}
-.month-display{text-align:center;flex-grow:1;user-select:none;}
-.display-year-month{display:block;font-size:1.1rem;font-weight:800;color:#0f172a;letter-spacing:-0.2px;}
-.display-eng{display:block;font-size:0.72rem;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-top:-2px;}
-.status-tabs{display:flex;gap:0.6rem;margin-bottom:1rem;}
+.month-nav{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:0.9rem;
+    margin:1rem auto 2.2rem;
+}
+.month-nav-shell{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:1rem;
+    min-width:min(100%, 560px);
+    padding:0.95rem 1.15rem;
+    border-radius:20px;
+    background:#ffffff;
+    border:1px solid #e7eef7;
+    box-shadow:0 10px 24px rgba(15,23,42,0.06);
+}
+.month-nav-arrow{
+    width:42px;
+    height:42px;
+    flex:0 0 auto;
+    border:1px solid #e2e8f0;
+    border-radius:999px;
+    background:#f8fafc;
+    color:#334155;
+    cursor:pointer;
+    font-size:1.2rem;
+    font-weight:900;
+    line-height:1;
+    transition:all 0.18s ease;
+    box-shadow:none;
+}
+.month-nav-arrow:hover{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1d4ed8;
+    transform:translateY(-1px);
+}
+.month-nav-arrow:active{transform:scale(0.97);}
+.month-display{
+    min-width:220px;
+    text-align:center;
+    user-select:none;
+}
+.display-year-month{
+    display:block;
+    font-size:1.85rem;
+    font-weight:800;
+    color:#0f172a;
+    letter-spacing:-0.04em;
+    line-height:1.02;
+}
+.display-eng{
+    display:block;
+    margin-top:0.2rem;
+    font-size:0.74rem;
+    color:#94a3b8;
+    text-transform:uppercase;
+    font-weight:800;
+    letter-spacing:0.1em;
+}
+.month-nav-actions{
+    display:flex;
+    align-items:center;
+    gap:0.45rem;
+    position:relative;
+    padding-left:0.15rem;
+}
+.month-picker-btn,
+.month-today-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:36px;
+    padding:0 0.8rem;
+    border-radius:999px;
+    font-size:0.82rem;
+    font-weight:800;
+    cursor:pointer;
+    transition:all 0.18s ease;
+}
+.month-picker-btn{
+    border:1px solid #dbeafe;
+    background:#f8fbff;
+    color:#1d4ed8;
+}
+.month-picker-btn:hover{
+    background:#eff6ff;
+}
+.month-picker-btn.active{
+    background:#eff6ff;
+    color:#1e40af;
+}
+.month-today-btn{
+    border:1px solid #e2e8f0;
+    background:#f8fafc;
+    color:#475569;
+}
+.month-today-btn:hover{
+    background:#f1f5f9;
+}
+.month-jump{
+    position:absolute;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+}
+.production-month-calendar{
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+    width:320px;
+    padding:0.9rem;
+    border-radius:20px;
+    background:rgba(255,255,255,0.98);
+    border:1px solid #dbe7f5;
+    box-shadow:0 18px 40px rgba(15,23,42,0.14);
+    display:none;
+    z-index:30;
+}
+.production-month-calendar.open{display:block;}
+.production-calendar-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:0.75rem;
+}
+.production-calendar-title{
+    font-size:1rem;
+    font-weight:900;
+    color:#0f172a;
+    letter-spacing:-0.02em;
+}
+.production-calendar-nav{
+    width:34px;
+    height:34px;
+    border:1px solid #dbe3f0;
+    border-radius:10px;
+    background:#fff;
+    color:#334155;
+    font-size:1rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.production-calendar-nav:hover{
+    border-color:#93c5fd;
+    color:#1d4ed8;
+    background:#eff6ff;
+}
+.production-calendar-weekdays,
+.production-calendar-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:0.3rem;
+}
+.production-calendar-weekday{
+    text-align:center;
+    font-size:0.74rem;
+    font-weight:800;
+    color:#94a3b8;
+    padding-bottom:0.2rem;
+}
+.production-calendar-day{
+    height:38px;
+    border:none;
+    border-radius:11px;
+    background:#f8fafc;
+    color:#cbd5e1;
+    font-size:0.87rem;
+    font-weight:800;
+    cursor:not-allowed;
+}
+.production-calendar-day.available{
+    background:#eff6ff;
+    color:#1d4ed8;
+    cursor:pointer;
+}
+.production-calendar-day.available:hover{
+    background:#dbeafe;
+}
+.production-calendar-day.active{
+    background:linear-gradient(135deg,#0f172a,#2563eb);
+    color:#fff;
+    box-shadow:0 10px 18px rgba(37,99,235,0.22);
+}
+.production-calendar-day.other-month{
+    opacity:0.35;
+}
+.production-calendar-empty{
+    margin-top:0.7rem;
+    text-align:center;
+    color:#94a3b8;
+    font-size:0.78rem;
+    font-weight:700;
+}
+.table-container tr.prod-date-focus td{
+    background:#eff6ff !important;
+    transition:background 0.25s ease;
+}
+.status-tabs{display:flex;gap:0.6rem;margin-top:1.35rem;margin-bottom:1rem;}
 .status-tab{flex:1;padding:0.8rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:white;cursor:pointer;font-weight:700;font-size:0.9rem;text-align:center;transition:all 0.2s;text-decoration:none;color:#374151;box-shadow:0 6px 14px rgba(15,23,42,0.06);}
 .status-tab:hover{border-color:#c7d2fe;background:#f8fafc;}
 .status-tab.active{background:linear-gradient(135deg,#0f172a,#2563eb);color:white;border-color:#1e3a8a;box-shadow:0 10px 24px rgba(30,64,175,0.25);}
@@ -25,10 +220,20 @@
 .search-table thead th{font-size:0.8rem;}
 .search-table tbody td{font-size:0.85rem;}
 @media (max-width: 768px) {
-    .month-nav{padding:0.7rem;gap:0.4rem;}
-    .nav-btn{width:36px;height:36px;}
-    .display-year-month{font-size:1rem;}
-    .display-eng{font-size:0.68rem;}
+    .month-nav-shell{
+        width:100%;
+        min-width:0;
+        padding:0.8rem 0.85rem;
+        gap:0.6rem;
+    }
+    .month-nav-arrow{width:38px;height:38px;font-size:1.05rem;}
+    .month-display{min-width:0;flex:1;}
+    .display-year-month{font-size:1.42rem;}
+    .display-eng{font-size:0.72rem;}
+    .month-nav-actions{gap:0.35rem;}
+    .month-picker-btn,.month-today-btn{height:34px;padding:0 0.7rem;font-size:0.78rem;}
+    .month-today-btn{display:none;}
+    .production-month-calendar{width:min(92vw,320px);right:auto;left:0;}
     .status-tabs{flex-direction:column;}
     .status-tab{padding:0.7rem 0.8rem;}
     .status-tab .count{font-size:1.25rem;}
@@ -53,24 +258,39 @@
 
 <!-- 월 네비게이션 -->
 <div class="month-nav">
-    <button class="nav-btn" 
-            onclick="location.href='/production?month={{ prev_month }}&tab={{ current_tab }}'"
-            aria-label="이전 달">
-        ‹
-    </button>
-
-    <div class="month-display">
-        <span class="display-year-month">
-            {{ current_year }}년 {{ current_month_num }}월
-        </span>
-        <small class="display-eng">{{ current_month }}</small>
+    <div class="month-nav-shell">
+        <button type="button" class="month-nav-arrow" onclick="goProductionMonth('{{ prev_month }}')" aria-label="이전 달">‹</button>
+        <div class="month-display">
+            <span class="display-year-month">
+                {{ current_year }}년 {{ current_month_num }}월
+            </span>
+            <small class="display-eng">{{ current_month }}</small>
+        </div>
+        <div class="month-nav-actions">
+            <button type="button" class="month-picker-btn" id="productionMonthPickerBtn" onclick="toggleProductionMonthCalendar()">월 선택</button>
+            <button type="button" class="month-today-btn" onclick="goProductionCurrentMonth()">이번달</button>
+            <div class="production-month-calendar" id="productionMonthCalendar" onclick="event.stopPropagation()">
+                <div class="production-calendar-head">
+                    <button type="button" class="production-calendar-nav" onclick="moveProductionCalendar(-1)">‹</button>
+                    <div class="production-calendar-title" id="productionCalendarTitle">-</div>
+                    <button type="button" class="production-calendar-nav" onclick="moveProductionCalendar(1)">›</button>
+                </div>
+                <div class="production-calendar-weekdays">
+                    <div class="production-calendar-weekday">일</div>
+                    <div class="production-calendar-weekday">월</div>
+                    <div class="production-calendar-weekday">화</div>
+                    <div class="production-calendar-weekday">수</div>
+                    <div class="production-calendar-weekday">목</div>
+                    <div class="production-calendar-weekday">금</div>
+                    <div class="production-calendar-weekday">토</div>
+                </div>
+                <div class="production-calendar-grid" id="productionCalendarGrid"></div>
+                <div class="production-calendar-empty">생산 데이터가 있는 날짜만 선택할 수 있습니다.</div>
+            </div>
+        </div>
+        <button type="button" class="month-nav-arrow" onclick="goProductionMonth('{{ next_month }}')" aria-label="다음 달">›</button>
     </div>
-
-    <button class="nav-btn" 
-            onclick="location.href='/production?month={{ next_month }}&tab={{ current_tab }}'"
-            aria-label="다음 달">
-        ›
-    </button>
+    <input type="month" id="productionMonthPicker" class="month-jump" value="{{ current_month }}" onchange="goProductionMonth(this.value)" aria-label="월 선택">
 </div>
 
 <!-- 진행/완료 탭 -->
@@ -95,7 +315,7 @@
         </thead>
         <tbody>
         {% for prod in productions %}
-        <tr>
+        <tr data-production-date="{{ prod.production_date }}">
             <td style="white-space:nowrap;">{{ prod.production_date[5:] }}</td>
             <td><strong style="font-size:0.85rem;">{{ prod.product_name }}</strong></td>
             <td>
@@ -173,6 +393,139 @@
 </div>
 
 <script>
+const PRODUCTION_AVAILABLE_DATES = {{ available_calendar_dates_json|safe }};
+const productionAvailableDateSet = new Set(PRODUCTION_AVAILABLE_DATES);
+const DEFAULT_PRODUCTION_FOCUS_DATE = {{ (productions[0].production_date if productions else '')|tojson }};
+let productionCalendarMonth = null;
+
+function goProductionMonth(monthValue) {
+    if (!monthValue) return;
+    window.location.href = `/production?month=${monthValue}&tab={{ current_tab }}`;
+}
+
+function toggleProductionMonthCalendar() {
+    const popup = document.getElementById('productionMonthCalendar');
+    const btn = document.getElementById('productionMonthPickerBtn');
+    if (!popup || !btn) return;
+    const shouldOpen = !popup.classList.contains('open');
+    popup.classList.toggle('open', shouldOpen);
+    btn.classList.toggle('active', shouldOpen);
+    if (shouldOpen) {
+        ensureProductionCalendarMonth();
+        renderProductionCalendar();
+    }
+}
+
+function closeProductionMonthCalendar() {
+    const popup = document.getElementById('productionMonthCalendar');
+    const btn = document.getElementById('productionMonthPickerBtn');
+    if (popup) popup.classList.remove('open');
+    if (btn) btn.classList.remove('active');
+}
+
+function ensureProductionCalendarMonth() {
+    if (productionCalendarMonth instanceof Date) return;
+    const seed = '{{ current_month }}';
+    const [year, month] = seed.split('-').map((v) => Number(v || 0));
+    productionCalendarMonth = new Date(year, Math.max(0, month - 1), 1);
+}
+
+function moveProductionCalendar(offset) {
+    ensureProductionCalendarMonth();
+    productionCalendarMonth = new Date(
+        productionCalendarMonth.getFullYear(),
+        productionCalendarMonth.getMonth() + offset,
+        1
+    );
+    renderProductionCalendar();
+}
+
+function renderProductionCalendar() {
+    ensureProductionCalendarMonth();
+    const titleEl = document.getElementById('productionCalendarTitle');
+    const gridEl = document.getElementById('productionCalendarGrid');
+    if (!titleEl || !gridEl) return;
+
+    const year = productionCalendarMonth.getFullYear();
+    const month = productionCalendarMonth.getMonth();
+    titleEl.textContent = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const prevLastDate = new Date(year, month, 0).getDate();
+    const activeDate = (window.location.hash || '').startsWith('#date-')
+        ? (window.location.hash || '').replace('#date-', '')
+        : DEFAULT_PRODUCTION_FOCUS_DATE;
+    let html = '';
+
+    for (let i = 0; i < firstDay; i += 1) {
+        const day = prevLastDate - firstDay + i + 1;
+        html += `<button type="button" class="production-calendar-day other-month" disabled>${day}</button>`;
+    }
+
+    for (let day = 1; day <= lastDate; day += 1) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isAvailable = productionAvailableDateSet.has(dateStr);
+        const isActive = !!activeDate && dateStr === activeDate;
+        const classes = ['production-calendar-day'];
+        if (isAvailable) classes.push('available');
+        if (isActive) classes.push('active');
+        const clickAttr = isAvailable ? `onclick="selectProductionCalendarDate('${dateStr}')"` : 'disabled';
+        html += `<button type="button" class="${classes.join(' ')}" ${clickAttr}>${day}</button>`;
+    }
+
+    const totalCells = firstDay + lastDate;
+    const remaining = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= remaining; i += 1) {
+        html += `<button type="button" class="production-calendar-day other-month" disabled>${i}</button>`;
+    }
+
+    gridEl.innerHTML = html;
+}
+
+function selectProductionCalendarDate(dateStr) {
+    if (!productionAvailableDateSet.has(dateStr)) return;
+    closeProductionMonthCalendar();
+    const targetMonth = dateStr.slice(0, 7);
+    if (targetMonth === '{{ current_month }}') {
+        const targetEl = document.querySelector(`[data-production-date="${dateStr}"]`);
+        if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.classList.add('prod-date-focus');
+            window.setTimeout(() => targetEl.classList.remove('prod-date-focus'), 1600);
+        }
+        return;
+    }
+    window.location.href = `/production?month=${targetMonth}&tab={{ current_tab }}#date-${dateStr}`;
+}
+
+function goProductionCurrentMonth() {
+    const today = new Date();
+    const monthValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    goProductionMonth(monthValue);
+}
+
+document.addEventListener('click', function(event) {
+    const actions = document.querySelector('.month-nav-actions');
+    if (!actions) return;
+    if (!actions.contains(event.target)) {
+        closeProductionMonthCalendar();
+    }
+});
+
+window.addEventListener('load', function() {
+    const hash = window.location.hash || '';
+    if (!hash.startsWith('#date-')) return;
+    const targetDate = hash.replace('#date-', '');
+    const targetEl = document.querySelector(`[data-production-date="${targetDate}"]`);
+    if (!targetEl) return;
+    window.setTimeout(() => {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetEl.classList.add('prod-date-focus');
+        window.setTimeout(() => targetEl.classList.remove('prod-date-focus'), 1600);
+    }, 120);
+});
+
 function openSearchModal() {
     document.getElementById('searchModal').style.display = 'flex';
     setTimeout(() => {

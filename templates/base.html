@@ -214,6 +214,12 @@
                         {% if nav_unread_notifications %}
                         <form method="POST" action="/notifications/read-all">
                             <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                            {% for nt in nav_notifications %}
+                                {% if nt.dynamic_key and not nt.is_read %}
+                            <input type="hidden" name="dynamic_notification_key[]" value="{{ nt.dynamic_key }}">
+                            <input type="hidden" name="dynamic_signature[]" value="{{ nt.dynamic_signature }}">
+                                {% endif %}
+                            {% endfor %}
                             <button type="submit" class="btn btn-small" style="background:#0f766e;">모두 읽음</button>
                         </form>
                         {% endif %}
@@ -230,7 +236,14 @@
                                         {% if nt.link %}
                                         <a href="{{ nt.link }}" class="btn btn-small" style="background:#2563eb;">열기</a>
                                         {% endif %}
-                                        {% if nt.id and not nt.is_read %}
+                                        {% if nt.dynamic_key and not nt.is_read %}
+                                        <form method="POST" action="/notifications/dynamic-read">
+                                            <input type="hidden" name="notification_key" value="{{ nt.dynamic_key }}">
+                                            <input type="hidden" name="signature" value="{{ nt.dynamic_signature }}">
+                                            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                            <button type="submit" class="btn btn-small btn-secondary">읽음</button>
+                                        </form>
+                                        {% elif nt.id and not nt.is_read %}
                                         <form method="POST" action="/notifications/{{ nt.id }}/read">
                                             <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                                             <button type="submit" class="btn btn-small btn-secondary">읽음</button>

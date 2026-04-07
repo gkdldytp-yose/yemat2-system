@@ -108,6 +108,8 @@
 .request-list-table tbody td{padding:0.78rem 0.65rem;border-top:1px solid #e6edf5;border-bottom:1px solid #e6edf5;background:#fff;}
 .request-list-table tbody td:first-child{border-left:1px solid #e6edf5;border-top-left-radius:14px;border-bottom-left-radius:14px;}
 .request-list-table tbody td:last-child{border-right:1px solid #e6edf5;border-top-right-radius:14px;border-bottom-right-radius:14px;}
+#issueBulkForm .request-list-table th:nth-child(3),
+#issueBulkForm .request-list-table td:nth-child(3){display:none;}
 .request-empty{padding:2rem 1rem!important;text-align:center;color:#94a3b8!important;background:linear-gradient(180deg,#ffffff,#f8fafc)!important;}
 .request-select{border-radius:14px;border:1px solid #d7deea;background:#fbfdff;padding:0.45rem;}
 .request-inline-actions{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;}
@@ -132,6 +134,22 @@
 .issue-date-tabs{display:flex;gap:0.45rem;flex-wrap:wrap;margin:0.75rem 0 0.9rem;}
 .issue-date-btn{padding:0.42rem 0.8rem;border:1px solid #dbe5f0;border-radius:999px;background:#fff;font-size:0.77rem;font-weight:800;color:#334155;cursor:pointer;}
 .issue-date-btn.active{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+.issue-date-btn.is-collapsed{display:none;}
+.issue-date-picker{position:relative;display:inline-flex;align-items:center;}
+.issue-date-picker-btn{display:inline-flex;align-items:center;justify-content:center;padding:0.42rem 0.8rem;border:1px solid #cbd5e1;border-radius:999px;background:#f8fafc;font-size:0.77rem;font-weight:800;color:#334155;cursor:pointer;}
+.issue-date-calendar{position:absolute;top:calc(100% + 0.45rem);right:0;width:280px;padding:0.8rem;border:1px solid #dbe5f0;border-radius:18px;background:#fff;box-shadow:0 18px 40px rgba(15,23,42,.14);display:none;z-index:30;}
+.issue-date-calendar.open{display:block;}
+.issue-date-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.65rem;}
+.issue-date-calendar-title{font-size:.82rem;font-weight:900;color:#0f172a;}
+.issue-date-calendar-nav{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid #dbe5f0;border-radius:999px;background:#f8fafc;color:#334155;font-weight:900;cursor:pointer;}
+.issue-date-calendar-weekdays,.issue-date-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.3rem;}
+.issue-date-calendar-weekdays{margin-bottom:.35rem;}
+.issue-date-calendar-weekday{font-size:.7rem;font-weight:800;color:#94a3b8;text-align:center;padding:.2rem 0;}
+.issue-date-calendar-day{display:inline-flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1/1;border:none;border-radius:12px;background:#f8fafc;color:#cbd5e1;font-size:.76rem;font-weight:800;cursor:not-allowed;}
+.issue-date-calendar-day.other{background:transparent;color:#e2e8f0;}
+.issue-date-calendar-day.available{background:#e0f2fe;color:#0369a1;cursor:pointer;box-shadow:inset 0 0 0 1px #bae6fd;}
+.issue-date-calendar-day.available:hover{background:#bae6fd;}
+.issue-date-calendar-day.active{background:#2563eb;color:#fff;box-shadow:none;}
 .issue-date-pane{display:none;}
 .issue-date-pane.active{display:block;}
 .issue-status-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.8rem;}
@@ -161,12 +179,13 @@
 .issue-manage-stack input[type="text"]{width:130px;}
 .receipt-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.56);z-index:900;align-items:center;justify-content:center;padding:1rem;}
 .receipt-modal-bg.open{display:flex;}
-.receipt-modal{width:min(720px,96vw);background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbe5f0;border-radius:24px;box-shadow:0 28px 70px rgba(15,23,42,.24);overflow:hidden;}
+.receipt-modal{width:min(720px,96vw);max-height:min(92vh,920px);display:flex;flex-direction:column;background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbe5f0;border-radius:24px;box-shadow:0 28px 70px rgba(15,23,42,.24);overflow:hidden;}
+.receipt-modal form{display:flex;flex-direction:column;flex:1;min-height:0;}
 .receipt-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:1.1rem 1.2rem;border-bottom:1px solid #e6edf5;background:linear-gradient(135deg,#eff6ff,#f8fafc);}
 .receipt-modal-title{margin:0;font-size:1.08rem;font-weight:900;color:#0f172a;}
 .receipt-modal-caption{margin:.25rem 0 0;font-size:.83rem;color:#64748b;line-height:1.45;}
 .receipt-modal-close{border:none;background:#e2e8f0;color:#334155;width:34px;height:34px;border-radius:999px;font-size:1rem;font-weight:900;cursor:pointer;}
-.receipt-modal-body{padding:1.1rem 1.2rem 1.2rem;}
+.receipt-modal-body{padding:1.1rem 1.2rem 1.2rem;flex:1;min-height:0;overflow-y:auto;}
 .receipt-modal-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;margin-bottom:1rem;}
 .receipt-summary-item{padding:.78rem .85rem;border:1px solid #dbe5f0;border-radius:16px;background:#fff;}
 .receipt-summary-label{font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:.24rem;}
@@ -181,9 +200,31 @@
 .receipt-none-btn{display:inline-flex;align-items:center;justify-content:center;padding:.34rem .68rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-size:.74rem;font-weight:800;color:#475569;cursor:pointer;}
 .receipt-none-btn.active{background:#0f172a;border-color:#0f172a;color:#fff;}
 .receipt-help{grid-column:1 / -1;padding:.8rem .9rem;border:1px dashed #cbd5e1;border-radius:14px;background:#fff;color:#64748b;font-size:.79rem;line-height:1.5;}
+.receipt-split-toggle{display:inline-flex;align-items:center;justify-content:center;padding:.48rem .82rem;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:900;cursor:pointer;}
+.receipt-split-wrap{grid-column:1 / -1;display:none;flex-direction:column;gap:.7rem;padding:.95rem;border:1px solid #dbe5f0;border-radius:18px;background:linear-gradient(180deg,#ffffff,#f8fbff);}
+.receipt-split-wrap.open{display:flex;}
+.receipt-split-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap;}
+.receipt-split-title{font-size:.84rem;font-weight:900;color:#0f172a;}
+.receipt-split-caption{font-size:.76rem;color:#64748b;}
+.receipt-split-add{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .8rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#334155;font-size:.76rem;font-weight:900;cursor:pointer;}
+.receipt-split-rows{display:flex;flex-direction:column;gap:.65rem;}
+.receipt-split-row{display:grid;grid-template-columns:120px 96px repeat(3,minmax(0,1fr));gap:.6rem;align-items:end;padding:.78rem;border:1px solid #dbe5f0;border-radius:16px;background:#fff;}
+.receipt-split-cell{display:flex;flex-direction:column;gap:.3rem;}
+.receipt-split-cell label{font-size:.76rem;font-weight:800;color:#334155;}
+.receipt-split-cell input{width:100%;height:40px;padding:0 .72rem;border:1px solid #cfd8e3;border-radius:12px;background:#fff;box-sizing:border-box;}
+.receipt-split-cell input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.14);}
+.receipt-split-field-head{display:flex;align-items:center;justify-content:space-between;gap:.45rem;}
+.receipt-split-none{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 .62rem;border:1px solid #dbe3f0;border-radius:999px;background:#fff;color:#64748b;font-size:.72rem;font-weight:900;cursor:pointer;}
+.receipt-split-none.active{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;}
+.receipt-split-qty.is-auto input{background:#f8fafc;color:#475569;font-weight:900;}
+.receipt-split-row-head{display:flex;align-items:center;justify-content:space-between;gap:.45rem;}
+.receipt-split-row-badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;height:34px;padding:0 .7rem;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:.76rem;font-weight:900;}
+.receipt-split-remove{border:none;background:#fee2e2;color:#b91c1c;width:30px;height:30px;border-radius:999px;font-size:.9rem;font-weight:900;cursor:pointer;}
+.receipt-split-total{font-size:.78rem;color:#475569;font-weight:800;text-align:right;}
 .receipt-modal-actions{display:flex;justify-content:flex-end;gap:.55rem;margin-top:1rem;}
 @media (max-width: 760px){
   .receipt-modal-summary,.receipt-modal-grid{grid-template-columns:1fr;}
+  .receipt-split-row{grid-template-columns:1fr;}
 }
 .issue-empty{padding:2rem 1rem!important;text-align:center;color:#94a3b8!important;background:linear-gradient(180deg,#ffffff,#f8fafc)!important;}
 @media (max-width: 960px){
@@ -356,6 +397,7 @@
         <div class="material-detail-tabs">
             <button type="button" class="material-detail-tab active" id="tabLotsBtn" onclick="switchMaterialPanel('lots')">{% if can_manage_lots %}로트 관리{% else %}로트 목록{% endif %}</button>
             <button type="button" class="material-detail-tab" id="tabLogsBtn" onclick="switchMaterialPanel('logs')">사용 로그</button>
+            <button type="button" class="material-detail-tab" id="tabReceiveBtn" onclick="switchMaterialPanel('receive')">입고 로그</button>
         </div>
 
         <div id="materialLotsPanel" class="material-panel active">
@@ -386,8 +428,18 @@
             <p class="material-section-title">부자재 사용 로그</p>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>사용일</th><th>생산번호</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
+                    <thead><tr><th>사용일</th><th>생산번호</th><th>상품명</th><th>사용 로트</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
                     <tbody id="usageLogTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="materialReceivePanel" class="material-panel">
+            <p class="material-section-title">부자재 입고 로그</p>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>입고일</th><th>제조일</th><th>소비기한</th><th>입고수량</th><th>구분</th><th>비고</th></tr></thead>
+                    <tbody id="receiveLogTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -591,7 +643,6 @@
         <div class="issue-status-tabs">
             <button type="button" class="issue-status-btn" id="issueStatusPendingBtn" onclick="switchIssueStatusTab('pending')">불출 요청 중 <span class="issue-status-count">{{ issue_requests_pending|length }}</span></button>
             <button type="button" class="issue-status-btn" id="issueStatusCompletedBtn" onclick="switchIssueStatusTab('completed')">불출 완료 <span class="issue-status-count">{{ issue_requests_completed|length }}</span></button>
-            <button type="button" class="issue-status-btn" id="issueStatusRejectedBtn" onclick="switchIssueStatusTab('rejected')">불출 반려 <span class="issue-status-count">{{ issue_requests_rejected|length }}</span></button>
         </div>
         <div id="issueStatusPendingPane" class="issue-status-pane">
         <div class="issue-status-board">
@@ -669,8 +720,30 @@
         {% if issue_completed_groups %}
         <div class="issue-date-tabs">
             {% for group in issue_completed_groups %}
-            <button type="button" class="issue-date-btn {% if loop.first %}active{% endif %}" id="issueCompletedDateBtn{{ loop.index0 }}" onclick="switchIssueCompletedDate({{ loop.index0 }})">{{ group['date'] }} <span class="issue-status-count">{{ group['items']|length }}</span></button>
+            <button type="button" class="issue-date-btn {% if loop.first %}active{% endif %} {% if loop.index0 >= 5 %}is-collapsed{% endif %}" id="issueCompletedDateBtn{{ loop.index0 }}" data-date="{{ group['date'] }}" onclick="switchIssueCompletedDate({{ loop.index0 }})">{{ group['date'] }} <span class="issue-status-count">{{ group['items']|length }}</span></button>
             {% endfor %}
+            {% if issue_completed_groups|length > 5 %}
+            <div class="issue-date-picker">
+                <button type="button" class="issue-date-picker-btn" id="issueCompletedDatePickerBtn" onclick="toggleIssueCompletedCalendar()">캘린더 선택</button>
+                <div class="issue-date-calendar" id="issueCompletedDateCalendar" onclick="event.stopPropagation()">
+                    <div class="issue-date-calendar-head">
+                        <button type="button" class="issue-date-calendar-nav" onclick="moveIssueCompletedCalendar(-1)">‹</button>
+                        <div class="issue-date-calendar-title" id="issueCompletedCalendarTitle">-</div>
+                        <button type="button" class="issue-date-calendar-nav" onclick="moveIssueCompletedCalendar(1)">›</button>
+                    </div>
+                    <div class="issue-date-calendar-weekdays">
+                        <div class="issue-date-calendar-weekday">일</div>
+                        <div class="issue-date-calendar-weekday">월</div>
+                        <div class="issue-date-calendar-weekday">화</div>
+                        <div class="issue-date-calendar-weekday">수</div>
+                        <div class="issue-date-calendar-weekday">목</div>
+                        <div class="issue-date-calendar-weekday">금</div>
+                        <div class="issue-date-calendar-weekday">토</div>
+                    </div>
+                    <div class="issue-date-calendar-grid" id="issueCompletedCalendarGrid"></div>
+                </div>
+            </div>
+            {% endif %}
         </div>
             {% for group in issue_completed_groups %}
             <div id="issueCompletedDatePane{{ loop.index0 }}" class="issue-date-pane {% if loop.first %}active{% endif %}">
@@ -704,40 +777,6 @@
             </table>
         </div>
         {% endif %}
-        </div>
-        </div>
-        <div id="issueStatusRejectedPane" class="issue-status-pane">
-        <div class="issue-status-board">
-            <div class="issue-status-head">
-                <div>
-                    <div class="issue-status-title">불출 반려</div>
-                    <div class="issue-status-caption">최종 완료 전에 반려된 요청입니다.</div>
-                </div>
-            </div>
-        <div class="table-container">
-            <table class="issue-status-table">
-                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>반려일</th><th>반려사유</th></tr></thead>
-                <tbody>
-                {% if issue_requests_rejected %}
-                    {% for r in issue_requests_rejected %}
-                    <tr>
-                        <td class="issue-meta-cell">
-                            <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
-                            <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
-                        </td>
-                        <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
-                        <td class="issue-name-cell">{{ r.material_name }}</td>
-                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
-                        <td class="issue-meta-cell"><div class="issue-date">{{ r.rejected_at[:16] if r.rejected_at else (r.processed_at[:16] if r.processed_at else '-') }}</div><div class="issue-subtext">반려 처리</div></td>
-                        <td><span class="issue-note-box">{{ (r.rejected_reason or '-')|e }}</span></td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr><td colspan="6" class="issue-empty">불출 반려 내역이 없습니다.</td></tr>
-                {% endif %}
-                </tbody>
-            </table>
-        </div>
         </div>
         </div>
     </div>
@@ -994,7 +1033,9 @@
                     </div>
                     <div class="receipt-summary-item">
                         <div class="receipt-summary-label">실입고수량</div>
-                        <div class="receipt-summary-value"><input type="number" id="receiptActualQty" name="actual_quantity" step="0.01" min="0.01" required style="width:100%;height:40px;border:1px solid #cfd8e3;border-radius:12px;padding:0 .7rem;"></div>
+                        <div class="receipt-summary-value">
+                            <input type="number" id="receiptActualQty" name="actual_quantity" step="0.01" min="0.01" required style="width:100%;height:40px;border:1px solid #cfd8e3;border-radius:12px;padding:0 .7rem;background:#f8fafc;font-weight:900;" oninput="updateReceiptSplitSummary()">
+                        </div>
                     </div>
                 </div>
                 <div class="receipt-modal-grid">
@@ -1024,8 +1065,21 @@
                     <div class="receipt-field" style="grid-column:1 / -1;">
                         <div class="receipt-field-head">
                             <label for="receiptProcessNote">메모</label>
+                            <button type="button" class="receipt-split-toggle" id="receiptSplitToggleBtn" onclick="enableReceiptSplit()">로트 나누기</button>
                         </div>
                         <input type="text" id="receiptProcessNote" name="process_note" placeholder="실입고 메모 입력">
+                    </div>
+                    <input type="hidden" id="receiptSplitEnabled" name="split_enabled" value="0">
+                    <div id="receiptSplitWrap" class="receipt-split-wrap">
+                        <div class="receipt-split-head">
+                            <div>
+                                <div class="receipt-split-title">로트 나누기</div>
+                                <div class="receipt-split-caption">행별 입고 수량과 lot 정보를 나눠 저장합니다. 마지막 행은 나머지 수량이 자동 계산됩니다.</div>
+                            </div>
+                            <button type="button" class="receipt-split-add" onclick="addReceiptSplitRow()">행 추가</button>
+                        </div>
+                        <div id="receiptSplitRows" class="receipt-split-rows"></div>
+                        <div id="receiptSplitTotal" class="receipt-split-total"></div>
                     </div>
                     <div class="receipt-help">
                         같은 작업장에서 마지막으로 등록된 lot의 입고일, 제조일, 소비기한을 기본값으로 불러옵니다. 필요한 정보만 확인 후 바로 완료할 수 있습니다.
@@ -1102,8 +1156,11 @@ let currentIssueStatusTab = {{ issue_status_tab|tojson }};
 let currentExportStatusTab = {{ export_status_tab|tojson }};
 let currentIssueCompletedDateTab = 0;
 let currentExportCompletedDateTab = 0;
+const ISSUE_COMPLETED_DATES = {{ issue_completed_groups|map(attribute='date')|list|tojson }};
+let issueCompletedCalendarMonth = null;
 const ISSUE_MATERIAL_ROWS = {{ request_materials|tojson }};
 const EXPORT_MATERIAL_ROWS = {{ export_request_materials|tojson }};
+const DASHBOARD_ISSUE_PREFILL = {{ dashboard_issue_prefill_json|safe }};
 let reqExpanded = false;
 let currentMaterialId = null;
 const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
@@ -1144,8 +1201,8 @@ function switchReqTab(tab){
 }
 
 function switchIssueStatusTab(tab){
-    currentIssueStatusTab = ['pending','completed','rejected'].includes(tab) ? tab : 'pending';
-    ['pending','completed','rejected'].forEach((name) => {
+    currentIssueStatusTab = ['pending','completed'].includes(tab) ? tab : 'pending';
+    ['pending','completed'].forEach((name) => {
         document.getElementById(`issueStatus${name.charAt(0).toUpperCase() + name.slice(1)}Pane`)?.classList.toggle('active', name === currentIssueStatusTab);
         document.getElementById(`issueStatus${name.charAt(0).toUpperCase() + name.slice(1)}Btn`)?.classList.toggle('active', name === currentIssueStatusTab);
     });
@@ -1167,6 +1224,107 @@ function switchIssueCompletedDate(index){
     document.querySelectorAll('[id^="issueCompletedDateBtn"]').forEach((btn, btnIndex) => {
         btn.classList.toggle('active', btnIndex === currentIssueCompletedDateTab);
     });
+    const activeBtn = document.getElementById(`issueCompletedDateBtn${index}`);
+    if(activeBtn){
+        const selectedDate = activeBtn.dataset.date || '';
+        if(selectedDate){
+            const [year, month] = selectedDate.split('-').map((v) => Number(v || 0));
+            if(year && month){
+                issueCompletedCalendarMonth = new Date(year, month - 1, 1);
+            }
+        }
+        renderIssueCompletedCalendar();
+    }
+}
+
+function selectIssueCompletedDateByValue(value){
+    if(!value) return;
+    document.querySelectorAll('[id^="issueCompletedDateBtn"]').forEach((btn, btnIndex) => {
+        if((btn.dataset.date || '') === value){
+            switchIssueCompletedDate(btnIndex);
+        }
+    });
+}
+
+function ensureIssueCompletedCalendarMonth(){
+    if(issueCompletedCalendarMonth instanceof Date) return;
+    const seed = ISSUE_COMPLETED_DATES[0];
+    if(seed){
+        const [year, month] = seed.split('-').map((v) => Number(v || 0));
+        issueCompletedCalendarMonth = new Date(year, Math.max(0, month - 1), 1);
+        return;
+    }
+    const now = new Date();
+    issueCompletedCalendarMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+function renderIssueCompletedCalendar(){
+    const calendar = document.getElementById('issueCompletedDateCalendar');
+    const title = document.getElementById('issueCompletedCalendarTitle');
+    const grid = document.getElementById('issueCompletedCalendarGrid');
+    if(!calendar || !title || !grid || !ISSUE_COMPLETED_DATES.length) return;
+    ensureIssueCompletedCalendarMonth();
+    const year = issueCompletedCalendarMonth.getFullYear();
+    const month = issueCompletedCalendarMonth.getMonth();
+    title.textContent = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
+    const availableDates = new Set(ISSUE_COMPLETED_DATES);
+    const activeBtn = document.getElementById(`issueCompletedDateBtn${currentIssueCompletedDateTab}`);
+    const activeDate = activeBtn?.dataset.date || '';
+    const firstDay = new Date(year, month, 1);
+    const startWeekday = firstDay.getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    grid.innerHTML = '';
+    for(let i = 0; i < startWeekday; i += 1){
+        const empty = document.createElement('div');
+        empty.className = 'issue-date-calendar-day other';
+        grid.appendChild(empty);
+    }
+    for(let day = 1; day <= lastDate; day += 1){
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'issue-date-calendar-day';
+        btn.textContent = String(day);
+        if(availableDates.has(dateStr)){
+            btn.classList.add('available');
+            if(dateStr === activeDate){
+                btn.classList.add('active');
+            }
+            btn.onclick = () => {
+                selectIssueCompletedDateByValue(dateStr);
+                closeIssueCompletedCalendar();
+            };
+        } else {
+            btn.disabled = true;
+        }
+        grid.appendChild(btn);
+    }
+}
+
+function toggleIssueCompletedCalendar(){
+    const calendar = document.getElementById('issueCompletedDateCalendar');
+    if(!calendar) return;
+    const willOpen = !calendar.classList.contains('open');
+    closeIssueCompletedCalendar();
+    if(willOpen){
+        renderIssueCompletedCalendar();
+        calendar.classList.add('open');
+    }
+}
+
+function closeIssueCompletedCalendar(){
+    const calendar = document.getElementById('issueCompletedDateCalendar');
+    if(calendar) calendar.classList.remove('open');
+}
+
+function moveIssueCompletedCalendar(offset){
+    ensureIssueCompletedCalendarMonth();
+    issueCompletedCalendarMonth = new Date(
+        issueCompletedCalendarMonth.getFullYear(),
+        issueCompletedCalendarMonth.getMonth() + offset,
+        1,
+    );
+    renderIssueCompletedCalendar();
 }
 
 function switchExportCompletedDate(index){
@@ -1253,20 +1411,16 @@ function filterIssueMaterials(){
     renderMaterialOptions(list, filtered, list.value);
 }
 
-function addIssueItemFromList(){
-    const list = document.getElementById('issueMaterialList');
+function appendIssueItemRow(materialData, defaults = {}){
     const body = document.getElementById('issueItemsBody');
-    if(!list || !body || list.selectedIndex < 0) return;
-    const opt = list.options[list.selectedIndex];
-    if(opt.hidden) return;
-
-    const materialId = String(opt.value || '');
+    if(!body || !materialData) return;
+    const materialId = String(materialData.id || materialData.value || materialData.material_id || '');
     if(!materialId) return;
-    const code = opt.dataset.code || '-';
-    const name = opt.dataset.name || '';
-    const unit = opt.dataset.unit || '';
-    const upperUnit = opt.dataset.upperUnit || '';
-    const upperUnitQty = Number(opt.dataset.upperUnitQty || 0);
+    const code = materialData.code || '-';
+    const name = materialData.name || materialData.material_name || '';
+    const unit = materialData.unit || '';
+    const upperUnit = materialData.upper_unit || materialData.upperUnit || '';
+    const upperUnitQty = Number(materialData.upper_unit_qty || materialData.upperUnitQty || materialData.upperUnitQty || 0);
     const hasUpperUnit = !!upperUnit && Number.isFinite(upperUnitQty) && upperUnitQty > 0;
     const rowId = `issue_item_${materialId}`;
     if(document.getElementById(rowId)) return;
@@ -1277,14 +1431,14 @@ function addIssueItemFromList(){
     tr.id = rowId;
     const qtyInputHtml = hasUpperUnit
         ? `<div class="issue-qty-entry request-qty-box">
-                <input type="number" class="js-issue-qty-input request-qty-input" step="0.01" min="0.01" value="1" required oninput="syncIssueConvertedQty(this)">
+                <input type="number" class="js-issue-qty-input request-qty-input" step="0.01" min="0.01" value="${defaults.displayQuantity || 1}" required oninput="syncIssueConvertedQty(this)">
                 <button type="button" class="issue-unit-toggle js-issue-unit-toggle" data-mode="upper" data-unit="${upperUnit}" data-base-unit="${unit}" data-upper-unit="${upperUnit}" data-factor="${upperUnitQty}" onclick="toggleIssueUnitMode(this)">${upperUnit}</button>
            </div>
-           <input type="hidden" name="requested_quantity[]" class="js-issue-converted-value" value="${upperUnitQty}">
+           <input type="hidden" name="requested_quantity[]" class="js-issue-converted-value" value="${defaults.requestedQuantity || upperUnitQty}">
            <input type="hidden" class="js-issue-upper-unit-qty" value="${upperUnitQty}">`
-        : `<div class="issue-qty-entry request-qty-box"><input type="number" name="requested_quantity[]" class="request-qty-input" step="0.01" min="0.01" required><span class="request-qty-unit">${unit}</span></div>`;
+        : `<div class="issue-qty-entry request-qty-box"><input type="number" name="requested_quantity[]" class="request-qty-input" step="0.01" min="0.01" required value="${defaults.requestedQuantity || ''}"><span class="request-qty-unit">${unit}</span></div>`;
     const convertedQtyHtml = hasUpperUnit
-        ? `<div><strong class="js-issue-converted-label issue-converted-hint">${upperUnitQty.toFixed(2)} ${unit}</strong></div>`
+        ? `<div><strong class="js-issue-converted-label issue-converted-hint">${Number(defaults.requestedQuantity || upperUnitQty).toFixed(2)} ${unit}</strong></div>`
         : `<span style="color:#94a3b8;">-</span>`;
     tr.innerHTML = `
         <td>${code}<input type="hidden" name="material_id[]" value="${materialId}"></td>
@@ -1292,10 +1446,27 @@ function addIssueItemFromList(){
         <td>${unit}</td>
         <td>${qtyInputHtml}</td>
         <td>${convertedQtyHtml}</td>
-        <td><input type="text" name="note[]" class="request-note-input" placeholder="비고 입력"></td>
+        <td><input type="text" name="note[]" class="request-note-input" placeholder="비고 입력" value="${defaults.note || ''}"></td>
         <td><button type="button" class="btn btn-small btn-secondary" onclick="removeIssueItem('${rowId}')">삭제</button></td>
     `;
     body.appendChild(tr);
+    const qtyInput = tr.querySelector('.js-issue-qty-input');
+    if(qtyInput) syncIssueConvertedQty(qtyInput);
+}
+
+function addIssueItemFromList(){
+    const list = document.getElementById('issueMaterialList');
+    if(!list || list.selectedIndex < 0) return;
+    const opt = list.options[list.selectedIndex];
+    if(opt.hidden) return;
+    appendIssueItemRow({
+        id: String(opt.value || ''),
+        code: opt.dataset.code || '-',
+        name: opt.dataset.name || '',
+        unit: opt.dataset.unit || '',
+        upper_unit: opt.dataset.upperUnit || '',
+        upper_unit_qty: opt.dataset.upperUnitQty || '',
+    });
 }
 
 function syncIssueConvertedQty(inputEl){
@@ -1408,29 +1579,200 @@ function toggleReceiptNone(kind){
     syncReceiptNoneState(kind);
 }
 
+function syncReceiptSplitNoneState(target){
+    if(!target) return;
+    const input = target.querySelector('.js-split-none-input');
+    const hidden = target.querySelector('.js-split-none-hidden');
+    const btn = target.querySelector('.js-split-none-btn');
+    if(!input || !hidden || !btn) return;
+    const isNone = hidden.value === '1';
+    btn.classList.toggle('active', isNone);
+    input.disabled = isNone;
+    if(isNone) input.value = '';
+}
+
+function toggleReceiptSplitNone(btn){
+    const target = btn?.closest('.js-split-none-wrap');
+    if(!target) return;
+    const hidden = target.querySelector('.js-split-none-hidden');
+    if(!hidden) return;
+    hidden.value = hidden.value === '1' ? '0' : '1';
+    syncReceiptSplitNoneState(target);
+}
+
+function getReceiptTotalQty(){
+    return Number(document.getElementById('receiptActualQty')?.value || 0);
+}
+
+function updateReceiptSplitSummary(){
+    const totalEl = document.getElementById('receiptSplitTotal');
+    const rows = Array.from(document.querySelectorAll('.receipt-split-row'));
+    const totalQty = getReceiptTotalQty();
+    if(!rows.length){
+        if(totalEl) totalEl.textContent = '';
+        return;
+    }
+    let used = 0;
+    rows.forEach((row, idx) => {
+        const input = row.querySelector('.js-receipt-split-qty');
+        const qtyWrap = row.querySelector('.receipt-split-qty');
+        const isLast = idx === rows.length - 1;
+        if(!input) return;
+        qtyWrap?.classList.toggle('is-auto', isLast);
+        input.readOnly = isLast;
+        if(isLast){
+            const remain = Math.max(0, totalQty - used);
+            input.value = remain > 0 ? remain.toFixed(2).replace(/\.00$/, '') : '0';
+        } else {
+            const val = Math.max(0, Number(input.value || 0));
+            used += val;
+        }
+    });
+    const sum = rows.reduce((acc, row) => acc + Math.max(0, Number(row.querySelector('.js-receipt-split-qty')?.value || 0)), 0);
+    if(totalEl){
+        totalEl.textContent = `총 ${totalQty.toFixed(2).replace(/\.00$/, '')} / 분할합 ${sum.toFixed(2).replace(/\.00$/, '')}`;
+    }
+}
+
+function buildReceiptSplitRow(index, defaults = {}){
+    const row = document.createElement('div');
+    row.className = 'receipt-split-row';
+    row.dataset.index = String(index);
+    row.innerHTML = `
+        <div class="receipt-split-cell">
+            <div class="receipt-split-row-head">
+                <span class="receipt-split-row-badge">${index + 1}번 lot</span>
+                ${index > 1 ? '<button type="button" class="receipt-split-remove" onclick="removeReceiptSplitRow(this)">×</button>' : ''}
+            </div>
+        </div>
+        <div class="receipt-split-cell receipt-split-qty">
+            <label>입고수량</label>
+            <input type="number" name="split_quantity[]" class="js-receipt-split-qty" step="0.01" min="0" value="${defaults.quantity || ''}" oninput="updateReceiptSplitSummary()">
+        </div>
+        <div class="receipt-split-cell">
+            <label>입고일 *</label>
+            <input type="date" name="split_receiving_date[]" value="${defaults.receivingDate || ''}" required>
+        </div>
+        <div class="receipt-split-cell js-split-none-wrap">
+            <div class="receipt-split-field-head">
+                <label>제조일</label>
+                <button type="button" class="receipt-split-none js-split-none-btn" onclick="toggleReceiptSplitNone(this)">없음</button>
+            </div>
+            <input type="date" name="split_manufacture_date[]" class="js-split-none-input" value="${defaults.manufactureDate || ''}">
+            <input type="hidden" name="split_manufacture_unknown[]" class="js-split-none-hidden" value="${defaults.manufactureUnknown || '0'}">
+        </div>
+        <div class="receipt-split-cell js-split-none-wrap">
+            <div class="receipt-split-field-head">
+                <label>소비기한</label>
+                <button type="button" class="receipt-split-none js-split-none-btn" onclick="toggleReceiptSplitNone(this)">없음</button>
+            </div>
+            <input type="date" name="split_expiry_date[]" class="js-split-none-input" value="${defaults.expiryDate || ''}">
+            <input type="hidden" name="split_expiry_unknown[]" class="js-split-none-hidden" value="${defaults.expiryUnknown || '0'}">
+        </div>
+    `;
+    row.querySelectorAll('.js-split-none-wrap').forEach((target) => syncReceiptSplitNoneState(target));
+    return row;
+}
+
+function addReceiptSplitRow(){
+    const rowsWrap = document.getElementById('receiptSplitRows');
+    if(!rowsWrap) return;
+    const baseReceiving = document.getElementById('receiptReceivingDate')?.value || '';
+    const baseManufacture = document.getElementById('receiptManufactureDate')?.value || '';
+    const baseExpiry = document.getElementById('receiptExpiryDate')?.value || '';
+    const baseManufactureUnknown = document.getElementById('receiptManufactureUnknown')?.value || '0';
+    const baseExpiryUnknown = document.getElementById('receiptExpiryUnknown')?.value || '0';
+    const row = buildReceiptSplitRow(rowsWrap.children.length, {
+        receivingDate: baseReceiving,
+        manufactureDate: baseManufacture,
+        expiryDate: baseExpiry,
+        manufactureUnknown: baseManufactureUnknown,
+        expiryUnknown: baseExpiryUnknown,
+    });
+    rowsWrap.appendChild(row);
+    updateReceiptSplitSummary();
+}
+
+function removeReceiptSplitRow(btn){
+    const row = btn?.closest('.receipt-split-row');
+    const rowsWrap = document.getElementById('receiptSplitRows');
+    if(!row || !rowsWrap) return;
+    row.remove();
+    Array.from(rowsWrap.children).forEach((child, idx) => {
+        child.dataset.index = String(idx);
+        const badge = child.querySelector('.receipt-split-row-badge');
+        if(badge) badge.textContent = `${idx + 1}번 lot`;
+        const removeBtn = child.querySelector('.receipt-split-remove');
+        if(removeBtn){
+            removeBtn.style.display = idx > 1 ? '' : 'none';
+        }
+    });
+    updateReceiptSplitSummary();
+}
+
+function enableReceiptSplit(){
+    const wrap = document.getElementById('receiptSplitWrap');
+    const toggleBtn = document.getElementById('receiptSplitToggleBtn');
+    const enabled = document.getElementById('receiptSplitEnabled');
+    const rowsWrap = document.getElementById('receiptSplitRows');
+    if(!wrap || !enabled || !rowsWrap) return;
+    if(enabled.value === '1'){
+        resetReceiptSplit();
+        if(toggleBtn) toggleBtn.textContent = '로트 나누기';
+        return;
+    }
+    wrap.classList.add('open');
+    enabled.value = '1';
+    if(toggleBtn) toggleBtn.textContent = '로트 나누기 취소';
+    if(!rowsWrap.children.length){
+        addReceiptSplitRow();
+        addReceiptSplitRow();
+    }
+    updateReceiptSplitSummary();
+}
+
+function resetReceiptSplit(){
+    const wrap = document.getElementById('receiptSplitWrap');
+    const toggleBtn = document.getElementById('receiptSplitToggleBtn');
+    const enabled = document.getElementById('receiptSplitEnabled');
+    const rowsWrap = document.getElementById('receiptSplitRows');
+    const totalEl = document.getElementById('receiptSplitTotal');
+    if(wrap) wrap.classList.remove('open');
+    if(enabled) enabled.value = '0';
+    if(toggleBtn) toggleBtn.textContent = '로트 나누기';
+    if(rowsWrap) rowsWrap.innerHTML = '';
+    if(totalEl) totalEl.textContent = '';
+}
+
 function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, manufactureDate, expiryDate, manufactureUnknown, expiryUnknown){
     const modal = document.getElementById('receiptCompleteModal');
     const form = document.getElementById('receiptCompleteForm');
     if(!modal || !form) return;
+    document.body.style.overflow = 'hidden';
     form.action = `/issue-requests/${reqId}/complete`;
     document.getElementById('receiptSummaryName').textContent = name || '-';
     document.getElementById('receiptSummaryCode').textContent = code || '-';
-    document.getElementById('receiptActualQty').value = Number(qty || 0).toFixed(1);
+    document.getElementById('receiptActualQty').value = Number(qty || 0).toFixed(2).replace(/\.00$/, '');
     document.getElementById('receiptReceivingDate').value = receivingDate || '';
     document.getElementById('receiptManufactureDate').value = manufactureDate || '';
     document.getElementById('receiptExpiryDate').value = expiryDate || '';
     document.getElementById('receiptManufactureUnknown').value = String(manufactureUnknown || '0') === '1' ? '1' : '0';
     document.getElementById('receiptExpiryUnknown').value = String(expiryUnknown || '0') === '1' ? '1' : '0';
     document.getElementById('receiptProcessNote').value = '';
+    resetReceiptSplit();
     syncReceiptNoneState('manufacture');
     syncReceiptNoneState('expiry');
     modal.classList.add('open');
+    requestAnimationFrame(() => {
+        document.getElementById('receiptActualQty')?.focus();
+    });
 }
 
 function closeReceiptCompleteModal(event){
     if(event && event.target && event.target !== event.currentTarget) return;
     const modal = document.getElementById('receiptCompleteModal');
     if(modal) modal.classList.remove('open');
+    document.body.style.overflow = '';
 }
 
 document.querySelectorAll('.js-open-receipt-complete').forEach((btn) => {
@@ -1448,6 +1790,14 @@ document.querySelectorAll('.js-open-receipt-complete').forEach((btn) => {
             btn.dataset.expiryUnknown || '0',
         );
     });
+});
+
+document.addEventListener('click', (event) => {
+    const picker = document.querySelector('.issue-date-picker');
+    if(!picker) return;
+    if(!picker.contains(event.target)){
+        closeIssueCompletedCalendar();
+    }
 });
 
 function syncExportLots(){
@@ -1575,6 +1925,21 @@ ISSUE_MATERIAL_SOURCE = mapMaterialRows(ISSUE_MATERIAL_ROWS);
 EXPORT_MATERIAL_SOURCE = mapMaterialRows(EXPORT_MATERIAL_ROWS);
 renderMaterialOptions(document.getElementById('issueMaterialList'), ISSUE_MATERIAL_SOURCE);
 renderMaterialOptions(document.getElementById('exportMaterialList'), EXPORT_MATERIAL_SOURCE);
+if(Array.isArray(DASHBOARD_ISSUE_PREFILL) && DASHBOARD_ISSUE_PREFILL.length){
+    switchReqTab('issue');
+    setRequestPanelExpanded(true);
+    DASHBOARD_ISSUE_PREFILL.forEach((item) => {
+        const materialRow = ISSUE_MATERIAL_SOURCE.find((row) => String(row.value) === String(item.material_id));
+        if(!materialRow) return;
+        const factor = Number(materialRow.upperUnitQty || 0);
+        const requestedQty = Number(item.requested_quantity || 0);
+        appendIssueItemRow(materialRow, {
+            requestedQuantity: requestedQty > 0 ? requestedQty : '',
+            displayQuantity: factor > 0 && requestedQty > 0 ? (requestedQty / factor).toFixed(2).replace(/\.00$/, '') : '',
+            note: item.note || '',
+        });
+    });
+}
 
 const issueBulkForm = document.getElementById('issueBulkForm');
 if(issueBulkForm){
@@ -1614,19 +1979,29 @@ function closeMaterialDetailModal(){
 function switchMaterialPanel(type){
     const lotsPanel = document.getElementById('materialLotsPanel');
     const logsPanel = document.getElementById('materialLogsPanel');
+    const receivePanel = document.getElementById('materialReceivePanel');
     const lotBtn = document.getElementById('tabLotsBtn');
     const logBtn = document.getElementById('tabLogsBtn');
+    const receiveBtn = document.getElementById('tabReceiveBtn');
+    if(lotsPanel) lotsPanel.classList.remove('active');
+    if(logsPanel) logsPanel.classList.remove('active');
+    if(receivePanel) receivePanel.classList.remove('active');
+    if(lotBtn) lotBtn.classList.remove('active');
+    if(logBtn) logBtn.classList.remove('active');
+    if(receiveBtn) receiveBtn.classList.remove('active');
+
     if(type === 'logs' || !lotsPanel || !lotBtn){
-        if(lotsPanel) lotsPanel.classList.remove('active');
         if(logsPanel) logsPanel.classList.add('active');
-        if(lotBtn) lotBtn.classList.remove('active');
         if(logBtn) logBtn.classList.add('active');
-    } else {
-        if(logsPanel) logsPanel.classList.remove('active');
-        lotsPanel.classList.add('active');
-        if(logBtn) logBtn.classList.remove('active');
-        lotBtn.classList.add('active');
+        return;
     }
+    if(type === 'receive'){
+        if(receivePanel) receivePanel.classList.add('active');
+        if(receiveBtn) receiveBtn.classList.add('active');
+        return;
+    }
+    lotsPanel.classList.add('active');
+    lotBtn.classList.add('active');
 }
 
 function renderLotRows(lots){
@@ -1686,16 +2061,37 @@ async function toggleLotEdit(lotId){
 function renderUsageRows(logs){
     const tbody = document.getElementById('usageLogTableBody');
     if(!logs || logs.length === 0){
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
         return;
     }
     tbody.innerHTML = logs.map(log => `
         <tr>
             <td>${(log.use_date || '-').toString().slice(0,10)}</td>
             <td>${log.production_no || '-'}</td>
+            <td>${log.product_name || '-'}</td>
+            <td>${log.lot || '-'}</td>
             <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
             <td>${Number(log.remaining_quantity || 0).toFixed(1)}</td>
             <td>${log.user_name || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+function renderReceiveRows(logs){
+    const tbody = document.getElementById('receiveLogTableBody');
+    if(!tbody) return;
+    if(!logs || logs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">입고 로그가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${(log.receive_date || '-').toString().slice(0,10)}</td>
+            <td>${(log.manufacture_date || '-').toString().slice(0,10)}</td>
+            <td>${(log.expiry_date || '-').toString().slice(0,10)}</td>
+            <td>${Number(log.received_quantity || 0).toFixed(1)}</td>
+            <td>${log.action_label || '-'}</td>
+            <td>${log.note || '-'}</td>
         </tr>
     `).join('');
 }
@@ -1715,6 +2111,7 @@ async function loadMaterialDetail(materialId){
     document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
     renderLotRows(payload.lots || []);
     renderUsageRows(payload.usage_logs || []);
+    renderReceiveRows(payload.receive_logs || []);
     return true;
 }
 

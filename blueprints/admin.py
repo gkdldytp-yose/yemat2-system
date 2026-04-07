@@ -2254,6 +2254,7 @@ def integrated_raw_material_detail(raw_material_id):
                 FROM raw_materials
                 WHERE workplace = ?
                   AND TRIM(COALESCE(code, '')) = TRIM(COALESCE(?, ''))
+                  AND COALESCE(current_stock, 0) > 0
                 ORDER BY
                     CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     receiving_date ASC,
@@ -2274,6 +2275,7 @@ def integrated_raw_material_detail(raw_material_id):
                 FROM raw_materials
                 WHERE workplace = ?
                   AND TRIM(COALESCE(name, '')) = TRIM(COALESCE(?, ''))
+                  AND COALESCE(current_stock, 0) > 0
                 ORDER BY
                     CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     receiving_date ASC,
@@ -2282,12 +2284,60 @@ def integrated_raw_material_detail(raw_material_id):
                 (base['workplace'], base['name']),
             )
         lots = [dict(row) for row in cursor.fetchall()]
+        raw_ids = [int(row['id']) for row in lots if row.get('id')]
+        usage_logs = []
+        receive_logs = []
+        if raw_ids:
+            placeholders = ','.join(['?'] * len(raw_ids))
+            cursor.execute(
+                f'''
+                SELECT
+                    COALESCE(rml.created_at, '') as log_date,
+                    COALESCE(pr.name, '-') as product_name,
+                    COALESCE(p.production_date, substr(rml.created_at, 1, 10)) as production_date,
+                    COALESCE(rm.receiving_date, '-') as receiving_date,
+                    COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '-') as car_number,
+                    COALESCE(ABS(rml.quantity), 0) as quantity,
+                    CASE
+                        WHEN COALESCE(pr.name, '') <> '' THEN pr.name || ' 생산 (' || COALESCE(p.production_date, substr(rml.created_at, 1, 10)) || ')'
+                        ELSE COALESCE(rml.note, '-')
+                    END as note
+                FROM raw_material_logs rml
+                LEFT JOIN raw_materials rm ON rm.id = rml.raw_material_id
+                LEFT JOIN productions p ON rml.production_id = p.id
+                LEFT JOIN products pr ON p.product_id = pr.id
+                WHERE rml.raw_material_id IN ({placeholders})
+                  AND COALESCE(rml.type, '') = 'production'
+                ORDER BY rml.created_at DESC, rml.id DESC
+                LIMIT 200
+                ''',
+                raw_ids,
+            )
+            usage_logs = [dict(row) for row in cursor.fetchall()]
+
+            cursor.execute(
+                f'''
+                SELECT
+                    COALESCE(rm.receiving_date, substr(rml.created_at, 1, 10)) as receive_date,
+                    COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '-') as car_number,
+                    COALESCE(ABS(rml.quantity), 0) as quantity,
+                    COALESCE(rml.note, '-') as note
+                FROM raw_material_logs rml
+                LEFT JOIN raw_materials rm ON rm.id = rml.raw_material_id
+                WHERE rml.raw_material_id IN ({placeholders})
+                  AND COALESCE(rml.type, '') = 'receive'
+                ORDER BY COALESCE(rm.receiving_date, substr(rml.created_at, 1, 10)) DESC, rml.id DESC
+                LIMIT 200
+                ''',
+                raw_ids,
+            )
+            receive_logs = [dict(row) for row in cursor.fetchall()]
         payload = dict(base)
         payload['lot_count'] = len(lots)
         payload['total_stock_sum'] = sum(float(row.get('total_stock') or 0) for row in lots)
         payload['current_stock_sum'] = sum(float(row.get('current_stock') or 0) for row in lots)
         payload['used_quantity_sum'] = sum(float(row.get('used_quantity') or 0) for row in lots)
-        return jsonify({'ok': True, 'raw_material': payload, 'lots': lots})
+        return jsonify({'ok': True, 'raw_material': payload, 'lots': lots, 'usage_logs': usage_logs, 'receive_logs': receive_logs})
     finally:
         conn.close()
 
@@ -3149,11 +3199,16 @@ def integrated_material_detail(material_id):
 
         cursor.execute(
             """
-            SELECT
+SELECT
                 COALESCE(p.production_date, substr(pmu.created_at, 1, 10)) as use_date,
                 ('PROD-' || pmu.production_id) as production_no,
-                COALESCE(pmu.actual_quantity, 0) as used_quantity,
-                COALESCE(m.current_stock, 0) as remaining_quantity,
+                COALESCE(prd.name, '-') as product_name,
+                COALESCE(ml.lot, '-') as lot,
+                COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as used_quantity,
+                CASE
+                    WHEN pmlu.id IS NOT NULL THEN COALESCE(ml.current_quantity, 0)
+                    ELSE COALESCE(m.current_stock, 0)
+                END as remaining_quantity,
                 COALESCE(
                     (
                         SELECT NULLIF(al.name, '')
@@ -3175,21 +3230,56 @@ def integrated_material_detail(material_id):
                 ) as user_name
             FROM production_material_usage pmu
             LEFT JOIN productions p ON p.id = pmu.production_id
+            LEFT JOIN products prd ON prd.id = p.product_id
             LEFT JOIN materials m ON m.id = pmu.material_id
+            LEFT JOIN production_material_lot_usage pmlu
+              ON pmlu.production_usage_id = pmu.id
+             AND pmlu.material_id = pmu.material_id
+            LEFT JOIN material_lots ml ON ml.id = pmlu.material_lot_id
             WHERE pmu.material_id = ?
               AND COALESCE(pmu.actual_quantity, 0) > 0
               AND COALESCE(p.status, '') = '완료'
-            ORDER BY COALESCE(p.production_date, pmu.created_at) DESC
+            ORDER BY
+                COALESCE(p.production_date, pmu.created_at) DESC,
+                pmu.id DESC,
+                COALESCE(pmlu.id, 0) DESC
             LIMIT 200
             """,
             (material_id,),
         )
         usage_logs = [dict(row) for row in cursor.fetchall()]
 
+        cursor.execute(
+            """
+            SELECT
+                COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) as receive_date,
+                COALESCE(ml.manufacture_date, '-') as manufacture_date,
+                COALESCE(ml.expiry_date, '-') as expiry_date,
+                COALESCE(mll.quantity, 0) as received_quantity,
+                CASE COALESCE(mll.action, '')
+                    WHEN 'create' THEN '신규 입고'
+                    WHEN 'issue_request_complete' THEN '불출 입고 완료'
+                    ELSE COALESCE(mll.action, '-')
+                END as action_label,
+                COALESCE(mll.note, '-') as note
+            FROM material_lot_logs mll
+            LEFT JOIN material_lots ml ON ml.id = mll.material_lot_id
+            WHERE mll.material_id = ?
+              AND COALESCE(mll.action, '') IN ('create', 'issue_request_complete')
+              AND COALESCE(mll.quantity, 0) > 0
+            ORDER BY
+                COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) DESC,
+                mll.id DESC
+            LIMIT 200
+            """,
+            (material_id,),
+        )
+        receive_logs = [dict(row) for row in cursor.fetchall()]
+
         payload = dict(material)
         payload['total_quantity'] = sum(float(row.get('location_quantity') or 0) for row in lots)
         payload['can_manage_lots'] = bool(can_manage_lots)
-        return jsonify({'ok': True, 'material': payload, 'lots': lots, 'usage_logs': usage_logs})
+        return jsonify({'ok': True, 'material': payload, 'lots': lots, 'usage_logs': usage_logs, 'receive_logs': receive_logs})
     finally:
         conn.close()
 
