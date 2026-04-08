@@ -177,6 +177,14 @@
 .issue-manage-stack form{display:inline-flex;gap:0.35rem;align-items:center;flex-wrap:wrap;margin:0;}
 .issue-manage-stack input[type="number"]{width:92px;}
 .issue-manage-stack input[type="text"]{width:130px;}
+.export-complete-row{display:flex;align-items:center;gap:.55rem;flex-wrap:nowrap;min-width:0;}
+.export-complete-form{display:flex;align-items:center;gap:.55rem;flex:1;min-width:0;flex-wrap:nowrap;margin:0;}
+.export-complete-qty{width:92px!important;height:38px;border:1px solid #cbd5e1;border-radius:12px;padding:0 .72rem;background:linear-gradient(180deg,#ffffff,#f8fbff);color:#0f172a;font-size:.92rem;font-weight:900;text-align:right;box-shadow:0 3px 10px rgba(15,23,42,.05);}
+.export-complete-note{flex:1;min-width:150px;height:38px;border:1px solid #cbd5e1;border-radius:12px;padding:0 .82rem;background:linear-gradient(180deg,#ffffff,#f8fbff);color:#0f172a;font-size:.88rem;box-shadow:0 3px 10px rgba(15,23,42,.05);}
+.export-complete-qty:focus,.export-complete-note:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.export-complete-actions{display:flex;align-items:center;gap:.45rem;flex:0 0 auto;}
+.export-complete-delete{margin:0;flex:0 0 auto;}
+.export-complete-form .btn,.export-complete-delete .btn{height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
 .receipt-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.56);z-index:900;align-items:center;justify-content:center;padding:1rem;}
 .receipt-modal-bg.open{display:flex;}
 .receipt-modal{width:min(720px,96vw);max-height:min(92vh,920px);display:flex;flex-direction:column;background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbe5f0;border-radius:24px;box-shadow:0 28px 70px rgba(15,23,42,.24);overflow:hidden;}
@@ -231,6 +239,10 @@
   .issue-status-board{padding:0.75rem;}
   .issue-status-table{min-width:860px;}
   .issue-note-box{max-width:260px;}
+}
+@media (max-width: 760px){
+  .export-complete-row,.export-complete-form{flex-wrap:wrap;}
+  .export-complete-qty,.export-complete-note{width:100%!important;min-width:0;}
 }
 
 </style>
@@ -457,7 +469,7 @@
         </div>
     </div>
     <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
-        <form method="GET" action="{{ url_for('materials.materials') }}" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
+        <form method="GET" action="{{ url_for('materials.materials') }}" id="materialsFilterForm" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
             <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
                 <label for="materialSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">검색 기준</label>
                 <select id="materialSearchField" name="material_search_field" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
@@ -501,7 +513,7 @@
             </div>
             <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;">
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">적용</button>
-                <a href="{{ url_for('materials.materials') }}" class="btn btn-small btn-secondary">초기화</a>
+                <a href="{{ url_for('materials.materials') }}" id="materialsFilterReset" class="btn btn-small btn-secondary">초기화</a>
             </div>
         </form>
     </div>
@@ -869,7 +881,6 @@
         <div class="issue-status-tabs">
             <button type="button" class="issue-status-btn" id="exportStatusPendingBtn" onclick="switchExportStatusTab('pending')">반출 요청 중 <span class="issue-status-count">{{ export_requests_pending|length }}</span></button>
             <button type="button" class="issue-status-btn" id="exportStatusCompletedBtn" onclick="switchExportStatusTab('completed')">반출 완료 <span class="issue-status-count">{{ export_requests_completed|length }}</span></button>
-            <button type="button" class="issue-status-btn" id="exportStatusRejectedBtn" onclick="switchExportStatusTab('rejected')">반출 반려 <span class="issue-status-count">{{ export_requests_rejected|length }}</span></button>
         </div>
         <div id="exportStatusPendingPane" class="issue-status-pane">
         <div class="issue-status-board">
@@ -903,11 +914,16 @@
                         <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
                         <td><span class="issue-note-box">{{ (r.note or '-')|e }}</span></td>
                         <td>
-                            <div class="issue-manage-stack">
-                                <form method="POST" action="/export-requests/{{ r.id }}/complete" onsubmit="return confirm('실제 반출 수량으로 완료 처리하시겠습니까?');">
-                                    <input type="number" name="actual_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
-                                    <input type="text" name="process_note" placeholder="반출 메모">
-                                    <button type="submit" class="btn btn-small" style="background:#f97316;">반출 완료</button>
+                            <div class="export-complete-row">
+                                <form method="POST" action="/export-requests/{{ r.id }}/complete" class="export-complete-form" onsubmit="return confirm('실제 반출 수량으로 완료 처리하시겠습니까?');">
+                                    <input type="number" name="actual_quantity" class="export-complete-qty" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
+                                    <input type="text" name="process_note" class="export-complete-note" placeholder="반출 메모 입력">
+                                    <div class="export-complete-actions">
+                                        <button type="submit" class="btn btn-small" style="background:#f97316;">반출 완료</button>
+                                    </div>
+                                </form>
+                                <form method="POST" action="/export-requests/{{ r.id }}/delete" class="export-complete-delete" onsubmit="return confirm('해당 반출 요청을 삭제하시겠습니까?');">
+                                    <button type="submit" class="btn btn-small btn-danger">삭제</button>
                                 </form>
                             </div>
                         </td>
@@ -932,8 +948,28 @@
         {% if export_completed_groups %}
         <div class="issue-date-tabs">
             {% for group in export_completed_groups %}
-            <button type="button" class="issue-date-btn {% if loop.first %}active{% endif %}" id="exportCompletedDateBtn{{ loop.index0 }}" onclick="switchExportCompletedDate({{ loop.index0 }})">{{ group['date'] }} <span class="issue-status-count">{{ group['items']|length }}</span></button>
+            <button type="button" class="issue-date-btn {% if loop.first %}active{% endif %} {% if loop.index0 >= 5 %}is-collapsed{% endif %}" id="exportCompletedDateBtn{{ loop.index0 }}" data-date="{{ group['date'] }}" onclick="switchExportCompletedDate({{ loop.index0 }})">{{ group['date'] }} <span class="issue-status-count">{{ group['items']|length }}</span></button>
             {% endfor %}
+            <div class="issue-date-picker">
+                <button type="button" class="issue-date-picker-btn" id="exportCompletedDatePickerBtn" onclick="toggleExportCompletedCalendar()">캘린더 선택</button>
+                <div class="issue-date-calendar" id="exportCompletedDateCalendar" onclick="event.stopPropagation()">
+                    <div class="issue-date-calendar-head">
+                        <button type="button" class="issue-date-calendar-nav" onclick="moveExportCompletedCalendar(-1)">‹</button>
+                        <div class="issue-date-calendar-title" id="exportCompletedCalendarTitle">-</div>
+                        <button type="button" class="issue-date-calendar-nav" onclick="moveExportCompletedCalendar(1)">›</button>
+                    </div>
+                    <div class="issue-date-calendar-weekdays">
+                        <div class="issue-date-calendar-weekday">일</div>
+                        <div class="issue-date-calendar-weekday">월</div>
+                        <div class="issue-date-calendar-weekday">화</div>
+                        <div class="issue-date-calendar-weekday">수</div>
+                        <div class="issue-date-calendar-weekday">목</div>
+                        <div class="issue-date-calendar-weekday">금</div>
+                        <div class="issue-date-calendar-weekday">토</div>
+                    </div>
+                    <div class="issue-date-calendar-grid" id="exportCompletedCalendarGrid"></div>
+                </div>
+            </div>
         </div>
             {% for group in export_completed_groups %}
             <div id="exportCompletedDatePane{{ loop.index0 }}" class="issue-date-pane {% if loop.first %}active{% endif %}">
@@ -968,42 +1004,6 @@
             </table>
         </div>
         {% endif %}
-        </div>
-        </div>
-        <div id="exportStatusRejectedPane" class="issue-status-pane">
-        <div class="issue-status-board">
-            <div class="issue-status-head">
-                <div>
-                    <div class="issue-status-title">반출 반려</div>
-                    <div class="issue-status-caption">최종 완료 전에 반려된 반출 요청입니다.</div>
-                </div>
-            </div>
-        <div class="table-container">
-            <table class="issue-status-table">
-                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>반려일</th><th>사유</th><th>반려사유</th></tr></thead>
-                <tbody>
-                {% if export_requests_rejected %}
-                    {% for r in export_requests_rejected %}
-                    <tr>
-                        <td class="issue-meta-cell">
-                            <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
-                            <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
-                        </td>
-                        <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
-                        <td class="issue-name-cell">{{ r.material_name }}</td>
-                        <td>{{ r.material_lot or '-' }}</td>
-                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
-                        <td class="issue-meta-cell"><div class="issue-date">{{ r.rejected_at[:16] if r.rejected_at else (r.processed_at[:16] if r.processed_at else '-') }}</div><div class="issue-subtext">반려 처리</div></td>
-                        <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
-                        <td><span class="issue-note-box">{{ (r.rejected_reason or '-')|e }}</span></td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr><td colspan="8" class="issue-empty">반출 반려 내역이 없습니다.</td></tr>
-                {% endif %}
-                </tbody>
-            </table>
-        </div>
         </div>
         </div>
     </div>
@@ -1157,13 +1157,63 @@ let currentExportStatusTab = {{ export_status_tab|tojson }};
 let currentIssueCompletedDateTab = 0;
 let currentExportCompletedDateTab = 0;
 const ISSUE_COMPLETED_DATES = {{ issue_completed_groups|map(attribute='date')|list|tojson }};
+const EXPORT_COMPLETED_DATES = {{ export_completed_groups|map(attribute='date')|list|tojson }};
 let issueCompletedCalendarMonth = null;
+let exportCompletedCalendarMonth = null;
 const ISSUE_MATERIAL_ROWS = {{ request_materials|tojson }};
 const EXPORT_MATERIAL_ROWS = {{ export_request_materials|tojson }};
 const DASHBOARD_ISSUE_PREFILL = {{ dashboard_issue_prefill_json|safe }};
 let reqExpanded = false;
 let currentMaterialId = null;
 const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
+const MATERIALS_SCROLL_Y_KEY = 'materials_scroll_y';
+const MATERIALS_SCROLL_PATH_KEY = 'materials_scroll_path';
+const MATERIALS_SCROLL_TS_KEY = 'materials_scroll_ts';
+const MATERIALS_SCROLL_OFFSET_KEY = 'materials_scroll_offset';
+
+function saveMaterialsScrollPosition(){
+    try{
+        const listCard = document.getElementById('materialsListCard');
+        const cardTop = listCard ? listCard.getBoundingClientRect().top : 0;
+        sessionStorage.setItem(MATERIALS_SCROLL_Y_KEY, String(window.scrollY || window.pageYOffset || 0));
+        sessionStorage.setItem(MATERIALS_SCROLL_PATH_KEY, window.location.pathname || '');
+        sessionStorage.setItem(MATERIALS_SCROLL_TS_KEY, String(Date.now()));
+        sessionStorage.setItem(MATERIALS_SCROLL_OFFSET_KEY, String(cardTop));
+    }catch(_err){}
+}
+
+function restoreMaterialsScrollPosition(){
+    try{
+        const savedPath = sessionStorage.getItem(MATERIALS_SCROLL_PATH_KEY) || '';
+        const currentPath = window.location.pathname || '';
+        const savedTs = Number(sessionStorage.getItem(MATERIALS_SCROLL_TS_KEY) || '0');
+        if(savedPath !== currentPath || !savedTs || (Date.now() - savedTs) > 15000){
+            sessionStorage.removeItem(MATERIALS_SCROLL_Y_KEY);
+            sessionStorage.removeItem(MATERIALS_SCROLL_PATH_KEY);
+            sessionStorage.removeItem(MATERIALS_SCROLL_TS_KEY);
+            sessionStorage.removeItem(MATERIALS_SCROLL_OFFSET_KEY);
+            return;
+        }
+        const savedY = Number(sessionStorage.getItem(MATERIALS_SCROLL_Y_KEY) || '');
+        const savedOffset = Number(sessionStorage.getItem(MATERIALS_SCROLL_OFFSET_KEY) || '0');
+        if(Number.isFinite(savedY)){
+            requestAnimationFrame(() => {
+                const listCard = document.getElementById('materialsListCard');
+                if(listCard && Number.isFinite(savedOffset)){
+                    const currentCardTop = listCard.getBoundingClientRect().top;
+                    const delta = currentCardTop - savedOffset;
+                    window.scrollTo({ top: Math.max(0, savedY + delta), behavior: 'auto' });
+                    return;
+                }
+                window.scrollTo({ top: savedY, behavior: 'auto' });
+            });
+        }
+        sessionStorage.removeItem(MATERIALS_SCROLL_Y_KEY);
+        sessionStorage.removeItem(MATERIALS_SCROLL_PATH_KEY);
+        sessionStorage.removeItem(MATERIALS_SCROLL_TS_KEY);
+        sessionStorage.removeItem(MATERIALS_SCROLL_OFFSET_KEY);
+    }catch(_err){}
+}
 let ISSUE_MATERIAL_SOURCE = [];
 let EXPORT_MATERIAL_SOURCE = [];
 
@@ -1209,8 +1259,8 @@ function switchIssueStatusTab(tab){
 }
 
 function switchExportStatusTab(tab){
-    currentExportStatusTab = ['pending','completed','rejected'].includes(tab) ? tab : 'pending';
-    ['pending','completed','rejected'].forEach((name) => {
+    currentExportStatusTab = ['pending','completed'].includes(tab) ? tab : 'pending';
+    ['pending','completed'].forEach((name) => {
         document.getElementById(`exportStatus${name.charAt(0).toUpperCase() + name.slice(1)}Pane`)?.classList.toggle('active', name === currentExportStatusTab);
         document.getElementById(`exportStatus${name.charAt(0).toUpperCase() + name.slice(1)}Btn`)?.classList.toggle('active', name === currentExportStatusTab);
     });
@@ -1335,6 +1385,107 @@ function switchExportCompletedDate(index){
     document.querySelectorAll('[id^="exportCompletedDateBtn"]').forEach((btn, btnIndex) => {
         btn.classList.toggle('active', btnIndex === currentExportCompletedDateTab);
     });
+    const activeBtn = document.getElementById(`exportCompletedDateBtn${index}`);
+    if(activeBtn){
+        const selectedDate = activeBtn.dataset.date || '';
+        if(selectedDate){
+            const [year, month] = selectedDate.split('-').map((v) => Number(v || 0));
+            if(year && month){
+                exportCompletedCalendarMonth = new Date(year, month - 1, 1);
+            }
+        }
+        renderExportCompletedCalendar();
+    }
+}
+
+function selectExportCompletedDateByValue(value){
+    if(!value) return;
+    document.querySelectorAll('[id^="exportCompletedDateBtn"]').forEach((btn, btnIndex) => {
+        if((btn.dataset.date || '') === value){
+            switchExportCompletedDate(btnIndex);
+        }
+    });
+}
+
+function ensureExportCompletedCalendarMonth(){
+    if(exportCompletedCalendarMonth instanceof Date) return;
+    const seed = EXPORT_COMPLETED_DATES[0];
+    if(seed){
+        const [year, month] = seed.split('-').map((v) => Number(v || 0));
+        exportCompletedCalendarMonth = new Date(year, Math.max(0, month - 1), 1);
+        return;
+    }
+    const now = new Date();
+    exportCompletedCalendarMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+function renderExportCompletedCalendar(){
+    const calendar = document.getElementById('exportCompletedDateCalendar');
+    const title = document.getElementById('exportCompletedCalendarTitle');
+    const grid = document.getElementById('exportCompletedCalendarGrid');
+    if(!calendar || !title || !grid || !EXPORT_COMPLETED_DATES.length) return;
+    ensureExportCompletedCalendarMonth();
+    const year = exportCompletedCalendarMonth.getFullYear();
+    const month = exportCompletedCalendarMonth.getMonth();
+    title.textContent = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
+    const availableDates = new Set(EXPORT_COMPLETED_DATES);
+    const activeBtn = document.getElementById(`exportCompletedDateBtn${currentExportCompletedDateTab}`);
+    const activeDate = activeBtn?.dataset.date || '';
+    const firstDay = new Date(year, month, 1);
+    const startWeekday = firstDay.getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    grid.innerHTML = '';
+    for(let i = 0; i < startWeekday; i += 1){
+        const empty = document.createElement('div');
+        empty.className = 'issue-date-calendar-day other';
+        grid.appendChild(empty);
+    }
+    for(let day = 1; day <= lastDate; day += 1){
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'issue-date-calendar-day';
+        btn.textContent = String(day);
+        if(availableDates.has(dateStr)){
+            btn.classList.add('available');
+            if(dateStr === activeDate){
+                btn.classList.add('active');
+            }
+            btn.onclick = () => {
+                selectExportCompletedDateByValue(dateStr);
+                closeExportCompletedCalendar();
+            };
+        } else {
+            btn.disabled = true;
+        }
+        grid.appendChild(btn);
+    }
+}
+
+function toggleExportCompletedCalendar(){
+    const calendar = document.getElementById('exportCompletedDateCalendar');
+    if(!calendar) return;
+    const willOpen = !calendar.classList.contains('open');
+    closeExportCompletedCalendar();
+    if(willOpen){
+        renderExportCompletedCalendar();
+        calendar.classList.add('open');
+    }
+}
+
+function closeExportCompletedCalendar(){
+    const calendar = document.getElementById('exportCompletedDateCalendar');
+    if(calendar) calendar.classList.remove('open');
+}
+
+function moveExportCompletedCalendar(offset){
+    ensureExportCompletedCalendarMonth();
+    exportCompletedCalendarMonth = new Date(
+        exportCompletedCalendarMonth.getFullYear(),
+        exportCompletedCalendarMonth.getMonth() + offset,
+        1,
+    );
+    renderExportCompletedCalendar();
 }
 
 function collectMaterialSource(selectEl){
@@ -1793,10 +1944,13 @@ document.querySelectorAll('.js-open-receipt-complete').forEach((btn) => {
 });
 
 document.addEventListener('click', (event) => {
-    const picker = document.querySelector('.issue-date-picker');
-    if(!picker) return;
-    if(!picker.contains(event.target)){
+    const issuePicker = document.getElementById('issueCompletedDatePickerBtn')?.closest('.issue-date-picker');
+    if(issuePicker && !issuePicker.contains(event.target)){
         closeIssueCompletedCalendar();
+    }
+    const exportPicker = document.getElementById('exportCompletedDatePickerBtn')?.closest('.issue-date-picker');
+    if(exportPicker && !exportPicker.contains(event.target)){
+        closeExportCompletedCalendar();
     }
 });
 
@@ -1918,8 +2072,26 @@ try {
 setRequestPanelExpanded(reqExpandedDefault);
 const requestCard = document.getElementById('requestCard');
 const materialsListCard = document.getElementById('materialsListCard');
+const materialsFilterForm = document.getElementById('materialsFilterForm');
+const materialsFilterReset = document.getElementById('materialsFilterReset');
 if(requestCard && materialsListCard && materialsListCard.parentNode){
     materialsListCard.parentNode.insertBefore(requestCard, materialsListCard);
+}
+if(materialsFilterForm){
+    materialsFilterForm.addEventListener('submit', saveMaterialsScrollPosition);
+}
+if(materialsFilterReset){
+    materialsFilterReset.addEventListener('click', saveMaterialsScrollPosition);
+}
+const materialSearchKeyword = document.getElementById('materialSearchKeyword');
+if(materialSearchKeyword && materialsFilterForm){
+    materialSearchKeyword.addEventListener('keydown', (event) => {
+        if(event.key === 'Enter'){
+            event.preventDefault();
+            saveMaterialsScrollPosition();
+            materialsFilterForm.requestSubmit();
+        }
+    });
 }
 ISSUE_MATERIAL_SOURCE = mapMaterialRows(ISSUE_MATERIAL_ROWS);
 EXPORT_MATERIAL_SOURCE = mapMaterialRows(EXPORT_MATERIAL_ROWS);
@@ -1971,6 +2143,7 @@ if(exportBulkForm){
         }
     });
 }
+restoreMaterialsScrollPosition();
 
 function closeMaterialDetailModal(){
     document.getElementById('materialDetailModal').style.display = 'none';

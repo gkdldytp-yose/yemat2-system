@@ -338,7 +338,7 @@
             <td style="white-space:nowrap;">
                 <a href="/production/{{ prod.id }}" class="btn btn-small" style="background:#6c757d;">조회</a>
                 {% if current_tab == 'done' or prod.status == '완료' %}
-                <a href="/production/{{ prod.id }}/print" class="btn btn-small">출력</a>
+                <a href="/production/{{ prod.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ prod.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">출력</a>
                 {% endif %}
                 {% if can_prod %}
                 <form method="POST" action="/production/{{ prod.id }}/delete" style="display:inline;"

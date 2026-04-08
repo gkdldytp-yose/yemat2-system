@@ -461,6 +461,9 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE productions ADD COLUMN personnel_note TEXT")
         if 'expiry_date' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN expiry_date TEXT")
+        usage_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_material_usage)").fetchall()]
+        if 'usage_note' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN usage_note TEXT")
     except Exception:
         pass
     _production_schema_checked = True

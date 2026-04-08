@@ -108,6 +108,7 @@ def create_tables(conn):
         expected_quantity REAL,
         actual_quantity REAL,
         loss_quantity REAL,
+        usage_note TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (production_id) REFERENCES productions(id),
         FOREIGN KEY (material_id) REFERENCES materials(id)

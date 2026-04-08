@@ -7,6 +7,9 @@
 .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
 .info-item .lbl{font-size:0.78rem;color:#999;margin-bottom:0.2rem;}
 .info-item .val{font-weight:600;font-size:0.95rem;white-space:normal;word-break:break-word;line-height:1.35;}
+.note-textarea{width:100%;padding:0.55rem 0.65rem;border:2px solid #667eea;border-radius:8px;box-sizing:border-box;font-size:0.9rem;line-height:1.45;resize:vertical;min-height:74px;font-family:inherit;}
+.note-textarea[readonly]{background:#f8fafc;color:#475569;}
+.note-textarea.auto-grow{min-height:42px;height:42px;max-height:112px;resize:none;overflow-y:auto;}
 .raw-card{border:2px solid #e1e8ed;border-radius:8px;padding:1rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.2s;}
 .raw-card:hover{border-color:#667eea;background:#f8f9ff;}
 .raw-card.active{border-color:#27ae60;background:#f0fff4;}
@@ -15,6 +18,11 @@
 .raw-meta .ml{color:#999;font-size:0.75rem;}
 .raw-meta .mv{font-weight:600;}
 .raw-input-row{display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem;padding-top:0.75rem;border-top:1px dashed #ccc;}
+.raw-input-row .note-textarea{min-height:88px;}
+.raw-note-wrap{display:none;flex-direction:column;gap:0.28rem;}
+.raw-note-wrap.open{display:flex;}
+.raw-note-toggle{display:inline-flex;align-items:center;justify-content:center;padding:0.34rem 0.75rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#475569;font-size:0.8rem;font-weight:800;cursor:pointer;}
+.raw-note-toggle.active{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;}
 .mat-tbl{width:100%;border-collapse:collapse;font-size:0.9rem;table-layout:fixed;}
 .mat-tbl th{background:#667eea;color:white;padding:0.55rem 0.75rem;text-align:left;}
 .mat-tbl td{padding:0.55rem 0.75rem;border-bottom:1px solid #f0f0f0;}
@@ -90,7 +98,7 @@
         <a href="/production/{{ production.id }}" class="btn btn-small btn-secondary">수정 취소</a>
         {% endif %}
         {% if production.status == '완료' %}
-        <a href="/production/{{ production.id }}/print" class="btn btn-small">🖨️ A4 출력</a>
+        <a href="/production/{{ production.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ A4 출력</a>
         {% endif %}
         <a href="/production" class="btn btn-secondary btn-small">← 목록</a>
     </div>
@@ -167,9 +175,7 @@
                    style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">비고</div>
-            <input type="text" name="personnel_note" value="{{ production.personnel_note or '' }}"
-                   {% if not can_edit %}readonly{% endif %}
-                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+            <textarea name="personnel_note" rows="1" {% if not can_edit %}readonly{% endif %} class="note-textarea auto-grow" placeholder="인원 관련 비고 입력">{{ production.personnel_note or '' }}</textarea>
         </div>
     </div>
 </div>
@@ -192,7 +198,9 @@
     </div>
 
     {% for rm in bom_raw_items %}
-    {% set saved_raw_qty = raw_saved_map.get(rm.rm_id) %}
+    {% set raw_saved = raw_saved_map.get(rm.rm_id, {}) %}
+    {% set saved_raw_qty = raw_saved.get('qty') %}
+    {% set saved_raw_note = raw_saved.get('note', '') %}
     <div class="raw-card{% if saved_raw_qty is not none and saved_raw_qty > 0 %} active{% endif %}" id="rc_{{ rm.rm_id }}"
          data-id="{{ rm.rm_id }}" data-stock="{{ rm.current_stock }}"
          data-pbox="{{ rm.quantity_per_box }}"
@@ -213,14 +221,26 @@
             {% endif %}
         </div>
         {% if can_edit %}
-        <div id="iw_{{ rm.rm_id }}" class="raw-input-row" style="display:{% if saved_raw_qty is not none and saved_raw_qty > 0 %}flex{% else %}none{% endif %};" onclick="event.stopPropagation()">
-            <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
-            <input type="number" name="raw_actual_{{ loop.index0 }}"
-                   id="ri_{{ rm.rm_id }}" step="1" min="0" max="{{ rm.current_stock|int }}"
-                   value="{{ saved_raw_qty if saved_raw_qty is not none else '' }}" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;"
-                   oninput="checkRawOver({{ rm.rm_id }}, {{ rm.current_stock|int }}); updateTotal()">
-            <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}">
-            <span id="rw_{{ rm.rm_id }}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
+        <div id="iw_{{ rm.rm_id }}" class="raw-input-row" style="display:{% if saved_raw_qty is not none and saved_raw_qty > 0 %}flex{% else %}none{% endif %};flex-direction:column;align-items:stretch;" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
+                <input type="number" name="raw_actual_{{ loop.index0 }}"
+                       id="ri_{{ rm.rm_id }}" step="1" min="0" max="{{ rm.current_stock|int }}"
+                       value="{{ saved_raw_qty if saved_raw_qty is not none else '' }}" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;"
+                       oninput="checkRawOver({{ rm.rm_id }}, {{ rm.current_stock|int }}); updateTotal()">
+                <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}">
+                <span id="rw_{{ rm.rm_id }}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
+                <button type="button" id="raw_note_btn_{{ rm.rm_id }}" class="raw-note-toggle {% if saved_raw_note %}active{% endif %}" onclick="toggleRawNote({{ rm.rm_id }}); event.stopPropagation();">비고 입력</button>
+            </div>
+            <div id="raw_note_wrap_{{ rm.rm_id }}" class="raw-note-wrap {% if saved_raw_note %}open{% endif %}">
+                <label for="raw_note_{{ rm.rm_id }}" style="font-size:0.83rem;color:#555;font-weight:600;">비고</label>
+                <textarea id="raw_note_{{ rm.rm_id }}" name="raw_note_{{ loop.index0 }}" rows="3" class="note-textarea" placeholder="원초 사용 비고 입력">{{ saved_raw_note }}</textarea>
+            </div>
+        </div>
+        {% elif saved_raw_note %}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px dashed #ccc;">
+            <div style="font-size:0.78rem;color:#999;margin-bottom:0.25rem;">비고</div>
+            <div class="val" style="white-space:pre-wrap;">{{ saved_raw_note }}</div>
         </div>
         {% endif %}
     </div>
@@ -478,6 +498,7 @@ const IS_DONE = {{ 'false' if can_edit else 'true' }};
 window.onload = () => {
     recalcAll();
     initLotGapNoneButtons();
+    initAutoGrowNotes();
 };
 
 function getActualBoxes(){
@@ -511,12 +532,50 @@ function toggleCard(id){
         iw.style.display = 'none';
         inp.value = '';
         document.getElementById(`rw_${id}`).style.display = 'none';
+        const noteWrap = document.getElementById(`raw_note_wrap_${id}`);
+        const noteBtn = document.getElementById(`raw_note_btn_${id}`);
+        if(noteWrap) noteWrap.classList.remove('open');
+        if(noteBtn) noteBtn.classList.remove('active');
     } else {
         card.classList.add('active');
         iw.style.display = 'flex';
         inp.focus();
     }
     updateTotal();
+}
+
+function toggleRawNote(id){
+    const wrap = document.getElementById(`raw_note_wrap_${id}`);
+    const btn = document.getElementById(`raw_note_btn_${id}`);
+    if(!wrap || !btn) return;
+    const willOpen = !wrap.classList.contains('open');
+    wrap.classList.toggle('open', willOpen);
+    btn.classList.toggle('active', willOpen);
+    if(willOpen){
+        const textarea = wrap.querySelector('textarea');
+        if(textarea){
+            autoGrowTextarea(textarea);
+            textarea.focus();
+        }
+    }
+}
+
+function autoGrowTextarea(textarea){
+    if(!textarea) return;
+    const computed = window.getComputedStyle(textarea);
+    const lineHeight = parseFloat(computed.lineHeight) || 20;
+    const borderOffset = textarea.offsetHeight - textarea.clientHeight;
+    const maxHeight = (lineHeight * 3) + borderOffset + 2;
+    textarea.style.height = '42px';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+}
+
+function initAutoGrowNotes(){
+    document.querySelectorAll('.note-textarea.auto-grow').forEach((textarea) => {
+        autoGrowTextarea(textarea);
+        textarea.addEventListener('input', () => autoGrowTextarea(textarea));
+    });
 }
 
 function checkRawOver(id, maxStock){
