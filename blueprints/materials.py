@@ -577,7 +577,7 @@ def _cleanup_orphan_material_refs(conn):
     }
 
 
-def _register_export_request_row(cursor, workplace, req_user, material_id, lot_id, quantity, reason, reason_detail, note):
+def _register_export_request_row(cursor, workplace, req_user, req_username, material_id, lot_id, quantity, reason, reason_detail, note):
     if material_id <= 0 or lot_id <= 0 or quantity <= 0:
         raise ValueError('자재, 로트, 반출 수량을 확인해주세요.')
     if reason not in ('정리', '불량', '기타'):
@@ -591,9 +591,8 @@ def _register_export_request_row(cursor, workplace, req_user, material_id, lot_i
         raise ValueError('자재를 찾을 수 없습니다.')
 
     workplace_location_id = _get_inventory_location_id(cursor, workplace)
-    logistics_location_id = _get_inventory_location_id(cursor, '물류창고')
-    if not workplace_location_id or not logistics_location_id:
-        raise ValueError('재고 위치 정보를 찾을 수 없습니다.')
+    if not workplace_location_id:
+        raise ValueError('작업장 재고 위치를 찾을 수 없습니다.')
 
     cursor.execute(
         '''
@@ -630,8 +629,8 @@ def _register_export_request_row(cursor, workplace, req_user, material_id, lot_i
         '''
         INSERT INTO logistics_issue_requests
         (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, approved_quantity,
-         request_type, reason, reason_detail, material_lot_id, status, note, requested_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'RETURN', ?, ?, ?, ?, ?, ?)
+         request_type, reason, reason_detail, material_lot_id, status, note, requested_by, requester_username)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'RETURN', ?, ?, ?, ?, ?, ?, ?)
         ''',
         (
             material_id,
@@ -647,6 +646,7 @@ def _register_export_request_row(cursor, workplace, req_user, material_id, lot_i
             ISSUE_STATUS_REQUESTED,
             note,
             req_user,
+            req_username,
         ),
     )
     cursor.execute(
@@ -2604,7 +2604,33 @@ def raw_material_detail(raw_material_id):
                 ''',
                 raw_ids,
             )
-            usage_logs = [dict(row) for row in cursor.fetchall()]
+            usage_logs = []
+            for row in cursor.fetchall():
+                item = dict(row)
+                note_text = (item.get('note') or '').strip()
+                product_name = (item.get('product_name') or '').strip()
+                production_date = (item.get('production_date') or '').strip()
+
+                if product_name and product_name != '-':
+                    item['note'] = f"{product_name} 생산 ({production_date})" if production_date else f"{product_name} 생산"
+                elif note_text == 'production_edit:fifo rollback':
+                    item['note'] = '생산 수정: FIFO 재계산 복원'
+                elif note_text.startswith('production_resave:'):
+                    item['note'] = '생산 수정 후 원초 재적용'
+                elif note_text.startswith('production rollback:'):
+                    item['note'] = '생산 취소로 원초 복원'
+                elif (
+                    not note_text
+                    or '??' in note_text
+                    or '�' in note_text
+                    or '?앹궛' in note_text
+                    or '李④컧' in note_text
+                ):
+                    item['note'] = f"생산 차감 ({production_date})" if production_date else '생산 차감'
+                else:
+                    item['note'] = note_text
+
+                usage_logs.append(item)
 
             cursor.execute(
                 f'''
@@ -4165,9 +4191,10 @@ def add_export_request():
     conn = get_db()
     cursor = conn.cursor()
     req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username')
+    req_username = session.get('user', {}).get('username')
     try:
         req_id, pool_code, lot_text = _register_export_request_row(
-            cursor, workplace, req_user, material_id, lot_id, quantity, reason, reason_detail, note
+            cursor, workplace, req_user, req_username, material_id, lot_id, quantity, reason, reason_detail, note
         )
 
         audit_log(
@@ -4238,10 +4265,11 @@ def bulk_add_export_request():
     conn = get_db()
     cursor = conn.cursor()
     req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username')
+    req_username = session.get('user', {}).get('username')
     try:
         for idx, (mid, lid, qty, reason, reason_detail, note) in enumerate(rows, start=1):
             req_id, pool_code, lot_text = _register_export_request_row(
-                cursor, workplace, req_user, mid, lid, qty, reason, reason_detail, note
+                cursor, workplace, req_user, req_username, mid, lid, qty, reason, reason_detail, note
             )
             audit_log(
                 conn,
@@ -4627,29 +4655,32 @@ def complete_export_request(req_id):
     approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
     if approved_qty <= 0:
-        return "<script>alert('?? ??? ??? ???.'); history.back();</script>"
+        return "<script>alert('실제 반출 수량을 확인해 주세요.'); history.back();</script>"
 
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     current_username = (session.get('user', {}) or {}).get('username')
+    current_name = (session.get('user', {}) or {}).get('name')
     conn = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
-            return "<script>alert('?? ??? ?? ? ????.'); history.back();</script>"
+            return "<script>alert('반출 요청을 찾을 수 없습니다.'); history.back();</script>"
         if (req_row['request_type'] or 'ISSUE') != 'RETURN':
-            return "<script>alert('?? ?? ?? ??? ? ????.'); history.back();</script>"
+            return "<script>alert('반출 요청 건만 처리할 수 있습니다.'); history.back();</script>"
         if req_row['status'] != ISSUE_STATUS_REQUESTED:
-            return "<script>alert('?? ??? ?? ?????.'); history.back();</script>"
+            return "<script>alert('이미 처리된 반출 요청입니다.'); history.back();</script>"
         if approved_qty > float(req_row['requested_quantity'] or 0):
-            return "<script>alert('?? ??? ?? ???? ? ? ????.'); history.back();</script>"
-        if (req_row['requester_username'] or '') != current_username:
-            return "<script>alert('??? ??? ???? ?? ?? ?? ??? ? ????.'); history.back();</script>"
+            return "<script>alert('실제 반출 수량은 요청 수량을 초과할 수 없습니다.'); history.back();</script>"
+        requester_username = (req_row['requester_username'] or '').strip()
+        requester_name = (req_row['requested_by'] or '').strip()
+        if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
+            return "<script>alert('요청을 등록한 사용자만 반출 완료 처리할 수 있습니다.'); history.back();</script>"
 
         workplace_location_id = _get_inventory_location_id(cursor, req_row['requester_workplace'])
         if not workplace_location_id:
-            return "<script>alert('?? ?? ??? ?? ? ????.'); history.back();</script>"
+            return "<script>alert('작업장 재고 위치를 찾을 수 없습니다.'); history.back();</script>"
 
         cursor.execute(
             '''
@@ -4663,7 +4694,7 @@ def complete_export_request(req_id):
         lot_balance_row = cursor.fetchone()
         workplace_lot_qty = float((lot_balance_row['qty'] if lot_balance_row else 0) or 0)
         if workplace_lot_qty < approved_qty:
-            return "<script>alert('?? ??? ?? ??? ?????.'); history.back();</script>"
+            return "<script>alert('현재 로트 재고가 실제 반출 수량보다 부족합니다.'); history.back();</script>"
 
         cursor.execute(
             '''
@@ -4719,18 +4750,24 @@ def complete_export_request(req_id):
                 'requester_workplace': req_row['requester_workplace'],
             },
         )
-        add_user_notification(
-            conn,
-            req_row['requester_username'],
-            f"?? ??? ???????: {req_row['material_name']}",
-            f"{req_row['requester_workplace']} ?? {approved_qty:g}{req_row['unit'] or ''} ?? ??",
-            '/materials?req_tab=export',
+        cursor.execute(
+            '''
+            SELECT COUNT(*) AS cnt
+            FROM logistics_issue_requests
+            WHERE requester_workplace = ?
+              AND COALESCE(request_type, 'ISSUE') = 'RETURN'
+              AND status = ?
+            ''',
+            (req_row['requester_workplace'], ISSUE_STATUS_REQUESTED),
         )
+        pending_row = cursor.fetchone()
+        remaining_pending_count = int((pending_row['cnt'] if pending_row else 0) or 0)
         conn.commit()
     finally:
         conn.close()
 
-    return redirect(url_for('materials.materials', req_tab='export', export_status='completed'))
+    next_status = 'pending' if remaining_pending_count > 0 else 'completed'
+    return redirect(url_for('materials.materials', req_tab='export', export_status=next_status))
 
 
 @bp.route('/export-requests/<int:req_id>/reject', methods=['POST'])

@@ -2151,7 +2151,10 @@ def production_detail(production_id):
     raw_saved_map = {}
     for row in material_usage:
         if row['raw_material_id'] and row['actual_quantity'] is not None:
-            raw_saved_map[row['raw_material_id']] = raw_saved_map.get(row['raw_material_id'], 0) + row['actual_quantity']
+            entry = raw_saved_map.setdefault(row['raw_material_id'], {'qty': 0, 'note': ''})
+            entry['qty'] = float(entry.get('qty') or 0) + float(row['actual_quantity'] or 0)
+            if row.get('usage_note'):
+                entry['note'] = row.get('usage_note') or ''
 
     conn.close()
 
@@ -2359,7 +2362,11 @@ def update_production_usage(production_id):
                 qty = round(float(qty_raw), 4)
                 if qty <= 0:
                     continue
-                raw_entries[idx] = {'rm_id': rm_id, 'qty': qty}
+                raw_entries[idx] = {
+                    'rm_id': rm_id,
+                    'qty': qty,
+                    'note': (request.form.get(f'raw_note_{idx}') or '').strip(),
+                }
 
         if save_action == 'temp':
             cursor.execute(
@@ -2414,6 +2421,7 @@ def update_production_usage(production_id):
                     'name': rm['name'],
                     'workplace': rm['workplace'],
                     'actual_qty': float(entry['qty'] or 0),
+                    'note': entry.get('note', ''),
                 }
             )
 
@@ -2636,10 +2644,10 @@ def update_production_usage(production_id):
                 cursor.execute(
                     '''
                     INSERT INTO production_material_usage
-                    (production_id, material_id, raw_material_id, raw_material_name, expected_quantity, actual_quantity, loss_quantity, yield_rate)
-                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?)
+                    (production_id, material_id, raw_material_id, raw_material_name, expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note)
+                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
                     ''',
-                    (production_id, req['source_rm_id'], req['name'], expected_qty, actual_qty, loss, yield_rate),
+                    (production_id, req['source_rm_id'], req['name'], expected_qty, actual_qty, loss, yield_rate, req.get('note', '')),
                 )
                 continue
 
@@ -2669,8 +2677,8 @@ def update_production_usage(production_id):
                 cursor.execute(
                     '''
                     INSERT INTO production_material_usage
-                    (production_id, material_id, raw_material_id, raw_material_name, expected_quantity, actual_quantity, loss_quantity, yield_rate)
-                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?)
+                    (production_id, material_id, raw_material_id, raw_material_name, expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note)
+                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
                     ''',
                     (
                         production_id,
@@ -2680,6 +2688,7 @@ def update_production_usage(production_id):
                         seg_qty,
                         seg_loss,
                         seg_yield,
+                        req.get('note', ''),
                     ),
                 )
 

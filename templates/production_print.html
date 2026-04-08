@@ -106,7 +106,7 @@
         <td class="center">{{ production.display_supply_line or production.outer_packing_line or production.supply_line or '' }}</td>
         <td class="center">{{ production.outer_packing_people if production.outer_packing_people is not none else '' }}</td>
         <td class="center">{{ production.work_time or '' }}</td>
-        <td>{{ production.personnel_note or '' }}</td>
+        <td style="white-space:pre-wrap;">{{ production.personnel_note or '' }}</td>
       </tr>
     </table>
 
@@ -126,7 +126,7 @@
         <td class="center">{{ r.car_number or '' }}</td>
         <td class="center">{{ r.receiving_date or '' }}</td>
         <td class="center">{{ fmt1(r.actual_quantity) }}</td>
-        <td></td>
+        <td style="white-space:pre-wrap;">{{ r.usage_note or '' }}</td>
       </tr>
       {% endfor %}
       {% for i in range(0, 3 - raw_usages|length if raw_usages|length < 3 else 0) %}
