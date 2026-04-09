@@ -461,6 +461,9 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE productions ADD COLUMN personnel_note TEXT")
         if 'expiry_date' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN expiry_date TEXT")
+        if 'raw_sok_mode' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN raw_sok_mode INTEGER DEFAULT 1")
+        conn.execute("UPDATE productions SET raw_sok_mode = 1 WHERE raw_sok_mode IS NULL OR raw_sok_mode < 1")
         usage_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_material_usage)").fetchall()]
         if 'usage_note' not in usage_cols:
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN usage_note TEXT")
@@ -470,7 +473,7 @@ def _ensure_production_schema(conn):
 
 
 def _ensure_products_schema(conn):
-    """products 테이블 소비기한 컬럼 보정"""
+    """products 테이블 상품 보조 컬럼 보정"""
     global _products_schema_checked
     if _products_schema_checked:
         return
@@ -478,6 +481,14 @@ def _ensure_products_schema(conn):
         cols = [row['name'] for row in conn.execute("PRAGMA table_info(products)").fetchall()]
         if 'expiry_months' not in cols:
             conn.execute("ALTER TABLE products ADD COLUMN expiry_months INTEGER DEFAULT 12")
+        if 'sok_per_box_2' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN sok_per_box_2 REAL")
+        if 'sok_per_box_3' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN sok_per_box_3 REAL")
+        if 'sheets_per_pack_2' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN sheets_per_pack_2 INTEGER")
+        if 'sheets_per_pack_3' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN sheets_per_pack_3 INTEGER")
         conn.execute("UPDATE products SET expiry_months = 12 WHERE expiry_months IS NULL")
     except Exception:
         pass
@@ -570,6 +581,23 @@ def _ensure_raw_material_schema(conn):
             WHERE lot IS NULL OR TRIM(lot) = ''
             '''
         )
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS raw_material_checksheet_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                raw_material_id INTEGER NOT NULL,
+                use_date TEXT NOT NULL,
+                note TEXT,
+                created_by TEXT,
+                updated_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(raw_material_id, use_date),
+                FOREIGN KEY (raw_material_id) REFERENCES raw_materials(id)
+            )
+            '''
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_checksheet_notes_raw_date ON raw_material_checksheet_notes(raw_material_id, use_date)")
     except Exception:
         pass
     _raw_material_schema_checked = True

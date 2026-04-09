@@ -32,6 +32,17 @@ def _round_1(value):
     return round(float(value), 1)
 
 
+def _format_print_workplace(workplace):
+    text = (workplace or '').strip()
+    mapping = {
+        '1동 조미': '1동 조미',
+        '1동 자반': '1동 자반',
+        '2동 신관 1층': '2동 신관 1층',
+        '2동 신관 2층': '2동 신관 2층',
+    }
+    return mapping.get(text, text)
+
+
 @bp.route('/production/<int:production_id>/print')
 @login_required
 def production_print(production_id):
@@ -67,6 +78,21 @@ def production_print(production_id):
     if not production:
         conn.close()
         return redirect(url_for('production.production_list'))
+
+    cursor.execute(
+        '''
+        SELECT id
+        FROM productions
+        WHERE workplace = ?
+          AND production_date = ?
+          AND status = '완료'
+        ORDER BY id ASC
+        ''',
+        (workplace, production['production_date']),
+    )
+    same_day_ids = [int(row['id']) for row in cursor.fetchall()]
+    same_day_total = len(same_day_ids)
+    same_day_index = same_day_ids.index(int(production['id'])) + 1 if int(production['id']) in same_day_ids else 1
 
     display_expiry = production['expiry_date'] or ''
     if not display_expiry:
@@ -110,6 +136,7 @@ def production_print(production_id):
             pmlu.quantity as lot_used_quantity,
             ml.lot as lot_no,
             ml.receiving_date as lot_receiving_date,
+            ml.manufacture_date as lot_manufacture_date,
             ml.expiry_date as lot_expiry_date,
             ml.lot_seq
         FROM production_material_usage pmu
@@ -189,5 +216,8 @@ def production_print(production_id):
         date_str=date_str,
         weekday=weekday,
         workplace=workplace,
+        workplace_label=_format_print_workplace(workplace),
         display_expiry=display_expiry,
+        same_day_index=same_day_index,
+        same_day_total=same_day_total,
     )

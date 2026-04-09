@@ -18,11 +18,37 @@ BOM_CATEGORY_SORT_CASE = """
 """
 
 
-def _round_to_1_decimal(value, default=0.0):
+def _round_to_2_decimal(value, default=0.0):
     try:
-        return round(float(value or 0) + 1e-9, 1)
+        return round(float(value or 0) + 1e-9, 2)
     except (TypeError, ValueError):
         return float(default or 0)
+
+
+def _parse_raw_option_values(form):
+    values = []
+    for sok_key, sheet_key in (
+        ('sok_per_box', 'sheets_per_pack'),
+        ('sok_per_box_2', 'sheets_per_pack_2'),
+        ('sok_per_box_3', 'sheets_per_pack_3'),
+    ):
+        sok_raw = (form.get(sok_key) or '').strip()
+        sheet_raw = (form.get(sheet_key) or '').strip()
+        if not sok_raw:
+            continue
+        try:
+            sok_num = round(float(sok_raw) + 1e-9, 2)
+        except (TypeError, ValueError):
+            continue
+        try:
+            sheet_num = int(float(sheet_raw or 0)) if sheet_raw else None
+        except (TypeError, ValueError):
+            sheet_num = None
+        values.append({'sok': sok_num, 'sheets': sheet_num})
+    values = values[:3]
+    while len(values) < 3:
+        values.append({'sok': None, 'sheets': None})
+    return values
 
 
 @bp.route('/products')
@@ -130,6 +156,14 @@ def product_bom(product_id):
         LEFT JOIN materials m ON b.material_id = m.id
         LEFT JOIN raw_materials rm ON b.raw_material_id = rm.id
         WHERE b.product_id = ?
+          AND (
+                b.raw_material_id IS NULL
+                OR NOT (
+                    COALESCE(rm.total_stock, 0) > 0
+                    AND COALESCE(rm.current_stock, 0) <= 0
+                    AND COALESCE(rm.used_quantity, 0) >= COALESCE(rm.total_stock, 0)
+                )
+              )
         ORDER BY
             {bom_sort},
             COALESCE(m.category, ''),
@@ -195,7 +229,14 @@ def update_product_info(product_id):
     sheets_per_pack = request.form.get('sheets_per_pack')
     cuts_per_sheet = request.form.get('cuts_per_sheet')
     category = (request.form.get('category') or '기타').strip() or '기타'
-    sok_per_box = _round_to_1_decimal(request.form.get('sok_per_box', 0), 0)
+    raw_option_values = _parse_raw_option_values(request.form)
+    first_option, second_option, third_option = raw_option_values
+    sok_per_box = first_option['sok'] if first_option['sok'] is not None else 0
+    sheets_per_pack = first_option['sheets'] if first_option['sheets'] is not None else sheets_per_pack
+    sok_per_box_2 = second_option['sok']
+    sok_per_box_3 = third_option['sok']
+    sheets_per_pack_2 = second_option['sheets']
+    sheets_per_pack_3 = third_option['sheets']
     expiry_months = request.form.get('expiry_months', 12)
     try:
         expiry_months = int(expiry_months)
@@ -209,9 +250,15 @@ def update_product_info(product_id):
 
     cursor.execute('''
         UPDATE products
-        SET box_quantity = ?, sheets_per_pack = ?, cuts_per_sheet = ?, category = ?, sok_per_box = ?, expiry_months = ?
+        SET box_quantity = ?, sheets_per_pack = ?, cuts_per_sheet = ?, category = ?,
+            sok_per_box = ?, sok_per_box_2 = ?, sok_per_box_3 = ?,
+            sheets_per_pack_2 = ?, sheets_per_pack_3 = ?, expiry_months = ?
         WHERE id = ?
-    ''', (box_quantity, sheets_per_pack, cuts_per_sheet, category, sok_per_box, expiry_months, product_id))
+    ''', (
+        box_quantity, sheets_per_pack, cuts_per_sheet, category,
+        sok_per_box, sok_per_box_2, sok_per_box_3,
+        sheets_per_pack_2, sheets_per_pack_3, expiry_months, product_id
+    ))
 
     conn.commit()
     conn.close()

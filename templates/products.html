@@ -24,7 +24,7 @@
 {%- set can_prod  = _r in ['admin','production'] -%}
 
 <h1>📦 상품 관리</h1>
-{% set CATS = ['식탁','김밥','유기','도시락','전장','생김','세트'] %}
+{% set CATS = ['식탁','김밥','유기','도시락','전장','생김','세트','무트레이'] %}
 
 {% if can_prod %}
 <div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:1rem;">
@@ -79,7 +79,7 @@
     <div class="table-container">
     <table>
         <thead>
-            <tr><th>상품</th><th>분류</th><th>낱봉</th><th>BOM</th>
+            <tr><th>상품</th><th>분류</th><th>낱봉</th><th>매수</th><th>절단</th><th>1박스당 원초</th><th>소비기한</th><th>BOM</th>
             {% if can_prod %}<th>관리</th>{% endif %}</tr>
         </thead>
         <tbody>
@@ -99,6 +99,16 @@
                 {% else %}-{% endif %}
             </td>
             <td>{{ p.box_quantity }}</td>
+            <td>{{ p.sheets_per_pack or 24 }}매</td>
+            <td>{{ p.cuts_per_sheet or 9 }}</td>
+            <td>
+                {% if p.sok_per_box and p.sok_per_box > 0 %}
+                {{ "%.2f"|format(p.sok_per_box) }}속
+                {% else %}
+                -
+                {% endif %}
+            </td>
+            <td>{{ p.expiry_months or 12 }}개월</td>
             <td><a href="/products/{{ p.id }}/bom" class="btn btn-small">BOM</a></td>
             {% if can_prod %}
             <td>

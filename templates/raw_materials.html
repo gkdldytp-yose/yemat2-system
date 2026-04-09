@@ -7,6 +7,8 @@
 .material-detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,0.2);}
 .material-panel{display:none;}
 .material-panel.active{display:block;}
+.raw-checksheet-btn{background:linear-gradient(135deg,#2563eb 0%, #1d4ed8 100%) !important;border:1px solid #1d4ed8 !important;color:#fff !important;box-shadow:0 10px 20px rgba(37,99,235,0.28);}
+.raw-checksheet-btn-enhanced{background:linear-gradient(135deg,#2563eb 0%, #1d4ed8 100%) !important;border:1px solid #1d4ed8 !important;color:#fff !important;box-shadow:0 10px 20px rgba(37,99,235,0.28);}
 </style>
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
 {%- set can_prod  = _r in ['admin','production'] -%}
@@ -137,7 +139,7 @@
             {% if can_raw %}
             <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}','{{ rm.receiving_date or "" }}')">입고</button>
             <button class="btn btn-small" onclick="showExport({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">반출</button>
-            <button class="btn btn-small" onclick="showAdjust({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }})">조정</button>
+            <button class="btn btn-small" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">점검표</button>
             <form method="POST" action="/raw-materials/{{ rm.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n※ 생산 기록에 사용된 적이 있으면 삭제할 수 없습니다.\n※ BOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
                 <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
             </form>
@@ -184,7 +186,7 @@
         <td onclick="event.stopPropagation()">
             {% if can_raw %}
             <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">입고</button>
-            <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">조정</button>
+            <button class="btn btn-small" type="button" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">점검표</button>
             <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">삭제</button>
             {% endif %}
         </td>
@@ -426,6 +428,19 @@
 {% endif %}
 
 <!-- 로그 모달 -->
+<div id="rawChecksheetModal" class="modal" style="display:none;">
+    <div class="modal-content" style="width:min(96vw,1400px);height:min(94vh,1080px);margin:1.5vh auto;background:white;padding:1rem 1rem 1.1rem;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <h2 style="margin:0;">원초 점검표 미리보기</h2>
+            <div style="display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;">
+                <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="printRawChecksheet()">A4 출력</button>
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeRawChecksheetModal()">닫기</button>
+            </div>
+        </div>
+        <iframe id="rawChecksheetFrame" title="원초 점검표 미리보기" style="width:100%;flex:1;border:1px solid #dbe5f0;border-radius:10px;background:#fff;"></iframe>
+    </div>
+</div>
+
 <div id="logsModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:900px;margin:5% auto;background:white;padding:2rem;border-radius:12px;max-height:80vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
@@ -547,11 +562,37 @@ function calcExportTotal(){
 }
 
 function showAdjust(id,name,stock){
-    document.getElementById('adjustId').value=id;
-    document.getElementById('adjustName').textContent=name;
-    document.getElementById('adjustStock').value=stock;
-    document.getElementById('adjustModal').style.display='block';
+    alert('원초 조정 기능은 제거되었습니다.');
 }
+
+function openRawChecksheet(rawMaterialId){
+    const modal = document.getElementById('rawChecksheetModal');
+    const frame = document.getElementById('rawChecksheetFrame');
+    if(!modal || !frame) return;
+    frame.src = `/raw-materials/${rawMaterialId}/checksheet-preview`;
+    modal.style.display = 'block';
+}
+
+function closeRawChecksheetModal(){
+    const modal = document.getElementById('rawChecksheetModal');
+    const frame = document.getElementById('rawChecksheetFrame');
+    if(modal) modal.style.display = 'none';
+    if(frame) frame.src = 'about:blank';
+}
+
+function printRawChecksheet(){
+    const frame = document.getElementById('rawChecksheetFrame');
+    if(frame && frame.contentWindow){
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('button[onclick*="openRawChecksheet("]').forEach((btn) => {
+        btn.classList.add('raw-checksheet-btn-enhanced');
+    });
+});
 
 function showLogs(id,name){
     document.getElementById('logsName').textContent=name;

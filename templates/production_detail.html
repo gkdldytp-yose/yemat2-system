@@ -190,7 +190,12 @@
     </div>
 
     <div style="background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem;display:flex;gap:2rem;flex-wrap:wrap;">
-        <span>1박스당 <strong>{{ "%.1f"|format(production.sok_per_box or 0) }}속</strong></span>
+        <input type="hidden" name="raw_sok_mode" id="rawSokMode" value="{{ production.raw_sok_mode or 1 }}">
+        <span>매수 <strong id="rawSheetsLabel">{{ production.active_sheets_per_pack or 0 }}매</strong></span>
+        <span>1박스당 <strong id="rawPerBoxLabel">{{ "%.1f"|format(production.active_sok_per_box or 0) }}속</strong></span>
+        {% if production.raw_sok_values and (production.raw_sok_values|length) > 1 and can_edit %}
+        <button type="button" id="rawSokModeBtn" onclick="toggleRawSokMode()" style="background:#eef2ff;border:1px solid #4f46e5;color:#3730a3;padding:0.38rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.82rem;font-weight:700;">매수 변경</button>
+        {% endif %}
         <span>총 필요량 <strong id="totalNeed" class="warn">-</strong></span>
         <span>선택 합계 <strong id="totalSel" style="color:#667eea;">0속</strong></span>
         <span>잔여 <strong id="remain">-</strong></span>
@@ -217,7 +222,7 @@
             <div><div class="ml">사용량</div><div class="mv">{{ rm.actual_quantity|round(1) if (rm.actual_quantity is defined and rm.actual_quantity is not none) else '-' }}속</div></div>
             <div><div class="ml">수율</div><div class="mv">{{ (rm.yield_rate|round(1) ~ '%') if (rm.yield_rate is defined and rm.yield_rate is not none) else '-' }}</div></div>
             {% else %}
-            <div><div class="ml">최대 생산</div><div class="mv">{% if rm.quantity_per_box > 0 %}{{ (rm.current_stock / rm.quantity_per_box)|int }}박스{% else %}-{% endif %}</div></div>
+            <div><div class="ml">최대 생산</div><div class="mv" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
             {% endif %}
         </div>
         {% if can_edit %}
@@ -490,12 +495,15 @@
 {% endif %}
 
 <script>
-const PER_BOX = {{ production.sok_per_box or 0 }};
+const RAW_SOK_VALUES = {{ (production.raw_sok_values or [production.active_sok_per_box or 0])|tojson }};
+const RAW_SHEET_VALUES = {{ (production.raw_sheet_values or [production.active_sheets_per_pack or 0])|tojson }};
+let currentRawSokMode = {{ production.raw_sok_mode or 1 }};
 const PLANNED = {{ production.planned_boxes }};
 const DEFAULT_BOXES = {{ production.actual_boxes or production.planned_boxes }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
 
 window.onload = () => {
+    syncRawSokUi();
     recalcAll();
     initLotGapNoneButtons();
     initAutoGrowNotes();
@@ -506,9 +514,46 @@ function getActualBoxes(){
     return parseFloat(el && el.value) || DEFAULT_BOXES;
 }
 
+function getCurrentPerBox(){
+    if(!RAW_SOK_VALUES.length) return 0;
+    const idx = Math.max(0, Math.min(RAW_SOK_VALUES.length - 1, (currentRawSokMode || 1) - 1));
+    return parseFloat(RAW_SOK_VALUES[idx]) || 0;
+}
+
+function syncRawSokUi(){
+    const perBox = getCurrentPerBox();
+    const sheets = RAW_SHEET_VALUES[Math.max(0, Math.min(RAW_SHEET_VALUES.length - 1, (currentRawSokMode || 1) - 1))] || 0;
+    const label = document.getElementById('rawPerBoxLabel');
+    const sheetsLabel = document.getElementById('rawSheetsLabel');
+    const modeInput = document.getElementById('rawSokMode');
+    const btn = document.getElementById('rawSokModeBtn');
+    if(label) label.textContent = `${perBox.toFixed(1)}속`;
+    if(sheetsLabel) sheetsLabel.textContent = `${sheets}매`;
+    if(modeInput) modeInput.value = currentRawSokMode;
+    if(btn) btn.textContent = currentRawSokMode > 1 ? '기본 매수' : '매수 변경';
+    document.querySelectorAll('.raw-card').forEach(card => {
+        const stock = parseFloat(card.dataset.stock) || 0;
+        const id = card.dataset.id;
+        const target = document.getElementById(`rawMaxBoxes_${id}`);
+        if(target){
+            target.textContent = perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-';
+        }
+    });
+}
+
+function toggleRawSokMode(){
+    if(IS_DONE || RAW_SOK_VALUES.length <= 1) return;
+    currentRawSokMode += 1;
+    if(currentRawSokMode > RAW_SOK_VALUES.length){
+        currentRawSokMode = 1;
+    }
+    syncRawSokUi();
+    recalcAll();
+}
+
 function recalcAll(){
     const boxes = getActualBoxes();
-    const need = PER_BOX * boxes;
+    const need = getCurrentPerBox() * boxes;
     const tn = document.getElementById('totalNeed');
     if(tn) tn.textContent = Math.ceil(need) + '속';
 
@@ -588,7 +633,7 @@ function updateTotal(){
     let total = 0;
     document.querySelectorAll('[id^="ri_"]').forEach(inp => total += parseFloat(inp.value) || 0);
     const boxes = getActualBoxes();
-    const need = PER_BOX * boxes;
+    const need = getCurrentPerBox() * boxes;
     const remain = need - total;
 
     const ts = document.getElementById('totalSel');
@@ -611,7 +656,7 @@ function updateTotal(){
 
 function autoSelect(){
     const boxes = getActualBoxes();
-    let remaining = PER_BOX * boxes;
+    let remaining = getCurrentPerBox() * boxes;
 
     document.querySelectorAll('.raw-card').forEach(c => {
         c.classList.remove('active');
