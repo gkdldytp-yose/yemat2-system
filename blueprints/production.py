@@ -33,6 +33,61 @@ def _normalize_production_status(status_value):
         return planned
     return s
 
+
+def _get_product_raw_options(product_row):
+    values = []
+    for sok_key, sheet_key in (
+        ('sok_per_box', 'sheets_per_pack'),
+        ('sok_per_box_2', 'sheets_per_pack_2'),
+        ('sok_per_box_3', 'sheets_per_pack_3'),
+    ):
+        try:
+            sok_value = float(product_row.get(sok_key) or 0)
+        except (TypeError, ValueError, AttributeError):
+            sok_value = 0.0
+        if sok_value <= 0:
+            continue
+        try:
+            sheet_value = int(float(product_row.get(sheet_key) or 0))
+        except (TypeError, ValueError, AttributeError):
+            sheet_value = 0
+        values.append({
+            'sok_per_box': round(sok_value, 2),
+            'sheets_per_pack': sheet_value,
+        })
+    return values
+
+
+def _resolve_raw_sok_mode(product_row, mode_value):
+    values = _get_product_raw_options(product_row)
+    if not values:
+        return 1, {'sok_per_box': 0.0, 'sheets_per_pack': 0}, []
+    try:
+        mode = int(mode_value or 1)
+    except (TypeError, ValueError):
+        mode = 1
+    if mode < 1:
+        mode = 1
+    if mode > len(values):
+        mode = 1
+    return mode, values[mode - 1], values
+
+
+def _compose_raw_usage_note(user_note, raw_sok_mode, per_box_value, sheets_per_pack=0, base_sheets_per_pack=0):
+    base_note = (user_note or '').strip()
+    auto_note = ''
+    if int(raw_sok_mode or 1) > 1 and float(per_box_value or 0) > 0:
+        if int(sheets_per_pack or 0) > 0:
+            if int(base_sheets_per_pack or 0) > 0:
+                auto_note = f"매수 변경 적용: {int(base_sheets_per_pack)}매 → {int(sheets_per_pack)}매"
+            else:
+                auto_note = f"매수 변경 적용: {int(sheets_per_pack)}매"
+    if auto_note and base_note:
+        if base_note.startswith(auto_note):
+            return base_note
+        return f"{auto_note}\n{base_note}"
+    return auto_note or base_note
+
 def _sync_material_stock_with_lots(conn, material_id=None):
     cursor = conn.cursor()
     if material_id is not None:
@@ -1957,7 +2012,8 @@ def production_detail(production_id):
     # ?앹궛 ?뺣낫
     cursor.execute(
         '''
-        SELECT pr.*, p.name as product_name, p.box_quantity, p.sok_per_box, p.expiry_months
+        SELECT pr.*, p.name as product_name, p.box_quantity, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
+               p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3, p.expiry_months
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
         WHERE pr.id = ?
@@ -1990,7 +2046,12 @@ def production_detail(production_id):
     # ???곹뭹??BOM ?먯큹 紐⑸줉
     # - 완료???앹궛: ?ㅼ젣 ?ъ슜???먯큹留??쒖떆 (production_material_usage 湲곗?)
     # - 吏꾪뻾 以??앹궛: ?ш퀬 ?덈뒗 ?먯큹 ?쒖떆 (?좏깮 媛??
-    product_sok = float(production['sok_per_box'] or 0)
+    raw_sok_mode, active_raw_option, product_raw_options = _resolve_raw_sok_mode(production, production.get('raw_sok_mode'))
+    production['raw_sok_mode'] = raw_sok_mode
+    production['active_sok_per_box'] = float(active_raw_option.get('sok_per_box') or 0)
+    production['active_sheets_per_pack'] = int(active_raw_option.get('sheets_per_pack') or 0)
+    production['raw_sok_values'] = [float(item.get('sok_per_box') or 0) for item in product_raw_options]
+    production['raw_sheet_values'] = [int(item.get('sheets_per_pack') or 0) for item in product_raw_options]
 
     if production['status'] == '완료' and not edit_completed:
         # 완료嫄? ?ㅼ젣 ?ъ슜???먯큹 湲곕줉 ?쒖떆 (?뚯쭊???먯큹???대쫫 ?쒖떆)
@@ -2053,7 +2114,7 @@ def production_detail(production_id):
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production_id, production['product_id'], product_sok, production['workplace']),
+                (production_id, production['product_id'], production['active_sok_per_box'], production['workplace']),
             )
         else:
             cursor.execute(
@@ -2084,7 +2145,7 @@ def production_detail(production_id):
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production['product_id'], product_sok, production['workplace']),
+                (production['product_id'], production['active_sok_per_box'], production['workplace']),
             )
 
 
@@ -2191,7 +2252,9 @@ def update_production_usage(production_id):
         actual_boxes = float(request.form.get('actual_boxes', 0) or 0)
         cursor.execute(
             '''
-            SELECT pr.planned_boxes, pr.product_id, pr.production_date, pr.status, p.expiry_months
+            SELECT pr.planned_boxes, pr.product_id, pr.production_date, pr.status, pr.raw_sok_mode,
+                   p.expiry_months, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
+                   p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3
             FROM productions pr
             LEFT JOIN products p ON p.id = pr.product_id
             WHERE pr.id = ?
@@ -2250,10 +2313,15 @@ def update_production_usage(production_id):
         work_time = (request.form.get('work_time') or '').strip()
         personnel_note = (request.form.get('personnel_note') or '').strip()
         expiry_date_input = (request.form.get('expiry_date') or '').strip()
+        requested_raw_sok_mode = (request.form.get('raw_sok_mode') or '').strip() or str(prod_row['raw_sok_mode'] or 1)
 
         production_date_str = prod_row['production_date'] if prod_row and prod_row['production_date'] else ''
         expiry_months = int(prod_row['expiry_months'] or 12) if prod_row else 12
         default_expiry_date = production_date_str
+        raw_sok_mode, active_raw_option, raw_options = _resolve_raw_sok_mode(dict(prod_row) if prod_row else {}, requested_raw_sok_mode)
+        active_per_box = float(active_raw_option.get('sok_per_box') or 0)
+        active_sheets_per_pack = int(active_raw_option.get('sheets_per_pack') or 0)
+        base_sheets_per_pack = int((raw_options[0].get('sheets_per_pack') if raw_options else 0) or 0)
         try:
             prod_dt = datetime.strptime(production_date_str, '%Y-%m-%d').date()
             month_index = (prod_dt.month - 1) + expiry_months
@@ -2305,7 +2373,7 @@ def update_production_usage(production_id):
             SET supply_line = ?, supply_people = ?,
                 packing_line = ?, packing_people = ?,
                 outer_packing_line = ?, outer_packing_people = ?,
-                work_time = ?, personnel_note = ?, expiry_date = ?
+                work_time = ?, personnel_note = ?, expiry_date = ?, raw_sok_mode = ?
             WHERE id = ?
             ''',
             (
@@ -2318,6 +2386,7 @@ def update_production_usage(production_id):
                 work_time,
                 personnel_note,
                 expiry_date,
+                raw_sok_mode,
                 production_id,
             ),
         )
@@ -2365,7 +2434,13 @@ def update_production_usage(production_id):
                 raw_entries[idx] = {
                     'rm_id': rm_id,
                     'qty': qty,
-                    'note': (request.form.get(f'raw_note_{idx}') or '').strip(),
+                    'note': _compose_raw_usage_note(
+                        (request.form.get(f'raw_note_{idx}') or '').strip(),
+                        raw_sok_mode,
+                        active_per_box,
+                        active_sheets_per_pack,
+                        base_sheets_per_pack,
+                    ),
                 }
 
         if save_action == 'temp':
@@ -2509,9 +2584,10 @@ def update_production_usage(production_id):
                 </script>
             '''
 
-        cursor.execute('SELECT sok_per_box FROM products WHERE id = ?', (product_id,))
+        cursor.execute('SELECT sok_per_box, sok_per_box_2, sok_per_box_3 FROM products WHERE id = ?', (product_id,))
         p = cursor.fetchone()
-        per_box = float(p['sok_per_box']) if p and p['sok_per_box'] else 0
+        raw_sok_mode, active_raw_option, _ = _resolve_raw_sok_mode(dict(p) if p else {}, raw_sok_mode)
+        per_box = float(active_raw_option.get('sok_per_box') or 0)
         boxes_for_need = actual_boxes if actual_boxes > 0 else planned_boxes
         total_need = per_box * boxes_for_need
 

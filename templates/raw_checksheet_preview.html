@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>원재료 입·출고 점검표</title>
+    <style>
+        @page { size: A4; margin: 6mm 5mm 5mm 6mm; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            color: #000;
+            font-family: "Malgun Gothic", "맑은 고딕", Gulim, sans-serif;
+        }
+        body { padding: 3px 2px 2px 3px; }
+        .sheet {
+            width: 100%;
+            max-width: 197.5mm;
+            min-height: 284mm;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+        .preview-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .preview-guide {
+            font-size: 11px;
+            color: #475569;
+            white-space: nowrap;
+        }
+        .preview-status {
+            min-width: 72px;
+            font-size: 11px;
+            color: #2563eb;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .preview-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 30px;
+            padding: 0 12px;
+            border: 1px solid #94a3b8;
+            border-radius: 999px;
+            background: #fff;
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .preview-btn.active {
+            background: #eff6ff;
+            border-color: #60a5fa;
+            color: #1d4ed8;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        td, th {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-size: 11px;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+            word-break: keep-all;
+        }
+        .left { text-align: left; }
+        .right { text-align: right; }
+        .header-table,
+        .intake-table,
+        .usage-table,
+        .footer-table {
+            margin: 0;
+        }
+        .meta-table {
+            margin: 0;
+        }
+        .meta-table td {
+            border-top: none;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .head-fill {
+            background: #dbe3fb;
+            font-weight: 700;
+        }
+        .title-cell {
+            padding: 8px 10px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 800;
+            text-decoration: underline;
+            letter-spacing: -0.04em;
+            line-height: 1.08;
+        }
+        .subtitle {
+            margin-top: 6px;
+            font-size: 19px;
+            font-weight: 500;
+            text-decoration: underline;
+            letter-spacing: -0.03em;
+            line-height: 1.08;
+        }
+        .approval-vertical {
+            background: #dbe3fb;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        .approval-sign {
+            height: 66px;
+        }
+        .section-title {
+            margin: 5px 0 5px 2px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .unit-row td {
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            padding: 2px 6px 2px 6px;
+            font-size: 10.5px;
+        }
+        .usage-top th,
+        .usage-sub th {
+            background: #dbe3fb;
+            font-weight: 800;
+        }
+        .usage-top th {
+            height: 36px;
+            font-size: 12.5px;
+        }
+        .usage-sub th {
+            height: 30px;
+            font-size: 11px;
+            line-height: 1.15;
+        }
+        .usage-row td {
+            height: 34px;
+            font-size: 12px;
+        }
+        .usage-balance {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            white-space: normal;
+        }
+        .usage-balance .main {
+            font-size: 11px;
+            font-weight: 800;
+        }
+        .usage-balance .sub {
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .note-edit-cell {
+            padding: 0 !important;
+            white-space: normal;
+        }
+        .note-editor {
+            display: block;
+            width: 100%;
+            min-height: 32px;
+            padding: 7px 8px;
+            border: none;
+            background: transparent;
+            color: #000;
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            resize: none;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .note-editor[readonly] { pointer-events: none; }
+        .note-editor:not([readonly]) {
+            background: #fffdf5;
+            outline: 1px solid #cbd5e1;
+            outline-offset: -1px;
+        }
+        .footer-table td {
+            height: 31px;
+        }
+        .footer-table tr.doc-row td {
+            height: 18px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+        }
+        .doc-code {
+            font-size: 10px;
+            text-align: left;
+        }
+        .company-name {
+            font-size: 10px;
+            text-align: right;
+        }
+        .spacer-8 { height: 10px; }
+        .spacer-10 { height: 12px; }
+        @media print {
+            body { padding: 0; }
+            .sheet {
+                max-width: 197.5mm;
+                min-height: 284mm;
+            }
+            .preview-actions { display: none !important; }
+            .head-fill,
+            .approval-vertical,
+            .usage-top th,
+            .usage-sub th {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background: #dbe3fb !important;
+            }
+            .note-editor {
+                background: transparent !important;
+                outline: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="sheet">
+    <div class="preview-actions">
+        <span class="preview-guide">기본은 미리보기 상태이며, 버튼 클릭 시 비고를 수정할 수 있습니다.</span>
+        <span id="noteSaveStatus" class="preview-status"></span>
+        <button type="button" id="noteEditToggleBtn" class="preview-btn" onclick="toggleNoteEdit()">비고 입력</button>
+    </div>
+
+    <table class="header-table">
+        <colgroup>
+            <col style="width:11%">
+            <col style="width:26%">
+            <col style="width:23%">
+            <col style="width:8%">
+            <col style="width:10.67%">
+            <col style="width:10.67%">
+            <col style="width:10.66%">
+        </colgroup>
+        <tr>
+            <td class="head-fill">작성주기</td>
+            <td class="title-cell" colspan="2" rowspan="2">
+                <div class="title">원재료 입·출고 점검표</div>
+                <div class="subtitle">[{{ workplace_title }}]</div>
+            </td>
+            <td class="approval-vertical" rowspan="2">결<br>재</td>
+            <td class="head-fill">작성</td>
+            <td class="head-fill">검토</td>
+            <td class="head-fill">승인</td>
+        </tr>
+        <tr>
+            <td>입 · 출고시</td>
+            <td class="approval-sign"></td>
+            <td class="approval-sign"></td>
+            <td class="approval-sign"></td>
+        </tr>
+    </table>
+
+    <table class="meta-table">
+        <colgroup>
+            <col style="width:60%">
+            <col style="width:40%">
+        </colgroup>
+        <tr>
+            <td class="left">작성일자 : {{ period_text }}</td>
+            <td class="left">작성자 : {{ author_name }}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">1. 입고 내역</div>
+
+    <table class="intake-table">
+        <colgroup>
+            <col style="width:16%">
+            <col style="width:14%">
+            <col style="width:16%">
+            <col style="width:20%">
+            <col style="width:12%">
+            <col style="width:14%">
+        </colgroup>
+        <tr>
+            <td class="head-fill">입고일자</td>
+            <td>{{ intake.receiving_date or '' }}</td>
+            <td class="head-fill">원재료명</td>
+            <td>{{ intake.name or '' }}</td>
+            <td class="head-fill">자호(Lot)</td>
+            <td>{{ intake.car_number or '' }}</td>
+        </tr>
+        <tr>
+            <td class="head-fill">속수</td>
+            <td>{{ intake.sheets_per_sok_text }}</td>
+            <td class="head-fill">수량(Box)</td>
+            <td>{{ intake.box_quantity_text }}</td>
+            <td class="head-fill">총 입고속수</td>
+            <td>{{ intake.total_stock_text }}</td>
+        </tr>
+    </table>
+
+    <div class="spacer-8"></div>
+    <div class="section-title">2. 사용 현황</div>
+
+    <table class="usage-table">
+        <colgroup>
+            <col style="width:18.2%">
+            <col style="width:14.1%">
+            <col style="width:12.6%">
+            <col style="width:14.3%">
+            <col style="width:10.3%">
+            <col style="width:30.5%">
+        </colgroup>
+        <tr class="unit-row">
+            <td colspan="6" class="right">단위 : 속</td>
+        </tr>
+        <tr class="usage-top">
+            <th rowspan="2">사용일자</th>
+            <th colspan="3">당일 재고</th>
+            <th rowspan="2">당일 사용량</th>
+            <th rowspan="2">비고</th>
+        </tr>
+        <tr class="usage-sub">
+            <th>
+                <div class="usage-balance">
+                    <span class="main">현장 재고</span>
+                    <span class="sub">①</span>
+                </div>
+            </th>
+            <th>
+                <div class="usage-balance">
+                    <span class="main">창고 재고</span>
+                    <span class="sub">②</span>
+                </div>
+            </th>
+            <th>
+                <div class="usage-balance">
+                    <span class="main">총 재고</span>
+                    <span class="sub">③=①+②</span>
+                </div>
+            </th>
+        </tr>
+
+        {% for row in usage_rows %}
+        <tr class="usage-row">
+            <td>{{ row.use_date }}</td>
+            <td>{{ row.site_stock }}</td>
+            <td>{{ row.warehouse_stock }}</td>
+            <td>{{ row.total_stock }}</td>
+            <td>{{ row.used_quantity }}</td>
+            <td class="note-edit-cell">
+                <textarea class="note-editor js-note-editor" rows="1" readonly data-use-date="{{ row.use_date }}">{{ row.note }}</textarea>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div class="spacer-10"></div>
+
+    <table class="footer-table">
+        <colgroup>
+            <col style="width:33%">
+            <col style="width:36%">
+            <col style="width:13%">
+            <col style="width:18%">
+        </colgroup>
+        <tr>
+            <td class="head-fill">이탈사항</td>
+            <td class="head-fill">조치결과</td>
+            <td class="head-fill">조치일자</td>
+            <td class="head-fill">승인</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="doc-row">
+            <td class="doc-code">YEMAT-HAF-101-27-5</td>
+            <td colspan="2"></td>
+            <td class="company-name">예맛식품(주)</td>
+        </tr>
+    </table>
+</div>
+
+<script>
+let noteEditEnabled = false;
+const rawMaterialId = {{ raw_material_id|tojson }};
+
+function autoGrowNote(textarea) {
+    if (!textarea) return;
+    textarea.style.height = '32px';
+    textarea.style.height = `${Math.max(32, textarea.scrollHeight)}px`;
+}
+
+function syncAllNoteEditors() {
+    document.querySelectorAll('.js-note-editor').forEach((textarea) => {
+        autoGrowNote(textarea);
+    });
+}
+
+function handleNoteInput(event) {
+    autoGrowNote(event.target);
+}
+
+function setNoteStatus(message, isError = false) {
+    const status = document.getElementById('noteSaveStatus');
+    if (!status) return;
+    status.textContent = message || '';
+    status.style.color = isError ? '#dc2626' : '#2563eb';
+}
+
+async function saveChecksheetNotes() {
+    const rows = Array.from(document.querySelectorAll('.js-note-editor'))
+        .map((textarea) => ({
+            use_date: textarea.dataset.useDate || '',
+            note: textarea.value || '',
+        }))
+        .filter((row) => row.use_date);
+
+    setNoteStatus('저장 중...');
+
+    try {
+        const response = await fetch(`/raw-materials/${rawMaterialId}/checksheet-notes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ rows }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+            throw new Error(data.message || '비고 저장에 실패했습니다.');
+        }
+        setNoteStatus('저장 완료');
+        return true;
+    } catch (error) {
+        setNoteStatus(error.message || '비고 저장에 실패했습니다.', true);
+        return false;
+    }
+}
+
+async function toggleNoteEdit() {
+    if (noteEditEnabled) {
+        const saved = await saveChecksheetNotes();
+        if (!saved) return;
+    }
+
+    noteEditEnabled = !noteEditEnabled;
+
+    document.querySelectorAll('.js-note-editor').forEach((textarea) => {
+        textarea.readOnly = !noteEditEnabled;
+        if (noteEditEnabled) {
+            textarea.style.pointerEvents = 'auto';
+            textarea.addEventListener('input', handleNoteInput);
+        } else {
+            textarea.style.pointerEvents = 'none';
+            textarea.removeEventListener('input', handleNoteInput);
+        }
+        autoGrowNote(textarea);
+    });
+
+    const btn = document.getElementById('noteEditToggleBtn');
+    if (btn) {
+        btn.classList.toggle('active', noteEditEnabled);
+        btn.textContent = noteEditEnabled ? '비고 입력 완료' : '비고 입력';
+    }
+
+    if (noteEditEnabled) {
+        setNoteStatus('');
+        document.querySelector('.js-note-editor[data-use-date]')?.focus();
+    }
+}
+
+window.addEventListener('load', syncAllNoteEditors);
+</script>
+</body>
+</html>

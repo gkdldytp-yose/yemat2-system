@@ -2659,6 +2659,194 @@ def raw_material_detail(raw_material_id):
         conn.close()
 
 
+@bp.route('/raw-materials/<int:raw_material_id>/checksheet-preview')
+@login_required
+def raw_material_checksheet_preview(raw_material_id):
+    workplace = get_workplace()
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            '''
+            SELECT
+                id, workplace, name, code, lot, receiving_date,
+                COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as car_number,
+                COALESCE(sheets_per_sok, 0) as sheets_per_sok,
+                COALESCE(total_stock, 0) as total_stock,
+                COALESCE(current_stock, 0) as current_stock,
+                COALESCE(used_quantity, 0) as used_quantity
+            FROM raw_materials
+            WHERE id = ?
+              AND workplace = ?
+            ''',
+            (raw_material_id, workplace),
+        )
+        raw = cursor.fetchone()
+        if not raw:
+            abort(404)
+
+        cursor.execute(
+            '''
+            SELECT
+                COALESCE(substr(p.production_date, 1, 10), substr(rml.created_at, 1, 10)) as use_date,
+                CASE
+                    WHEN COALESCE(SUM(COALESCE(rml.quantity, 0)), 0) < 0
+                    THEN ABS(COALESCE(SUM(COALESCE(rml.quantity, 0)), 0))
+                    ELSE 0
+                END as used_quantity,
+                GROUP_CONCAT(DISTINCT pr.name) as product_names,
+                COALESCE(rcn.note, '') as checksheet_note
+            FROM raw_material_logs rml
+            JOIN productions p
+              ON p.id = rml.production_id
+             AND COALESCE(p.production_date, '') <> ''
+            LEFT JOIN products pr ON pr.id = p.product_id
+            LEFT JOIN raw_material_checksheet_notes rcn
+              ON rcn.raw_material_id = rml.raw_material_id
+              AND rcn.use_date = COALESCE(substr(p.production_date, 1, 10), substr(rml.created_at, 1, 10))
+            WHERE rml.raw_material_id = ?
+              AND COALESCE(rml.type, '') IN ('production', 'RETURN')
+            GROUP BY
+                COALESCE(substr(p.production_date, 1, 10), substr(rml.created_at, 1, 10)),
+                COALESCE(rcn.note, '')
+            HAVING used_quantity > 0
+            ORDER BY use_date DESC
+            LIMIT 12
+            ''',
+            (raw_material_id,),
+        )
+        usage_logs = [dict(row) for row in cursor.fetchall()]
+
+        total_stock = float(raw['total_stock'] or 0)
+        ordered_logs = list(reversed(usage_logs))
+        running_before = total_stock
+        usage_rows = []
+        for log in ordered_logs:
+            used_qty = float(log.get('used_quantity') or 0)
+            default_note = ', '.join([x.strip() for x in (log.get('product_names') or '').split(',') if x.strip()])
+            note = (log.get('checksheet_note') or '').strip() or default_note
+            usage_rows.append(
+                {
+                    'use_date': log.get('use_date') or '',
+                    'site_stock': f'{running_before:,.1f}',
+                    'warehouse_stock': f'{0:,.1f}',
+                    'total_stock': f'{running_before:,.1f}',
+                    'used_quantity': f'{used_qty:,.1f}',
+                    'note': note,
+                }
+            )
+            running_before = max(running_before - used_qty, 0)
+        usage_rows.reverse()
+
+        while len(usage_rows) < 12:
+            usage_rows.append(
+                {
+                    'use_date': '',
+                    'site_stock': '',
+                    'warehouse_stock': '',
+                    'total_stock': '',
+                    'used_quantity': '',
+                    'note': '',
+                }
+            )
+
+        all_dates = [d for d in [raw['receiving_date']] + [row['use_date'] for row in usage_rows if row['use_date']] if d]
+        if all_dates:
+            period_text = f"{min(all_dates)} ~ {max(all_dates)}"
+        else:
+            period_text = '-'
+
+        sheets_per_sok = float(raw['sheets_per_sok'] or 0)
+        box_qty = (total_stock / sheets_per_sok) if sheets_per_sok > 0 else 0
+        workplace_title = str(workplace or '').replace('2층', '2F').replace('1층', '1F')
+        author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''
+
+        intake = {
+            'receiving_date': raw['receiving_date'] or '',
+            'name': raw['name'] or '',
+            'car_number': raw['car_number'] or '',
+            'sheets_per_sok_text': f'{sheets_per_sok:,.1f}' if sheets_per_sok else '',
+            'box_quantity_text': f'{box_qty:,.1f}' if box_qty else '',
+            'total_stock_text': f'{total_stock:,.1f}' if total_stock else '',
+        }
+
+        return render_template(
+            'raw_checksheet_preview.html',
+            raw_material_id=raw_material_id,
+            intake=intake,
+            usage_rows=usage_rows[:12],
+            period_text=period_text,
+            workplace_title=workplace_title,
+            author_name=author_name,
+        )
+    finally:
+        conn.close()
+
+
+@bp.route('/raw-materials/<int:raw_material_id>/checksheet-notes', methods=['POST'])
+@login_required
+def save_raw_material_checksheet_notes(raw_material_id):
+    workplace = get_workplace()
+    payload = request.get_json(silent=True) or {}
+    rows = payload.get('rows') or []
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            '''
+            SELECT id
+            FROM raw_materials
+            WHERE id = ?
+              AND workplace = ?
+            ''',
+            (raw_material_id, workplace),
+        )
+        raw = cursor.fetchone()
+        if not raw:
+            return jsonify({'ok': False, 'message': '원초를 찾을 수 없습니다.'}), 404
+
+        username = (session.get('user', {}) or {}).get('username') or ''
+        cleaned_rows = []
+        for row in rows:
+            use_date = str((row or {}).get('use_date') or '').strip()
+            note = str((row or {}).get('note') or '').rstrip()
+            if not use_date:
+                continue
+            cleaned_rows.append((use_date, note))
+
+        if cleaned_rows:
+            cursor.executemany(
+                '''
+                INSERT INTO raw_material_checksheet_notes
+                (raw_material_id, use_date, note, created_by, updated_by, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(raw_material_id, use_date) DO UPDATE SET
+                    note = excluded.note,
+                    updated_by = excluded.updated_by,
+                    updated_at = CURRENT_TIMESTAMP
+                ''',
+                [(raw_material_id, use_date, note, username, username) for use_date, note in cleaned_rows],
+            )
+            cursor.executemany(
+                '''
+                DELETE FROM raw_material_checksheet_notes
+                WHERE raw_material_id = ?
+                  AND use_date = ?
+                  AND COALESCE(TRIM(note), '') = ''
+                ''',
+                [(raw_material_id, use_date) for use_date, _note in cleaned_rows],
+            )
+
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'ok': False, 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+
 @bp.route('/raw-material-lots/<int:lot_id>/update', methods=['POST'])
 @role_required('rawmat')
 def update_raw_material_lot(lot_id):
@@ -2787,6 +2975,9 @@ def update_raw_material_stock():
     """원초 재고 조정 + 로그 기록 (autocommit)"""
     raw_material_id = request.form.get('raw_material_id')
     log_type = request.form.get('log_type', 'adjustment')
+
+    if log_type not in ('receive', 'export'):
+        return "<script>alert('원초 조정 기능은 제거되었습니다.'); location.href='/raw-materials';</script>"
 
     conn = None
     try:

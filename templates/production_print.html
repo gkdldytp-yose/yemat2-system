@@ -1,199 +1,513 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <title>일일생산관리일지</title>
   <style>
-    @page { size: A4; margin: 8mm; }
-    body { font-family: "Noto Sans KR", Arial, sans-serif; color:#111; }
-    .sheet { width: 190mm; margin: 0 auto; }
-    table { width:100%; border-collapse: collapse; font-size:11px; }
-    th, td {
-      border-left:1px solid #000;
-      border-right:1px solid #000;
-      border-top:1px dashed #000;
-      border-bottom:1px dashed #000;
-      padding:4px;
-      vertical-align:middle;
+    @page { size: A4; margin: 5mm; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #000;
+      font-family: "Malgun Gothic", "맑은 고딕", Gulim, sans-serif;
     }
-    .b2 { border:2px solid #000; }
-    .col-head th, .col-head td { border-top:1px solid #000; border-bottom:1px solid #000; }
-    .sum-row th, .sum-row td { border-top:1px solid #000; border-bottom:1px solid #000; }
-    .center { text-align:center; }
-    .title { font-size:18px; font-weight:700; text-align:center; }
-    .subtitle { font-size:11px; text-align:center; margin:2px 0; }
-    .section { background:#f5f5f5; font-weight:700; }
-    .stamp { height:44px; }
-    .row-fixed td { height:24px; }
+    body { padding: 2.5mm; }
+    .sheet { width: 100%; max-width: 198mm; margin: 0 auto; }
+    .production-no-top {
+      font-size: 10px;
+      font-weight: 700;
+      margin: 0 0 2px 2px;
+      text-align: left;
+    }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td {
+      border: 1px solid #000;
+      padding: 2px 4px;
+      font-size: 10.5px;
+      text-align: center;
+      vertical-align: middle;
+      word-break: keep-all;
+    }
+    .section-title {
+      margin: 6px 0 3px 2px;
+      font-size: 14px;
+      font-weight: 800;
+      text-align: left;
+    }
+    .gray-fill { background: #efefef; }
+    .section-table { border: 2px solid #000; }
+    .left { text-align: left; }
+    .center { text-align: center; }
+    .title-wrap {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 6px;
+      align-items: stretch;
+    }
+    .title-table td {
+      height: 82px;
+      padding: 0 8px;
+      border: none;
+    }
+    .title-main {
+      margin-top: 8px;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.34em;
+      text-align: center;
+    }
+    .title-sub {
+      margin-top: 3px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .title-date {
+      margin-top: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .date-count {
+      display: inline-block;
+      margin-left: 8px;
+      letter-spacing: 0.18em;
+    }
+    .approval-table th,
+    .approval-table td {
+      padding: 2px 0;
+      font-size: 10.5px;
+    }
+    .approval-sign td { height: 56px; }
+    .approval-vertical {
+      width: 18px;
+      font-weight: 800;
+      background: #efefef;
+    }
+    .thin-head th {
+      padding-top: 2px;
+      padding-bottom: 2px;
+      font-size: 11px;
+      font-weight: 800;
+      background: #efefef;
+    }
+    .dotted-row td {
+      border-top: 1px dotted #666;
+      border-bottom: 1px dotted #666;
+      height: 26px;
+    }
+    .product-code {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .product-name {
+      font-size: 20.5px;
+      font-weight: 800;
+      line-height: 1.25;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .big-note {
+      text-align: left;
+      vertical-align: top;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      padding: 6px 8px;
+    }
+    .raw-name-cell {
+      white-space: nowrap;
+      font-size: 10.5px;
+    }
+    .sum-table th,
+    .sum-table td {
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
+    .sum-table th {
+      font-weight: 800;
+      background: #efefef;
+    }
+    .yield { font-size: 12px; font-weight: 800; }
+    .personnel-section {
+      display: grid;
+      grid-template-columns: 76% 24%;
+      gap: 0;
+      margin-top: 8px;
+    }
+    .personnel-left,
+    .personnel-right {
+      width: 100%;
+      margin: 0;
+      border: 2px solid #000;
+    }
+    .personnel-left { border-right: none; }
+    .personnel-right { border-left: 2px solid #000; }
+    .personnel-left th,
+    .personnel-left td,
+    .personnel-right th,
+    .personnel-right td {
+      border: 1px solid #000;
+    }
+    .personnel-right tr:first-child th,
+    .personnel-left tr:first-child th { border-top: none; }
+    .personnel-right tr:last-child td,
+    .personnel-left tr:last-child td { border-bottom: none; }
+    .personnel-right th:first-child,
+    .personnel-right td:first-child,
+    .personnel-left th:first-child,
+    .personnel-left td:first-child { border-left: none; }
+    .personnel-right th:last-child,
+    .personnel-right td:last-child,
+    .personnel-left th:last-child,
+    .personnel-left td:last-child { border-right: none; }
+    .worktime-cell {
+      white-space: normal;
+      word-break: break-all;
+      font-size: 10.5px;
+      line-height: 1.15;
+    }
+    .prod-status-box {
+      padding: 0 !important;
+      border-left: 2px solid #000 !important;
+      border-right: 2px solid #000 !important;
+      border-bottom: 2px solid #000 !important;
+      border-top: 1px solid #000 !important;
+      vertical-align: top;
+    }
+    .prod-status-grid {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .prod-status-grid td,
+    .prod-status-grid th {
+      border: 1px solid #000;
+      padding: 2px 4px;
+      font-size: 11px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .prod-status-grid tr:first-child td,
+    .prod-status-grid tr:first-child th { border-top: none; }
+    .prod-status-grid tr:last-child td,
+    .prod-status-grid tr:last-child th { border-bottom: none; }
+    .prod-status-grid td:first-child,
+    .prod-status-grid th:first-child { border-left: none; }
+    .prod-status-grid td:last-child,
+    .prod-status-grid th:last-child { border-right: none; }
+    .prod-status-grid .input-row td {
+      height: 24px;
+      border-top: 1px dotted #666;
+      border-bottom: 1px dotted #666;
+    }
+    .prod-status-grid .sum-head {
+      font-weight: 800;
+      background: #efefef;
+    }
+    .raw-table .dotted-row td:first-child {
+      background: #efefef;
+    }
+    @media print {
+      .gray-fill,
+      .thin-head th,
+      .sum-table th,
+      .prod-status-grid .sum-head,
+      .approval-vertical,
+      .raw-table .dotted-row td:first-child {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background: #efefef !important;
+      }
+    }
   </style>
   {% macro fmt1(v) -%}
   {%- if v is not none and v != '' -%}
   {{ "%.1f"|format((v or 0)|float) }}
   {%- endif -%}
   {%- endmacro %}
+  {% set raw_row_count = 4 %}
+  {% set material_row_count = 7 %}
+  {% set packaging_row_count = 6 %}
+  {% set raw_notes = [] %}
+  {% for r in raw_usages[:raw_row_count] %}
+    {% if r.usage_note %}
+      {% set _ = raw_notes.append(r.usage_note) %}
+    {% endif %}
+  {% endfor %}
 </head>
 <body>
   <div class="sheet">
-    <!-- 상단 제목 + 결재선 -->
-    <table class="b2">
+    <div class="production-no-top">생산번호: PROD-{{ production.id }}</div>
+
+    <div class="title-wrap">
+      <table class="title-table">
+        <tr>
+          <td>
+            <div class="title-main">일 일 생 산 관 리 일 지</div>
+            <div class="title-sub">({{ workplace_label }})</div>
+            <div class="title-date">
+              {{ date_str }} {{ weekday }}
+              <span class="date-count">( {{ same_day_index }} / {{ same_day_total }} )</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <table class="approval-table section-table">
+        <colgroup>
+          <col style="width:18px">
+          <col style="width:94px">
+          <col style="width:94px">
+          <col style="width:94px">
+        </colgroup>
+        <tr>
+          <td class="approval-vertical" rowspan="2">결<br>재</td>
+          <th class="gray-fill">작성</th>
+          <th class="gray-fill">검토</th>
+          <th class="gray-fill">승인</th>
+        </tr>
+        <tr class="approval-sign">
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section-title">■ 일일 생산 현황</div>
+    <table class="section-table">
+      <colgroup>
+        <col style="width:49%">
+        <col style="width:19%">
+        <col style="width:17%">
+        <col style="width:15%">
+      </colgroup>
+      <tr class="thin-head">
+        <th>품목</th>
+        <th>소비기한</th>
+        <th>생산봉수(낱봉)</th>
+        <th>박스</th>
+      </tr>
       <tr>
-        <td style="width:66%; position:relative;" class="center">
-          <div style="position:absolute; top:4px; left:8px; font-size:10px; font-weight:700;">생산번호: PROD-{{ production.id }}</div>
-          <div class="title">일일생산관리일지</div>
-          <div class="subtitle">({{ workplace }})</div>
+        <td>
+          <div class="product-code">{{ production.product_code or '' }}</div>
+          <div class="product-name">{{ production.product_name or '' }}</div>
         </td>
-        <td style="width:34%" rowspan="2">
-          <table style="width:100%; border-collapse:collapse; font-size:11px;">
+        <td class="prod-status-box" colspan="3" rowspan="2">
+          <table class="prod-status-grid">
+            <colgroup>
+              <col style="width:37.255%">
+              <col style="width:33.333%">
+              <col style="width:29.412%">
+            </colgroup>
+            <tr class="input-row"><td></td><td></td><td></td></tr>
+            <tr class="input-row"><td></td><td></td><td></td></tr>
+            <tr class="input-row"><td></td><td></td><td></td></tr>
             <tr>
-              <th class="center" style="border:1px solid #000;">작성</th>
-              <th class="center" style="border:1px solid #000;">검토</th>
-              <th class="center" style="border:1px solid #000;">승인</th>
-            </tr>
-            <tr>
-              <td class="stamp" style="border:1px solid #000;"></td>
-              <td class="stamp" style="border:1px solid #000;"></td>
-              <td class="stamp" style="border:1px solid #000;"></td>
+              <th class="sum-head">합계 수량</th>
+              <td></td>
+              <td></td>
             </tr>
           </table>
         </td>
       </tr>
+      <tr></tr>
+    </table>
+
+    <div class="personnel-section">
+      <table class="personnel-left">
+        <colgroup>
+          <col style="width:14%">
+          <col style="width:14%">
+          <col style="width:14%">
+          <col style="width:14%">
+          <col style="width:14%">
+          <col style="width:14%">
+          <col style="width:18%">
+        </colgroup>
+        <tr class="thin-head">
+          <th colspan="7" class="left">인 원 관 리</th>
+        </tr>
+        <tr class="thin-head">
+          <th>공급 라인</th>
+          <th>공급 인원</th>
+          <th>포장 라인</th>
+          <th>포장 인원</th>
+          <th>외포장 라인</th>
+          <th>외포장 인원</th>
+          <th>작업시간</th>
+        </tr>
+        <tr style="height:28px;">
+          <td>{{ production.display_supply_line or production.supply_line or '' }}</td>
+          <td>{{ production.supply_people if production.supply_people is not none else '' }}</td>
+          <td>{{ production.display_supply_line or production.packing_line or production.supply_line or '' }}</td>
+          <td>{{ production.packing_people if production.packing_people is not none else '' }}</td>
+          <td>{{ production.display_supply_line or production.outer_packing_line or production.supply_line or '' }}</td>
+          <td>{{ production.outer_packing_people if production.outer_packing_people is not none else '' }}</td>
+          <td class="worktime-cell">{{ production.work_time or '' }}</td>
+        </tr>
+      </table>
+
+      <table class="personnel-right">
+        <tr class="thin-head">
+          <th>비 고</th>
+        </tr>
+        <tr>
+          <td class="big-note" style="height:56px;">{{ production.personnel_note or '' }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section-title">■ 원재료 사용현황</div>
+    <table class="section-table raw-table">
+      <colgroup>
+        <col style="width:13%">
+        <col style="width:18%">
+        <col style="width:16%">
+        <col style="width:15%">
+        <col style="width:38%">
+      </colgroup>
+      <tr class="thin-head">
+        <th>품목</th>
+        <th>자 호</th>
+        <th>입고일자</th>
+        <th>사용속수</th>
+        <th>비 고</th>
+      </tr>
+      {% for r in raw_usages[:raw_row_count] %}
+      <tr class="dotted-row">
+        <td class="left raw-name-cell">{{ r.raw_material_name or '' }}</td>
+        <td>{{ r.car_number or '' }}</td>
+        <td>{{ r.receiving_date or '' }}</td>
+        <td>{{ fmt1(r.actual_quantity) }}</td>
+        {% if loop.first %}
+        <td class="big-note" rowspan="{{ raw_row_count }}">{{ raw_notes|join('\n') }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+      {% for i in range(0, raw_row_count - raw_usages|length if raw_usages|length < raw_row_count else 0) %}
+      <tr class="dotted-row">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        {% if raw_usages|length == 0 and loop.first %}
+        <td class="big-note" rowspan="{{ raw_row_count }}"></td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </table>
+
+    {% set total_used = (raw_usages | sum(attribute='actual_quantity')) %}
+    {% set total_expected = (raw_usages | sum(attribute='expected_quantity')) %}
+    {% set yield_rate = (total_expected / total_used * 100) if total_used else None %}
+    <table class="sum-table section-table" style="margin-top:6px;">
+      <colgroup>
+        <col style="width:16%">
+        <col style="width:17%">
+        <col style="width:16%">
+        <col style="width:17%">
+        <col style="width:12%">
+        <col style="width:22%">
+      </colgroup>
       <tr>
-        <td class="center" style="font-size:11px; padding:4px 6px;">{{ date_str }} {{ weekday }}</td>
+        <th>총 사용속수</th>
+        <td>{{ "%.0f"|format(total_used) if total_used else '' }}</td>
+        <th>원재료총수</th>
+        <td>{{ "%.0f"|format(total_expected) if total_expected else '' }}</td>
+        <th>수율</th>
+        <td class="yield">{% if yield_rate is not none %}{{ "%.1f"|format(yield_rate) }}%{% endif %}</td>
       </tr>
     </table>
 
-    <!-- 일일 생산 현황 -->
-    <table class="b2" style="margin-top:6px;">
-      <tr><th class="section" colspan="5" style="text-align:left;">■ 일일 생산 현황</th></tr>
-      <tr class="col-head">
-        <th style="width:18%" class="center">제품코드</th>
-        <th style="width:42%" class="center">품목명</th>
-        <th style="width:14%" class="center">소비기한</th>
-        <th style="width:13%" class="center">생산박스(실적)</th>
-        <th style="width:13%" class="center">생산봉수(낱봉)</th>
+    <div class="section-title">■ 부재료 사용현황</div>
+    <table class="section-table">
+      <colgroup>
+        <col style="width:34%">
+        <col style="width:15%">
+        <col style="width:15%">
+        <col style="width:15%">
+        <col style="width:21%">
+      </colgroup>
+      <tr class="thin-head">
+        <th>품 목</th>
+        <th>사용량</th>
+        <th>입고일</th>
+        <th>소비기한</th>
+        <th>비 고</th>
       </tr>
-      <tr>
-        <td class="center">{{ production.product_code or '' }}</td>
-        <td>{{ production.product_name or '' }}</td>
-        <td class="center">{{ production.expiry_date or display_expiry or '' }}</td>
-        <td class="center">{{ production.actual_boxes or '' }}</td>
-        <td class="center">
-          {% if production.actual_boxes and production.box_quantity %}
-          {{ (production.actual_boxes * production.box_quantity)|int }}
+      {% for m in material_usages[:material_row_count] %}
+      <tr class="dotted-row">
+        <td class="left">{{ m.material_name or '' }}</td>
+        <td>{{ fmt1(m.lot_used_quantity if m.lot_used_quantity is not none else (m.actual_quantity if m.actual_quantity is not none else m.expected_quantity)) }}</td>
+        <td>{{ m.lot_receiving_date or '' }}</td>
+        <td>
+          {% if m.lot_expiry_date %}
+          {{ m.lot_expiry_date }}
+          {% elif m.lot_manufacture_date %}
+          (제) {{ m.lot_manufacture_date }}
           {% endif %}
         </td>
-      </tr>
-    </table>
-
-    <!-- 인원 관리 -->
-    <table class="b2" style="margin-top:6px;">
-      <tr><th class="section" colspan="8" style="text-align:left;">■ 인원 관리</th></tr>
-      <tr class="col-head">
-        <th class="center" style="width:9%">공급 라인</th>
-        <th class="center" style="width:9%">공급 인원</th>
-        <th class="center" style="width:9%">포장 라인</th>
-        <th class="center" style="width:9%">포장 인원</th>
-        <th class="center" style="width:10%">외포장 라인</th>
-        <th class="center" style="width:10%">외포장 인원</th>
-        <th class="center" style="width:12%">작업시간</th>
-        <th class="center" style="width:32%">비고</th>
-      </tr>
-      <tr class="row-fixed">
-        <td class="center">{{ production.display_supply_line or production.supply_line or '' }}</td>
-        <td class="center">{{ production.supply_people if production.supply_people is not none else '' }}</td>
-        <td class="center">{{ production.display_supply_line or production.packing_line or production.supply_line or '' }}</td>
-        <td class="center">{{ production.packing_people if production.packing_people is not none else '' }}</td>
-        <td class="center">{{ production.display_supply_line or production.outer_packing_line or production.supply_line or '' }}</td>
-        <td class="center">{{ production.outer_packing_people if production.outer_packing_people is not none else '' }}</td>
-        <td class="center">{{ production.work_time or '' }}</td>
-        <td style="white-space:pre-wrap;">{{ production.personnel_note or '' }}</td>
-      </tr>
-    </table>
-
-    <!-- 원재료 사용현황 -->
-    <table class="b2" style="margin-top:6px;">
-      <tr><th class="section" colspan="5" style="text-align:left;">■ 원재료 사용현황</th></tr>
-      <tr class="col-head">
-        <th class="center" style="width:20%">품목</th>
-        <th class="center" style="width:15%">자호</th>
-        <th class="center" style="width:20%">입고일자</th>
-        <th class="center" style="width:15%">사용속수</th>
-        <th class="center" style="width:30%">비고</th>
-      </tr>
-      {% for r in raw_usages[:3] %}
-      <tr class="row-fixed">
-        <td>{{ r.raw_material_name or '' }}</td>
-        <td class="center">{{ r.car_number or '' }}</td>
-        <td class="center">{{ r.receiving_date or '' }}</td>
-        <td class="center">{{ fmt1(r.actual_quantity) }}</td>
-        <td style="white-space:pre-wrap;">{{ r.usage_note or '' }}</td>
+        {% if loop.first %}
+        <td rowspan="{{ material_row_count }}"></td>
+        {% endif %}
       </tr>
       {% endfor %}
-      {% for i in range(0, 3 - raw_usages|length if raw_usages|length < 3 else 0) %}
-      <tr class="row-fixed"><td></td><td></td><td></td><td></td><td></td></tr>
-      {% endfor %}
-      {% set total_used = (raw_usages | sum(attribute='actual_quantity')) %}
-      {% set total_expected = (raw_usages | sum(attribute='expected_quantity')) %}
-      {% set yield_rate = (total_expected / total_used * 100) if total_used else None %}
-      <tr class="row-fixed sum-row">
-        <th class="center">총 사용속수</th>
-        <td class="center">{{ "%.0f"|format(total_used) if total_used else '' }}</td>
-        <th class="center">원재료속수</th>
-        <td class="center">{{ "%.0f"|format(total_expected) if total_expected else '' }}</td>
-        <td class="center" style="padding:4px 6px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:700;">수율</span>
-            <span style="font-weight:800;font-size:12px;">{% if yield_rate is not none %}{{ "%.1f"|format(yield_rate) }}%{% endif %}</span>
-          </div>
-        </td>
-      </tr>
-    </table>
-
-    <!-- 부재료 사용현황 -->
-    <table class="b2" style="margin-top:6px;">
-      <tr><th class="section" colspan="5" style="text-align:left;">■ 부재료 사용현황</th></tr>
-      <tr class="col-head">
-        <th class="center" style="width:35%">품목</th>
-        <th class="center" style="width:15%">사용량</th>
-        <th class="center" style="width:20%">입고일</th>
-        <th class="center" style="width:15%">소비기한</th>
-        <th class="center" style="width:15%">비고</th>
-      </tr>
-      {% for m in material_usages %}
-      <tr class="row-fixed">
-        <td>{{ m.material_name or '' }}</td>
-        <td class="center">{{ fmt1(m.lot_used_quantity if m.lot_used_quantity is not none else (m.actual_quantity if m.actual_quantity is not none else m.expected_quantity)) }}</td>
-        <td class="center">{{ m.lot_receiving_date or '' }}</td>
-        <td class="center">{{ m.lot_expiry_date or '' }}</td>
+      {% for i in range(0, material_row_count - material_usages|length if material_usages|length < material_row_count else 0) %}
+      <tr class="dotted-row">
         <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        {% if material_usages|length == 0 and loop.first %}
+        <td rowspan="{{ material_row_count }}"></td>
+        {% endif %}
       </tr>
-      {% endfor %}
-      {% for i in range(0, 5 - material_usages|length if material_usages|length < 5 else 0) %}
-      <tr class="row-fixed"><td></td><td></td><td></td><td></td><td></td></tr>
       {% endfor %}
     </table>
 
-    <!-- 포장재 사용현황 -->
-    <table class="b2" style="margin-top:6px;">
-      <tr><th class="section" colspan="5" style="text-align:left;">■ 포장재 사용현황</th></tr>
-      <tr class="col-head">
-        <th class="center" style="width:35%">품목</th>
-        <th class="center" style="width:15%">사용량</th>
-        <th class="center" style="width:15%">로스량</th>
-        <th class="center" style="width:20%">입고일</th>
-        <th class="center" style="width:15%">비고</th>
+    <div class="section-title">■ 포장재 사용현황</div>
+    <table class="section-table packaging-table">
+      <colgroup>
+        <col style="width:34%">
+        <col style="width:15%">
+        <col style="width:15%">
+        <col style="width:15%">
+        <col style="width:21%">
+      </colgroup>
+      <tr class="thin-head">
+        <th>품 목</th>
+        <th>사용량</th>
+        <th>로스량</th>
+        <th>입고일</th>
+        <th>비 고</th>
       </tr>
-      {% for p in packaging_usages %}
-      <tr class="row-fixed">
-        <td>{{ p.material_name or '' }}</td>
-        <td class="center">{{ fmt1(p.lot_used_quantity if p.lot_used_quantity is not none else (p.actual_quantity if p.actual_quantity is not none else p.expected_quantity)) }}</td>
-        <td class="center">{% if p.display_loss_quantity is defined and p.display_loss_quantity is not none %}{{ "%.1f"|format(p.display_loss_quantity) }}{% elif p.loss_quantity is not none %}{{ "%.1f"|format(p.loss_quantity) }}{% endif %}</td>
-        <td class="center">{{ p.lot_receiving_date or '' }}</td>
-        <td></td>
+      {% for p in packaging_usages[:packaging_row_count] %}
+      <tr class="dotted-row">
+        <td class="left">{{ p.material_name or '' }}</td>
+        <td>{{ fmt1(p.lot_used_quantity if p.lot_used_quantity is not none else (p.actual_quantity if p.actual_quantity is not none else p.expected_quantity)) }}</td>
+        <td>{% if p.display_loss_quantity is defined and p.display_loss_quantity is not none %}{{ "%.1f"|format(p.display_loss_quantity) }}{% elif p.loss_quantity is not none %}{{ "%.1f"|format(p.loss_quantity) }}{% endif %}</td>
+        <td>{{ p.lot_receiving_date or '' }}</td>
+        {% if loop.first %}
+        <td rowspan="{{ packaging_row_count }}"></td>
+        {% endif %}
       </tr>
       {% endfor %}
-      {% for i in range(0, 7 - packaging_usages|length if packaging_usages|length < 7 else 0) %}
-      <tr class="row-fixed"><td></td><td></td><td></td><td></td><td></td></tr>
+      {% for i in range(0, packaging_row_count - packaging_usages|length if packaging_usages|length < packaging_row_count else 0) %}
+      <tr class="dotted-row">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        {% if packaging_usages|length == 0 and loop.first %}
+        <td rowspan="{{ packaging_row_count }}"></td>
+        {% endif %}
+      </tr>
       {% endfor %}
     </table>
   </div>

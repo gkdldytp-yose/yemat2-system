@@ -50,6 +50,43 @@
 .empty-state .icon{font-size:4rem;margin-bottom:1rem;opacity:0.5;}
 .raw-list-helper{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:0.85rem 1.1rem;background:#f8fbff;border-bottom:1px solid #e5ecff;color:#64748b;font-size:0.82rem;}
 .raw-list-helper strong{color:#0f172a;}
+.sok-multi-wrap{display:flex;flex-direction:column;gap:0.45rem;}
+.sok-multi-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:end;gap:0.5rem;}
+.sok-multi-row .mini-label{display:block;font-size:0.74rem;font-weight:700;color:#475569;margin-bottom:0.18rem;}
+.sok-multi-row input{width:100%;}
+.sok-multi-add{align-self:flex-start;}
+.sok-multi-tag{display:inline-flex;align-items:center;padding:0.22rem 0.55rem;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:700;font-size:0.78rem;margin-right:0.35rem;margin-bottom:0.25rem;}
+.product-info-shell{display:flex;flex-direction:column;gap:1rem;}
+.product-info-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.2rem;}
+.product-info-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.9rem;padding:1rem;border:1px solid #e8eef8;border-radius:18px;background:linear-gradient(180deg,#fcfdff 0%,#f6f9ff 100%);}
+.product-info-item{padding:0.95rem 1rem;border:1px solid #e8eef8;border-radius:16px;background:#fff;min-height:92px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 6px 18px rgba(15,23,42,0.04);}
+.product-info-label{font-size:0.78rem;font-weight:800;color:#64748b;letter-spacing:-0.01em;}
+.product-info-value{font-size:1.08rem;font-weight:800;color:#0f172a;line-height:1.3;word-break:keep-all;}
+.product-info-value.muted{font-size:0.92rem;font-weight:700;color:#334155;}
+.product-edit-panel{display:none;padding:1rem;border:1px solid #ffe0b2;border-radius:18px;background:linear-gradient(180deg,#fffaf0 0%,#fff6e2 100%);}
+.product-edit-title{margin:0 0 0.9rem;font-size:1rem;font-weight:800;color:#0f172a;}
+.product-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.8rem 0.9rem;}
+.product-edit-grid .form-group{margin:0;}
+.product-edit-grid .form-group input,
+.product-edit-grid .form-group select{height:42px;border:1px solid #d8e0ec;border-radius:10px;padding:0 0.8rem;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.03);font-size:0.95rem;}
+.product-edit-grid .form-group input:focus,
+.product-edit-grid .form-group select:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,0.12);}
+.product-edit-grid .form-group label{font-size:0.76rem;font-weight:800;color:#475569;margin-bottom:0.3rem;display:block;}
+.product-edit-wide{grid-column:1 / -1;}
+.product-edit-actions{display:flex;justify-content:flex-end;gap:0.55rem;margin-top:0.9rem;flex-wrap:wrap;}
+@media (max-width: 900px){
+  .product-info-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width: 640px){
+  .product-info-summary{grid-template-columns:1fr;padding:0.85rem;}
+  .product-info-item{min-height:auto;}
+  .product-edit-panel{padding:0.85rem;}
+  .product-edit-grid{grid-template-columns:1fr;}
+  .product-edit-wide{grid-column:auto;}
+  .sok-multi-row{grid-template-columns:1fr;}
+  .product-info-head{align-items:flex-start;}
+  .product-edit-actions > *{flex:1;}
+}
 </style>
 {% endblock %}
 
@@ -59,42 +96,67 @@
 {%- set can_purch = _r in ['admin','purchase','logistics'] -%}
 {%- set can_raw   = _r in ['admin','rawmat'] -%}
 {%- set is_admin  = _r == 'admin' -%}
+{% set sok_values = [] %}
+{% if product.sok_per_box is not none and product.sok_per_box > 0 %}{% set _ = sok_values.append(product.sok_per_box) %}{% endif %}
+{% if product.sok_per_box_2 is not none and product.sok_per_box_2 > 0 %}{% set _ = sok_values.append(product.sok_per_box_2) %}{% endif %}
+{% if product.sok_per_box_3 is not none and product.sok_per_box_3 > 0 %}{% set _ = sok_values.append(product.sok_per_box_3) %}{% endif %}
+{% set raw_options = [] %}
+{% if product.sok_per_box is not none and product.sok_per_box > 0 %}{% set _ = raw_options.append({'sok': product.sok_per_box, 'sheets': product.sheets_per_pack or 24}) %}{% endif %}
+{% if product.sok_per_box_2 is not none and product.sok_per_box_2 > 0 %}{% set _ = raw_options.append({'sok': product.sok_per_box_2, 'sheets': product.sheets_per_pack_2 or product.sheets_per_pack or 24}) %}{% endif %}
+{% if product.sok_per_box_3 is not none and product.sok_per_box_3 > 0 %}{% set _ = raw_options.append({'sok': product.sok_per_box_3, 'sheets': product.sheets_per_pack_3 or product.sheets_per_pack or 24}) %}{% endif %}
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
     <h1>📦 {{ product.name }}</h1>
     <a href="/products" class="btn btn-secondary">← 목록</a>
 </div>
 
 <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-        <h3>상품 정보</h3>
+    <div class="product-info-shell">
+    <div class="product-info-head">
+        <h3 style="margin:0;">상품 정보</h3>
         {% if can_prod %}
         <button class="btn btn-small" onclick="document.getElementById('editProductInfo').style.display='block'">수정</button>
         {% endif %}
     </div>
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:1rem;padding:1rem;background:#f8f9fa;border-radius:8px;">
-        <div><strong>분류:</strong> {{ product.category or '-' }}</div>
-        <div><strong>박스당 낱봉:</strong> {{ product.box_quantity }}개</div>
-        <div><strong>매수:</strong> {{ product.sheets_per_pack or 24 }}매</div>
-        <div><strong>절단:</strong> {{ product.cuts_per_sheet or 9 }}</div>
-        <div><strong>소비기한:</strong> {{ product.expiry_months or 12 }}개월</div>
-        <div><strong>1박스당 원초(속):</strong>
-            {% if product.sok_per_box and product.sok_per_box > 0 %}
-            <span style="color:#667eea;font-weight:700;">{{ "%.1f"|format(product.sok_per_box) }}속</span>
+        <div class="product-info-summary">
+        <div class="product-info-item">
+            <div class="product-info-label">분류</div>
+            <div class="product-info-value">{{ product.category or '-' }}</div>
+        </div>
+        <div class="product-info-item">
+            <div class="product-info-label">박스당 낱봉</div>
+            <div class="product-info-value">{{ product.box_quantity }}개</div>
+        </div>
+        <div class="product-info-item">
+            <div class="product-info-label">매수 / 절단</div>
+            <div class="product-info-value">{{ product.sheets_per_pack or 24 }}매 / {{ product.cuts_per_sheet or 9 }}</div>
+        </div>
+        <div class="product-info-item">
+            <div class="product-info-label">소비기한</div>
+            <div class="product-info-value">{{ product.expiry_months or 12 }}개월</div>
+        </div>
+        <div class="product-info-item" style="grid-column:span 2;">
+            <div class="product-info-label">1박스당 사용 원초 / 매수</div>
+            {% if raw_options %}
+            <div class="product-info-value muted">
+                {% for raw_option in raw_options %}
+                <span class="sok-multi-tag">{{ "%.2f"|format(raw_option.sok) }}속 / {{ raw_option.sheets }}매</span>
+                {% endfor %}
+            </div>
             {% else %}
-            <span style="color:#e74c3c;font-size:0.85rem;">⚠️ 미설정</span>
+            <div class="product-info-value muted" style="color:#e74c3c;">미설정</div>
             {% endif %}
         </div>
     </div>
     
     {% if can_prod %}
-    <div id="editProductInfo" style="display:none;margin-top:1rem;padding:1rem;background:#fff3e0;border-radius:8px;">
-        <h4 style="margin-bottom:1rem;">상품 정보 수정</h4>
+    <div id="editProductInfo" class="product-edit-panel">
+        <h4 class="product-edit-title">상품 정보 수정</h4>
         <form method="POST" action="/products/{{ product.id }}/update-info">
-            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:1rem;">
+            <div class="product-edit-grid">
                 <div class="form-group">
                     <label>분류</label>
                     <select name="category" required>
-                        {% set PRODUCT_CATEGORIES = ['식탁','김밥','유기','도시락','전장','생김','세트','기타'] %}
+                        {% set PRODUCT_CATEGORIES = ['식탁','김밥','유기','도시락','전장','생김','세트','무트레이','기타'] %}
                         {% for category in PRODUCT_CATEGORIES %}
                         <option value="{{ category }}" {% if (product.category or '기타') == category %}selected{% endif %}>{{ category }}</option>
                         {% endfor %}
@@ -103,10 +165,6 @@
                 <div class="form-group">
                     <label>박스당 낱봉</label>
                     <input type="number" name="box_quantity" value="{{ product.box_quantity }}" required>
-                </div>
-                <div class="form-group">
-                    <label>매수</label>
-                    <input type="number" name="sheets_per_pack" value="{{ product.sheets_per_pack or 24 }}" required>
                 </div>
                 <div class="form-group">
                     <label>절단</label>
@@ -120,20 +178,57 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>1박스당 원초 사용량(속)</label>
-                    <input type="number" name="sok_per_box" step="0.1"
-                           value="{{ '%.1f'|format(product.sok_per_box) if product.sok_per_box or product.sok_per_box == 0 else '' }}" placeholder="예: 2.7"
-                           style="border-color:#667eea;">
+                <div class="form-group product-edit-wide">
+                    <label>1박스당 원초 / 매수</label>
+                    <div class="sok-multi-wrap" id="sokPerBoxFields">
+                        <div class="sok-multi-row">
+                            <div>
+                                <span class="mini-label">1박스당 원초(속)</span>
+                                <input type="number" name="sok_per_box" step="0.01"
+                                       value="{{ '%.2f'|format(product.sok_per_box) if product.sok_per_box or product.sok_per_box == 0 else '' }}" placeholder="예: 2.75"
+                                       style="border-color:#667eea;">
+                            </div>
+                            <div>
+                                <span class="mini-label">매수</span>
+                                <input type="number" name="sheets_per_pack" value="{{ product.sheets_per_pack or 24 }}" placeholder="예: 24">
+                            </div>
+                        </div>
+                        {% if product.sok_per_box_2 %}
+                        <div class="sok-multi-row">
+                            <div>
+                                <span class="mini-label">추가 원초량</span>
+                                <input type="number" name="sok_per_box_2" step="0.01" value="{{ '%.2f'|format(product.sok_per_box_2) }}" placeholder="추가 원초량">
+                            </div>
+                            <div>
+                                <span class="mini-label">추가 매수</span>
+                                <input type="number" name="sheets_per_pack_2" value="{{ product.sheets_per_pack_2 or product.sheets_per_pack or 24 }}" placeholder="추가 매수">
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if product.sok_per_box_3 %}
+                        <div class="sok-multi-row">
+                            <div>
+                                <span class="mini-label">추가 원초량</span>
+                                <input type="number" name="sok_per_box_3" step="0.01" value="{{ '%.2f'|format(product.sok_per_box_3) }}" placeholder="추가 원초량">
+                            </div>
+                            <div>
+                                <span class="mini-label">추가 매수</span>
+                                <input type="number" name="sheets_per_pack_3" value="{{ product.sheets_per_pack_3 or product.sheets_per_pack or 24 }}" placeholder="추가 매수">
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-small sok-multi-add" id="addSokValueBtn" onclick="addSokPerBoxField()">+ 추가</button>
                 </div>
             </div>
-            <div style="text-align:right;margin-top:1rem;">
+            <div class="product-edit-actions">
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('editProductInfo').style.display='none'">취소</button>
                 <button type="submit" class="btn">저장</button>
             </div>
         </form>
     </div>
-    {% endif %}
+{% endif %}
+</div>
 </div>
 
 {% if can_prod %}
@@ -540,6 +635,48 @@ function closeForm(){
     document.querySelectorAll('#rawList tbody tr, #matList tbody tr').forEach(row=>row.classList.remove('selected'));
     updateMaterialList();
 }
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addSokPerBoxField() {
+    const wrap = document.getElementById('sokPerBoxFields');
+    const btn = document.getElementById('addSokValueBtn');
+    if (!wrap || !btn) return;
+    const current = wrap.querySelectorAll('.sok-multi-row').length;
+    if (current >= 3) {
+        btn.style.display = 'none';
+        return;
+    }
+    const nextName = current === 1 ? 'sok_per_box_2' : 'sok_per_box_3';
+    const nextSheetName = current === 1 ? 'sheets_per_pack_2' : 'sheets_per_pack_3';
+    const row = document.createElement('div');
+    row.className = 'sok-multi-row';
+    row.innerHTML = `
+        <div>
+            <span class="mini-label">추가 원초량</span>
+            <input type="number" name="${nextName}" step="0.01" placeholder="추가 원초량">
+        </div>
+        <div>
+            <span class="mini-label">추가 매수</span>
+            <input type="number" name="${nextSheetName}" placeholder="추가 매수">
+        </div>
+    `;
+    wrap.appendChild(row);
+    if (wrap.querySelectorAll('.sok-multi-row').length >= 3) {
+        btn.style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const wrap = document.getElementById('sokPerBoxFields');
+    const btn = document.getElementById('addSokValueBtn');
+    if (!wrap || !btn) return;
+    if (wrap.querySelectorAll('.sok-multi-row').length >= 3) {
+        btn.style.display = 'none';
+    }
+});
 </script>
 {% endblock %}
 

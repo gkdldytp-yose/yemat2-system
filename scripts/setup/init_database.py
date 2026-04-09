@@ -67,6 +67,14 @@ def create_tables(conn):
         code TEXT UNIQUE,
         description TEXT,
         box_quantity INTEGER DEFAULT 1,
+        sheets_per_pack INTEGER DEFAULT 24,
+        cuts_per_sheet INTEGER DEFAULT 9,
+        sok_per_box REAL DEFAULT 0,
+        sok_per_box_2 REAL,
+        sok_per_box_3 REAL,
+        sheets_per_pack_2 INTEGER,
+        sheets_per_pack_3 INTEGER,
+        expiry_months INTEGER DEFAULT 12,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
@@ -94,6 +102,7 @@ def create_tables(conn):
         actual_boxes INTEGER,
         status TEXT DEFAULT '계획',
         note TEXT,
+        raw_sok_mode INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products(id)
     )
@@ -112,6 +121,20 @@ def create_tables(conn):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (production_id) REFERENCES productions(id),
         FOREIGN KEY (material_id) REFERENCES materials(id)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS raw_material_checksheet_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        raw_material_id INTEGER NOT NULL,
+        use_date TEXT NOT NULL,
+        note TEXT,
+        created_by TEXT,
+        updated_by TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(raw_material_id, use_date)
     )
     ''')
     
