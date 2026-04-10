@@ -230,9 +230,14 @@
   {{ "%.1f"|format((v or 0)|float) }}
   {%- endif -%}
   {%- endmacro %}
+  {% macro fmt0comma(v) -%}
+  {%- if v is not none and v != '' -%}
+  {{ "{:,.0f}".format((v or 0)|float) }}
+  {%- endif -%}
+  {%- endmacro %}
   {% set raw_row_count = 4 %}
-  {% set material_row_count = 7 %}
-  {% set packaging_row_count = 6 %}
+  {% set material_row_count = 5 %}
+  {% set packaging_row_count = 8 %}
   {% set raw_notes = [] %}
   {% for r in raw_usages[:raw_row_count] %}
     {% if r.usage_note %}
@@ -305,13 +310,13 @@
               <col style="width:33.333%">
               <col style="width:29.412%">
             </colgroup>
-            <tr class="input-row"><td></td><td></td><td></td></tr>
+            <tr class="input-row"><td>{{ display_expiry }}</td><td>{{ fmt0comma((production.actual_boxes or 0) * (production.box_quantity or 0)) if production.actual_boxes and production.box_quantity else '' }}</td><td>{{ fmt0comma(production.actual_boxes) }}</td></tr>
             <tr class="input-row"><td></td><td></td><td></td></tr>
             <tr class="input-row"><td></td><td></td><td></td></tr>
             <tr>
               <th class="sum-head">합계 수량</th>
-              <td></td>
-              <td></td>
+              <td>{{ fmt0comma((production.actual_boxes or 0) * (production.box_quantity or 0)) if production.actual_boxes and production.box_quantity else '' }}</td>
+              <td>{{ fmt0comma(production.actual_boxes) }}</td>
             </tr>
           </table>
         </td>
@@ -384,7 +389,7 @@
         <td class="left raw-name-cell">{{ r.raw_material_name or '' }}</td>
         <td>{{ r.car_number or '' }}</td>
         <td>{{ r.receiving_date or '' }}</td>
-        <td>{{ fmt1(r.actual_quantity) }}</td>
+        <td>{{ fmt0comma(r.actual_quantity) }}</td>
         {% if loop.first %}
         <td class="big-note" rowspan="{{ raw_row_count }}">{{ raw_notes|join('\n') }}</td>
         {% endif %}
@@ -417,9 +422,9 @@
       </colgroup>
       <tr>
         <th>총 사용속수</th>
-        <td>{{ "%.0f"|format(total_used) if total_used else '' }}</td>
+        <td>{{ fmt0comma(total_used) }}</td>
         <th>원재료총수</th>
-        <td>{{ "%.0f"|format(total_expected) if total_expected else '' }}</td>
+        <td>{{ fmt0comma(total_expected) }}</td>
         <th>수율</th>
         <td class="yield">{% if yield_rate is not none %}{{ "%.1f"|format(yield_rate) }}%{% endif %}</td>
       </tr>

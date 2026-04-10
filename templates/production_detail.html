@@ -194,7 +194,7 @@
         <span>매수 <strong id="rawSheetsLabel">{{ production.active_sheets_per_pack or 0 }}매</strong></span>
         <span>1박스당 <strong id="rawPerBoxLabel">{{ "%.1f"|format(production.active_sok_per_box or 0) }}속</strong></span>
         {% if production.raw_sok_values and (production.raw_sok_values|length) > 1 and can_edit %}
-        <button type="button" id="rawSokModeBtn" onclick="toggleRawSokMode()" style="background:#eef2ff;border:1px solid #4f46e5;color:#3730a3;padding:0.38rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.82rem;font-weight:700;">매수 변경</button>
+        <button type="button" id="rawSokModeBtn" onclick="toggleRawSokMode()" style="background:#eef2ff;border:1px solid #4f46e5;color:#3730a3;padding:0.38rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.82rem;font-weight:700;position:relative;top:-2px;">매수 변경</button>
         {% endif %}
         <span>총 필요량 <strong id="totalNeed" class="warn">-</strong></span>
         <span>선택 합계 <strong id="totalSel" style="color:#667eea;">0속</strong></span>
@@ -239,7 +239,7 @@
             </div>
             <div id="raw_note_wrap_{{ rm.rm_id }}" class="raw-note-wrap {% if saved_raw_note %}open{% endif %}">
                 <label for="raw_note_{{ rm.rm_id }}" style="font-size:0.83rem;color:#555;font-weight:600;">비고</label>
-                <textarea id="raw_note_{{ rm.rm_id }}" name="raw_note_{{ loop.index0 }}" rows="3" class="note-textarea" placeholder="원초 사용 비고 입력">{{ saved_raw_note }}</textarea>
+                <textarea id="raw_note_{{ rm.rm_id }}" name="raw_note_{{ loop.index0 }}" rows="3" class="note-textarea {% if loop.first %}js-first-raw-note{% endif %}" placeholder="원초 사용 비고 입력">{{ saved_raw_note }}</textarea>
             </div>
         </div>
         {% elif saved_raw_note %}
@@ -520,9 +520,59 @@ function getCurrentPerBox(){
     return parseFloat(RAW_SOK_VALUES[idx]) || 0;
 }
 
+function getCurrentSheetsPerPack(){
+    if(!RAW_SHEET_VALUES.length) return 0;
+    const idx = Math.max(0, Math.min(RAW_SHEET_VALUES.length - 1, (currentRawSokMode || 1) - 1));
+    return parseInt(RAW_SHEET_VALUES[idx] || 0, 10) || 0;
+}
+
+function stripRawAutoNote(text){
+    return (text || '')
+        .split('\n')
+        .filter(line => !line.trim().startsWith('매수 변경 적용:'))
+        .join('\n')
+        .trim();
+}
+
+function getRawAutoNoteText(){
+    if(currentRawSokMode <= 1) return '';
+    const baseSheets = parseInt(RAW_SHEET_VALUES[0] || 0, 10) || 0;
+    const currentSheets = getCurrentSheetsPerPack();
+    if(baseSheets > 0 && currentSheets > 0){
+        return `매수 변경 적용: ${baseSheets}매 → ${currentSheets}매`;
+    }
+    if(currentSheets > 0){
+        return `매수 변경 적용: ${currentSheets}매`;
+    }
+    return '';
+}
+
+function syncFirstRawAutoNote(){
+    const textarea = document.querySelector('.js-first-raw-note');
+    if(!textarea) return;
+    const manualText = stripRawAutoNote(textarea.value);
+    const autoText = getRawAutoNoteText();
+    textarea.value = autoText ? (manualText ? `${autoText}\n${manualText}` : autoText) : manualText;
+    autoGrowTextarea(textarea);
+}
+
+function syncFirstRawNoteVisibility(){
+    const textarea = document.querySelector('.js-first-raw-note');
+    if(!textarea) return;
+    const wrap = textarea.closest('.raw-note-wrap');
+    const btn = wrap ? wrap.parentElement.querySelector('.raw-note-toggle') : null;
+    if(!wrap || !btn) return;
+    const shouldOpen = currentRawSokMode > 1;
+    wrap.classList.toggle('open', shouldOpen);
+    btn.classList.toggle('active', shouldOpen);
+    if(shouldOpen){
+        autoGrowTextarea(textarea);
+    }
+}
+
 function syncRawSokUi(){
     const perBox = getCurrentPerBox();
-    const sheets = RAW_SHEET_VALUES[Math.max(0, Math.min(RAW_SHEET_VALUES.length - 1, (currentRawSokMode || 1) - 1))] || 0;
+    const sheets = getCurrentSheetsPerPack();
     const label = document.getElementById('rawPerBoxLabel');
     const sheetsLabel = document.getElementById('rawSheetsLabel');
     const modeInput = document.getElementById('rawSokMode');
@@ -539,6 +589,8 @@ function syncRawSokUi(){
             target.textContent = perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-';
         }
     });
+    syncFirstRawAutoNote();
+    syncFirstRawNoteVisibility();
 }
 
 function toggleRawSokMode(){

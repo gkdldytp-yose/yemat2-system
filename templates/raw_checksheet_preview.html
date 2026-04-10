@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>원재료 입·출고 점검표</title>
     <style>
-        @page { size: A4; margin: 6mm 5mm 5mm 6mm; }
+        @page { size: A4; margin: 16mm 5mm 5mm 6mm; }
         html, body {
             margin: 0;
             padding: 0;
@@ -15,8 +15,8 @@
         body { padding: 3px 2px 2px 3px; }
         .sheet {
             width: 100%;
-            max-width: 197.5mm;
-            min-height: 284mm;
+            max-width: 196.5mm;
+            min-height: 270mm;
             margin: 0 auto;
             box-sizing: border-box;
         }
@@ -72,6 +72,10 @@
             white-space: nowrap;
             word-break: keep-all;
         }
+        .intake-table td {
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
         .left { text-align: left; }
         .right { text-align: right; }
         .header-table,
@@ -87,7 +91,7 @@
             border-top: none;
             padding-top: 6px;
             padding-bottom: 6px;
-            font-size: 12px;
+            font-size: 12.75px;
             font-weight: 800;
         }
         .head-fill {
@@ -95,28 +99,28 @@
             font-weight: 700;
         }
         .title-cell {
-            padding: 8px 10px;
+            padding: 6px 10px 5px;
             text-align: center;
             vertical-align: middle;
         }
         .title {
-            font-size: 24px;
+            font-size: 31px;
             font-weight: 800;
             text-decoration: underline;
-            letter-spacing: -0.04em;
-            line-height: 1.08;
+            letter-spacing: -0.05em;
+            line-height: 1.02;
         }
         .subtitle {
-            margin-top: 6px;
-            font-size: 19px;
+            margin-top: 5px;
+            font-size: 26px;
             font-weight: 500;
             text-decoration: underline;
-            letter-spacing: -0.03em;
-            line-height: 1.08;
+            letter-spacing: -0.04em;
+            line-height: 1.02;
         }
         .approval-vertical {
             background: #dbe3fb;
-            font-weight: 700;
+            font-weight: 600;
             line-height: 1.3;
         }
         .approval-sign {
@@ -206,11 +210,13 @@
             border-bottom: none;
         }
         .doc-code {
-            font-size: 10px;
+            font-size: 12px;
+            font-weight: 700;
             text-align: left;
         }
         .company-name {
-            font-size: 10px;
+            font-size: 12px;
+            font-weight: 700;
             text-align: right;
         }
         .spacer-8 { height: 10px; }
@@ -218,8 +224,8 @@
         @media print {
             body { padding: 0; }
             .sheet {
-                max-width: 197.5mm;
-                min-height: 284mm;
+                max-width: 196.5mm;
+                min-height: 270mm;
             }
             .preview-actions { display: none !important; }
             .head-fill,
@@ -245,15 +251,15 @@
         <button type="button" id="noteEditToggleBtn" class="preview-btn" onclick="toggleNoteEdit()">비고 입력</button>
     </div>
 
-    <table class="header-table">
+        <table class="header-table">
         <colgroup>
             <col style="width:11%">
-            <col style="width:26%">
             <col style="width:23%">
-            <col style="width:8%">
-            <col style="width:10.67%">
-            <col style="width:10.67%">
-            <col style="width:10.66%">
+            <col style="width:22%">
+            <col style="width:5%">
+            <col style="width:13%">
+            <col style="width:13%">
+            <col style="width:13%">
         </colgroup>
         <tr>
             <td class="head-fill">작성주기</td>
@@ -262,9 +268,9 @@
                 <div class="subtitle">[{{ workplace_title }}]</div>
             </td>
             <td class="approval-vertical" rowspan="2">결<br>재</td>
-            <td class="head-fill">작성</td>
-            <td class="head-fill">검토</td>
-            <td class="head-fill">승인</td>
+            <td class="head-fill">작  성</td>
+            <td class="head-fill">검  토</td>
+            <td class="head-fill">승  인</td>
         </tr>
         <tr>
             <td>입 · 출고시</td>
@@ -276,8 +282,8 @@
 
     <table class="meta-table">
         <colgroup>
-            <col style="width:60%">
-            <col style="width:40%">
+            <col style="width:56%">
+            <col style="width:44%">
         </colgroup>
         <tr>
             <td class="left">작성일자 : {{ period_text }}</td>
@@ -289,11 +295,11 @@
 
     <table class="intake-table">
         <colgroup>
-            <col style="width:16%">
             <col style="width:14%">
-            <col style="width:16%">
-            <col style="width:20%">
-            <col style="width:12%">
+            <col style="width:15%">
+            <col style="width:14%">
+            <col style="width:21%">
+            <col style="width:10%">
             <col style="width:14%">
         </colgroup>
         <tr>
@@ -406,6 +412,7 @@
 </div>
 
 <script>
+document.title = '';
 let noteEditEnabled = false;
 const rawMaterialId = {{ raw_material_id|tojson }};
 
