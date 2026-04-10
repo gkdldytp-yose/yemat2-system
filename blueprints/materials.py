@@ -1384,6 +1384,16 @@ def materials():
     export_completed_groups = _group_request_rows_by_date(export_requests_completed, 'processed_at')
     if not is_logistics_role:
         for row in issue_requests_pending:
+            note_text = str(row.get('note') or '').strip()
+            if (
+                ('??' in note_text)
+                or ('�' in note_text)
+                or note_text.startswith('[????]')
+                or note_text.startswith('[?????]')
+            ):
+                qty = float(row.get('requested_quantity') or 0)
+                unit = (row.get('unit') or '').strip()
+                row['note'] = "[자동 불출 등록]"
             defaults = _get_latest_workplace_lot_defaults(cursor, int(row['material_id']), row['requester_workplace'])
             row['receipt_lot_defaults'] = defaults
 
@@ -2728,16 +2738,14 @@ def raw_material_checksheet_preview(raw_material_id):
             usage_rows.append(
                 {
                     'use_date': log.get('use_date') or '',
-                    'site_stock': f'{running_before:,.1f}',
-                    'warehouse_stock': f'{0:,.1f}',
-                    'total_stock': f'{running_before:,.1f}',
-                    'used_quantity': f'{used_qty:,.1f}',
+                    'site_stock': f'{running_before:,.0f}',
+                    'warehouse_stock': f'{0:,.0f}',
+                    'total_stock': f'{running_before:,.0f}',
+                    'used_quantity': f'{used_qty:,.0f}',
                     'note': note,
                 }
             )
             running_before = max(running_before - used_qty, 0)
-        usage_rows.reverse()
-
         while len(usage_rows) < 12:
             usage_rows.append(
                 {
@@ -2765,9 +2773,9 @@ def raw_material_checksheet_preview(raw_material_id):
             'receiving_date': raw['receiving_date'] or '',
             'name': raw['name'] or '',
             'car_number': raw['car_number'] or '',
-            'sheets_per_sok_text': f'{sheets_per_sok:,.1f}' if sheets_per_sok else '',
-            'box_quantity_text': f'{box_qty:,.1f}' if box_qty else '',
-            'total_stock_text': f'{total_stock:,.1f}' if total_stock else '',
+            'sheets_per_sok_text': f'{sheets_per_sok:,.0f}' if sheets_per_sok else '',
+            'box_quantity_text': f'{box_qty:,.0f}' if box_qty else '',
+            'total_stock_text': f'{total_stock:,.0f}' if total_stock else '',
         }
 
         return render_template(

@@ -1016,7 +1016,7 @@ def schedule_requirements_auto_purchase():
         planned_rows = []
         for raw_row in cursor.fetchall():
             row = dict(raw_row)
-            if _normalize_production_status(row.get('status')) == '??':
+            if _normalize_production_status(row.get('status')) == '예정':
                 planned_rows.append(row)
 
         product_box_map = {}
@@ -1131,7 +1131,7 @@ def schedule_requirements_auto_purchase():
                 WHERE material_id = ?
                   AND requester_workplace = ?
                   AND COALESCE(request_type, 'ISSUE') = 'ISSUE'
-                  AND status = '??'
+                  AND status = '요청'
                 LIMIT 1
                 ''',
                 (mid, workplace),
@@ -1142,7 +1142,7 @@ def schedule_requirements_auto_purchase():
                 continue
 
             issue_qty = round(shortage, 2)
-            issue_note = f"[????] ?? ???? ?? ?? ?? (?? {issue_qty}{unit})"
+            issue_note = "[자동 불출 등록]"
             cursor.execute(
                 '''
                 INSERT INTO logistics_issue_requests
@@ -2434,13 +2434,7 @@ def update_production_usage(production_id):
                 raw_entries[idx] = {
                     'rm_id': rm_id,
                     'qty': qty,
-                    'note': _compose_raw_usage_note(
-                        (request.form.get(f'raw_note_{idx}') or '').strip(),
-                        raw_sok_mode,
-                        active_per_box,
-                        active_sheets_per_pack,
-                        base_sheets_per_pack,
-                    ),
+                    'note': (request.form.get(f'raw_note_{idx}') or '').strip(),
                 }
 
         if save_action == 'temp':
