@@ -326,6 +326,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
     summary_sub = {}
     summary_sub_groups = {'box': {}, 'inner': {}, 'outer': {}, 'silica': {}, 'tray': {}, 'etc': {}}
     product_detail = {}
+    seen_product_raw_keys = set()
 
     def _upsert_item(target, key, code, name, unit, stock, required, category=''):
         if key not in target:
@@ -368,6 +369,10 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
         if row.get('raw_material_id'):
             code = str(row.get('raw_code') or '')
             name = row.get('raw_name') or code or '원초'
+            raw_key = (product_id, code or name)
+            if raw_key in seen_product_raw_keys:
+                continue
+            seen_product_raw_keys.add(raw_key)
             stock = raw_stock_map.get(code, 0.0)
             _upsert_item(summary_raw, code or name, code, name, '속', stock, need_qty, '원초')
             _upsert_item(product_detail[product_id]['raw_map'], code or name, code, name, '속', stock, need_qty, '원초')
