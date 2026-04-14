@@ -1787,7 +1787,7 @@ def production_list():
         LEFT JOIN production_schedules ps ON pr.schedule_id = ps.id
         WHERE strftime('%Y-%m', pr.production_date) = ?
           AND pr.workplace = ?
-        ORDER BY pr.production_date DESC
+        ORDER BY pr.production_date ASC
         ''',
         (current_month, workplace),
     )
