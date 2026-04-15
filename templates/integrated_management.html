@@ -218,6 +218,77 @@
 .reqcalc-usage-input{width:110px;padding:0.35rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;text-align:right;}
 .reqcalc-post-actions{display:none;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;padding-top:1rem;border-top:1px solid #e5e7eb;}
 .reqcalc-post-actions.active{display:flex;}
+.meeting-eval-grid{display:grid;grid-template-columns:1fr;gap:1rem;}
+.meeting-eval-card{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border:1px solid #dbe7f3;border-radius:22px;padding:1.15rem 1.2rem;box-shadow:0 16px 36px rgba(15,23,42,0.06);}
+.meeting-eval-card h3{margin:0 0 0.35rem;font-size:1.06rem;color:#0f172a;letter-spacing:-0.02em;}
+.meeting-eval-card p{margin:0;color:#64748b;font-size:0.89rem;line-height:1.55;}
+.meeting-eval-summary-row{display:flex;justify-content:space-between;align-items:flex-start;gap:0.9rem;flex-wrap:wrap;margin:1rem 0 0.35rem;padding:0.95rem 1rem;border:1px solid #e2e8f0;border-radius:18px;background:rgba(255,255,255,0.78);}
+.meeting-eval-summary-group{display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;}
+.meeting-eval-total-chip{display:inline-flex;align-items:center;gap:0.45rem;padding:0.56rem 0.92rem;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:800;font-size:0.85rem;line-height:1;}
+.meeting-eval-total-chip.strong{background:#0f172a;border-color:#0f172a;color:#fff;box-shadow:0 10px 22px rgba(15,23,42,0.16);}
+.meeting-eval-block{margin-top:1rem;padding:1rem;border:1px solid #dde7f2;border-radius:18px;background:#f8fafc;}
+.meeting-eval-workplace{padding:1rem 1rem 0.95rem;background:linear-gradient(180deg,#f9fbff 0%,#f5f8fc 100%);}
+.meeting-eval-day-card{margin-top:0.85rem;padding:0.9rem;border:1px solid #dce6f2;border-radius:16px;background:#ffffff;box-shadow:0 8px 22px rgba(15,23,42,0.04);}
+.meeting-eval-block-title{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;}
+.meeting-eval-block-title h4{margin:0;font-size:0.98rem;color:#0f172a;letter-spacing:-0.02em;}
+.meeting-eval-block-title span{color:#64748b;font-size:0.82rem;font-weight:800;}
+.meeting-eval-kicker{display:inline-flex;align-items:center;gap:0.45rem;padding:0.32rem 0.62rem;border-radius:999px;background:#e0ecff;color:#1d4ed8;font-size:0.76rem;font-weight:900;}
+.meeting-eval-toolbar{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin:1rem 0 0.25rem;padding:0.9rem 1rem;border:1px dashed #d7e3f3;border-radius:16px;background:#fff;}
+.meeting-calendar-wrap{position:relative;display:inline-flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}
+.meeting-calendar-popover{display:none;position:absolute;top:calc(100% + 10px);left:0;z-index:40;width:320px;padding:0.9rem;background:#fff;border:1px solid #dbe7f3;border-radius:18px;box-shadow:0 18px 40px rgba(15,23,42,0.12);}
+.meeting-calendar-popover.active{display:block;}
+.meeting-calendar-header{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;margin-bottom:0.85rem;}
+.meeting-calendar-title{font-size:0.95rem;font-weight:800;color:#0f172a;}
+.meeting-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0.35rem;}
+.meeting-calendar-weekday,.meeting-calendar-day{display:flex;align-items:center;justify-content:center;border-radius:10px;font-size:0.8rem;}
+.meeting-calendar-weekday{height:32px;color:#64748b;font-weight:800;background:#f8fafc;}
+.meeting-calendar-day{height:38px;border:1px solid #e2e8f0;background:#fff;color:#94a3b8;}
+.meeting-calendar-day.empty{border-color:transparent;background:transparent;}
+.meeting-calendar-day.enabled{color:#0f172a;background:#eff6ff;border-color:#bfdbfe;cursor:pointer;font-weight:800;}
+.meeting-calendar-day.enabled:hover{background:#dbeafe;}
+.meeting-calendar-day.selected{background:#0f172a;color:#fff;border-color:#0f172a;}
+.meeting-month-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.45rem;}
+.meeting-month-btn{height:44px;border-radius:12px;border:1px solid #dbe7f3;background:#fff;color:#334155;font-size:0.84rem;font-weight:800;cursor:pointer;}
+.meeting-month-btn:hover{background:#f8fafc;}
+.meeting-month-btn.has-data{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+.meeting-month-btn.selected{background:#0f172a;border-color:#0f172a;color:#fff;}
+.meeting-eval-table{width:100%;border-collapse:separate;border-spacing:0;font-size:0.89rem;background:#fff;border:1px solid #e5edf5;border-radius:16px;overflow:hidden;}
+.meeting-eval-table th,.meeting-eval-table td{padding:0.82rem 0.72rem;border-bottom:1px solid #e5edf5;vertical-align:middle;}
+.meeting-eval-table th{background:#f8fafc;color:#475569;font-size:0.78rem;font-weight:900;letter-spacing:0.01em;}
+.meeting-eval-table tr:last-child td{border-bottom:none;}
+.meeting-eval-table .num{text-align:right;white-space:nowrap;}
+.meeting-eval-table td:first-child,.meeting-eval-table th:first-child{padding-left:0.95rem;}
+.meeting-eval-table td:last-child,.meeting-eval-table th:last-child{padding-right:0.95rem;}
+.meeting-eval-code-badge{display:inline-flex;align-items:center;justify-content:center;min-width:88px;padding:0.38rem 0.58rem;border-radius:999px;background:#eef4ff;border:1px solid #c7dafc;color:#1d4ed8;font-size:0.78rem;font-weight:900;}
+.meeting-eval-name-cell{display:flex;flex-direction:column;gap:0.18rem;}
+.meeting-eval-name-cell strong{font-size:0.92rem;color:#0f172a;letter-spacing:-0.01em;}
+.meeting-eval-name-sub{font-size:0.76rem;color:#64748b;font-weight:700;}
+.meeting-eval-qty-badge{display:inline-flex;align-items:center;justify-content:flex-end;padding:0.34rem 0.7rem;border-radius:999px;background:#f8fafc;border:1px solid #dbe7f3;color:#0f172a;font-weight:900;}
+.meeting-eval-input-wrap{display:inline-flex;align-items:center;justify-content:flex-end;gap:0.35rem;padding:0.2rem;border:1px solid #dbe7f3;border-radius:12px;background:#fff;}
+.meeting-eval-input-suffix{font-size:0.74rem;color:#64748b;font-weight:800;padding-right:0.35rem;}
+.meeting-eval-price-input{width:112px;padding:0.52rem 0.6rem;border:1px solid #cbd5e1;border-radius:10px;text-align:right;background:#fff;}
+.meeting-eval-price-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.14);}
+.meeting-eval-amount{font-weight:900;color:#0f172a;font-variant-numeric:tabular-nums;}
+.meeting-eval-total-row td{background:#f8fafc;font-weight:900;color:#0f172a;}
+.meeting-eval-save-btn{background:#0f766e;}
+.meeting-week-select-btn{
+  background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+  border-color:#1d4ed8;
+  color:#fff;
+  font-weight:800;
+  min-height:42px;
+  padding:0.7rem 1rem;
+  box-shadow:0 10px 20px rgba(37,99,235,0.22);
+}
+.meeting-week-select-btn:hover{
+  filter:brightness(1.03);
+}
+.meeting-week-note{
+  font-size:0.8rem;
+  color:#64748b;
+  font-weight:700;
+}
+.meeting-eval-empty{padding:1.25rem 1rem;text-align:center;color:#64748b;border:1px dashed #d6e2f0;border-radius:16px;background:#fff;}
 @media (max-width: 900px){
   .stats-grid{grid-template-columns:repeat(2,minmax(140px,1fr));}
   .stats-panels{grid-template-columns:1fr;}
@@ -226,6 +297,13 @@
   .material-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
   .lot-inline-form{grid-template-columns:1fr 1fr;}
   .lot-inline-form .btn{width:100%;}
+  .meeting-eval-table{font-size:0.82rem;}
+  .meeting-eval-price-input{width:92px;}
+  .meeting-calendar-popover{width:min(92vw, 320px);}
+  .meeting-eval-summary-row{padding:0.85rem;}
+  .meeting-eval-toolbar{padding:0.85rem;}
+  .meeting-eval-code-badge{min-width:auto;}
+  .meeting-eval-table th,.meeting-eval-table td{padding:0.68rem 0.52rem;}
 }
 @media print{
   body.printing-req-summary > *:not(.container),
@@ -269,13 +347,14 @@
     <button class="tab-btn {% if tab == 'materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=materials'">🧰 부자재</button>
     <button class="tab-btn {% if tab == 'productions' %}active{% endif %}" onclick="location.href='/integrated-management?tab=productions'">🏭 생산관리</button>
     <button class="tab-btn {% if tab == 'requirements_calculator' %}active{% endif %}" onclick="location.href='/integrated-management?tab=requirements_calculator'">🧮 원부자재 계산기</button>
+    <button class="tab-btn {% if tab == 'meeting_eval' %}active{% endif %}" onclick="location.href='/integrated-management?tab=meeting_eval'">📈 회의/평가 자료</button>
     <button class="tab-btn {% if tab == 'inventory_audit' %}active{% endif %}" onclick="location.href='/integrated-management?tab=inventory_audit'">📊 재고 조사</button>
     <button class="tab-btn" onclick="location.href='/imports'">📥 엑셀 임포트</button>
     <button class="tab-btn {% if tab == 'db_backups' %}active{% endif %}" onclick="location.href='/integrated-management?tab=db_backups'">💾 DB 백업</button>
 </div>
 
 <!-- 작업장 필터 -->
-{% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'materials'] %}
+{% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'materials'] %}
 <div class="subtabs">
     <button class="subtab-btn {% if wp_filter == 'all' %}active{% endif %}"
             onclick="location.href='/integrated-management?tab={{ tab }}&wp=all{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">전체</button>
@@ -310,10 +389,11 @@
                 {% elif tab == 'materials' %}전체 부자재 관리
                 {% elif tab == 'productions' %}전체 생산 관리
                 {% elif tab == 'requirements_calculator' %}원부자재 계산기
+                {% elif tab == 'meeting_eval' %}주간회의 / 경영평가 자료
                 {% elif tab == 'inventory_audit' %}전체 재고 조사 현황
                 {% elif tab == 'db_backups' %}전체 DB 백업 관리
                 {% endif %}
-                {% if tab != 'requirements_calculator' %}
+                {% if tab not in ['requirements_calculator', 'meeting_eval'] %}
                 <span style="color:#999;font-size:0.9rem;font-weight:normal;">({{ data|length }}건)</span>
                 {% endif %}
             </h2>
@@ -360,7 +440,7 @@
                 {% if tab == 'db_backups' %}
                 <input type="hidden" name="keep_count" value="{{ backup_keep_count or 10 }}">
                 {% endif %}
-                {% if tab not in ['inventory_audit', 'requirements_calculator'] %}
+                {% if tab not in ['inventory_audit', 'requirements_calculator', 'meeting_eval'] %}
                 <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="키워드 검색">
                 <button type="submit" class="btn btn-small">검색</button>
                 {% endif %}
@@ -392,7 +472,7 @@
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">지금 백업</button>
             </form>
             {% endif %}
-            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'productions'] %}
+            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions'] %}
             <button class="btn btn-small" onclick="openAddModal()">+ 추가</button>
             {% endif %}
             </div>
@@ -627,6 +707,272 @@
                 </div>
             </div>
         </div>
+    </div>
+    {% elif tab == 'meeting_eval' %}
+    <div class="meeting-eval-grid">
+        <div class="meeting-eval-card" style="padding:0.85rem 1rem;">
+            <div class="card-tabs">
+                <button class="card-tab-btn {% if meeting_view == 'all' %}active{% endif %}" onclick="location.href='/integrated-management?tab=meeting_eval&meeting_view=all{% if meeting_week_anchor %}&meeting_week_anchor={{ meeting_week_anchor|urlencode }}{% endif %}{% if meeting_month_anchor %}&meeting_month_anchor={{ meeting_month_anchor|urlencode }}{% endif %}'">전체 보기</button>
+                <button class="card-tab-btn {% if meeting_view == 'weekly' %}active{% endif %}" onclick="location.href='/integrated-management?tab=meeting_eval&meeting_view=weekly{% if meeting_week_anchor %}&meeting_week_anchor={{ meeting_week_anchor|urlencode }}{% endif %}{% if meeting_month_anchor %}&meeting_month_anchor={{ meeting_month_anchor|urlencode }}{% endif %}'">주간회의</button>
+                <button class="card-tab-btn {% if meeting_view == 'monthly_product' %}active{% endif %}" onclick="location.href='/integrated-management?tab=meeting_eval&meeting_view=monthly_product{% if meeting_week_anchor %}&meeting_week_anchor={{ meeting_week_anchor|urlencode }}{% endif %}{% if meeting_month_anchor %}&meeting_month_anchor={{ meeting_month_anchor|urlencode }}{% endif %}'">경영평가 상품</button>
+                <button class="card-tab-btn {% if meeting_view == 'monthly_raw' %}active{% endif %}" onclick="location.href='/integrated-management?tab=meeting_eval&meeting_view=monthly_raw{% if meeting_week_anchor %}&meeting_week_anchor={{ meeting_week_anchor|urlencode }}{% endif %}{% if meeting_month_anchor %}&meeting_month_anchor={{ meeting_month_anchor|urlencode }}{% endif %}'">경영평가 원초</button>
+            </div>
+        </div>
+        {% if meeting_view in ['all', 'weekly'] %}
+        <div class="meeting-eval-card">
+            <h3>주간회의 자료</h3>
+            <p>매주 월요일 기준, 지난주 완료 생산량을 작업장별로 모아 단가 입력 후 금액을 바로 확인할 수 있습니다.</p>
+            <div class="meeting-eval-summary-row">
+                <div class="meeting-eval-summary-group">
+                <div class="meeting-calendar-wrap">
+                    <div class="meeting-eval-total-chip">집계 기간 {{ meeting_eval.weekly.start_date }} ~ {{ meeting_eval.weekly.end_date }}</div>
+                    <div class="meeting-eval-total-chip">기준 월요일 {{ meeting_eval.weekly.anchor_date }}</div>
+                    <button type="button" class="btn btn-small meeting-week-select-btn" onclick="toggleMeetingWeekCalendar()">주차 선택</button>
+                    <div id="meetingWeekCalendarPopover" class="meeting-calendar-popover">
+                        <div class="meeting-calendar-header">
+                            <button type="button" class="btn btn-small btn-secondary" onclick="shiftMeetingWeekCalendar(-1)">이전달</button>
+                            <div id="meetingWeekCalendarTitle" class="meeting-calendar-title"></div>
+                            <button type="button" class="btn btn-small btn-secondary" onclick="shiftMeetingWeekCalendar(1)">다음달</button>
+                        </div>
+                        <div id="meetingWeekCalendarGrid" class="meeting-calendar-grid"></div>
+                    </div>
+                </div>
+                </div>
+                <div class="meeting-eval-summary-group">
+                    <div class="meeting-eval-total-chip">총 생산량 {{ "{:,.1f}".format(meeting_eval.weekly.total_qty or 0) }} BOX</div>
+                    <div class="meeting-eval-total-chip strong">총 생산 금액 <span id="meetingWeeklyGrandTotal">0원</span></div>
+                </div>
+            </div>
+            <div class="meeting-week-note">월요일만 선택 가능하며, 선택한 월요일 기준 전주 월요일부터 일요일까지 집계됩니다.</div>
+            <div class="meeting-eval-toolbar">
+                <div style="color:#64748b;font-size:0.84rem;">단가 저장 후 다음 접속 시 마지막 저장값을 불러옵니다.</div>
+                <button type="button" class="btn btn-small meeting-eval-save-btn" onclick="saveMeetingEvalPrices('weekly')">주간회의 단가 저장</button>
+            </div>
+            {% for workplace in meeting_eval.weekly.workplaces %}
+            {% set workplace_index = loop.index0 %}
+            <div class="meeting-eval-block meeting-eval-workplace">
+                <div class="meeting-eval-block-title">
+                    <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+                        <span class="meeting-eval-kicker">작업장</span>
+                        <h4>{{ workplace.workplace }}</h4>
+                    </div>
+                    <span>작업장 생산량 {{ "{:,.1f}".format(workplace.total_qty or 0) }} BOX</span>
+                </div>
+                {% for day in workplace.days %}
+                <div class="meeting-eval-day-card">
+                    <div class="meeting-eval-block-title" style="margin-bottom:0.6rem;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+                            <span class="meeting-eval-kicker">요일별</span>
+                            <h4>{{ day.production_date }} ({{ day.weekday_label }})</h4>
+                        </div>
+                        <span>요일 생산량 {{ "{:,.1f}".format(day.total_qty or 0) }} BOX</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="meeting-eval-table">
+                            <thead>
+                                <tr>
+                                    <th>상품코드</th>
+                                    <th>상품명</th>
+                                    <th class="num">생산량</th>
+                                    <th class="num">단가</th>
+                                    <th class="num">금액</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in day['items'] %}
+                                <tr data-meeting-scope="weekly" data-meeting-group="{{ workplace_index }}" data-qty="{{ item.qty }}">
+                                    <td><span class="meeting-eval-code-badge">{{ item.product_code }}</span></td>
+                                    <td>
+                                        <div class="meeting-eval-name-cell">
+                                            <strong>{{ item.product_name }}</strong>
+                                            <span class="meeting-eval-name-sub">{{ workplace.workplace }} / {{ day.weekday_label }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="num"><span class="meeting-eval-qty-badge">{{ "{:,.1f}".format(item.qty or 0) }} BOX</span></td>
+                                    <td class="num">
+                                        <div class="meeting-eval-input-wrap">
+                                            <input type="text" class="meeting-eval-price-input" data-role="price" data-scope="{{ item.price_scope }}" data-item-key="{{ item.item_key }}" data-link-key="product:{{ item.product_id }}" value="{{ item.saved_price or 0 }}" placeholder="0">
+                                            <span class="meeting-eval-input-suffix">원</span>
+                                        </div>
+                                    </td>
+                                    <td class="num meeting-eval-amount" data-role="amount">0원</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="table-container" style="margin-top:0.8rem;">
+                    <table class="meeting-eval-table">
+                        <tbody>
+                            <tr class="meeting-eval-total-row">
+                                <td colspan="4">작업장 합계</td>
+                                <td class="num meeting-eval-amount" data-weekly-group-total="{{ workplace_index }}">0원</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="meeting-eval-empty">지난주 완료 생산 데이터가 없습니다.</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if meeting_view in ['all', 'monthly_product'] %}
+        <div class="meeting-eval-card">
+            <h3>경영평가 상품 자료</h3>
+            <p>지난달 완료 생산량을 기준으로 상품별 총 생산 금액을 확인합니다.</p>
+            <div class="meeting-eval-summary-row">
+                <div class="meeting-eval-summary-group">
+                    <div class="meeting-eval-total-chip">집계 기간 {{ meeting_eval.monthly.start_date }} ~ {{ meeting_eval.monthly.end_date }}</div>
+                    <div class="meeting-calendar-wrap">
+                        <button type="button" class="btn btn-small meeting-week-select-btn" onclick="toggleMeetingMonthCalendar()">월 선택</button>
+                        <div id="meetingMonthCalendarPopover" class="meeting-calendar-popover">
+                            <div class="meeting-calendar-header">
+                                <button type="button" class="btn btn-small btn-secondary" onclick="shiftMeetingMonthCalendar(-1)">이전달</button>
+                                <div id="meetingMonthCalendarTitle" class="meeting-calendar-title"></div>
+                                <button type="button" class="btn btn-small btn-secondary" onclick="shiftMeetingMonthCalendar(1)">다음달</button>
+                            </div>
+                            <div id="meetingMonthCalendarGrid" class="meeting-calendar-grid"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="meeting-eval-summary-group">
+                    <div class="meeting-eval-total-chip strong">상품 총금액 <span id="meetingMonthlyProductGrandTotal">0원</span></div>
+                </div>
+            </div>
+
+            <div class="meeting-eval-block">
+                <div class="meeting-eval-block-title">
+                    <h4>지난달 상품별 총 생산 금액</h4>
+                    <span>총 생산량 {{ "{:,.1f}".format(meeting_eval.monthly.products_total_qty or 0) }} BOX</span>
+                </div>
+                <div class="meeting-eval-toolbar" style="margin-top:0;margin-bottom:0.75rem;">
+                    <div style="color:#64748b;font-size:0.84rem;">상품별 단가를 저장하면 다음 달 비교 시에도 바로 수정할 수 있습니다.</div>
+                    <button type="button" class="btn btn-small meeting-eval-save-btn" onclick="saveMeetingEvalPrices('monthly_product')">상품 단가 저장</button>
+                </div>
+                <div class="table-container">
+                    <table class="meeting-eval-table">
+                        <thead>
+                            <tr>
+                                <th>작업장</th>
+                                <th>상품코드</th>
+                                <th>상품명</th>
+                                <th class="num">총 생산량</th>
+                                <th class="num">단가</th>
+                                <th class="num">금액</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in meeting_eval.monthly.products %}
+                            <tr data-meeting-scope="monthly-product" data-qty="{{ item.qty }}">
+                                <td><span class="meeting-eval-kicker">{{ item.workplace }}</span></td>
+                                <td><span class="meeting-eval-code-badge">{{ item.product_code }}</span></td>
+                                <td>
+                                    <div class="meeting-eval-name-cell">
+                                        <strong>{{ item.product_name }}</strong>
+                                        <span class="meeting-eval-name-sub">지난달 완료 생산량 기준</span>
+                                    </div>
+                                </td>
+                                <td class="num"><span class="meeting-eval-qty-badge">{{ "{:,.1f}".format(item.qty or 0) }} BOX</span></td>
+                                <td class="num">
+                                    <div class="meeting-eval-input-wrap">
+                                        <input type="text" class="meeting-eval-price-input" data-role="price" data-scope="{{ item.price_scope }}" data-item-key="{{ item.item_key }}" data-link-key="product:{{ item.product_id }}" value="{{ item.saved_price or 0 }}" placeholder="0">
+                                        <span class="meeting-eval-input-suffix">원</span>
+                                    </div>
+                                </td>
+                                <td class="num meeting-eval-amount" data-role="amount">0원</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" style="text-align:center;color:#64748b;">지난달 완료 생산 데이터가 없습니다.</td></tr>
+                            {% endfor %}
+                            <tr class="meeting-eval-total-row">
+                                <td colspan="5">상품 총금액</td>
+                                <td class="num" id="meetingMonthlyProductTableTotal">0원</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if meeting_view in ['all', 'monthly_raw'] %}
+        <div class="meeting-eval-card">
+            <h3>경영평가 원초 자료</h3>
+            <p>지난달 원초 사용량을 기준으로 원초별 총 사용 금액을 확인합니다.</p>
+            <div class="meeting-eval-summary-row">
+                <div class="meeting-eval-summary-group">
+                    <div class="meeting-eval-total-chip">집계 기간 {{ meeting_eval.monthly.start_date }} ~ {{ meeting_eval.monthly.end_date }}</div>
+                    {% if meeting_view == 'monthly_raw' %}
+                    <div class="meeting-calendar-wrap">
+                        <button type="button" class="btn btn-small meeting-week-select-btn" onclick="toggleMeetingMonthCalendar()">월 선택</button>
+                        <div id="meetingMonthCalendarPopover" class="meeting-calendar-popover">
+                            <div class="meeting-calendar-header">
+                                <button type="button" class="btn btn-small btn-secondary" onclick="shiftMeetingMonthCalendar(-1)">이전달</button>
+                                <div id="meetingMonthCalendarTitle" class="meeting-calendar-title"></div>
+                                <button type="button" class="btn btn-small btn-secondary" onclick="shiftMeetingMonthCalendar(1)">다음달</button>
+                            </div>
+                            <div id="meetingMonthCalendarGrid" class="meeting-calendar-grid"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="meeting-eval-summary-group">
+                    <div class="meeting-eval-total-chip strong">전체 원초 수율 {{ "{:,.2f}".format(meeting_eval.monthly.raw_total_yield_rate or 0) }}%</div>
+                </div>
+            </div>
+
+            <div class="meeting-eval-block">
+                <div class="meeting-eval-block-title">
+                    <h4>지난달 원초 수율 현황</h4>
+                    <span>투입 {{ "{:,.1f}".format(meeting_eval.monthly.raw_input_total_qty or 0) }}속 / 완제 {{ "{:,.1f}".format(meeting_eval.monthly.raw_output_total_qty or 0) }}속</span>
+                </div>
+                <div class="meeting-eval-toolbar" style="margin-top:0;margin-bottom:0.75rem;">
+                    <div style="color:#64748b;font-size:0.84rem;">원초별 해당 달 투입속수와 완제속수를 비교해 월간 수율을 확인합니다.</div>
+                </div>
+                <div class="table-container">
+                    <table class="meeting-eval-table">
+                        <thead>
+                            <tr>
+                                <th>원초코드</th>
+                                <th>원초명</th>
+                                <th class="num">투입속수</th>
+                                <th class="num">완제속수</th>
+                                <th class="num">수율</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in meeting_eval.monthly.raws %}
+                            <tr>
+                                <td><span class="meeting-eval-code-badge">{{ item.raw_code }}</span></td>
+                                <td>
+                                    <div class="meeting-eval-name-cell">
+                                        <strong>{{ item.raw_name }}</strong>
+                                        <span class="meeting-eval-name-sub">해당 달 원초 투입/완제 기준</span>
+                                    </div>
+                                </td>
+                                <td class="num"><span class="meeting-eval-qty-badge">{{ "{:,.1f}".format(item.input_qty or 0) }} {{ item.unit }}</span></td>
+                                <td class="num"><span class="meeting-eval-qty-badge">{{ "{:,.1f}".format(item.output_qty or 0) }} {{ item.unit }}</span></td>
+                                <td class="num meeting-eval-amount">{{ "{:,.2f}".format(item.yield_rate or 0) }}%</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" style="text-align:center;color:#64748b;">지난달 원초 사용 데이터가 없습니다.</td></tr>
+                            {% endfor %}
+                            <tr class="meeting-eval-total-row">
+                                <td colspan="2">전체 원초 합계</td>
+                                <td class="num">{{ "{:,.1f}".format(meeting_eval.monthly.raw_input_total_qty or 0) }} 속</td>
+                                <td class="num">{{ "{:,.1f}".format(meeting_eval.monthly.raw_output_total_qty or 0) }} 속</td>
+                                <td class="num">{{ "{:,.2f}".format(meeting_eval.monthly.raw_total_yield_rate or 0) }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% elif tab == 'stats' %}
     <div class="stats-toolbar">
@@ -3739,6 +4085,291 @@ document.getElementById('rawActivityModal').addEventListener('click', function(e
 document.getElementById('rawActDateInput').addEventListener('change', function(){
     if(this.value){
         loadRawActivityByDate(this.value);
+    }
+});
+
+function formatMeetingEvalAmount(value){
+    return `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Math.round(Number(value || 0)))}원`;
+}
+
+const meetingWeekCalendarState = {
+    visibleMonth: '{{ meeting_eval.weekly.anchor_month if meeting_eval and meeting_eval.weekly else "" }}',
+    selectedDate: '{{ meeting_eval.weekly.anchor_date if meeting_eval and meeting_eval.weekly else "" }}',
+    availableMonths: {{ (meeting_eval.weekly.available_months if meeting_eval and meeting_eval.weekly else [])|tojson }},
+    availableDates: {{ (meeting_eval.weekly.all_available_dates if meeting_eval and meeting_eval.weekly else [])|tojson }},
+};
+const meetingMonthCalendarState = {
+    visibleYear: {{ (meeting_eval.monthly.anchor_month[:4] if meeting_eval and meeting_eval.monthly and meeting_eval.monthly.anchor_month else '')|tojson }},
+    selectedMonth: '{{ meeting_eval.monthly.anchor_month if meeting_eval and meeting_eval.monthly else "" }}',
+    availableMonths: {{ (meeting_eval.monthly.available_months if meeting_eval and meeting_eval.monthly else [])|tojson }},
+};
+
+function toggleMeetingWeekCalendar(forceOpen){
+    const popover = document.getElementById('meetingWeekCalendarPopover');
+    if(!popover) return;
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !popover.classList.contains('active');
+    popover.classList.toggle('active', shouldOpen);
+    if(shouldOpen){
+        renderMeetingWeekCalendar();
+    }
+}
+
+function shiftMeetingWeekCalendar(delta){
+    const months = meetingWeekCalendarState.availableMonths || [];
+    if(!months.length) return;
+    let index = months.indexOf(meetingWeekCalendarState.visibleMonth);
+    if(index < 0){
+        index = 0;
+    }
+    index = Math.max(0, Math.min(months.length - 1, index + delta));
+    meetingWeekCalendarState.visibleMonth = months[index];
+    renderMeetingWeekCalendar();
+}
+
+function selectMeetingWeekDate(dateText){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'meeting_eval');
+    params.set('meeting_view', 'weekly');
+    params.set('meeting_week_anchor', dateText);
+    if('{{ meeting_month_anchor }}'){
+        params.set('meeting_month_anchor', '{{ meeting_month_anchor }}');
+    }
+    window.location.href = `/integrated-management?${params.toString()}`;
+}
+
+function renderMeetingWeekCalendar(){
+    const title = document.getElementById('meetingWeekCalendarTitle');
+    const grid = document.getElementById('meetingWeekCalendarGrid');
+    if(!title || !grid) return;
+
+    const monthToken = meetingWeekCalendarState.visibleMonth;
+    if(!monthToken){
+        grid.innerHTML = '<div style="grid-column:1 / -1;text-align:center;color:#64748b;padding:1rem 0;">선택 가능한 월이 없습니다.</div>';
+        title.textContent = '-';
+        return;
+    }
+
+    const [year, month] = monthToken.split('-').map(Number);
+    const first = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0).getDate();
+    const firstWeekday = (first.getDay() + 6) % 7;
+    title.textContent = `${year}년 ${String(month).padStart(2, '0')}월`;
+
+    const availableSet = new Set((meetingWeekCalendarState.availableDates || []).filter(dateText => dateText.startsWith(monthToken)));
+    const weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
+    const cells = weekdayLabels.map(label => `<div class="meeting-calendar-weekday">${label}</div>`);
+
+    for(let i = 0; i < firstWeekday; i += 1){
+        cells.push('<div class="meeting-calendar-day empty"></div>');
+    }
+
+    for(let day = 1; day <= lastDay; day += 1){
+        const dateText = `${monthToken}-${String(day).padStart(2, '0')}`;
+        const enabled = availableSet.has(dateText);
+        const selected = meetingWeekCalendarState.selectedDate === dateText;
+        const classNames = ['meeting-calendar-day'];
+        if(enabled) classNames.push('enabled');
+        if(selected) classNames.push('selected');
+        const action = enabled ? `onclick="selectMeetingWeekDate('${dateText}')"` : '';
+        cells.push(`<button type="button" class="${classNames.join(' ')}" ${action}>${day}</button>`);
+    }
+
+    grid.innerHTML = cells.join('');
+}
+
+function toggleMeetingMonthCalendar(forceOpen){
+    const popover = document.getElementById('meetingMonthCalendarPopover');
+    if(!popover) return;
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !popover.classList.contains('active');
+    popover.classList.toggle('active', shouldOpen);
+    if(shouldOpen){
+        renderMeetingMonthCalendar();
+    }
+}
+
+function shiftMeetingMonthCalendar(delta){
+    const currentYear = Number(meetingMonthCalendarState.visibleYear || new Date().getFullYear());
+    meetingMonthCalendarState.visibleYear = String(currentYear + delta);
+    renderMeetingMonthCalendar();
+}
+
+function selectMeetingMonth(monthToken){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'meeting_eval');
+    params.set('meeting_view', '{{ meeting_view }}');
+    params.set('meeting_month_anchor', `${monthToken}-01`);
+    if('{{ meeting_week_anchor }}'){
+        params.set('meeting_week_anchor', '{{ meeting_week_anchor }}');
+    }
+    window.location.href = `/integrated-management?${params.toString()}`;
+}
+
+function renderMeetingMonthCalendar(){
+    const title = document.getElementById('meetingMonthCalendarTitle');
+    const grid = document.getElementById('meetingMonthCalendarGrid');
+    if(!title || !grid) return;
+
+    const year = Number(meetingMonthCalendarState.visibleYear || new Date().getFullYear());
+    title.textContent = `${year}년`;
+
+    const availableSet = new Set(meetingMonthCalendarState.availableMonths || []);
+    const monthLabels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const cells = [];
+
+    for(let month = 1; month <= 12; month += 1){
+        const monthToken = `${year}-${String(month).padStart(2, '0')}`;
+        const classNames = ['meeting-month-btn'];
+        if(availableSet.has(monthToken)) classNames.push('has-data');
+        if(meetingMonthCalendarState.selectedMonth === monthToken) classNames.push('selected');
+        cells.push(`<button type="button" class="${classNames.join(' ')}" onclick="selectMeetingMonth('${monthToken}')">${monthLabels[month - 1]}</button>`);
+    }
+
+    grid.innerHTML = cells.join('');
+}
+
+function parseMeetingEvalNumber(value){
+    const normalized = String(value || '').replace(/,/g, '').trim();
+    if(!normalized) return 0;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatMeetingEvalPrice(value){
+    const num = parseMeetingEvalNumber(value);
+    return new Intl.NumberFormat('ko-KR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    }).format(num);
+}
+
+function updateMeetingEvalAmounts(){
+    const scopeTotals = {
+        'weekly': 0,
+        'monthly-product': 0,
+        'monthly-raw': 0,
+    };
+    const weeklyGroupTotals = {};
+
+    document.querySelectorAll('tr[data-meeting-scope]').forEach(row => {
+        const scope = row.getAttribute('data-meeting-scope');
+        const qty = Number(row.getAttribute('data-qty') || 0);
+        const priceInput = row.querySelector('[data-role="price"]');
+        const amountCell = row.querySelector('[data-role="amount"]');
+        if(!priceInput || !amountCell){
+            return;
+        }
+        const price = parseMeetingEvalNumber(priceInput.value || 0);
+        const amount = qty * price;
+        amountCell.textContent = formatMeetingEvalAmount(amount);
+        scopeTotals[scope] = (scopeTotals[scope] || 0) + amount;
+        if(scope === 'weekly'){
+            const groupKey = row.getAttribute('data-meeting-group') || '0';
+            weeklyGroupTotals[groupKey] = (weeklyGroupTotals[groupKey] || 0) + amount;
+        }
+    });
+
+    Object.keys(weeklyGroupTotals).forEach(groupKey => {
+        const totalCell = document.querySelector(`[data-weekly-group-total="${groupKey}"]`);
+        if(totalCell){
+            totalCell.textContent = formatMeetingEvalAmount(weeklyGroupTotals[groupKey]);
+        }
+    });
+
+    const weeklyGrandTotal = document.getElementById('meetingWeeklyGrandTotal');
+    if(weeklyGrandTotal){
+        weeklyGrandTotal.textContent = formatMeetingEvalAmount(scopeTotals['weekly']);
+    }
+    const monthlyProductGrandTotal = document.getElementById('meetingMonthlyProductGrandTotal');
+    if(monthlyProductGrandTotal){
+        monthlyProductGrandTotal.textContent = formatMeetingEvalAmount(scopeTotals['monthly-product']);
+    }
+    const monthlyRawGrandTotal = document.getElementById('meetingMonthlyRawGrandTotal');
+    if(monthlyRawGrandTotal){
+        monthlyRawGrandTotal.textContent = formatMeetingEvalAmount(scopeTotals['monthly-raw']);
+    }
+    const monthlyProductTableTotal = document.getElementById('meetingMonthlyProductTableTotal');
+    if(monthlyProductTableTotal){
+        monthlyProductTableTotal.textContent = formatMeetingEvalAmount(scopeTotals['monthly-product']);
+    }
+    const monthlyRawTableTotal = document.getElementById('meetingMonthlyRawTableTotal');
+    if(monthlyRawTableTotal){
+        monthlyRawTableTotal.textContent = formatMeetingEvalAmount(scopeTotals['monthly-raw']);
+    }
+}
+
+async function saveMeetingEvalPrices(scope){
+    const inputs = Array.from(document.querySelectorAll(`.meeting-eval-price-input[data-scope="${scope}"]`));
+    const items = inputs.map(input => ({
+        item_key: input.getAttribute('data-item-key') || '',
+        unit_price: parseMeetingEvalNumber(input.value || 0),
+    })).filter(item => item.item_key);
+
+    try{
+        const res = await fetch('/integrated-management/meeting-eval/save-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scope, items }),
+        });
+        const payload = await res.json();
+        if(!payload.ok){
+            throw new Error(payload.message || '단가 저장 실패');
+        }
+        inputs.forEach(input => {
+            input.value = formatMeetingEvalPrice(input.value || 0);
+        });
+        updateMeetingEvalAmounts();
+        alert('단가를 저장했습니다.');
+    } catch(err){
+        alert(err.message || '단가 저장 중 오류가 발생했습니다.');
+    }
+}
+
+function syncMeetingEvalLinkedInputs(sourceInput, formatted=false){
+    const linkKey = sourceInput.getAttribute('data-link-key') || '';
+    if(!linkKey) return;
+    const nextValue = formatted
+        ? formatMeetingEvalPrice(sourceInput.value || 0)
+        : (sourceInput.value || '');
+    document.querySelectorAll(`.meeting-eval-price-input[data-link-key="${linkKey}"]`).forEach(input => {
+        if(input === sourceInput) return;
+        input.value = nextValue;
+    });
+}
+
+document.querySelectorAll('.meeting-eval-price-input').forEach(input => {
+    input.addEventListener('focus', function(){
+        const num = parseMeetingEvalNumber(this.value || 0);
+        this.value = num ? String(num) : '';
+        this.select();
+    });
+    input.addEventListener('input', function(){
+        syncMeetingEvalLinkedInputs(this, false);
+        updateMeetingEvalAmounts();
+    });
+    input.addEventListener('blur', function(){
+        this.value = formatMeetingEvalPrice(this.value || 0);
+        syncMeetingEvalLinkedInputs(this, true);
+        updateMeetingEvalAmounts();
+    });
+    input.value = formatMeetingEvalPrice(input.value || 0);
+});
+updateMeetingEvalAmounts();
+
+document.addEventListener('click', function(event){
+    const weekPopover = document.getElementById('meetingWeekCalendarPopover');
+    const monthPopover = document.getElementById('meetingMonthCalendarPopover');
+    const wraps = Array.from(document.querySelectorAll('.meeting-calendar-wrap'));
+    if(weekPopover && weekPopover.classList.contains('active')){
+        const insideWeek = wraps.some(wrap => wrap.contains(event.target) && wrap.contains(weekPopover));
+        if(!insideWeek){
+            toggleMeetingWeekCalendar(false);
+        }
+    }
+    if(monthPopover && monthPopover.classList.contains('active')){
+        const insideMonth = wraps.some(wrap => wrap.contains(event.target) && wrap.contains(monthPopover));
+        if(!insideMonth){
+            toggleMeetingMonthCalendar(false);
+        }
     }
 });
 </script>
