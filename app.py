@@ -34,7 +34,7 @@ def register_blueprints(app):
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.getenv('YEMAT_SECRET_KEY', DEFAULT_SECRET_KEY)
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', DEFAULT_SECRET_KEY)
 
     register_blueprints(app)
 
@@ -388,14 +388,3 @@ if __name__ == '__main__':
     app.run(host=host, port=port, debug=True)
 
 
-def create_app():
-    app = Flask(__name__)
-    
-    app.secret_key = os.environ.get("SECRET_KEY", DEFAULT_SECRET_KEY)
-    
-    register_blueprints(app)
-    
-    return app
-
-
-app = create_app()

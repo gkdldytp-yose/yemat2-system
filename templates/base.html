@@ -156,11 +156,102 @@
         @media (max-width: 768px) {
             h1{font-size:1.2rem;margin-bottom:0.75rem;}
         }
-        
+
+        /* 통합관리 제외 공통 모바일 최적화 */
+        @media (max-width: 768px) {
+            body:not(.page-integrated) {
+                padding-bottom: 76px;
+            }
+            body:not(.page-integrated) .nav-container {
+                flex-wrap: wrap;
+                gap: 0.6rem;
+                padding: 0.7rem 0.8rem;
+            }
+            body:not(.page-integrated) .nav-brand {
+                font-size: 0.98rem;
+            }
+            body:not(.page-integrated) .nav-user {
+                width: 100%;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+                row-gap: 0.45rem;
+            }
+            body:not(.page-integrated) .nav-user > a,
+            body:not(.page-integrated) .nav-user > div,
+            body:not(.page-integrated) .nav-user > span,
+            body:not(.page-integrated) .nav-user > .nav-notify {
+                flex-shrink: 0;
+            }
+            body:not(.page-integrated) main {
+                padding: 0.7rem;
+            }
+            body:not(.page-integrated) .card {
+                padding: 0.9rem;
+                border-radius: 14px;
+                box-shadow: 0 8px 22px rgba(15,23,42,0.08);
+            }
+            body:not(.page-integrated) .tabs {
+                gap: 0.4rem;
+                padding: 0.35rem;
+                margin-bottom: 0.9rem;
+                border-radius: 12px;
+            }
+            body:not(.page-integrated) .tab-btn {
+                padding: 0.62rem 0.85rem;
+                font-size: 0.82rem;
+            }
+            body:not(.page-integrated) .subtabs {
+                gap: 0.4rem;
+                margin-bottom: 0.8rem;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.15rem;
+            }
+            body:not(.page-integrated) .subtab-btn {
+                flex: 0 0 auto;
+            }
+            body:not(.page-integrated) .search-input {
+                width: 100%;
+                min-width: 0;
+            }
+            body:not(.page-integrated) .grid,
+            body:not(.page-integrated) .grid-2,
+            body:not(.page-integrated) .grid-3,
+            body:not(.page-integrated) .grid-4 {
+                gap: 0.75rem;
+            }
+            body:not(.page-integrated) .table-container {
+                margin: 0 -0.2rem;
+                padding: 0 0.2rem 0.3rem;
+            }
+            body:not(.page-integrated) table {
+                min-width: 680px;
+            }
+            body:not(.page-integrated) .card > table,
+            body:not(.page-integrated) form > table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            body:not(.page-integrated) .btn {
+                min-height: 38px;
+            }
+            body:not(.page-integrated) .nav-notify-menu {
+                right: -0.35rem;
+                width: min(360px, calc(100vw - 1rem));
+                max-width: min(360px, calc(100vw - 1rem));
+            }
+            body:not(.page-integrated) input,
+            body:not(.page-integrated) select,
+            body:not(.page-integrated) textarea {
+                max-width: 100%;
+            }
+        }
+         
         {% block extra_css %}{% endblock %}
     </style>
 </head>
-<body>
+<body class="{% if request.path.startswith('/integrated-management') %}page-integrated{% else %}page-standard{% endif %}">
 {% if user %}
         {%- set _r = user.role if user.role else ('admin' if user.is_admin else 'readonly') -%}
         {%- set _sa = user.is_admin -%}
