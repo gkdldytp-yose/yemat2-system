@@ -91,6 +91,145 @@ def _round_to_1_decimal(value):
     return round(float(value or 0) + 1e-9, 1)
 
 
+def _is_completed_status(status_value):
+    text = str(status_value or '').strip()
+    return text == '완료' or '완료' in text
+
+
+def _build_meeting_eval_payload(cursor):
+    today = datetime.now().date()
+    this_monday = today - timedelta(days=today.weekday())
+    weekly_start = this_monday - timedelta(days=7)
+    weekly_end = this_monday - timedelta(days=1)
+
+    first_this_month = today.replace(day=1)
+    prev_month_end = first_this_month - timedelta(days=1)
+    prev_month_start = prev_month_end.replace(day=1)
+
+    weekly_rows = cursor.execute(
+        '''
+        SELECT
+            pr.workplace,
+            pr.product_id,
+            COALESCE(p.code, '-') as product_code,
+            COALESCE(p.name, printf('상품 #%s', pr.product_id)) as product_name,
+            SUM(COALESCE(pr.actual_boxes, 0)) as qty
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE pr.production_date BETWEEN ? AND ?
+          AND COALESCE(pr.actual_boxes, 0) > 0
+          AND (COALESCE(pr.status, '') = '완료' OR COALESCE(pr.status, '') LIKE '%완료%')
+        GROUP BY pr.workplace, pr.product_id, p.code, p.name
+        ORDER BY pr.workplace, p.name
+        ''',
+        (weekly_start.strftime('%Y-%m-%d'), weekly_end.strftime('%Y-%m-%d')),
+    ).fetchall()
+
+    weekly_workplaces = []
+    weekly_map = {}
+    for row in weekly_rows:
+        workplace = (row['workplace'] or '-').strip() or '-'
+        bucket = weekly_map.setdefault(
+            workplace,
+            {
+                'workplace': workplace,
+                'items': [],
+                'total_qty': 0.0,
+            },
+        )
+        qty = float(row['qty'] or 0)
+        bucket['items'].append(
+            {
+                'product_id': int(row['product_id'] or 0),
+                'product_code': row['product_code'] or '-',
+                'product_name': row['product_name'] or '-',
+                'qty': round(qty, 1),
+            }
+        )
+        bucket['total_qty'] += qty
+    for workplace in sorted(weekly_map.keys()):
+        entry = weekly_map[workplace]
+        entry['total_qty'] = round(entry['total_qty'], 1)
+        weekly_workplaces.append(entry)
+
+    monthly_product_rows = cursor.execute(
+        '''
+        SELECT
+            pr.workplace,
+            pr.product_id,
+            COALESCE(p.code, '-') as product_code,
+            COALESCE(p.name, printf('상품 #%s', pr.product_id)) as product_name,
+            SUM(COALESCE(pr.actual_boxes, 0)) as qty
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE pr.production_date BETWEEN ? AND ?
+          AND COALESCE(pr.actual_boxes, 0) > 0
+          AND (COALESCE(pr.status, '') = '완료' OR COALESCE(pr.status, '') LIKE '%완료%')
+        GROUP BY pr.workplace, pr.product_id, p.code, p.name
+        ORDER BY p.name, pr.workplace
+        ''',
+        (prev_month_start.strftime('%Y-%m-%d'), prev_month_end.strftime('%Y-%m-%d')),
+    ).fetchall()
+
+    monthly_products = [
+        {
+            'workplace': (row['workplace'] or '-').strip() or '-',
+            'product_id': int(row['product_id'] or 0),
+            'product_code': row['product_code'] or '-',
+            'product_name': row['product_name'] or '-',
+            'input_qty': round(float(row['input_qty'] or 0), 1),
+            'output_qty': round(float(row['output_qty'] or 0), 1),
+            'yield_rate': round((float(row['output_qty'] or 0) / float(row['input_qty'] or 0) * 100), 2) if float(row['input_qty'] or 0) > 0 else 0.0,
+        }
+        for row in monthly_product_rows
+    ]
+
+    monthly_raw_rows = cursor.execute(
+        '''
+        SELECT
+            COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id), '-') as raw_code,
+            COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), rm.name, printf('원초 #%s', pmu.raw_material_id)) as raw_name,
+            SUM(COALESCE(pmu.actual_quantity, 0)) as qty
+        FROM production_material_usage pmu
+        JOIN productions pr ON pr.id = pmu.production_id
+        LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+        WHERE pr.production_date BETWEEN ? AND ?
+          AND COALESCE(pmu.actual_quantity, 0) > 0
+          AND (pmu.raw_material_id IS NOT NULL OR COALESCE(TRIM(pmu.raw_material_name), '') != '')
+          AND (COALESCE(pr.status, '') = '완료' OR COALESCE(pr.status, '') LIKE '%완료%')
+        GROUP BY COALESCE(pmu.raw_material_id, -pmu.id), raw_code, raw_name
+        ORDER BY raw_name
+        ''',
+        (prev_month_start.strftime('%Y-%m-%d'), prev_month_end.strftime('%Y-%m-%d')),
+    ).fetchall()
+
+    monthly_raws = [
+        {
+            'raw_code': row['raw_code'] or '-',
+            'raw_name': row['raw_name'] or '-',
+            'input_qty': round(float(row['input_qty'] or 0), 1),
+            'output_qty': round(float(row['output_qty'] or 0), 1),
+            'yield_rate': round((float(row['output_qty'] or 0) / float(row['input_qty'] or 0) * 100), 2) if float(row['input_qty'] or 0) > 0 else 0.0,
+            'unit': '속',
+        }
+        for row in monthly_raw_rows
+    ]
+
+    return {
+        'weekly': {
+            'start_date': weekly_start.strftime('%Y-%m-%d'),
+            'end_date': weekly_end.strftime('%Y-%m-%d'),
+            'workplaces': weekly_workplaces,
+        },
+        'monthly': {
+            'start_date': prev_month_start.strftime('%Y-%m-%d'),
+            'end_date': prev_month_end.strftime('%Y-%m-%d'),
+            'products': monthly_products,
+            'raws': monthly_raws,
+        },
+    }
+
+
 def _xlsx_escape_text(value):
     text = '' if value is None else str(value)
     text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f]', '', text)
@@ -197,6 +336,324 @@ def _build_simple_xlsx(sheet_name, headers, rows):
 
     buffer.seek(0)
     return buffer
+
+
+def _meeting_completed_clause():
+    return "(COALESCE(pr.status, '') = '완료' OR COALESCE(pr.status, '') LIKE '%완료%')"
+
+
+def _ensure_meeting_eval_price_schema(conn):
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS meeting_eval_prices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            price_scope TEXT NOT NULL,
+            item_key TEXT NOT NULL,
+            unit_price REAL NOT NULL DEFAULT 0,
+            updated_by TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        '''
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_meeting_eval_prices_scope_key ON meeting_eval_prices(price_scope, item_key)"
+    )
+
+
+def _load_meeting_eval_saved_prices(cursor):
+    rows = cursor.execute(
+        '''
+        SELECT id, price_scope, item_key, unit_price, updated_at
+        FROM meeting_eval_prices
+        ORDER BY datetime(updated_at) DESC, id DESC
+        '''
+    ).fetchall()
+    saved_prices = {}
+    for row in rows:
+        scope = (row['price_scope'] or '').strip()
+        item_key = (row['item_key'] or '').strip()
+        unit_price = float(row['unit_price'] or 0)
+        pair = (scope, item_key)
+        if pair not in saved_prices:
+            saved_prices[pair] = unit_price
+
+        generic_scope = None
+        generic_key = None
+        if scope == 'weekly':
+            product_id = item_key.split('|')[-1].strip()
+            if product_id:
+                generic_scope = 'product'
+                generic_key = product_id
+        elif scope == 'monthly_product':
+            parts = item_key.split('|')
+            product_id = parts[-1].strip() if parts else ''
+            if product_id:
+                generic_scope = 'product'
+                generic_key = product_id
+        elif scope == 'monthly_raw':
+            generic_scope = 'raw'
+            generic_key = item_key
+
+        if generic_scope and generic_key:
+            generic_pair = (generic_scope, generic_key)
+            existing_generic = saved_prices.get(generic_pair)
+            if existing_generic is None:
+                saved_prices[generic_pair] = unit_price
+            elif float(existing_generic or 0) <= 0 and float(unit_price or 0) > 0:
+                saved_prices[generic_pair] = unit_price
+    return saved_prices
+
+
+def _meeting_eval_fallback_price(saved_prices, scope, item_key, fallback_keys=None):
+    specific = saved_prices.get(((scope or '').strip(), (item_key or '').strip()))
+    fallback_candidates = []
+    for fallback_scope, fallback_key in (fallback_keys or []):
+        fallback_value = saved_prices.get(((fallback_scope or '').strip(), (fallback_key or '').strip()))
+        if fallback_value is not None:
+            fallback_candidates.append(fallback_value)
+    if specific is not None and float(specific or 0) > 0:
+        return specific
+    if fallback_candidates:
+        positive_fallbacks = [value for value in fallback_candidates if float(value or 0) > 0]
+        if positive_fallbacks:
+            return positive_fallbacks[0]
+    if specific is not None:
+        return specific
+    if fallback_candidates:
+        return fallback_candidates[0]
+    return 0.0
+
+
+def _build_meeting_eval_payload(cursor, weekly_anchor=None, monthly_anchor=None):
+    saved_prices = _load_meeting_eval_saved_prices(cursor)
+    today = datetime.now().date()
+    this_monday = today - timedelta(days=today.weekday())
+
+    try:
+        weekly_anchor_date = datetime.strptime((weekly_anchor or '').strip(), '%Y-%m-%d').date() if weekly_anchor else this_monday
+    except Exception:
+        weekly_anchor_date = this_monday
+
+    weekly_anchor_date = weekly_anchor_date - timedelta(days=weekly_anchor_date.weekday())
+    weekly_end = weekly_anchor_date - timedelta(days=1)
+    weekly_start = weekly_anchor_date - timedelta(days=7)
+    anchor_month_start = weekly_anchor_date.replace(day=1)
+    next_anchor_month = (anchor_month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    anchor_month_end = next_anchor_month - timedelta(days=1)
+
+    first_this_month = today.replace(day=1)
+    prev_month_end = first_this_month - timedelta(days=1)
+    prev_month_start = prev_month_end.replace(day=1)
+    try:
+        monthly_anchor_date = datetime.strptime((monthly_anchor or '').strip(), '%Y-%m-%d').date() if monthly_anchor else prev_month_end
+    except Exception:
+        monthly_anchor_date = prev_month_end
+    monthly_month_start = monthly_anchor_date.replace(day=1)
+    next_month = (monthly_month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    monthly_month_end = next_month - timedelta(days=1)
+
+    weekly_rows = cursor.execute(
+        f'''
+        SELECT
+            pr.workplace,
+            pr.production_date,
+            pr.product_id,
+            COALESCE(p.code, '-') AS product_code,
+            COALESCE(p.name, printf('상품 #%s', pr.product_id)) AS product_name,
+            SUM(COALESCE(pr.actual_boxes, 0)) AS qty
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE pr.production_date BETWEEN ? AND ?
+          AND COALESCE(pr.actual_boxes, 0) > 0
+          AND {_meeting_completed_clause()}
+        GROUP BY pr.workplace, pr.production_date, pr.product_id, p.code, p.name
+        ORDER BY pr.workplace, pr.production_date, p.name
+        ''',
+        (weekly_start.strftime('%Y-%m-%d'), weekly_end.strftime('%Y-%m-%d')),
+    ).fetchall()
+
+    weekday_names = ['월', '화', '수', '목', '금', '토', '일']
+    weekly_map = {}
+    for row in weekly_rows:
+        workplace = (row['workplace'] or '-').strip() or '-'
+        entry = weekly_map.setdefault(
+            workplace,
+            {'workplace': workplace, 'days': [], 'days_map': {}, 'total_qty': 0.0},
+        )
+        production_date = (row['production_date'] or '').strip()
+        day_entry = entry['days_map'].get(production_date)
+        if day_entry is None:
+            try:
+                weekday_label = weekday_names[datetime.strptime(production_date, '%Y-%m-%d').weekday()]
+            except Exception:
+                weekday_label = '-'
+            day_entry = {
+                'production_date': production_date,
+                'weekday_label': weekday_label,
+                'items': [],
+                'total_qty': 0.0,
+            }
+            entry['days_map'][production_date] = day_entry
+            entry['days'].append(day_entry)
+        qty = round(float(row['qty'] or 0), 1)
+        day_entry['items'].append(
+            {
+                'product_id': int(row['product_id'] or 0),
+                'product_code': row['product_code'] or '-',
+                'product_name': row['product_name'] or '-',
+                'qty': qty,
+                'price_scope': 'weekly',
+                'item_key': f"{workplace}|{production_date}|{int(row['product_id'] or 0)}",
+            }
+        )
+        day_entry['total_qty'] += qty
+        entry['total_qty'] += qty
+
+    weekly_workplaces = []
+    for workplace in sorted(weekly_map.keys(), key=_material_workplace_sort_key):
+        entry = weekly_map[workplace]
+        for day_entry in entry['days']:
+            day_entry['total_qty'] = round(day_entry['total_qty'], 1)
+            for item in day_entry['items']:
+                item['saved_price'] = _meeting_eval_fallback_price(
+                    saved_prices,
+                    item['price_scope'],
+                    item['item_key'],
+                    [('product', str(int(item.get('product_id') or 0)))],
+                )
+        entry.pop('days_map', None)
+        entry['total_qty'] = round(entry['total_qty'], 1)
+        weekly_workplaces.append(entry)
+
+    monthly_product_rows = cursor.execute(
+        f'''
+        SELECT
+            pr.workplace,
+            pr.product_id,
+            COALESCE(p.code, '-') AS product_code,
+            COALESCE(p.name, printf('상품 #%s', pr.product_id)) AS product_name,
+            SUM(COALESCE(pr.actual_boxes, 0)) AS qty
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE pr.production_date BETWEEN ? AND ?
+          AND COALESCE(pr.actual_boxes, 0) > 0
+          AND {_meeting_completed_clause()}
+        GROUP BY pr.workplace, pr.product_id, p.code, p.name
+        ORDER BY p.name, pr.workplace
+        ''',
+        (monthly_month_start.strftime('%Y-%m-%d'), monthly_month_end.strftime('%Y-%m-%d')),
+    ).fetchall()
+
+    monthly_products = [
+        {
+            'workplace': (row['workplace'] or '-').strip() or '-',
+            'product_id': int(row['product_id'] or 0),
+            'product_code': row['product_code'] or '-',
+            'product_name': row['product_name'] or '-',
+            'qty': round(float(row['qty'] or 0), 1),
+            'price_scope': 'monthly_product',
+            'item_key': f"{((row['workplace'] or '-').strip() or '-')}|{int(row['product_id'] or 0)}",
+        }
+        for row in monthly_product_rows
+    ]
+    for item in monthly_products:
+        item['saved_price'] = _meeting_eval_fallback_price(
+            saved_prices,
+            item['price_scope'],
+            item['item_key'],
+            [('product', str(int(item.get('product_id') or 0)))],
+        )
+
+    monthly_raw_rows = cursor.execute(
+        f'''
+        SELECT
+            COALESCE(NULLIF(TRIM(rm.code), ''), '-') AS raw_code,
+            COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), rm.name, printf('원초 #%s', pmu.raw_material_id)) AS raw_name,
+            SUM(COALESCE(pmu.actual_quantity, 0)) AS input_qty,
+            SUM(COALESCE(pmu.expected_quantity, 0)) AS output_qty
+        FROM production_material_usage pmu
+        JOIN productions pr ON pr.id = pmu.production_id
+        LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+        WHERE pr.production_date BETWEEN ? AND ?
+          AND COALESCE(pmu.actual_quantity, 0) > 0
+          AND (pmu.raw_material_id IS NOT NULL OR COALESCE(TRIM(pmu.raw_material_name), '') != '')
+          AND {_meeting_completed_clause()}
+        GROUP BY pmu.raw_material_id, raw_code, raw_name
+        ORDER BY raw_name
+        ''',
+        (monthly_month_start.strftime('%Y-%m-%d'), monthly_month_end.strftime('%Y-%m-%d')),
+    ).fetchall()
+
+    monthly_raws = [
+        {
+            'raw_code': row['raw_code'] or '-',
+            'raw_name': row['raw_name'] or '-',
+            'input_qty': round(float(row['input_qty'] or 0), 1),
+            'output_qty': round(float(row['output_qty'] or 0), 1),
+            'yield_rate': round((float(row['output_qty'] or 0) / float(row['input_qty'] or 0) * 100), 2) if float(row['input_qty'] or 0) > 0 else 0.0,
+            'unit': '속',
+        }
+        for row in monthly_raw_rows
+    ]
+
+    weekly_calendar_rows = cursor.execute(
+        f'''
+        SELECT DISTINCT pr.production_date
+        FROM productions pr
+        WHERE COALESCE(pr.actual_boxes, 0) > 0
+          AND {_meeting_completed_clause()}
+        ORDER BY pr.production_date
+        '''
+    ).fetchall()
+    all_available_dates = []
+    for row in weekly_calendar_rows:
+        production_date = (row['production_date'] or '').strip()
+        if not production_date:
+            continue
+        try:
+            production_dt = datetime.strptime(production_date, '%Y-%m-%d').date()
+        except Exception:
+            continue
+        week_start = production_dt - timedelta(days=production_dt.weekday())
+        anchor_date = week_start + timedelta(days=7)
+        all_available_dates.append(anchor_date.strftime('%Y-%m-%d'))
+    all_available_dates = sorted(set(all_available_dates))
+    available_months = sorted({date_text[:7] for date_text in all_available_dates if len(date_text) >= 7})
+    visible_month_dates = [date_text for date_text in all_available_dates if anchor_month_start.strftime('%Y-%m') == date_text[:7]]
+    monthly_available_dates = sorted({(row['production_date'] or '').strip() for row in weekly_calendar_rows if (row['production_date'] or '').strip()})
+    monthly_available_months = sorted({date_text[:7] for date_text in monthly_available_dates if len(date_text) >= 7})
+    monthly_visible_dates = [date_text for date_text in monthly_available_dates if monthly_month_start.strftime('%Y-%m') == date_text[:7]]
+
+    return {
+        'weekly': {
+            'start_date': weekly_start.strftime('%Y-%m-%d'),
+            'end_date': weekly_end.strftime('%Y-%m-%d'),
+            'anchor_date': weekly_anchor_date.strftime('%Y-%m-%d'),
+            'anchor_month': anchor_month_start.strftime('%Y-%m'),
+            'anchor_month_start': anchor_month_start.strftime('%Y-%m-%d'),
+            'anchor_month_end': anchor_month_end.strftime('%Y-%m-%d'),
+            'available_dates': visible_month_dates,
+            'all_available_dates': all_available_dates,
+            'available_months': available_months,
+            'workplaces': weekly_workplaces,
+            'total_qty': round(sum(item['total_qty'] for item in weekly_workplaces), 1),
+        },
+        'monthly': {
+            'start_date': monthly_month_start.strftime('%Y-%m-%d'),
+            'end_date': monthly_month_end.strftime('%Y-%m-%d'),
+            'anchor_date': monthly_anchor_date.strftime('%Y-%m-%d'),
+            'anchor_month': monthly_month_start.strftime('%Y-%m'),
+            'available_dates': monthly_visible_dates,
+            'all_available_dates': monthly_available_dates,
+            'available_months': monthly_available_months,
+            'products': monthly_products,
+            'raws': monthly_raws,
+            'products_total_qty': round(sum(item['qty'] for item in monthly_products), 1),
+            'raw_input_total_qty': round(sum(item['input_qty'] for item in monthly_raws), 1),
+            'raw_output_total_qty': round(sum(item['output_qty'] for item in monthly_raws), 1),
+            'raw_total_yield_rate': round((sum(item['output_qty'] for item in monthly_raws) / sum(item['input_qty'] for item in monthly_raws) * 100), 2) if sum(item['input_qty'] for item in monthly_raws) > 0 else 0.0,
+        },
+    }
 
 
 def _normalize_requirement_sub_category(category):
@@ -1301,7 +1758,7 @@ def integrated_management():
     if not session['user']['is_admin']:
         return "??????????????源낆┰?????????곸죩", 403
 
-    tab = request.args.get('tab', 'products')  # products, raw_materials, materials, productions, purchase_requests, requirements_calculator, inventory_audit, db_backups
+    tab = request.args.get('tab', 'products')  # products, raw_materials, materials, productions, requirements_calculator, meeting_eval, inventory_audit, db_backups
     if tab in ('stats', 'audit_logs'):
         tab = 'products'
     wp_filter = request.args.get('wp', 'all')
@@ -1330,13 +1787,20 @@ def integrated_management():
     inventory_product_id = (request.args.get('inventory_product_id') or '').strip()
     inventory_q = (request.args.get('inventory_q') or '').strip()
     inventory_wp = (request.args.get('inventory_wp') or 'all').strip() or 'all'
+    meeting_view = (request.args.get('meeting_view') or 'all').strip() or 'all'
+    meeting_week_anchor = (request.args.get('meeting_week_anchor') or '').strip()
+    meeting_month_anchor = (request.args.get('meeting_month_anchor') or '').strip()
+    if meeting_view not in ('all', 'weekly', 'monthly_product', 'monthly_raw'):
+        meeting_view = 'all'
     selected_inventory_wps = []
     if inventory_wp != 'all':
         selected_inventory_wps = [inventory_wp]
 
     conn = get_db()
     cursor = conn.cursor()
+    _ensure_meeting_eval_price_schema(conn)
     stats = None
+    meeting_eval = None
     if tab in ('materials', 'purchase_requests'):
         _sync_material_stock_with_lots(conn)
 
@@ -1669,6 +2133,9 @@ def integrated_management():
         stats = _query_integrated_stats(cursor, wp_filter, stat_period, stat_anchor)
     elif tab == 'requirements_calculator':
         data = []
+    elif tab == 'meeting_eval':
+        data = []
+        meeting_eval = _build_meeting_eval_payload(cursor, meeting_week_anchor, meeting_month_anchor)
 
     elif tab == 'inventory_audit':
         # 월말 재고 조사용 작업장별 상세 리스트 (현재고 0 초과만)
@@ -1737,12 +2204,84 @@ def integrated_management():
                            can_manage_material_lots=_can_manage_material_lots(),
                            rm_tab=rm_tab,
                            prod_tab=prod_tab,
-                           production_counts=production_counts,
-                           stats=stats,
-                           stat_period=stat_period,
+                            production_counts=production_counts,
+                            stats=stats,
+                            meeting_eval=meeting_eval,
+                            meeting_view=meeting_view,
+                            meeting_week_anchor=meeting_week_anchor,
+                            meeting_month_anchor=meeting_month_anchor,
+                            stat_period=stat_period,
                            stat_view=stat_view,
-                           stat_anchor=(stats or {}).get('anchor', stat_anchor),
-                           backup_keep_count=keep_count)
+                            stat_anchor=(stats or {}).get('anchor', stat_anchor),
+                            backup_keep_count=keep_count)
+
+
+@bp.route('/integrated-management/meeting-eval/save-prices', methods=['POST'])
+@admin_required
+def integrated_meeting_eval_save_prices():
+    conn = get_db()
+    cursor = conn.cursor()
+    _ensure_meeting_eval_price_schema(conn)
+
+    payload = request.get_json(silent=True) or {}
+    scope = (payload.get('scope') or '').strip()
+    items = payload.get('items') or []
+    username = (session.get('user') or {}).get('username', '')
+
+    if scope not in ('weekly', 'monthly_product', 'monthly_raw'):
+        return jsonify({'ok': False, 'message': '저장 구분이 올바르지 않습니다.'}), 400
+    if not isinstance(items, list):
+        return jsonify({'ok': False, 'message': '저장 항목 형식이 올바르지 않습니다.'}), 400
+
+    try:
+        with conn:
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                item_key = str(item.get('item_key') or '').strip()
+                if not item_key:
+                    continue
+                unit_price = float(item.get('unit_price') or 0)
+                cursor.execute(
+                    '''
+                    INSERT INTO meeting_eval_prices (price_scope, item_key, unit_price, updated_by, updated_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(price_scope, item_key)
+                    DO UPDATE SET unit_price = excluded.unit_price, updated_by = excluded.updated_by, updated_at = CURRENT_TIMESTAMP
+                    ''',
+                    (scope, item_key, unit_price, username),
+                )
+                generic_scope = None
+                generic_key = None
+                if scope == 'weekly':
+                    product_id = item_key.split('|')[-1].strip()
+                    if product_id:
+                        generic_scope = 'product'
+                        generic_key = product_id
+                elif scope == 'monthly_product':
+                    parts = item_key.split('|')
+                    product_id = parts[-1].strip() if parts else ''
+                    if product_id:
+                        generic_scope = 'product'
+                        generic_key = product_id
+                elif scope == 'monthly_raw':
+                    generic_scope = 'raw'
+                    generic_key = item_key
+
+                if generic_scope and generic_key and unit_price > 0:
+                    cursor.execute(
+                        '''
+                        INSERT INTO meeting_eval_prices (price_scope, item_key, unit_price, updated_by, updated_at)
+                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(price_scope, item_key)
+                        DO UPDATE SET unit_price = excluded.unit_price, updated_by = excluded.updated_by, updated_at = CURRENT_TIMESTAMP
+                        ''',
+                        (generic_scope, generic_key, unit_price, username),
+                    )
+    except Exception as exc:
+        return jsonify({'ok': False, 'message': f'단가 저장 중 오류가 발생했습니다: {exc}'}), 500
+
+    return jsonify({'ok': True})
 
 
 @bp.route('/integrated-management/inventory-audit/export')
