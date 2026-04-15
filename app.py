@@ -386,3 +386,16 @@ if __name__ == '__main__':
     print(f'\n접속 URL: http://localhost:{port}')
     print('관리자 계정: admin / 1111\n')
     app.run(host=host, port=port, debug=True)
+
+
+def create_app():
+    app = Flask(__name__)
+    
+    app.secret_key = os.environ.get("SECRET_KEY", DEFAULT_SECRET_KEY)
+    
+    register_blueprints(app)
+    
+    return app
+
+
+app = create_app()
