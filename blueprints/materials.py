@@ -1238,6 +1238,8 @@ def materials():
     for row in material_rows:
         item = dict(row)
         workplace_stock = float(workplace_stock_by_id.get(int(item.get('id') or 0), 0) or 0)
+        if workplace_stock <= 0:
+            continue
         item['unit'] = _normalize_material_unit(item.get('unit'))
         item['workplace_stock'] = workplace_stock
         item['logistics_stock'] = 0.0
@@ -1802,12 +1804,31 @@ def material_detail(material_id):
             """
 SELECT
                 COALESCE(p.production_date, substr(pmu.created_at, 1, 10)) as use_date,
+                pmu.production_id as production_id,
                 ('PROD-' || pmu.production_id) as production_no,
                 COALESCE(prd.name, '-') as product_name,
                 COALESCE(ml.lot, '-') as lot,
                 COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as used_quantity,
+                COALESCE(pmu.actual_quantity, 0) as total_used_quantity,
                 CASE
-                    WHEN pmlu.id IS NOT NULL THEN COALESCE(ml.current_quantity, 0)
+                    WHEN pmlu.id IS NOT NULL THEN
+                        COALESCE(ml.received_quantity, 0) - COALESCE((
+                            SELECT SUM(COALESCE(pmlu2.quantity, 0))
+                            FROM production_material_lot_usage pmlu2
+                            JOIN production_material_usage pmu2 ON pmu2.id = pmlu2.production_usage_id
+                            LEFT JOIN productions p2 ON p2.id = pmu2.production_id
+                            WHERE pmlu2.material_lot_id = pmlu.material_lot_id
+                              AND (
+                                  COALESCE(p2.production_date, substr(pmu2.created_at, 1, 10)) < COALESCE(p.production_date, substr(pmu.created_at, 1, 10))
+                                  OR (
+                                      COALESCE(p2.production_date, substr(pmu2.created_at, 1, 10)) = COALESCE(p.production_date, substr(pmu.created_at, 1, 10))
+                                      AND (
+                                          pmu2.production_id < pmu.production_id
+                                          OR (pmu2.production_id = pmu.production_id AND pmlu2.id <= pmlu.id)
+                                      )
+                                  )
+                              )
+                        ), 0)
                     ELSE COALESCE(m.current_stock, 0)
                 END as remaining_quantity,
                 COALESCE(
@@ -2593,7 +2614,8 @@ def raw_material_detail(raw_material_id):
             cursor.execute(
                 f'''
                 SELECT
-                    COALESCE(rml.created_at, '') as log_date,
+                    COALESCE(p.production_date, substr(rml.created_at, 1, 10)) as log_date,
+                    rml.production_id as production_id,
                     COALESCE(pr.name, '-') as product_name,
                     COALESCE(p.production_date, substr(rml.created_at, 1, 10)) as production_date,
                     COALESCE(rm.receiving_date, '-') as receiving_date,
@@ -2609,6 +2631,8 @@ def raw_material_detail(raw_material_id):
                 LEFT JOIN products pr ON p.product_id = pr.id
                 WHERE rml.raw_material_id IN ({placeholders})
                   AND COALESCE(rml.type, '') = 'production'
+                  AND COALESCE(p.production_date, '') <> ''
+                  AND p.product_id IS NOT NULL
                 ORDER BY rml.created_at DESC, rml.id DESC
                 LIMIT 200
                 ''',

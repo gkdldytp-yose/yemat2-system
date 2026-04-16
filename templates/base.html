@@ -271,6 +271,9 @@
             <li><a href="/raw-materials" onclick="closeMenu()">원초 관리</a></li>
             <li><a href="/materials" onclick="closeMenu()">부자재 관리</a></li>
             {% if _sa %}
+            <li><a href="/production-statistics" onclick="closeMenu()">생산통계</a></li>
+            {% endif %}
+            {% if _sa %}
             <li><a href="/integrated-management" onclick="closeMenu()" style="color:#f39c12;font-weight:600;">🔧 통합 관리</a></li>
             <li><a href="/users" class="admin-btn" onclick="closeMenu()">👥 사용자</a></li>
             {% endif %}

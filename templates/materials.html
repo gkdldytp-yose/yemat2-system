@@ -437,7 +437,10 @@
         </div>
 
         <div id="materialLogsPanel" class="material-panel">
-            <p class="material-section-title">부자재 사용 로그</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
+                <p class="material-section-title" style="margin:0;">부자재 사용 로그</p>
+                <div style="font-size:0.84rem;font-weight:900;color:#0f172a;">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
+            </div>
             <div class="table-container">
                 <table>
                     <thead><tr><th>사용일</th><th>생산번호</th><th>상품명</th><th>사용 로트</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
@@ -2233,6 +2236,11 @@ async function toggleLotEdit(lotId){
 
 function renderUsageRows(logs){
     const tbody = document.getElementById('usageLogTableBody');
+    const totalEl = document.getElementById('md_usage_total_qty');
+    const totalQty = Array.isArray(logs) ? logs.reduce((sum, log) => sum + Number(log.total_used_quantity || 0), 0) : 0;
+    if(totalEl){
+        totalEl.textContent = totalQty.toFixed(1);
+    }
     if(!logs || logs.length === 0){
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
         return;
@@ -2240,7 +2248,7 @@ function renderUsageRows(logs){
     tbody.innerHTML = logs.map(log => `
         <tr>
             <td>${(log.use_date || '-').toString().slice(0,10)}</td>
-            <td>${log.production_no || '-'}</td>
+            <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_no || '-'}</a>` : (log.production_no || '-')}</td>
             <td>${log.product_name || '-'}</td>
             <td>${log.lot || '-'}</td>
             <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
