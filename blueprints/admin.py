@@ -12,6 +12,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 
 from core import (
     get_db,
+    get_workplace,
     login_required,
     admin_required,
     WORKPLACES,
@@ -340,6 +341,651 @@ def _build_simple_xlsx(sheet_name, headers, rows):
 
 def _meeting_completed_clause():
     return "(COALESCE(pr.status, '') = '완료' OR COALESCE(pr.status, '') LIKE '%완료%')"
+
+
+def _format_stat_number(value, digits=1):
+    number = float(value or 0)
+    if digits == 0:
+        return f"{int(round(number)):,}"
+    return f"{number:,.{digits}f}"
+
+
+def _normalize_statistics_material_category(category):
+    text = (category or '').strip()
+    if text == '기름':
+        return 'oil'
+    if text == '소금':
+        return 'salt'
+    if text == '내포':
+        return 'inner'
+    if text == '외포':
+        return 'outer'
+    if text == '박스':
+        return 'box'
+    if text in ('실리카', '실리카겔'):
+        return 'silica'
+    if text == '트레이':
+        return 'tray'
+    return 'etc'
+
+
+def _format_stat_material_entry(name, qty, unit=''):
+    qty_text = _format_stat_number(qty, 1)
+    unit_text = (unit or '').strip()
+    return f"{name} {qty_text}{unit_text}".strip()
+
+
+PRODUCTION_STATISTICS_VIEWS = ('date', 'product', 'material', 'raw', 'workplace')
+PRODUCTION_STATISTICS_SESSION_KEY = 'production_statistics_state'
+
+
+def _normalize_production_statistics_view(view):
+    current = (view or '').strip()
+    return current if current in PRODUCTION_STATISTICS_VIEWS else 'date'
+
+
+def _empty_production_statistics_summary():
+    return {
+        'production_count': 0,
+        'total_box_qty': 0.0,
+        'total_raw_input_qty': 0.0,
+        'total_material_usage_qty': 0.0,
+    }
+
+
+def _empty_production_statistics_payload(view='date', workplace=''):
+    normalized_view = _normalize_production_statistics_view(view)
+    return {
+        'view': normalized_view,
+        'date_from': '',
+        'date_to': '',
+        'workplace': workplace,
+        'selected_workplace': workplace,
+        'keyword': '',
+        'selected_product_id': '',
+        'product_options': [],
+        'bom_material_options': [],
+        'bom_material_map': {},
+        'date_rows': [],
+        'product_rows': [],
+        'material_rows': [],
+        'raw_rows': [],
+        'workplace_rows': [],
+        'rows': [],
+        'summary': _empty_production_statistics_summary(),
+    }
+
+
+def _load_production_statistics_product_options(cursor, workplace=''):
+    params = []
+    query = f'''
+        SELECT DISTINCT
+            pr.product_id,
+            COALESCE(NULLIF(TRIM(p.code), ''), printf('P%05d', pr.product_id)) as product_code,
+            COALESCE(p.name, printf('상품 #%s', pr.product_id)) as product_name
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE COALESCE(pr.actual_boxes, pr.planned_boxes, 0) > 0
+          AND {_meeting_completed_clause()}
+          AND pr.product_id IS NOT NULL
+    '''
+    if workplace:
+        query += ' AND COALESCE(pr.workplace, "") = ?'
+        params.append(workplace)
+    query += ' ORDER BY product_name ASC, product_code ASC'
+    options = []
+    for row in cursor.execute(query, params).fetchall():
+        product_id = str(int(row['product_id'] or 0))
+        if not product_id or product_id == '0':
+            continue
+        product_code = (row['product_code'] or '-').strip() or '-'
+        product_name = (row['product_name'] or '-').strip() or '-'
+        options.append({
+            'product_id': product_id,
+            'product_code': product_code,
+            'product_name': product_name,
+            'label': f'{product_name} ({product_code})',
+        })
+    return options
+
+
+def _load_production_statistics_bom_material_options(cursor, product_id=''):
+    selected_product_id = str(product_id or '').strip()
+    if not selected_product_id:
+        return []
+    try:
+        product_id_int = int(selected_product_id)
+    except Exception:
+        return []
+    rows = cursor.execute(
+        '''
+        SELECT DISTINCT
+            m.id as material_id,
+            COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
+            COALESCE(m.name, printf('부자재 #%s', m.id)) as material_name,
+            COALESCE(m.category, '기타') as material_category
+        FROM bom b
+        JOIN materials m ON m.id = b.material_id
+        WHERE b.product_id = ?
+          AND b.material_id IS NOT NULL
+        ORDER BY material_category ASC, material_name ASC, material_code ASC
+        ''',
+        (product_id_int,),
+    ).fetchall()
+    options = []
+    for row in rows:
+        material_id = str(int(row['material_id'] or 0))
+        if not material_id or material_id == '0':
+            continue
+        material_code = (row['material_code'] or '-').strip() or '-'
+        material_name = (row['material_name'] or '-').strip() or '-'
+        material_category = (row['material_category'] or '기타').strip() or '기타'
+        options.append({
+            'material_id': material_id,
+            'material_code': material_code,
+            'material_name': material_name,
+            'material_category': material_category,
+            'label': material_name,
+        })
+    return options
+
+
+def _load_production_statistics_bom_material_map(cursor, product_ids=None):
+    valid_ids = []
+    for raw_id in product_ids or []:
+        try:
+            product_id = int(raw_id or 0)
+        except Exception:
+            product_id = 0
+        if product_id > 0:
+            valid_ids.append(product_id)
+    if not valid_ids:
+        return {}
+
+    placeholders = ','.join(['?'] * len(valid_ids))
+    rows = cursor.execute(
+        f'''
+        SELECT DISTINCT
+            b.product_id,
+            m.id as material_id,
+            COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
+            COALESCE(m.name, printf('부자재 #%s', m.id)) as material_name,
+            COALESCE(m.category, '기타') as material_category
+        FROM bom b
+        JOIN materials m ON m.id = b.material_id
+        WHERE b.product_id IN ({placeholders})
+          AND b.material_id IS NOT NULL
+        ORDER BY b.product_id ASC, material_category ASC, material_name ASC, material_code ASC
+        ''',
+        valid_ids,
+    ).fetchall()
+    result = {}
+    for row in rows:
+        product_key = str(int(row['product_id'] or 0))
+        if not product_key or product_key == '0':
+            continue
+        result.setdefault(product_key, []).append({
+            'material_id': str(int(row['material_id'] or 0)),
+            'material_code': (row['material_code'] or '-').strip() or '-',
+            'material_name': (row['material_name'] or '-').strip() or '-',
+            'material_category': (row['material_category'] or '기타').strip() or '기타',
+            'label': (row['material_name'] or '-').strip() or '-',
+        })
+    return result
+
+
+def _get_production_statistics_state():
+    state = session.get(PRODUCTION_STATISTICS_SESSION_KEY)
+    if isinstance(state, dict):
+        return state
+    return {}
+
+
+def _set_production_statistics_state(state):
+    session[PRODUCTION_STATISTICS_SESSION_KEY] = state
+    session.modified = True
+
+
+def _parse_statistics_date(value, fallback):
+    raw = (value or '').strip()
+    if not raw:
+        return fallback
+    try:
+        return datetime.strptime(raw, '%Y-%m-%d').date()
+    except ValueError:
+        return fallback
+
+
+def _build_production_statistics_payload(cursor, view='date', date_from=None, date_to=None, workplace='', keyword='', product_id=''):
+    today = datetime.now().date()
+    start_date = _parse_statistics_date(date_from, today.replace(day=1))
+    end_date = _parse_statistics_date(date_to, today)
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    params = [start_date.isoformat(), end_date.isoformat()]
+    query = f'''
+        SELECT
+            pr.id,
+            pr.production_date,
+            pr.workplace,
+            pr.product_id,
+            COALESCE(NULLIF(TRIM(p.code), ''), printf('P%05d', pr.product_id)) as product_code,
+            COALESCE(p.name, printf('상품 #%s', pr.product_id)) as product_name,
+            COALESCE(pr.actual_boxes, pr.planned_boxes, 0) as box_qty
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE pr.production_date BETWEEN ? AND ?
+          AND COALESCE(pr.actual_boxes, pr.planned_boxes, 0) > 0
+          AND {_meeting_completed_clause()}
+    '''
+    if workplace:
+        query += ' AND COALESCE(pr.workplace, "") = ?'
+        params.append(workplace)
+    query += ' ORDER BY pr.production_date ASC, pr.id ASC'
+
+    production_rows = [dict(row) for row in cursor.execute(query, params).fetchall()]
+    production_ids = [int(row['id']) for row in production_rows if row.get('id')]
+    production_map = {}
+    for row in production_rows:
+        production_id = int(row['id'])
+        production_map[production_id] = {
+            'production_id': production_id,
+            'production_no': str(production_id),
+            'production_date': (row.get('production_date') or '').strip(),
+            'workplace': (row.get('workplace') or '-').strip() or '-',
+            'product_id': int(row.get('product_id') or 0),
+            'product_code': (row.get('product_code') or '-').strip() or '-',
+            'product_name': (row.get('product_name') or '-').strip() or '-',
+            'box_qty': round(float(row.get('box_qty') or 0), 1),
+            'raw_entries': [],
+            'material_entries': [],
+            'category_qtys': {'inner': 0.0, 'outer': 0.0, 'box': 0.0, 'silica': 0.0, 'tray': 0.0},
+            'oil_entries': [],
+            'salt_entries': [],
+        }
+
+    if production_ids:
+        placeholders = ','.join(['?'] * len(production_ids))
+        product_ids = sorted({int(row.get('product_id') or 0) for row in production_rows if int(row.get('product_id') or 0) > 0})
+        raw_query = f'''
+            SELECT
+                pmu.production_id,
+                COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), rm.name, printf('원초 #%s', pmu.raw_material_id)) as raw_name,
+                COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '-') as ja_ho,
+                COALESCE(pmu.actual_quantity, pmu.expected_quantity, 0) as qty
+            FROM production_material_usage pmu
+            LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+            WHERE pmu.production_id IN ({placeholders})
+              AND pmu.raw_material_id IS NOT NULL
+              AND COALESCE(pmu.actual_quantity, pmu.expected_quantity, 0) > 0
+            ORDER BY pmu.production_id ASC, pmu.id ASC
+        '''
+        for row in cursor.execute(raw_query, production_ids).fetchall():
+            item = dict(row)
+            prod = production_map.get(int(item['production_id']))
+            if not prod:
+                continue
+            prod['raw_entries'].append({
+                'raw_name': (item.get('raw_name') or '-').strip() or '-',
+                'ja_ho': (item.get('ja_ho') or '-').strip() or '-',
+                'qty': round(float(item.get('qty') or 0), 1),
+            })
+
+        material_query = f'''
+            SELECT
+                pmu.production_id,
+                pmu.material_id,
+                COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', pmu.material_id)) as material_code,
+                COALESCE(m.name, printf('부자재 #%s', pmu.material_id)) as material_name,
+                COALESCE(m.category, '기타') as category,
+                COALESCE(m.unit, '') as unit,
+                COALESCE(pmu.actual_quantity, pmu.expected_quantity, 0) as qty
+            FROM production_material_usage pmu
+            LEFT JOIN materials m ON m.id = pmu.material_id
+            WHERE pmu.production_id IN ({placeholders})
+              AND pmu.material_id IS NOT NULL
+              AND COALESCE(pmu.actual_quantity, pmu.expected_quantity, 0) > 0
+            ORDER BY pmu.production_id ASC, pmu.id ASC
+        '''
+        for row in cursor.execute(material_query, production_ids).fetchall():
+            item = dict(row)
+            prod = production_map.get(int(item['production_id']))
+            if not prod:
+                continue
+            category_key = _normalize_statistics_material_category(item.get('category'))
+            entry = {
+                'material_id': int(item.get('material_id') or 0),
+                'material_code': (item.get('material_code') or '-').strip() or '-',
+                'material_name': (item.get('material_name') or '-').strip() or '-',
+                'category': (item.get('category') or '기타').strip() or '기타',
+                'category_key': category_key,
+                'unit': (item.get('unit') or '').strip(),
+                'qty': round(float(item.get('qty') or 0), 1),
+            }
+            prod['material_entries'].append(entry)
+            if category_key == 'oil':
+                prod['oil_entries'].append(entry)
+            elif category_key == 'salt':
+                prod['salt_entries'].append(entry)
+            elif category_key in prod['category_qtys']:
+                prod['category_qtys'][category_key] += entry['qty']
+
+        bom_material_map = {}
+        if product_ids:
+            product_placeholders = ','.join(['?'] * len(product_ids))
+            bom_rows = cursor.execute(
+                f'''
+                SELECT
+                    b.product_id,
+                    b.material_id,
+                    COALESCE(b.quantity_per_box, 0) as quantity_per_box,
+                    COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
+                    COALESCE(m.name, printf('부자재 #%s', m.id)) as material_name,
+                    COALESCE(m.category, '기타') as material_category,
+                    COALESCE(NULLIF(TRIM(m.unit), ''), '-') as material_unit
+                FROM bom b
+                JOIN materials m ON m.id = b.material_id
+                WHERE b.product_id IN ({product_placeholders})
+                  AND b.material_id IS NOT NULL
+                ORDER BY b.product_id ASC, material_category ASC, material_name ASC
+                ''',
+                product_ids,
+            ).fetchall()
+            for row in bom_rows:
+                product_key = int(row['product_id'] or 0)
+                if product_key <= 0:
+                    continue
+                bom_material_map.setdefault(product_key, []).append({
+                    'material_id': int(row['material_id'] or 0),
+                    'material_code': (row['material_code'] or '-').strip() or '-',
+                    'material_name': (row['material_name'] or '-').strip() or '-',
+                    'category': (row['material_category'] or '기타').strip() or '기타',
+                    'unit': (row['material_unit'] or '-').strip() or '-',
+                    'quantity_per_box': float(row['quantity_per_box'] or 0),
+                })
+    else:
+        bom_material_map = {}
+
+    production_items = []
+    for prod in production_map.values():
+        raw_names = ', '.join(dict.fromkeys([entry['raw_name'] for entry in prod['raw_entries']])) or '-'
+        raw_lots = ', '.join(dict.fromkeys([entry['ja_ho'] for entry in prod['raw_entries']])) or '-'
+        raw_input_qty = round(sum(entry['qty'] for entry in prod['raw_entries']), 1)
+        oil_entries_formatted = [
+            _format_stat_material_entry(entry['material_name'], entry['qty'], entry['unit'])
+            for entry in prod['oil_entries']
+        ]
+        oil_text = ', '.join(oil_entries_formatted) or '-'
+        oil_1_text = oil_entries_formatted[0] if len(oil_entries_formatted) >= 1 else '-'
+        oil_2_text = oil_entries_formatted[1] if len(oil_entries_formatted) >= 2 else '-'
+        salt_text = ', '.join(_format_stat_material_entry(entry['material_name'], entry['qty'], entry['unit']) for entry in prod['salt_entries']) or '-'
+        prod['raw_names'] = raw_names
+        prod['raw_lots'] = raw_lots
+        prod['raw_input_qty'] = raw_input_qty
+        prod['yield_rate'] = round((float(prod['box_qty'] or 0) / float(raw_input_qty or 0) * 100), 1) if float(raw_input_qty or 0) > 0 else 0.0
+        prod['oil_text'] = oil_text
+        prod['oil_1_text'] = oil_1_text
+        prod['oil_2_text'] = oil_2_text
+        prod['salt_text'] = salt_text
+        prod['inner_qty'] = round(prod['category_qtys']['inner'], 1)
+        prod['outer_qty'] = round(prod['category_qtys']['outer'], 1)
+        prod['box_material_qty'] = round(prod['category_qtys']['box'], 1)
+        prod['silica_qty'] = round(prod['category_qtys']['silica'], 1)
+        prod['tray_qty'] = round(prod['category_qtys']['tray'], 1)
+        prod['search_blob'] = ' '.join([
+            prod['production_no'],
+            prod['production_date'],
+            prod['workplace'],
+            prod['product_code'],
+            prod['product_name'],
+            raw_names,
+            raw_lots,
+            oil_text,
+            salt_text,
+            ' '.join(entry['material_name'] for entry in prod['material_entries']),
+        ]).lower()
+        production_items.append(prod)
+
+    product_options = []
+    seen_product_ids = set()
+    for item in production_items:
+        option_key = str(item['product_id'] or '')
+        if not option_key or option_key in seen_product_ids:
+            continue
+        seen_product_ids.add(option_key)
+        product_options.append({
+            'product_id': option_key,
+            'product_code': item['product_code'],
+            'product_name': item['product_name'],
+            'workplace': item['workplace'],
+            'label': f"{item['product_name']} ({item['product_code']})",
+        })
+    product_options.sort(key=lambda item: (item['product_name'], item['product_code']))
+
+    if view == 'product':
+        production_items.sort(key=lambda item: (item['product_name'], item['production_date'], item['production_id']))
+    else:
+        production_items.sort(key=lambda item: (item['production_date'], item['product_name'], item['production_id']))
+
+    material_rows = []
+    raw_rows = []
+    for prod in production_items:
+        material_entries_by_id = {
+            int(entry['material_id'] or 0): entry
+            for entry in prod['material_entries']
+            if int(entry.get('material_id') or 0) > 0
+        }
+        bom_entries = bom_material_map.get(int(prod.get('product_id') or 0), [])
+        material_row_entries = []
+        used_material_ids = set()
+
+        for bom_entry in bom_entries:
+            material_id = int(bom_entry.get('material_id') or 0)
+            if material_id <= 0:
+                continue
+            actual_entry = material_entries_by_id.get(material_id)
+            qty = actual_entry['qty'] if actual_entry else round(float(bom_entry.get('quantity_per_box') or 0) * float(prod.get('box_qty') or 0), 1)
+            material_row_entries.append({
+                'material_id': material_id,
+                'material_code': actual_entry['material_code'] if actual_entry else bom_entry['material_code'],
+                'material_name': actual_entry['material_name'] if actual_entry else bom_entry['material_name'],
+                'category': actual_entry['category'] if actual_entry else bom_entry['category'],
+                'unit': (actual_entry['unit'] if actual_entry else bom_entry['unit']) or '-',
+                'qty': qty,
+            })
+            used_material_ids.add(material_id)
+
+        for entry in prod['material_entries']:
+            material_id = int(entry.get('material_id') or 0)
+            if material_id > 0 and material_id in used_material_ids:
+                continue
+            material_row_entries.append(entry)
+
+        for entry in material_row_entries:
+            row = {
+                'production_id': prod['production_id'],
+                'production_date': prod['production_date'],
+                'production_no': prod['production_no'],
+                'workplace': prod['workplace'],
+                'product_id': prod['product_id'],
+                'material_id': int(entry.get('material_id') or 0),
+                'product_code': prod['product_code'],
+                'product_name': prod['product_name'],
+                'box_qty': prod['box_qty'],
+                'raw_names': prod['raw_names'],
+                'raw_lots': prod['raw_lots'],
+                'material_code': entry['material_code'],
+                'material_name': entry['material_name'],
+                'category': entry['category'],
+                'unit': entry['unit'] or '-',
+                'qty': entry['qty'],
+            }
+            row['search_blob'] = ' '.join(str(value) for value in row.values()).lower()
+            material_rows.append(row)
+        for entry in prod['raw_entries']:
+            row = {
+                'production_id': prod['production_id'],
+                'production_date': prod['production_date'],
+                'production_no': prod['production_no'],
+                'workplace': prod['workplace'],
+                'product_code': prod['product_code'],
+                'product_name': prod['product_name'],
+                'box_qty': prod['box_qty'],
+                'raw_name': entry['raw_name'],
+                'ja_ho': entry['ja_ho'],
+                'qty': entry['qty'],
+                'oil_text': prod['oil_text'],
+                'oil_1_text': prod['oil_1_text'],
+                'oil_2_text': prod['oil_2_text'],
+                'salt_text': prod['salt_text'],
+                'inner_qty': prod['inner_qty'],
+                'outer_qty': prod['outer_qty'],
+                'box_material_qty': prod['box_material_qty'],
+                'silica_qty': prod['silica_qty'],
+                'tray_qty': prod['tray_qty'],
+            }
+            row['search_blob'] = ' '.join(str(value) for value in row.values()).lower()
+            raw_rows.append(row)
+
+    material_rows.sort(key=lambda item: (item['production_date'], item['category'], item['material_name'], item['production_no']))
+    raw_rows.sort(key=lambda item: (item['production_date'], item['raw_name'], item['ja_ho'], item['production_no']))
+
+    active_view = _normalize_production_statistics_view(view)
+    keyword_text = (keyword or '').strip().lower()
+    selected_product_id = (str(product_id or '')).strip()
+    if keyword_text:
+        if active_view == 'product':
+            production_items = [
+                item for item in production_items
+                if keyword_text in ' '.join([item['product_code'], item['product_name']]).lower()
+            ]
+        elif active_view == 'material':
+            material_rows = [
+                row for row in material_rows
+                if str(row.get('material_id') or '') == keyword_text
+            ]
+        elif active_view == 'raw':
+            raw_rows = [
+                row for row in raw_rows
+                if keyword_text in ' '.join([row['raw_name'], row['ja_ho']]).lower()
+            ]
+
+    if active_view == 'product' and selected_product_id:
+        production_items = [
+            item for item in production_items
+            if str(item.get('product_id') or '') == selected_product_id
+        ]
+    if active_view == 'material' and selected_product_id:
+        material_rows = [
+            row for row in material_rows
+            if str(row.get('product_id') or '') == selected_product_id
+        ]
+
+    if active_view == 'material':
+        active_rows = material_rows
+    elif active_view == 'raw':
+        active_rows = raw_rows
+    else:
+        active_rows = production_items
+
+    return {
+        'view': active_view,
+        'date_from': start_date.isoformat(),
+        'date_to': end_date.isoformat(),
+        'workplace': workplace,
+        'keyword': keyword or '',
+        'selected_product_id': selected_product_id,
+        'product_options': product_options,
+        'date_rows': production_items,
+        'product_rows': production_items,
+        'material_rows': material_rows,
+        'raw_rows': raw_rows,
+        'workplace_rows': production_items,
+        'rows': active_rows,
+        'summary': {
+            'production_count': len(production_items),
+            'total_box_qty': round(sum(item['box_qty'] for item in production_items), 1),
+            'total_raw_input_qty': round(sum(item['raw_input_qty'] for item in production_items), 1),
+            'total_material_usage_qty': round(sum(item['qty'] for item in material_rows), 1),
+        },
+    }
+
+
+def _build_production_statistics_export_rows(payload):
+    view = payload.get('view') or 'date'
+    if view == 'material':
+        headers = ['부자재코드', '부자재명', '카테고리', '사용량', '사용일자', '생산번호', '생산 박스 수량']
+        rows = [[
+            row['material_code'],
+            row['material_name'],
+            row['category'],
+            f"{_format_stat_number(row['qty'], 1)} {row['unit']}".strip(),
+            row['production_date'],
+            row['production_no'],
+            f"{_format_stat_number(row['box_qty'], 1)} BOX",
+        ] for row in payload.get('rows', [])]
+        return headers, rows
+    if view == 'raw':
+        headers = ['일시', '생산번호', '상품명', '생산량(BOX)', '원초명', '자호', '투입속수', '기름1', '기름2', '소금', '내포', '외포', '박스', '실리카', '트레이']
+        rows = [[
+            row['production_date'],
+            row['production_no'],
+            row['product_name'],
+            _format_stat_number(row['box_qty'], 1),
+            row['raw_name'],
+            row['ja_ho'],
+            _format_stat_number(row['qty'], 1),
+            row['oil_1_text'],
+            row['oil_2_text'],
+            row['salt_text'],
+            _format_stat_number(row['inner_qty'], 1),
+            _format_stat_number(row['outer_qty'], 1),
+            _format_stat_number(row['box_material_qty'], 1),
+            _format_stat_number(row['silica_qty'], 1),
+            _format_stat_number(row['tray_qty'], 1),
+        ] for row in payload.get('rows', [])]
+        return headers, rows
+
+    if view == 'date':
+        headers = ['일시', '생산번호', '상품명', '생산량(BOX)', '원초명', '수율', '기름1', '기름2', '소금', '내포', '외포', '박스', '실리카', '트레이']
+        rows = [[
+            row['production_date'],
+            row['production_no'],
+            row['product_name'],
+            _format_stat_number(row['box_qty'], 1),
+            row['raw_names'],
+            f"{_format_stat_number(row['yield_rate'], 1)}%",
+            row['oil_1_text'],
+            row['oil_2_text'],
+            row['salt_text'],
+            _format_stat_number(row['inner_qty'], 1),
+            _format_stat_number(row['outer_qty'], 1),
+            _format_stat_number(row['box_material_qty'], 1),
+            _format_stat_number(row['silica_qty'], 1),
+            _format_stat_number(row['tray_qty'], 1),
+        ] for row in payload.get('rows', [])]
+        return headers, rows
+
+    headers = ['일시', '생산번호', '상품명', '생산량(BOX)', '원초명', '자호', '투입속수', '기름1', '기름2', '소금', '내포', '외포', '박스', '실리카', '트레이']
+    rows = [[
+        row['production_date'],
+        row['production_no'],
+        row['product_name'],
+        _format_stat_number(row['box_qty'], 1),
+        row['raw_names'],
+        row['raw_lots'],
+        _format_stat_number(row['raw_input_qty'], 1),
+        row['oil_1_text'],
+        row['oil_2_text'],
+        row['salt_text'],
+        _format_stat_number(row['inner_qty'], 1),
+        _format_stat_number(row['outer_qty'], 1),
+        _format_stat_number(row['box_material_qty'], 1),
+        _format_stat_number(row['silica_qty'], 1),
+        _format_stat_number(row['tray_qty'], 1),
+    ] for row in payload.get('rows', [])]
+    return headers, rows
 
 
 def _ensure_meeting_eval_price_schema(conn):
@@ -2836,7 +3482,8 @@ def integrated_raw_material_detail(raw_material_id):
             cursor.execute(
                 f'''
                 SELECT
-                    COALESCE(rml.created_at, '') as log_date,
+                    COALESCE(p.production_date, substr(rml.created_at, 1, 10)) as log_date,
+                    rml.production_id as production_id,
                     COALESCE(pr.name, '-') as product_name,
                     COALESCE(p.production_date, substr(rml.created_at, 1, 10)) as production_date,
                     COALESCE(rm.receiving_date, '-') as receiving_date,
@@ -2852,12 +3499,40 @@ def integrated_raw_material_detail(raw_material_id):
                 LEFT JOIN products pr ON p.product_id = pr.id
                 WHERE rml.raw_material_id IN ({placeholders})
                   AND COALESCE(rml.type, '') = 'production'
+                  AND COALESCE(p.production_date, '') <> ''
+                  AND p.product_id IS NOT NULL
                 ORDER BY rml.created_at DESC, rml.id DESC
                 LIMIT 200
                 ''',
                 raw_ids,
             )
-            usage_logs = [dict(row) for row in cursor.fetchall()]
+            usage_logs = []
+            for row in cursor.fetchall():
+                item = dict(row)
+                note_text = (item.get('note') or '').strip()
+                product_name = (item.get('product_name') or '').strip()
+                production_date = (item.get('production_date') or '').strip()
+
+                if product_name and product_name != '-':
+                    item['note'] = f"{product_name} 생산 ({production_date})" if production_date else f"{product_name} 생산"
+                elif note_text == 'production_edit:fifo rollback':
+                    item['note'] = '생산 수정: FIFO 재계산 복원'
+                elif note_text.startswith('production_resave:'):
+                    item['note'] = '생산 수정 후 원초 재적용'
+                elif note_text.startswith('production rollback:'):
+                    item['note'] = '생산 취소로 원초 복원'
+                elif (
+                    not note_text
+                    or '??' in note_text
+                    or '�' in note_text
+                    or '??밴텦' in note_text
+                    or '筌△몿而?' in note_text
+                ):
+                    item['note'] = f"생산 차감 ({production_date})" if production_date else '생산 차감'
+                else:
+                    item['note'] = note_text
+
+                usage_logs.append(item)
 
             cursor.execute(
                 f'''
@@ -4116,6 +4791,169 @@ def integrated_requirements_calculator_export():
     workbook = _build_simple_xlsx('원부자재계산기', headers, rows)
     now_token = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f'requirements_calculator_{mode}_{now_token}.xlsx'
+    return send_file(
+        workbook,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@bp.route('/production-statistics')
+@admin_required
+def production_statistics():
+    current_view = _normalize_production_statistics_view(request.args.get('view') or 'date')
+    persist = (request.args.get('persist') or '').strip() == '1'
+    searched = (request.args.get('searched') or '').strip() == '1'
+    reset_all = (request.args.get('reset_all') or '').strip() == '1'
+    reset_tab = (request.args.get('reset_tab') or '').strip() == '1'
+    current_workplace = (get_workplace() or '').strip()
+
+    if not persist or reset_all:
+        session.pop(PRODUCTION_STATISTICS_SESSION_KEY, None)
+
+    state = _get_production_statistics_state()
+    if reset_tab and current_view in state:
+        state.pop(current_view, None)
+        _set_production_statistics_state(state)
+    saved_filters = state.get(current_view) if isinstance(state.get(current_view), dict) else {}
+
+    if searched:
+        current_filters = {
+            'date_from': (request.args.get('date_from') or '').strip(),
+            'date_to': (request.args.get('date_to') or '').strip(),
+            'selected_workplace': (request.args.get('selected_workplace') or '').strip(),
+            'product_q': (request.args.get('product_q') or '').strip(),
+            'product_id': (request.args.get('product_id') or '').strip(),
+            'material_product_id': (request.args.get('material_product_id') or '').strip(),
+            'bom_material_id': (request.args.get('bom_material_id') or '').strip(),
+            'material_q': (request.args.get('material_q') or '').strip(),
+            'raw_q': (request.args.get('raw_q') or '').strip(),
+            'searched': True,
+        }
+        state[current_view] = current_filters
+        _set_production_statistics_state(state)
+    else:
+        current_filters = {
+            'date_from': (saved_filters.get('date_from') or '').strip(),
+            'date_to': (saved_filters.get('date_to') or '').strip(),
+            'selected_workplace': (saved_filters.get('selected_workplace') or '').strip(),
+            'product_q': (saved_filters.get('product_q') or '').strip(),
+            'product_id': (saved_filters.get('product_id') or '').strip(),
+            'material_product_id': (saved_filters.get('material_product_id') or '').strip(),
+            'bom_material_id': (saved_filters.get('bom_material_id') or '').strip(),
+            'material_q': (saved_filters.get('material_q') or '').strip(),
+            'raw_q': (saved_filters.get('raw_q') or '').strip(),
+            'searched': bool(saved_filters.get('searched')),
+        }
+
+    searched = bool(current_filters.get('searched'))
+    keyword = (
+        current_filters['product_q'] if current_view == 'product'
+        else current_filters['bom_material_id'] if current_view == 'material'
+        else current_filters['raw_q'] if current_view == 'raw'
+        else ''
+    )
+    effective_workplace = current_filters['selected_workplace'] if current_view == 'workplace' and current_filters['selected_workplace'] else current_workplace
+
+    payload = _empty_production_statistics_payload(current_view, effective_workplace)
+    if searched:
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            payload = _build_production_statistics_payload(
+                cursor,
+                view=current_view,
+                date_from=current_filters['date_from'],
+                date_to=current_filters['date_to'],
+                workplace=effective_workplace,
+                keyword=keyword,
+                product_id=current_filters['product_id'] if current_view == 'product' else current_filters['material_product_id'] if current_view == 'material' else '',
+            )
+            payload['product_options'] = _load_production_statistics_product_options(cursor, effective_workplace if current_view == 'product' else current_workplace)
+            payload['bom_material_options'] = _load_production_statistics_bom_material_options(cursor, current_filters['material_product_id'])
+            payload['bom_material_map'] = _load_production_statistics_bom_material_map(
+                cursor,
+                [item.get('product_id') for item in payload.get('product_options', [])],
+            )
+        finally:
+            conn.close()
+    else:
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            payload['product_options'] = _load_production_statistics_product_options(cursor, current_workplace)
+            payload['bom_material_options'] = _load_production_statistics_bom_material_options(cursor, current_filters['material_product_id'])
+            payload['bom_material_map'] = _load_production_statistics_bom_material_map(
+                cursor,
+                [item.get('product_id') for item in payload.get('product_options', [])],
+            )
+        finally:
+            conn.close()
+
+    return render_template(
+        'production_statistics.html',
+        stats=payload,
+        current_view=payload['view'],
+        searched=searched,
+        current_workplace=current_workplace,
+        filters={
+            'date_from': payload['date_from'],
+            'date_to': payload['date_to'],
+            'selected_workplace': current_filters['selected_workplace'],
+            'product_q': current_filters['product_q'],
+            'product_id': payload.get('selected_product_id', current_filters['product_id']),
+            'material_product_id': current_filters['material_product_id'],
+            'bom_material_id': current_filters['bom_material_id'],
+            'material_q': current_filters['material_q'],
+            'raw_q': current_filters['raw_q'],
+        },
+        product_options=payload.get('product_options', []),
+        bom_material_options=payload.get('bom_material_options', []),
+        bom_material_map=payload.get('bom_material_map', {}),
+        workplaces=WORKPLACES,
+    )
+
+
+@bp.route('/production-statistics/export')
+@admin_required
+def production_statistics_export():
+    view = _normalize_production_statistics_view(request.args.get('view') or 'date')
+    searched = (request.args.get('searched') or '').strip() == '1'
+    date_from = (request.args.get('date_from') or '').strip()
+    date_to = (request.args.get('date_to') or '').strip()
+    product_q = (request.args.get('product_q') or '').strip()
+    product_id = (request.args.get('product_id') or '').strip()
+    material_product_id = (request.args.get('material_product_id') or '').strip()
+    bom_material_id = (request.args.get('bom_material_id') or '').strip()
+    selected_workplace = (request.args.get('selected_workplace') or '').strip()
+    material_q = (request.args.get('material_q') or '').strip()
+    raw_q = (request.args.get('raw_q') or '').strip()
+    keyword = product_q if view == 'product' else bom_material_id if view == 'material' else raw_q if view == 'raw' else ''
+    current_workplace = (get_workplace() or '').strip()
+    effective_workplace = selected_workplace if view == 'workplace' and selected_workplace else current_workplace
+
+    payload = {'view': view, 'rows': []}
+    if searched:
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            payload = _build_production_statistics_payload(
+                cursor,
+                view=view,
+                date_from=date_from,
+                date_to=date_to,
+                workplace=effective_workplace,
+                keyword=keyword,
+                product_id=product_id if view == 'product' else material_product_id if view == 'material' else '',
+            )
+        finally:
+            conn.close()
+
+    headers, rows = _build_production_statistics_export_rows(payload)
+    workbook = _build_simple_xlsx('생산통계', headers, rows)
+    now_token = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'production_statistics_{payload["view"]}_{now_token}.xlsx'
     return send_file(
         workbook,
         as_attachment=True,

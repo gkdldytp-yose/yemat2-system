@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+{% block title %}생산통계{% endblock %}
+{% block content %}
+<style>
+.stats-shell{display:flex;flex-direction:column;gap:1rem;}
+.stats-hero{background:linear-gradient(135deg,#fff 0%,#f8fbff 55%,#eef6ff 100%);border:1px solid #dbeafe;border-radius:24px;padding:1.25rem 1.35rem;box-shadow:0 16px 34px rgba(15,23,42,0.08);}
+.stats-hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;}
+.stats-hero-title{margin:0;font-size:1.7rem;font-weight:900;color:#0f172a;letter-spacing:-0.03em;}
+.stats-hero-desc{margin:0.45rem 0 0;color:#475569;font-size:0.95rem;line-height:1.6;max-width:780px;}
+.stats-chip-row{display:flex;gap:0.55rem;flex-wrap:wrap;margin-top:0.9rem;}
+.stats-chip{display:inline-flex;align-items:center;gap:0.35rem;padding:0.42rem 0.78rem;border-radius:999px;background:#fff;border:1px solid #dbeafe;font-size:0.8rem;font-weight:800;color:#1e3a8a;box-shadow:0 8px 18px rgba(37,99,235,0.08);}
+.stats-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.8rem;}
+.stats-summary-card{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:1rem 1.05rem;box-shadow:0 12px 28px rgba(15,23,42,0.05);}
+.stats-summary-label{font-size:0.82rem;color:#64748b;font-weight:800;margin-bottom:0.4rem;}
+.stats-summary-value{font-size:1.45rem;font-weight:900;color:#0f172a;line-height:1.1;}
+.stats-summary-sub{margin-top:0.3rem;font-size:0.82rem;color:#64748b;}
+.stats-filter-card{background:#fff;border:1px solid #e2e8f0;border-radius:22px;padding:1rem 1.1rem;box-shadow:0 14px 28px rgba(15,23,42,0.05);}
+.stats-filter-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;}
+.stats-field{display:flex;flex-direction:column;gap:0.38rem;}
+.stats-field label{font-size:0.81rem;color:#475569;font-weight:800;}
+.stats-field input,.stats-field select{width:100%;padding:0.72rem 0.8rem;border:1px solid #cbd5e1;border-radius:14px;background:#fff;font-size:0.92rem;}
+.stats-view-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.7rem;}
+.stats-view-tab{display:flex;align-items:center;justify-content:center;min-height:58px;padding:0.9rem 1rem;border-radius:18px;border:1px solid #dbeafe;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);color:#1e293b;text-decoration:none;font-weight:900;font-size:0.95rem;letter-spacing:-0.01em;box-shadow:0 12px 24px rgba(15,23,42,0.05);transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;}
+.stats-view-tab:hover{transform:translateY(-1px);box-shadow:0 16px 28px rgba(15,23,42,0.08);border-color:#93c5fd;}
+.stats-view-tab.active{background:linear-gradient(135deg,#0f172a,#2563eb);border-color:#1d4ed8;color:#fff;box-shadow:0 18px 34px rgba(37,99,235,0.24);}
+.stats-table-card{background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:1rem 1.05rem;box-shadow:0 16px 36px rgba(15,23,42,0.06);}
+.stats-table-head{display:flex;justify-content:space-between;align-items:center;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.85rem;}
+.stats-table-title{margin:0;font-size:1.05rem;font-weight:900;color:#0f172a;}
+.stats-table-sub{margin:0.3rem 0 0;color:#64748b;font-size:0.86rem;}
+.stats-head-actions{display:flex;gap:0.55rem;align-items:center;flex-wrap:wrap;}
+.stats-pill{display:inline-flex;align-items:center;gap:0.3rem;padding:0.36rem 0.7rem;border-radius:999px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:900;font-size:0.78rem;}
+.stats-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:18px;}
+.stats-table{width:100%;border-collapse:separate;border-spacing:0;min-width:1280px;}
+.stats-table thead th{position:sticky;top:0;background:#f8fafc;color:#334155;font-size:0.82rem;font-weight:900;padding:0.82rem 0.72rem;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
+.stats-table tbody td{padding:0.9rem 0.72rem;border-bottom:1px solid #eef2f7;font-size:0.9rem;color:#0f172a;vertical-align:top;background:#fff;}
+.stats-table tbody tr:hover td{background:#f8fbff;}
+.stats-code{display:inline-flex;align-items:center;padding:0.34rem 0.62rem;border-radius:999px;background:#eef4ff;border:1px solid #c7d2fe;color:#1d4ed8;font-weight:900;font-size:0.8rem;white-space:nowrap;}
+.stats-link{color:#2563eb;text-decoration:none;font-weight:900;}
+.stats-link:hover{text-decoration:underline;}
+.stats-qty{display:inline-flex;align-items:center;padding:0.34rem 0.66rem;border-radius:999px;background:#f8fafc;border:1px solid #dbeafe;color:#0f172a;font-weight:900;white-space:nowrap;}
+.stats-stack{display:flex;flex-direction:column;gap:0.2rem;}
+.stats-muted{font-size:0.8rem;color:#64748b;}
+.stats-empty{padding:3.2rem 1rem;text-align:center;color:#64748b;font-weight:700;}
+.stats-filter-note{display:flex;align-items:center;min-height:48px;padding:0.72rem 0.85rem;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;color:#64748b;font-size:0.88rem;line-height:1.5;}
+@media print{
+  body > *:not(.container){display:none !important;}
+  .container > *:not(.stats-shell){display:none !important;}
+  .stats-filter-card,.stats-view-tabs,.stats-head-actions .btn{display:none !important;}
+  .stats-hero,.stats-summary-card,.stats-table-card{box-shadow:none !important;}
+  .stats-table-wrap{overflow:visible !important;border:none !important;}
+  .stats-table{min-width:0 !important;width:100% !important;font-size:11px;}
+  .stats-table thead th,.stats-table tbody td{padding:5px 4px;}
+}
+@media (max-width: 1024px){
+  .stats-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .stats-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .stats-field{grid-column:span 1 !important;}
+  .stats-view-tabs{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width: 720px){
+  .stats-hero{padding:1rem;}
+  .stats-hero-title{font-size:1.35rem;}
+  .stats-summary-grid{grid-template-columns:1fr;}
+  .stats-filter-grid{grid-template-columns:1fr;}
+  .stats-field{grid-column:span 1 !important;}
+  .stats-table-card{padding:0.8rem;}
+  .stats-view-tabs{grid-template-columns:1fr;}
+}
+</style>
+
+<div class="stats-shell">
+    <section class="stats-hero">
+        <div class="stats-hero-top">
+            <div>
+                <h1 class="stats-hero-title">생산통계</h1>
+                <p class="stats-hero-desc">일자별, 상품별, 부자재별, 원초별로 생산 완료 데이터를 자세히 확인할 수 있습니다. 같은 데이터 기준으로 엑셀 내보내기와 출력까지 바로 사용할 수 있게 구성했습니다.</p>
+                <div class="stats-chip-row">
+                    {% if searched and stats.date_from and stats.date_to %}
+                    <span class="stats-chip">집계 기간 {{ stats.date_from }} ~ {{ stats.date_to }}</span>
+                    {% endif %}
+                    {% if current_view == 'workplace' and filters.selected_workplace %}
+                    <span class="stats-chip">작업장 {{ filters.selected_workplace }}</span>
+                    {% elif current_workplace %}
+                    <span class="stats-chip">작업장 {{ current_workplace }}</span>
+                    {% endif %}
+                    {% set active_search = filters.product_q if current_view == 'product' else filters.raw_q if current_view == 'raw' else '' %}
+                    {% set active_search_label = '상품' if current_view == 'product' else '원초' if current_view == 'raw' else '' %}
+                    {% if active_search %}
+                    <span class="stats-chip">{{ active_search_label }} 검색 {{ active_search }}</span>
+                    {% endif %}
+                    {% if current_view == 'material' and filters.material_product_id %}
+                    <span class="stats-chip">상품 선택 완료</span>
+                    {% endif %}
+                    {% if current_view == 'material' and filters.bom_material_id %}
+                    <span class="stats-chip">BOM 선택 완료</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="display:flex;gap:0.55rem;flex-wrap:wrap;">
+                <a href="/" class="btn btn-secondary btn-small">대시보드</a>
+                <a href="/production-statistics?view={{ current_view }}&reset_all=1" class="btn btn-secondary btn-small">전체 초기화</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-view-tabs">
+        <a class="stats-view-tab {% if current_view == 'date' %}active{% endif %}" href="/production-statistics?view=date&persist=1">일자별 통계</a>
+        <a class="stats-view-tab {% if current_view == 'product' %}active{% endif %}" href="/production-statistics?view=product&persist=1">상품별 통계</a>
+        <a class="stats-view-tab {% if current_view == 'material' %}active{% endif %}" href="/production-statistics?view=material&persist=1">부자재별 통계</a>
+        <a class="stats-view-tab {% if current_view == 'raw' %}active{% endif %}" href="/production-statistics?view=raw&persist=1">원초별 통계</a>
+        <a class="stats-view-tab {% if current_view == 'workplace' %}active{% endif %}" href="/production-statistics?view=workplace&persist=1">작업장별 통계</a>
+    </section>
+
+    <section class="stats-summary-grid">
+        <div class="stats-summary-card">
+            <div class="stats-summary-label">생산건수</div>
+            <div class="stats-summary-value">{{ stats.summary.production_count }}</div>
+            <div class="stats-summary-sub">완료 생산건 기준</div>
+        </div>
+        <div class="stats-summary-card">
+            <div class="stats-summary-label">총 생산량</div>
+            <div class="stats-summary-value">{{ '%.1f'|format(stats.summary.total_box_qty or 0) }} BOX</div>
+            <div class="stats-summary-sub">실제 생산 박스 합계</div>
+        </div>
+        <div class="stats-summary-card">
+            <div class="stats-summary-label">원초 투입 합계</div>
+            <div class="stats-summary-value">{{ '%.1f'|format(stats.summary.total_raw_input_qty or 0) }} 속</div>
+            <div class="stats-summary-sub">실사용 원초 기준</div>
+        </div>
+        <div class="stats-summary-card">
+            <div class="stats-summary-label">부자재 사용 합계</div>
+            <div class="stats-summary-value">{{ '%.1f'|format(stats.summary.total_material_usage_qty or 0) }}</div>
+            <div class="stats-summary-sub">실사용 부자재 기준</div>
+        </div>
+    </section>
+
+    <section class="stats-filter-card">
+        <form method="GET" action="/production-statistics" class="stats-filter-grid">
+            <input type="hidden" name="view" value="{{ current_view }}">
+            <input type="hidden" name="persist" value="1">
+            <input type="hidden" name="searched" value="1">
+            {% if current_view == 'product' %}
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>상품 선택</label>
+                <select name="product_id">
+                    <option value="">전체 상품</option>
+                    {% for product in product_options %}
+                    <option value="{{ product.product_id }}" {% if filters.product_id == product.product_id %}selected{% endif %}>{{ product.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>상품 검색</label>
+                <input type="text" name="product_q" value="{{ filters.product_q }}" placeholder="예: 상품명 키워드">
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>시작일</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>종료일</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            {% elif current_view == 'material' %}
+            <div class="stats-field" style="grid-column:span 3;">
+                <label>상품 선택</label>
+                <select name="material_product_id" id="statsMaterialProductSelect">
+                    <option value="">상품 선택</option>
+                    {% for product in product_options %}
+                    <option value="{{ product.product_id }}" {% if filters.material_product_id == product.product_id %}selected{% endif %}>{{ product.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="stats-field" style="grid-column:span 3;">
+                <label>BOM 선택</label>
+                <select name="bom_material_id" id="statsBomMaterialSelect">
+                    <option value="">BOM 부자재 선택</option>
+                    {% for item in bom_material_options %}
+                    <option value="{{ item.material_id }}" {% if filters.bom_material_id == item.material_id %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>시작일</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>종료일</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            {% elif current_view == 'raw' %}
+            <div class="stats-field" style="grid-column:span 3;">
+                <label>원초 검색</label>
+                <input type="text" name="raw_q" value="{{ filters.raw_q }}" placeholder="예: 원초명 / 자호">
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>시작일</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>종료일</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            {% elif current_view == 'workplace' %}
+            <div class="stats-field" style="grid-column:span 3;">
+                <label>작업장 선택</label>
+                <select name="selected_workplace">
+                    <option value="">작업장 선택</option>
+                    {% for wp in workplaces %}
+                    <option value="{{ wp }}" {% if filters.selected_workplace == wp %}selected{% endif %}>{{ wp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>시작일</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>종료일</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            <div class="stats-field" style="grid-column:span 3;">
+                <label>작업장별 검색 안내</label>
+                <div class="stats-filter-note">먼저 작업장을 선택한 뒤 기간 기준으로 통계를 조회합니다.</div>
+            </div>
+            {% else %}
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>시작일</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="stats-field" style="grid-column:span 2;">
+                <label>종료일</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            <div class="stats-field" style="grid-column:span 4;">
+                <label>기간 검색 안내</label>
+                <div class="stats-filter-note">일자별 통계는 시작일과 종료일 범위에 맞는 생산 완료 건만 집계합니다.</div>
+            </div>
+            {% endif %}
+            <div class="stats-field" style="grid-column:span 2;display:flex;flex-direction:row;gap:0.55rem;align-items:end;justify-content:flex-end;">
+                <button type="submit" class="btn">조회</button>
+                <a href="/production-statistics?view={{ current_view }}&persist=1&reset_tab=1" class="btn btn-secondary">이 탭 초기화</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="stats-table-card">
+        <div class="stats-table-head">
+            <div>
+                <h2 class="stats-table-title">
+                    {% if current_view == 'date' %}일자별 생산통계{% elif current_view == 'product' %}상품별 생산통계{% elif current_view == 'material' %}부자재별 생산통계{% elif current_view == 'workplace' %}작업장별 생산통계{% else %}원초별 생산통계{% endif %}
+                </h2>
+                <p class="stats-table-sub">현재 화면과 동일한 조건으로 엑셀 저장 또는 A4 출력이 가능합니다.</p>
+            </div>
+            <div class="stats-head-actions">
+                <span class="stats-pill">총 {{ stats.rows|length }}건</span>
+                {% if searched and stats.rows %}
+                <a class="btn btn-small btn-secondary" href="/production-statistics/export?view={{ current_view }}&searched=1&date_from={{ filters.date_from|urlencode }}&date_to={{ filters.date_to|urlencode }}&selected_workplace={{ filters.selected_workplace|urlencode }}&product_q={{ filters.product_q|urlencode }}&product_id={{ filters.product_id|urlencode }}&material_product_id={{ filters.material_product_id|urlencode }}&bom_material_id={{ filters.bom_material_id|urlencode }}&raw_q={{ filters.raw_q|urlencode }}">엑셀 출력</a>
+                <button type="button" class="btn btn-small" onclick="printStatistics()">A4 출력</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="stats-table-wrap" id="productionStatsPrintArea">
+            {% if searched and stats.rows %}
+            <table class="stats-table">
+                <thead>
+                    {% if current_view == 'date' %}
+                    <tr>
+                        <th>일시</th>
+                        <th>생산번호</th>
+                        <th>상품명</th>
+                        <th>생산량</th>
+                        <th>원초명</th>
+                        <th>수율</th>
+                        <th>기름1</th>
+                        <th>기름2</th>
+                        <th>소금</th>
+                        <th>내포</th>
+                        <th>외포</th>
+                        <th>박스</th>
+                        <th>실리카</th>
+                        <th>트레이</th>
+                    </tr>
+                    {% elif current_view in ['product', 'workplace'] %}
+                    <tr>
+                        <th>일시</th>
+                        <th>생산번호</th>
+                        <th>상품명</th>
+                        <th>생산량</th>
+                        <th>원초명</th>
+                        <th>자호</th>
+                        <th>투입속수</th>
+                        <th>기름1</th>
+                        <th>기름2</th>
+                        <th>소금</th>
+                        <th>내포</th>
+                        <th>외포</th>
+                        <th>박스</th>
+                        <th>실리카</th>
+                        <th>트레이</th>
+                    </tr>
+                    {% elif current_view == 'material' %}
+                    <tr>
+                        <th>부자재코드</th>
+                        <th>부자재명</th>
+                        <th>카테고리</th>
+                        <th>사용량</th>
+                        <th>사용일자</th>
+                        <th>생산번호</th>
+                        <th>생산 박스 수량</th>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <th>일시</th>
+                        <th>생산번호</th>
+                        <th>상품명</th>
+                        <th>생산량</th>
+                        <th>원초명</th>
+                        <th>자호</th>
+                        <th>투입속수</th>
+                        <th>기름1</th>
+                        <th>기름2</th>
+                        <th>소금</th>
+                        <th>내포</th>
+                        <th>외포</th>
+                        <th>박스</th>
+                        <th>실리카</th>
+                        <th>트레이</th>
+                    </tr>
+                    {% endif %}
+                </thead>
+                <tbody>
+                    {% if current_view == 'date' %}
+                        {% for row in stats.rows %}
+                        <tr>
+                            <td>{{ row.production_date }}</td>
+                            <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
+                            <td>
+                                <div class="stats-stack">
+                                    <strong>{{ row.product_name }}</strong>
+                                    <span class="stats-muted">{{ row.workplace }}</span>
+                                </div>
+                            </td>
+                            <td><span class="stats-qty">{{ '%.1f'|format(row.box_qty or 0) }} BOX</span></td>
+                            <td>{{ row.raw_names }}</td>
+                            <td>{{ '%.1f'|format(row.yield_rate or 0) }}%</td>
+                            <td>{{ row.oil_1_text }}</td>
+                            <td>{{ row.oil_2_text }}</td>
+                            <td>{{ row.salt_text }}</td>
+                            <td>{{ '%.1f'|format(row.inner_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.outer_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.box_material_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.silica_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.tray_qty or 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% elif current_view in ['product', 'workplace'] %}
+                        {% for row in stats.rows %}
+                        <tr>
+                            <td>{{ row.production_date }}</td>
+                            <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
+                            <td>
+                                <div class="stats-stack">
+                                    <strong>{{ row.product_name }}</strong>
+                                    <span class="stats-muted">{{ row.workplace }}</span>
+                                </div>
+                            </td>
+                            <td><span class="stats-qty">{{ '%.1f'|format(row.box_qty or 0) }} BOX</span></td>
+                            <td>{{ row.raw_names }}</td>
+                            <td>{{ row.raw_lots }}</td>
+                            <td>{{ '%.1f'|format(row.raw_input_qty or 0) }}속</td>
+                            <td>{{ row.oil_1_text }}</td>
+                            <td>{{ row.oil_2_text }}</td>
+                            <td>{{ row.salt_text }}</td>
+                            <td>{{ '%.1f'|format(row.inner_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.outer_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.box_material_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.silica_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.tray_qty or 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% elif current_view == 'material' %}
+                        {% for row in stats.rows %}
+                        <tr>
+                            <td><span class="stats-code">{{ row.material_code }}</span></td>
+                            <td>{{ row.material_name }}</td>
+                            <td>{{ row.category }}</td>
+                            <td>{{ '%.1f'|format(row.qty or 0) }} {{ row.unit }}</td>
+                            <td>{{ row.production_date }}</td>
+                            <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
+                            <td><span class="stats-qty">{{ '%.1f'|format(row.box_qty or 0) }} BOX</span></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        {% for row in stats.rows %}
+                        <tr>
+                            <td>{{ row.production_date }}</td>
+                            <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
+                            <td>{{ row.product_name }}</td>
+                            <td><span class="stats-qty">{{ '%.1f'|format(row.box_qty or 0) }} BOX</span></td>
+                            <td>{{ row.raw_name }}</td>
+                            <td>{{ row.ja_ho }}</td>
+                            <td>{{ '%.1f'|format(row.qty or 0) }}속</td>
+                            <td>{{ row.oil_1_text }}</td>
+                            <td>{{ row.oil_2_text }}</td>
+                            <td>{{ row.salt_text }}</td>
+                            <td>{{ '%.1f'|format(row.inner_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.outer_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.box_material_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.silica_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.tray_qty or 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+            {% elif searched %}
+            <div class="stats-empty">조건에 맞는 생산통계 데이터가 없습니다.</div>
+            {% else %}
+            <div class="stats-empty">상단에서 기준을 선택하고 검색한 뒤 통계 리스트를 확인할 수 있습니다.</div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<script>
+const statsBomMaterialMap = {{ bom_material_map|tojson }};
+
+function refreshStatsBomMaterialOptions() {
+    const productSelect = document.getElementById('statsMaterialProductSelect');
+    const bomSelect = document.getElementById('statsBomMaterialSelect');
+    if (!productSelect || !bomSelect) {
+        return;
+    }
+    const selectedProductId = String(productSelect.value || '').trim();
+    const selectedBomId = String(bomSelect.dataset.selectedBomId || bomSelect.value || '').trim();
+    const options = statsBomMaterialMap[selectedProductId] || [];
+
+    bomSelect.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'BOM 부자재 선택';
+    bomSelect.appendChild(placeholder);
+
+    options.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.material_id;
+        option.textContent = item.label;
+        if (selectedBomId && String(item.material_id) === selectedBomId) {
+            option.selected = true;
+        }
+        bomSelect.appendChild(option);
+    });
+
+    if (!options.some((item) => String(item.material_id) === selectedBomId)) {
+        bomSelect.value = '';
+    }
+}
+
+function printStatistics(){
+    const target = document.getElementById('productionStatsPrintArea');
+    if(!target){
+        return;
+    }
+    const titleMap = {
+        date: '일자별 생산통계',
+        product: '상품별 생산통계',
+        material: '부자재별 생산통계',
+        raw: '원초별 생산통계',
+        workplace: '작업장별 생산통계',
+    };
+    const title = titleMap['{{ current_view }}'] || '생산통계';
+    const printWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+    if(!printWindow){
+        alert('출력 창을 열 수 없습니다.');
+        return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>${title}</title>
+            <style>
+                body{font-family:'Malgun Gothic',sans-serif;margin:24px;color:#111827;}
+                h1{font-size:24px;margin:0 0 8px;font-weight:900;}
+                .meta{font-size:12px;color:#475569;margin-bottom:14px;}
+                table{width:100%;border-collapse:collapse;font-size:11px;}
+                th,td{border:1px solid #cbd5e1;padding:6px 5px;text-align:left;vertical-align:top;}
+                th{background:#f8fafc;font-weight:900;}
+                @page{size:A4 landscape;margin:10mm;}
+            </style>
+        </head>
+        <body>
+            <h1>${title}</h1>
+            <div class="meta">기간 {{ filters.date_from }} ~ {{ filters.date_to }}{% if current_view == 'workplace' and filters.selected_workplace %} / 작업장 {{ filters.selected_workplace }}{% elif current_workplace %} / 작업장 {{ current_workplace }}{% endif %}{% set active_search = filters.product_q if current_view == 'product' else filters.raw_q if current_view == 'raw' else '' %}{% set active_search_label = '상품' if current_view == 'product' else '원초' if current_view == 'raw' else '' %}{% if active_search %} / {{ active_search_label }} 검색 {{ active_search }}{% endif %}{% if current_view == 'material' and filters.material_product_id %} / 상품 선택 적용{% endif %}{% if current_view == 'material' and filters.bom_material_id %} / BOM 선택 적용{% endif %}</div>
+            ${target.innerHTML}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 200);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const productSelect = document.getElementById('statsMaterialProductSelect');
+    const bomSelect = document.getElementById('statsBomMaterialSelect');
+    if (bomSelect) {
+        bomSelect.dataset.selectedBomId = '{{ filters.bom_material_id }}';
+    }
+    refreshStatsBomMaterialOptions();
+    if (productSelect) {
+        productSelect.addEventListener('change', () => {
+            if (bomSelect) {
+                bomSelect.dataset.selectedBomId = '';
+            }
+            refreshStatsBomMaterialOptions();
+        });
+    }
+});
+</script>
+{% endblock %}
