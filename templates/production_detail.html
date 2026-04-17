@@ -196,10 +196,10 @@
         {% if production.raw_sok_values and (production.raw_sok_values|length) > 1 and can_edit %}
         <button type="button" id="rawSokModeBtn" onclick="toggleRawSokMode()" style="background:#eef2ff;border:1px solid #4f46e5;color:#3730a3;padding:0.38rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.82rem;font-weight:700;position:relative;top:-2px;">매수 변경</button>
         {% endif %}
-        <span>총 필요량 <strong id="totalNeed" class="warn">-</strong></span>
-        <span>선택 합계 <strong id="totalSel" style="color:#667eea;">0속</strong></span>
-        <span>잔여 <strong id="remain">-</strong></span>
-        <span>수율 <strong id="rawYield" style="color:#2c3e50;">-</strong></span>
+        <span>총 필요량 <strong id="totalNeed" class="warn">{{ (total_raw_need_qty|round(0)|int) if total_raw_need_qty is not none else '-' }}속</strong></span>
+        <span>선택 합계 <strong id="totalSel" style="color:#667eea;">{{ (total_raw_selected_qty|round(0)|int) if total_raw_selected_qty is not none else 0 }}속</strong></span>
+        <span>잔여 <strong id="remain" style="color:{% if total_raw_remain_qty is not none and total_raw_remain_qty <= 0 %}#27ae60{% else %}#e74c3c{% endif %};">{{ (total_raw_remain_qty|round(0)|int) if total_raw_remain_qty is not none else '-' }}속</strong></span>
+        <span>수율 <strong id="rawYield" style="color:#2c3e50;">{% if total_raw_yield_rate is not none %}<span style="color:{% if total_raw_yield_rate >= 95 %}#27ae60{% elif total_raw_yield_rate >= 90 %}#f39c12{% else %}#e74c3c{% endif %}">{{ "%.1f"|format(total_raw_yield_rate) }}%</span>{% else %}-{% endif %}</strong></span>
     </div>
 
     {% for rm in bom_raw_items %}
@@ -501,6 +501,8 @@ let currentRawSokMode = {{ production.raw_sok_mode or 1 }};
 const PLANNED = {{ production.planned_boxes }};
 const DEFAULT_BOXES = {{ production.actual_boxes or production.planned_boxes }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
+const INITIAL_TOTAL_RAW_SELECTED = {{ total_raw_selected_qty or 0 }};
+const INITIAL_TOTAL_RAW_NEED = {{ total_raw_need_qty or 0 }};
 
 window.onload = () => {
     syncRawSokUi();
@@ -683,22 +685,26 @@ function checkRawOver(id, maxStock){
 
 function updateTotal(){
     let total = 0;
-    document.querySelectorAll('[id^="ri_"]').forEach(inp => total += parseFloat(inp.value) || 0);
+    const rawInputs = document.querySelectorAll('[id^="ri_"]');
+    rawInputs.forEach(inp => total += parseFloat(inp.value) || 0);
     const boxes = getActualBoxes();
     const need = getCurrentPerBox() * boxes;
-    const remain = need - total;
+    const useInitialTotals = IS_DONE && total <= 0 && rawInputs.length === 0;
+    const effectiveTotal = useInitialTotals ? INITIAL_TOTAL_RAW_SELECTED : total;
+    const effectiveNeed = useInitialTotals ? INITIAL_TOTAL_RAW_NEED : need;
+    const remain = effectiveNeed - effectiveTotal;
 
     const ts = document.getElementById('totalSel');
     const rem = document.getElementById('remain');
-    if(ts) ts.textContent = Math.ceil(total) + '속';
+    if(ts) ts.textContent = Math.ceil(effectiveTotal) + '속';
     if(rem){
         rem.textContent = Math.ceil(remain) + '속';
         rem.style.color = remain <= 0 ? '#27ae60' : '#e74c3c';
     }
 
     const yieldEl = document.getElementById('rawYield');
-    if(yieldEl && total > 0 && need > 0) {
-        const yr = (need / total * 100).toFixed(1);
+    if(yieldEl && effectiveTotal > 0 && effectiveNeed > 0) {
+        const yr = (effectiveNeed / effectiveTotal * 100).toFixed(1);
         const color = yr >= 95 ? '#27ae60' : yr >= 90 ? '#f39c12' : '#e74c3c';
         yieldEl.innerHTML = `<span style="color:${color}">${yr}%</span>`;
     } else if(yieldEl) {
