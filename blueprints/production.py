@@ -2217,6 +2217,21 @@ def production_detail(production_id):
             if row.get('usage_note'):
                 entry['note'] = row.get('usage_note') or ''
 
+    total_raw_selected_qty = round(
+        sum(float(item.get('qty') or 0) for item in raw_saved_map.values()),
+        1,
+    )
+    total_raw_need_qty = round(
+        float(production.get('active_sok_per_box') or 0) * float(production.get('actual_boxes') or production.get('planned_boxes') or 0),
+        1,
+    )
+    total_raw_remain_qty = round(total_raw_need_qty - total_raw_selected_qty, 1)
+    total_raw_yield_rate = (
+        round((total_raw_need_qty / total_raw_selected_qty) * 100, 1)
+        if total_raw_selected_qty > 0 and total_raw_need_qty > 0
+        else None
+    )
+
     conn.close()
 
     return render_template(
@@ -2227,6 +2242,10 @@ def production_detail(production_id):
         bom_raw_items=bom_raw_items,
         calculated_expiry_date=calculated_expiry_date,
         raw_saved_map=raw_saved_map,
+        total_raw_selected_qty=total_raw_selected_qty,
+        total_raw_need_qty=total_raw_need_qty,
+        total_raw_remain_qty=total_raw_remain_qty,
+        total_raw_yield_rate=total_raw_yield_rate,
         material_shortage_popup=material_shortage_popup,
     )
 

@@ -34,6 +34,8 @@
 .stats-table thead th{position:sticky;top:0;background:#f8fafc;color:#334155;font-size:0.82rem;font-weight:900;padding:0.82rem 0.72rem;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
 .stats-table tbody td{padding:0.9rem 0.72rem;border-bottom:1px solid #eef2f7;font-size:0.9rem;color:#0f172a;vertical-align:top;background:#fff;}
 .stats-table tbody tr:hover td{background:#f8fbff;}
+.stats-table tfoot td{padding:0.95rem 0.72rem;border-top:2px solid #cbd5e1;border-bottom:none;font-size:0.9rem;font-weight:900;color:#0f172a;vertical-align:top;background:#f8fbff;}
+.stats-table tfoot td:not(:first-child){white-space:nowrap;}
 .stats-code{display:inline-flex;align-items:center;padding:0.34rem 0.62rem;border-radius:999px;background:#eef4ff;border:1px solid #c7d2fe;color:#1d4ed8;font-weight:900;font-size:0.8rem;white-space:nowrap;}
 .stats-link{color:#2563eb;text-decoration:none;font-weight:900;}
 .stats-link:hover{text-decoration:underline;}
@@ -73,7 +75,7 @@
         <div class="stats-hero-top">
             <div>
                 <h1 class="stats-hero-title">생산통계</h1>
-                <p class="stats-hero-desc">일자별, 상품별, 부자재별, 원초별로 생산 완료 데이터를 자세히 확인할 수 있습니다. 같은 데이터 기준으로 엑셀 내보내기와 출력까지 바로 사용할 수 있게 구성했습니다.</p>
+                <p class="stats-hero-desc">일자별, 상품별, 부자재별, 원초별, 작업장별로 생산 완료 데이터를 자세히 확인할 수 있습니다. 현재 화면 기준으로 엑셀 저장과 A4 출력까지 바로 사용할 수 있게 구성했습니다.</p>
                 <div class="stats-chip-row">
                     {% if searched and stats.date_from and stats.date_to %}
                     <span class="stats-chip">집계 기간 {{ stats.date_from }} ~ {{ stats.date_to }}</span>
@@ -115,7 +117,7 @@
         <div class="stats-summary-card">
             <div class="stats-summary-label">생산건수</div>
             <div class="stats-summary-value">{{ stats.summary.production_count }}</div>
-            <div class="stats-summary-sub">완료 생산건 기준</div>
+            <div class="stats-summary-sub">검색된 생산 완료 건수</div>
         </div>
         <div class="stats-summary-card">
             <div class="stats-summary-label">총 생산량</div>
@@ -125,12 +127,12 @@
         <div class="stats-summary-card">
             <div class="stats-summary-label">원초 투입 합계</div>
             <div class="stats-summary-value">{{ '%.1f'|format(stats.summary.total_raw_input_qty or 0) }} 속</div>
-            <div class="stats-summary-sub">실사용 원초 기준</div>
+            <div class="stats-summary-sub">검색된 생산건 기준 원초 합계</div>
         </div>
         <div class="stats-summary-card">
             <div class="stats-summary-label">부자재 사용 합계</div>
             <div class="stats-summary-value">{{ '%.1f'|format(stats.summary.total_material_usage_qty or 0) }}</div>
-            <div class="stats-summary-sub">실사용 부자재 기준</div>
+            <div class="stats-summary-sub">검색된 생산건 기준 부자재 합계</div>
         </div>
     </section>
 
@@ -151,7 +153,7 @@
             </div>
             <div class="stats-field" style="grid-column:span 2;">
                 <label>상품 검색</label>
-                <input type="text" name="product_q" value="{{ filters.product_q }}" placeholder="예: 상품명 키워드">
+                <input type="text" name="product_q" value="{{ filters.product_q }}" placeholder="상품명 키워드 입력">
             </div>
             <div class="stats-field" style="grid-column:span 2;">
                 <label>시작일</label>
@@ -191,7 +193,7 @@
             {% elif current_view == 'raw' %}
             <div class="stats-field" style="grid-column:span 3;">
                 <label>원초 검색</label>
-                <input type="text" name="raw_q" value="{{ filters.raw_q }}" placeholder="예: 원초명 / 자호">
+                <input type="text" name="raw_q" value="{{ filters.raw_q }}" placeholder="원초명 또는 자호">
             </div>
             <div class="stats-field" style="grid-column:span 2;">
                 <label>시작일</label>
@@ -221,7 +223,7 @@
             </div>
             <div class="stats-field" style="grid-column:span 3;">
                 <label>작업장별 검색 안내</label>
-                <div class="stats-filter-note">먼저 작업장을 선택한 뒤 기간 기준으로 통계를 조회합니다.</div>
+                <div class="stats-filter-note">먼저 작업장을 선택한 뒤 기간 기준으로 생산통계를 조회합니다.</div>
             </div>
             {% else %}
             <div class="stats-field" style="grid-column:span 2;">
@@ -282,7 +284,24 @@
                         <th>실리카</th>
                         <th>트레이</th>
                     </tr>
-                    {% elif current_view in ['product', 'workplace'] %}
+                    {% elif current_view == 'product' %}
+                    <tr>
+                        <th>상품명</th>
+                        <th>일시</th>
+                        <th>생산번호</th>
+                        <th>생산량</th>
+                        <th>원초명</th>
+                        <th>수율</th>
+                        <th>기름1</th>
+                        <th>기름2</th>
+                        <th>소금</th>
+                        <th>내포</th>
+                        <th>외포</th>
+                        <th>박스</th>
+                        <th>실리카</th>
+                        <th>트레이</th>
+                    </tr>
+                    {% elif current_view == 'workplace' %}
                     <tr>
                         <th>일시</th>
                         <th>생산번호</th>
@@ -332,7 +351,16 @@
                 </thead>
                 <tbody>
                     {% if current_view == 'date' %}
+                        {% set ns = namespace(box_qty=0, yield_rate=0, yield_count=0, inner_qty=0, outer_qty=0, box_material_qty=0, silica_qty=0, tray_qty=0) %}
                         {% for row in stats.rows %}
+                        {% set ns.box_qty = ns.box_qty + (row.box_qty or 0) %}
+                        {% set ns.yield_rate = ns.yield_rate + (row.yield_rate or 0) %}
+                        {% set ns.yield_count = ns.yield_count + 1 %}
+                        {% set ns.inner_qty = ns.inner_qty + (row.inner_qty or 0) %}
+                        {% set ns.outer_qty = ns.outer_qty + (row.outer_qty or 0) %}
+                        {% set ns.box_material_qty = ns.box_material_qty + (row.box_material_qty or 0) %}
+                        {% set ns.silica_qty = ns.silica_qty + (row.silica_qty or 0) %}
+                        {% set ns.tray_qty = ns.tray_qty + (row.tray_qty or 0) %}
                         <tr>
                             <td>{{ row.production_date }}</td>
                             <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
@@ -355,8 +383,49 @@
                             <td>{{ '%.1f'|format(row.tray_qty or 0) }}</td>
                         </tr>
                         {% endfor %}
-                    {% elif current_view in ['product', 'workplace'] %}
+                    {% elif current_view == 'product' %}
+                        {% set ns = namespace(box_qty=0, yield_rate=0, yield_count=0, inner_qty=0, outer_qty=0, box_material_qty=0, silica_qty=0, tray_qty=0) %}
                         {% for row in stats.rows %}
+                        {% set ns.box_qty = ns.box_qty + (row.box_qty or 0) %}
+                        {% set ns.yield_rate = ns.yield_rate + (row.yield_rate or 0) %}
+                        {% set ns.yield_count = ns.yield_count + 1 %}
+                        {% set ns.inner_qty = ns.inner_qty + (row.inner_qty or 0) %}
+                        {% set ns.outer_qty = ns.outer_qty + (row.outer_qty or 0) %}
+                        {% set ns.box_material_qty = ns.box_material_qty + (row.box_material_qty or 0) %}
+                        {% set ns.silica_qty = ns.silica_qty + (row.silica_qty or 0) %}
+                        {% set ns.tray_qty = ns.tray_qty + (row.tray_qty or 0) %}
+                        <tr>
+                            <td>
+                                <div class="stats-stack">
+                                    <strong>{{ row.product_name }}</strong>
+                                    <span class="stats-muted">{{ row.workplace }}</span>
+                                </div>
+                            </td>
+                            <td>{{ row.production_date }}</td>
+                            <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
+                            <td><span class="stats-qty">{{ '%.1f'|format(row.box_qty or 0) }} BOX</span></td>
+                            <td>{{ row.raw_names }}</td>
+                            <td>{{ '%.1f'|format(row.yield_rate or 0) }}%</td>
+                            <td>{{ row.oil_1_text }}</td>
+                            <td>{{ row.oil_2_text }}</td>
+                            <td>{{ row.salt_text }}</td>
+                            <td>{{ '%.1f'|format(row.inner_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.outer_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.box_material_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.silica_qty or 0) }}</td>
+                            <td>{{ '%.1f'|format(row.tray_qty or 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% elif current_view == 'workplace' %}
+                        {% set ns = namespace(box_qty=0, raw_input_qty=0, inner_qty=0, outer_qty=0, box_material_qty=0, silica_qty=0, tray_qty=0) %}
+                        {% for row in stats.rows %}
+                        {% set ns.box_qty = ns.box_qty + (row.box_qty or 0) %}
+                        {% set ns.raw_input_qty = ns.raw_input_qty + (row.raw_input_qty or 0) %}
+                        {% set ns.inner_qty = ns.inner_qty + (row.inner_qty or 0) %}
+                        {% set ns.outer_qty = ns.outer_qty + (row.outer_qty or 0) %}
+                        {% set ns.box_material_qty = ns.box_material_qty + (row.box_material_qty or 0) %}
+                        {% set ns.silica_qty = ns.silica_qty + (row.silica_qty or 0) %}
+                        {% set ns.tray_qty = ns.tray_qty + (row.tray_qty or 0) %}
                         <tr>
                             <td>{{ row.production_date }}</td>
                             <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
@@ -381,7 +450,10 @@
                         </tr>
                         {% endfor %}
                     {% elif current_view == 'material' %}
+                        {% set ns = namespace(qty=0, box_qty=0) %}
                         {% for row in stats.rows %}
+                        {% set ns.qty = ns.qty + (row.qty or 0) %}
+                        {% set ns.box_qty = ns.box_qty + (row.box_qty or 0) %}
                         <tr>
                             <td><span class="stats-code">{{ row.material_code }}</span></td>
                             <td>{{ row.material_name }}</td>
@@ -393,7 +465,14 @@
                         </tr>
                         {% endfor %}
                     {% else %}
+                        {% set ns = namespace(qty=0, inner_qty=0, outer_qty=0, box_material_qty=0, silica_qty=0, tray_qty=0) %}
                         {% for row in stats.rows %}
+                        {% set ns.qty = ns.qty + (row.qty or 0) %}
+                        {% set ns.inner_qty = ns.inner_qty + (row.inner_qty or 0) %}
+                        {% set ns.outer_qty = ns.outer_qty + (row.outer_qty or 0) %}
+                        {% set ns.box_material_qty = ns.box_material_qty + (row.box_material_qty or 0) %}
+                        {% set ns.silica_qty = ns.silica_qty + (row.silica_qty or 0) %}
+                        {% set ns.tray_qty = ns.tray_qty + (row.tray_qty or 0) %}
                         <tr>
                             <td>{{ row.production_date }}</td>
                             <td><a class="stats-link" href="/production/{{ row.production_id }}">{{ row.production_no }}</a></td>
@@ -414,16 +493,87 @@
                         {% endfor %}
                     {% endif %}
                 </tbody>
+                <tfoot>
+                    {% if current_view == 'date' %}
+                    <tr>
+                        <td colspan="3">합계</td>
+                        <td>{{ '%.1f'|format(ns.box_qty or 0) }} BOX</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format((ns.yield_rate / ns.yield_count) if ns.yield_count else 0) }}%</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format(ns.inner_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.outer_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.box_material_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.silica_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.tray_qty or 0) }}</td>
+                    </tr>
+                    {% elif current_view == 'product' %}
+                    <tr>
+                        <td>합계</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format(ns.box_qty or 0) }} BOX</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format((ns.yield_rate / ns.yield_count) if ns.yield_count else 0) }}%</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format(ns.inner_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.outer_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.box_material_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.silica_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.tray_qty or 0) }}</td>
+                    </tr>
+                    {% elif current_view == 'workplace' %}
+                    <tr>
+                        <td colspan="3">합계</td>
+                        <td>{{ '%.1f'|format(ns.box_qty or 0) }} BOX</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format(ns.raw_input_qty or 0) }}속</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format(ns.inner_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.outer_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.box_material_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.silica_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.tray_qty or 0) }}</td>
+                    </tr>
+                    {% elif current_view == 'material' %}
+                    <tr>
+                        <td colspan="3">합계</td>
+                        <td>{{ '%.1f'|format(ns.qty or 0) }}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format(ns.box_qty or 0) }} BOX</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">합계</td>
+                        <td>{{ '%.1f'|format(ns.qty or 0) }}속</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ '%.1f'|format(ns.inner_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.outer_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.box_material_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.silica_qty or 0) }}</td>
+                        <td>{{ '%.1f'|format(ns.tray_qty or 0) }}</td>
+                    </tr>
+                    {% endif %}
+                </tfoot>
             </table>
             {% elif searched %}
             <div class="stats-empty">조건에 맞는 생산통계 데이터가 없습니다.</div>
             {% else %}
-            <div class="stats-empty">상단에서 기준을 선택하고 검색한 뒤 통계 리스트를 확인할 수 있습니다.</div>
+            <div class="stats-empty">상단에서 기준과 검색 조건을 선택한 뒤 생산통계 리스트를 확인할 수 있습니다.</div>
             {% endif %}
         </div>
     </section>
 </div>
-
 <script>
 const statsBomMaterialMap = {{ bom_material_map|tojson }};
 

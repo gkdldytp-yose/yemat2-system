@@ -570,9 +570,13 @@ def _build_production_statistics_payload(cursor, view='date', date_from=None, da
             pr.production_date,
             pr.workplace,
             pr.product_id,
+            COALESCE(pr.raw_sok_mode, 1) as raw_sok_mode,
             COALESCE(NULLIF(TRIM(p.code), ''), printf('P%05d', pr.product_id)) as product_code,
             COALESCE(p.name, printf('상품 #%s', pr.product_id)) as product_name,
-            COALESCE(pr.actual_boxes, pr.planned_boxes, 0) as box_qty
+            COALESCE(pr.actual_boxes, pr.planned_boxes, 0) as box_qty,
+            COALESCE(p.sok_per_box, 0) as sok_per_box,
+            COALESCE(p.sok_per_box_2, 0) as sok_per_box_2,
+            COALESCE(p.sok_per_box_3, 0) as sok_per_box_3
         FROM productions pr
         LEFT JOIN products p ON p.id = pr.product_id
         WHERE pr.production_date BETWEEN ? AND ?
@@ -598,6 +602,10 @@ def _build_production_statistics_payload(cursor, view='date', date_from=None, da
             'product_code': (row.get('product_code') or '-').strip() or '-',
             'product_name': (row.get('product_name') or '-').strip() or '-',
             'box_qty': round(float(row.get('box_qty') or 0), 1),
+            'raw_sok_mode': int(row.get('raw_sok_mode') or 1),
+            'sok_per_box': float(row.get('sok_per_box') or 0),
+            'sok_per_box_2': float(row.get('sok_per_box_2') or 0),
+            'sok_per_box_3': float(row.get('sok_per_box_3') or 0),
             'raw_entries': [],
             'material_entries': [],
             'category_qtys': {'inner': 0.0, 'outer': 0.0, 'box': 0.0, 'silica': 0.0, 'tray': 0.0},
@@ -712,6 +720,14 @@ def _build_production_statistics_payload(cursor, view='date', date_from=None, da
         raw_names = ', '.join(dict.fromkeys([entry['raw_name'] for entry in prod['raw_entries']])) or '-'
         raw_lots = ', '.join(dict.fromkeys([entry['ja_ho'] for entry in prod['raw_entries']])) or '-'
         raw_input_qty = round(sum(entry['qty'] for entry in prod['raw_entries']), 1)
+        raw_sok_mode = int(prod.get('raw_sok_mode') or 1)
+        if raw_sok_mode == 2:
+            active_sok_per_box = float(prod.get('sok_per_box_2') or 0)
+        elif raw_sok_mode == 3:
+            active_sok_per_box = float(prod.get('sok_per_box_3') or 0)
+        else:
+            active_sok_per_box = float(prod.get('sok_per_box') or 0)
+        expected_raw_qty = round(float(prod.get('box_qty') or 0) * active_sok_per_box, 1)
         oil_entries_formatted = [
             _format_stat_material_entry(entry['material_name'], entry['qty'], entry['unit'])
             for entry in prod['oil_entries']
@@ -723,7 +739,8 @@ def _build_production_statistics_payload(cursor, view='date', date_from=None, da
         prod['raw_names'] = raw_names
         prod['raw_lots'] = raw_lots
         prod['raw_input_qty'] = raw_input_qty
-        prod['yield_rate'] = round((float(prod['box_qty'] or 0) / float(raw_input_qty or 0) * 100), 1) if float(raw_input_qty or 0) > 0 else 0.0
+        prod['expected_raw_qty'] = expected_raw_qty
+        prod['yield_rate'] = round((expected_raw_qty / float(raw_input_qty or 0) * 100), 1) if float(raw_input_qty or 0) > 0 and expected_raw_qty > 0 else 0.0
         prod['oil_text'] = oil_text
         prod['oil_1_text'] = oil_1_text
         prod['oil_2_text'] = oil_2_text
@@ -953,6 +970,26 @@ def _build_production_statistics_export_rows(payload):
             row['production_date'],
             row['production_no'],
             row['product_name'],
+            _format_stat_number(row['box_qty'], 1),
+            row['raw_names'],
+            f"{_format_stat_number(row['yield_rate'], 1)}%",
+            row['oil_1_text'],
+            row['oil_2_text'],
+            row['salt_text'],
+            _format_stat_number(row['inner_qty'], 1),
+            _format_stat_number(row['outer_qty'], 1),
+            _format_stat_number(row['box_material_qty'], 1),
+            _format_stat_number(row['silica_qty'], 1),
+            _format_stat_number(row['tray_qty'], 1),
+        ] for row in payload.get('rows', [])]
+        return headers, rows
+
+    if view == 'product':
+        headers = ['???', '??', '????', '???(BOX)', '???', '??', '??1', '??2', '??', '??', '??', '??', '???', '???']
+        rows = [[
+            row['product_name'],
+            row['production_date'],
+            row['production_no'],
             _format_stat_number(row['box_qty'], 1),
             row['raw_names'],
             f"{_format_stat_number(row['yield_rate'], 1)}%",
