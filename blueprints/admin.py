@@ -2005,7 +2005,15 @@ def _query_inventory_audit_rows(
                   AND (
                       (t.inv_type = 'material' AND b.material_id = t.inv_id)
                       OR
-                      (t.inv_type = 'raw_material' AND b.raw_material_id = t.inv_id)
+                      (
+                          t.inv_type = 'raw_material'
+                          AND EXISTS (
+                              SELECT 1
+                              FROM raw_materials bom_rm
+                              WHERE bom_rm.id = b.raw_material_id
+                                AND COALESCE(NULLIF(TRIM(bom_rm.code), ''), printf('RM%05d', bom_rm.id)) = t.code
+                          )
+                      )
                   )
             )
             '''
