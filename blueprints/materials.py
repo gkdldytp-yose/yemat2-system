@@ -2346,31 +2346,73 @@ def raw_materials():
     if is_logistics:
         cursor.execute(
             '''
+            WITH normalized AS (
+                SELECT
+                    id,
+                    COALESCE(NULLIF(TRIM(code), ''), '') as code,
+                    name,
+                    sheets_per_sok,
+                    receiving_date,
+                    COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as ja_ho
+                FROM raw_materials
+                WHERE TRIM(COALESCE(code, '')) <> ''
+            )
             SELECT
-                COALESCE(NULLIF(TRIM(code), ''), '') as code,
-                MIN(name) as name,
-                COALESCE(MAX(sheets_per_sok), 0) as sheets_per_sok,
-                MAX(receiving_date) as receiving_date,
-                MIN(COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''))) as ja_ho
-            FROM raw_materials
-            WHERE TRIM(COALESCE(code, '')) <> ''
-            GROUP BY COALESCE(NULLIF(TRIM(code), ''), '')
+                n.code,
+                n.name,
+                COALESCE(n.sheets_per_sok, 0) as sheets_per_sok,
+                n.receiving_date,
+                n.ja_ho
+            FROM normalized n
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM normalized newer
+                WHERE newer.code = n.code
+                  AND (
+                      COALESCE(newer.receiving_date, '') > COALESCE(n.receiving_date, '')
+                      OR (
+                          COALESCE(newer.receiving_date, '') = COALESCE(n.receiving_date, '')
+                          AND newer.id > n.id
+                      )
+                  )
+            )
             ORDER BY code
         '''
         )
     else:
         cursor.execute(
             '''
+            WITH normalized AS (
+                SELECT
+                    id,
+                    COALESCE(NULLIF(TRIM(code), ''), '') as code,
+                    name,
+                    sheets_per_sok,
+                    receiving_date,
+                    COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as ja_ho
+                FROM raw_materials
+                WHERE workplace = ?
+                  AND TRIM(COALESCE(code, '')) <> ''
+            )
             SELECT
-                COALESCE(NULLIF(TRIM(code), ''), '') as code,
-                MIN(name) as name,
-                COALESCE(MAX(sheets_per_sok), 0) as sheets_per_sok,
-                MAX(receiving_date) as receiving_date,
-                MIN(COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''))) as ja_ho
-            FROM raw_materials
-            WHERE workplace = ?
-              AND TRIM(COALESCE(code, '')) <> ''
-            GROUP BY COALESCE(NULLIF(TRIM(code), ''), '')
+                n.code,
+                n.name,
+                COALESCE(n.sheets_per_sok, 0) as sheets_per_sok,
+                n.receiving_date,
+                n.ja_ho
+            FROM normalized n
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM normalized newer
+                WHERE newer.code = n.code
+                  AND (
+                      COALESCE(newer.receiving_date, '') > COALESCE(n.receiving_date, '')
+                      OR (
+                          COALESCE(newer.receiving_date, '') = COALESCE(n.receiving_date, '')
+                          AND newer.id > n.id
+                      )
+                  )
+            )
             ORDER BY code
         ''',
             (workplace,),

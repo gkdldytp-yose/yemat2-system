@@ -256,34 +256,39 @@
 {% set calc_base_boxes = production.actual_boxes or production.planned_boxes %}
 {% set mat_list = material_usage | selectattr('material_id') | list %}
 {% if mat_list %}
-{% set pack_cats = ['포장재','내포','외포','박스','트레이','실리카'] %}
+{% set base_cats = ['기름','소금'] %}
 {% set pack_keys = ['내포','외포','박스','트레이','실리카'] %}
-{% set ns = namespace(pack_inner=[], pack_outer=[], pack_box=[], pack_rest=[], other=[]) %}
+{% set ns = namespace(base=[], pack_inner=[], pack_outer=[], pack_box=[], pack_silica=[], pack_tray=[], pack_other=[]) %}
 {% for u in mat_list %}
     {% set cat = (u.category or '') %}
     {% set nm = (u.material_name or '') %}
-    {% if cat in pack_cats or (pack_keys | select('in', nm) | list | length) > 0 %}
-        {% if cat == '내포' or ('내포' in nm) %}
-            {% set ns.pack_inner = ns.pack_inner + [u] %}
-        {% elif cat == '외포' or ('외포' in nm) %}
-            {% set ns.pack_outer = ns.pack_outer + [u] %}
-        {% elif cat == '박스' or ('박스' in nm) %}
-            {% set ns.pack_box = ns.pack_box + [u] %}
-        {% else %}
-            {% set ns.pack_rest = ns.pack_rest + [u] %}
-        {% endif %}
+    {% if cat in base_cats or ('기름' in cat) or ('유지' in cat) or ('소금' in cat) %}
+        {% set ns.base = ns.base + [u] %}
     {% else %}
-        {% set ns.other = ns.other + [u] %}
+        {% if cat == '내포' %}
+            {% set ns.pack_inner = ns.pack_inner + [u] %}
+        {% elif cat == '외포' %}
+            {% set ns.pack_outer = ns.pack_outer + [u] %}
+        {% elif cat == '박스' %}
+            {% set ns.pack_box = ns.pack_box + [u] %}
+        {% elif cat == '실리카' %}
+            {% set ns.pack_silica = ns.pack_silica + [u] %}
+        {% elif cat == '트레이' %}
+            {% set ns.pack_tray = ns.pack_tray + [u] %}
+        {% else %}
+            {% set ns.pack_other = ns.pack_other + [u] %}
+        {% endif %}
     {% endif %}
 {% endfor %}
 
-{% if ns.other|length %}
+{% set base_items = ns.base | sort(attribute='base_sort_key') %}
+{% if base_items|length %}
 <div class="sec">
     <h3>🧰 부자재 사용량</h3>
     <table class="mat-tbl">
         <thead><tr><th>부자재명</th><th>단위</th><th>예상량</th><th>실제 사용량</th><th>로스량</th><th>수율</th></tr></thead>
         <tbody id="matBody">
-        {% for u in ns.other %}
+        {% for u in base_items %}
         <tr data-uid="{{ u.id }}" data-pbox="{{ ((u.expected_quantity|default(0)) / calc_base_boxes)|round(6) if calc_base_boxes else 0 }}">
             <td><strong>{{ u.material_name }}</strong></td>
             <td>{{ u.unit }}</td>
@@ -358,7 +363,7 @@
 </div>
 {% endif %}
 
-{% set ordered_pack = ns.pack_inner + ns.pack_outer + ns.pack_box + ns.pack_rest %}
+{% set ordered_pack = (ns.pack_inner | sort(attribute='material_name')) + (ns.pack_outer | sort(attribute='material_name')) + (ns.pack_box | sort(attribute='material_name')) + (ns.pack_silica | sort(attribute='material_name')) + (ns.pack_tray | sort(attribute='material_name')) + (ns.pack_other | sort(attribute='material_name')) %}
 {% if ordered_pack|length %}
 <div class="sec">
     <h3>📦 포장재 사용량</h3>

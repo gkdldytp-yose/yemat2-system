@@ -2155,6 +2155,37 @@ def production_detail(production_id):
     cursor.execute('SELECT COUNT(*) as count FROM production_material_usage WHERE production_id = ?', (production_id,))
     usage_count = cursor.fetchone()['count']
 
+    if usage_count > 0 and production['status'] != '완료':
+        cursor.execute(
+            '''
+            SELECT b.material_id, b.quantity_per_box
+            FROM bom b
+            WHERE b.product_id = ?
+              AND b.material_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM production_material_usage pmu
+                  WHERE pmu.production_id = ?
+                    AND pmu.material_id = b.material_id
+              )
+            ''',
+            (production['product_id'], production_id),
+        )
+        missing_bom_mats = cursor.fetchall()
+        if missing_bom_mats:
+            planned = float(production['planned_boxes'] or 0)
+            for bom in missing_bom_mats:
+                expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned * 100) / 100
+                cursor.execute(
+                    '''
+                    INSERT INTO production_material_usage
+                    (production_id, material_id, raw_material_name, expected_quantity)
+                    VALUES (?, ?, NULL, ?)
+                    ''',
+                    (production_id, bom['material_id'], expected_qty),
+                )
+            conn.commit()
+
     # 遺?먯옱 ?ъ슜?됱씠 ?놁쑝硫?BOM 湲곕컲?쇰줈 ?먮룞 ?앹꽦 (遺?먯옱留? ?먯큹???ъ슜?먭? ?좏깮)
     if usage_count == 0 and production:
         planned = float(production['planned_boxes'])
@@ -2201,6 +2232,19 @@ def production_detail(production_id):
     material_usage = [dict(row) for row in cursor.fetchall()]
     current_workplace = (production.get('workplace') or get_workplace() or session.get('workplace') or '').strip()
     for row in material_usage:
+        category = (row.get('category') or '').strip()
+        name = (row.get('material_name') or '').strip()
+        if category == '기름' or '기름' in category or '유지' in category:
+            if '해바라기' in name:
+                row['base_sort_key'] = f'0-0-{name}'
+            elif '참기름' in name:
+                row['base_sort_key'] = f'0-1-{name}'
+            else:
+                row['base_sort_key'] = f'0-2-{name}'
+        elif category == '소금' or '소금' in category:
+            row['base_sort_key'] = f'1-0-{name}'
+        else:
+            row['base_sort_key'] = f'9-0-{name}'
         material_id = row.get('material_id')
         if material_id:
             gap = _get_material_info_gap(cursor, int(material_id), row.get('category'), current_workplace)
