@@ -1541,6 +1541,9 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
             shortage = required - stock
             if shortage < 0:
                 shortage = 0.0
+            projected_stock = stock - required
+            if projected_stock < 0:
+                projected_stock = 0.0
             rows.append(
                 {
                     'code': item.get('code') or '-',
@@ -1550,6 +1553,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
                     'stock': round(stock, 2),
                     'required': round(required, 2),
                     'shortage': round(shortage, 2),
+                    'projected_stock': round(projected_stock, 2),
                 }
             )
         if mode == 'sub':
@@ -1672,6 +1676,7 @@ def _build_requirement_export_rows(payload, mode):
                             float(item.get('stock') or 0),
                             float(item.get('required') or 0),
                             float(item.get('shortage') or 0),
+                            float(item.get('projected_stock') or 0),
                         ]
                     )
     else:
@@ -1706,6 +1711,7 @@ def _build_requirement_export_rows(payload, mode):
                         float(item.get('stock') or 0),
                         float(item.get('required') or 0),
                         float(item.get('shortage') or 0),
+                        float(item.get('projected_stock') or 0),
                     ]
                 )
 
@@ -4831,6 +4837,7 @@ def integrated_requirements_calculator_export():
         '현재고',
         '필요량',
         '부족량',
+        '예상 현재고',
     ]
     rows = _build_requirement_export_rows(result, mode)
     workbook = _build_simple_xlsx('원부자재계산기', headers, rows)

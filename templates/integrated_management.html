@@ -207,10 +207,12 @@
 .reqcalc-table th:nth-child(2), .reqcalc-table td:nth-child(2){width:auto;}
 .reqcalc-table th:nth-child(3), .reqcalc-table td:nth-child(3),
 .reqcalc-table th:nth-child(4), .reqcalc-table td:nth-child(4),
-.reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5){width:170px;}
+.reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5),
+.reqcalc-table th:nth-child(6), .reqcalc-table td:nth-child(6){width:170px;}
 .reqcalc-table th:nth-child(3), .reqcalc-table td:nth-child(3),
 .reqcalc-table th:nth-child(4), .reqcalc-table td:nth-child(4),
-.reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5){text-align:right;white-space:nowrap;}
+.reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5),
+.reqcalc-table th:nth-child(6), .reqcalc-table td:nth-child(6){text-align:right;white-space:nowrap;}
 .reqcalc-table .reqcalc-num{text-align:right;white-space:nowrap;}
 .reqcalc-saved-tab{display:inline-flex;align-items:center;gap:0.45rem;}
 .reqcalc-saved-tab .close{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(15,23,42,0.12);font-size:12px;line-height:1;border:none;cursor:pointer;color:inherit;padding:0;}
@@ -3039,6 +3041,7 @@ function renderRequirementCalcTable(items, options){
                         <th>현재 총재고</th>
                         <th>필요량</th>
                         <th>부족량</th>
+                        <th>예상 현재고</th>
                         ${usageHeader}
                     </tr>
                 </thead>
@@ -3048,6 +3051,7 @@ function renderRequirementCalcTable(items, options){
                             const usageValue = getRequirementCalcUsageValue(scopeKey, item);
                             const required = Number(item.required || 0);
                             const stock = Number(item.stock || 0);
+                            const projectedStock = Math.max(stock - required, 0);
                             const loss = Math.max(usageValue - required, 0);
                             const remaining = stock - usageValue;
                             const codeKey = escapeRequirementCalcHtml(String(item.code || item.name || '-'));
@@ -3058,6 +3062,7 @@ function renderRequirementCalcTable(items, options){
                                     <td class="reqcalc-num">${Number(stock).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
                                     <td class="reqcalc-num"><strong>${Number(required).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</strong></td>
                                     <td class="reqcalc-num" style="color:${Number(item.shortage || 0) > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">${Number(item.shortage || 0).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
+                                    <td class="reqcalc-num" style="color:${projectedStock > 0 ? '#0f766e' : '#64748b'};font-weight:700;">${projectedStock.toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
                                     ${requirementCalcUsageMode ? `
                                         <td class="reqcalc-num">
                                             <input type="number" min="0" step="0.1" class="reqcalc-usage-input" data-scope-key="${escapeRequirementCalcHtml(scopeKey)}" data-code-key="${codeKey}" value="${usageValue > 0 ? Number(usageValue).toFixed(1) : ''}" onchange="updateRequirementCalcUsageValue('${escapeRequirementCalcHtml(scopeKey)}', '${codeKey}', this.value)">
