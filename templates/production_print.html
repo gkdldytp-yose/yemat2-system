@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -38,6 +38,12 @@
     .gray-fill { background: #efefef; }
     .section-table { border: 2px solid #000; }
     .left { text-align: left; }
+    .item-name-cell {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.25;
+    }
     .center { text-align: center; }
     .title-wrap {
       display: grid;
@@ -91,6 +97,13 @@
       font-size: 11px;
       font-weight: 800;
       background: #efefef;
+    }
+    .personnel-title {
+      font-size: 12.5px !important;
+      font-weight: 950 !important;
+      letter-spacing: 0.08em;
+      padding-top: 1px !important;
+      padding-bottom: 1px !important;
     }
     .dotted-row td {
       border-top: 1px dotted #666;
@@ -336,7 +349,7 @@
           <col style="width:18%">
         </colgroup>
         <tr class="thin-head">
-          <th colspan="7" class="left">인 원 관 리</th>
+          <th colspan="7" class="left personnel-title">인 원 관 리</th>
         </tr>
         <tr class="thin-head">
           <th>공급 라인</th>
@@ -347,7 +360,7 @@
           <th>외포장 인원</th>
           <th>작업시간</th>
         </tr>
-        <tr style="height:28px;">
+        <tr style="height:24px;">
           <td>{{ production.display_supply_line or production.supply_line or '' }}</td>
           <td>{{ production.supply_people if production.supply_people is not none else '' }}</td>
           <td>{{ production.display_supply_line or production.packing_line or production.supply_line or '' }}</td>
@@ -433,13 +446,15 @@
     <div class="section-title">■ 부재료 사용현황</div>
     <table class="section-table">
       <colgroup>
-        <col style="width:34%">
-        <col style="width:15%">
-        <col style="width:15%">
-        <col style="width:15%">
-        <col style="width:21%">
+        <col style="width:9%">
+        <col style="width:31%">
+        <col style="width:13%">
+        <col style="width:14%">
+        <col style="width:14%">
+        <col style="width:19%">
       </colgroup>
       <tr class="thin-head">
+        <th>코드</th>
         <th>품 목</th>
         <th>사용량</th>
         <th>입고일</th>
@@ -448,7 +463,8 @@
       </tr>
       {% for m in material_usages[:material_row_count] %}
       <tr class="dotted-row">
-        <td class="left">{{ m.material_name or '' }}</td>
+        <td>{{ m.material_code or '' }}</td>
+        <td class="left item-name-cell">{{ m.material_name or '' }}</td>
         <td>{{ fmt1(m.lot_used_quantity if m.lot_used_quantity is not none else (m.actual_quantity if m.actual_quantity is not none else m.expected_quantity)) }}</td>
         <td>{{ m.lot_receiving_date or '' }}</td>
         <td>
@@ -469,6 +485,7 @@
         <td></td>
         <td></td>
         <td></td>
+        <td></td>
         {% if material_usages|length == 0 and loop.first %}
         <td rowspan="{{ material_row_count }}"></td>
         {% endif %}
@@ -479,13 +496,15 @@
     <div class="section-title">■ 포장재 사용현황</div>
     <table class="section-table packaging-table">
       <colgroup>
-        <col style="width:34%">
-        <col style="width:15%">
-        <col style="width:15%">
-        <col style="width:15%">
-        <col style="width:21%">
+        <col style="width:9%">
+        <col style="width:29%">
+        <col style="width:12%">
+        <col style="width:12%">
+        <col style="width:14%">
+        <col style="width:24%">
       </colgroup>
       <tr class="thin-head">
+        <th>코드</th>
         <th>품 목</th>
         <th>사용량</th>
         <th>로스량</th>
@@ -494,7 +513,8 @@
       </tr>
       {% for p in packaging_usages[:packaging_row_count] %}
       <tr class="dotted-row">
-        <td class="left">{{ p.material_name or '' }}</td>
+        <td>{{ p.material_code or '' }}</td>
+        <td class="left item-name-cell">{{ p.material_name or '' }}</td>
         <td>{{ fmt1(p.lot_used_quantity if p.lot_used_quantity is not none else (p.actual_quantity if p.actual_quantity is not none else p.expected_quantity)) }}</td>
         <td>{% if p.display_loss_quantity is defined and p.display_loss_quantity is not none %}{{ "%.1f"|format(p.display_loss_quantity) }}{% elif p.loss_quantity is not none %}{{ "%.1f"|format(p.loss_quantity) }}{% endif %}</td>
         <td>{{ p.lot_receiving_date or '' }}</td>
@@ -505,6 +525,7 @@
       {% endfor %}
       {% for i in range(0, packaging_row_count - packaging_usages|length if packaging_usages|length < packaging_row_count else 0) %}
       <tr class="dotted-row">
+        <td></td>
         <td></td>
         <td></td>
         <td></td>

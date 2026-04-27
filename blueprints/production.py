@@ -18,6 +18,37 @@ from core import (
 bp = Blueprint('production', __name__)
 
 
+def _get_production_material_section(row):
+    category = (row.get('category') or '').strip()
+    if category in ('기름', '소금') or '기름' in category or '유지' in category or '소금' in category:
+        return 'base'
+    if category == '내포':
+        return 'pack_inner'
+    if category == '외포':
+        return 'pack_outer'
+    if category == '박스':
+        return 'pack_box'
+    if category == '실리카':
+        return 'pack_silica'
+    if category == '트레이':
+        return 'pack_tray'
+    return 'pack_other'
+
+
+def _get_production_material_sort_key(row):
+    category = (row.get('category') or '').strip()
+    name = (row.get('material_name') or '').strip()
+    if category == '기름' or '기름' in category or '유지' in category:
+        if '해바라기' in name:
+            return f'0-0-{name}'
+        if '참기름' in name:
+            return f'0-1-{name}'
+        return f'0-2-{name}'
+    if category == '소금' or '소금' in category:
+        return f'1-0-{name}'
+    return f'9-0-{name}'
+
+
 def _normalize_production_status(status_value):
     s = (status_value or '').strip()
     done = '\uC644\uB8CC'
@@ -2232,19 +2263,7 @@ def production_detail(production_id):
     material_usage = [dict(row) for row in cursor.fetchall()]
     current_workplace = (production.get('workplace') or get_workplace() or session.get('workplace') or '').strip()
     for row in material_usage:
-        category = (row.get('category') or '').strip()
-        name = (row.get('material_name') or '').strip()
-        if category == '기름' or '기름' in category or '유지' in category:
-            if '해바라기' in name:
-                row['base_sort_key'] = f'0-0-{name}'
-            elif '참기름' in name:
-                row['base_sort_key'] = f'0-1-{name}'
-            else:
-                row['base_sort_key'] = f'0-2-{name}'
-        elif category == '소금' or '소금' in category:
-            row['base_sort_key'] = f'1-0-{name}'
-        else:
-            row['base_sort_key'] = f'9-0-{name}'
+        row['base_sort_key'] = _get_production_material_sort_key(row)
         material_id = row.get('material_id')
         if material_id:
             gap = _get_material_info_gap(cursor, int(material_id), row.get('category'), current_workplace)
@@ -2276,6 +2295,29 @@ def production_detail(production_id):
         else None
     )
 
+    cursor.execute(
+        '''
+        SELECT note_text
+        FROM (
+            SELECT TRIM(personnel_note) as note_text, MAX(id) as latest_id
+            FROM productions
+            WHERE workplace = ?
+              AND COALESCE(TRIM(personnel_note), '') != ''
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM production_personnel_note_hidden hidden
+                  WHERE hidden.workplace = productions.workplace
+                    AND hidden.note_text = TRIM(productions.personnel_note)
+              )
+            GROUP BY TRIM(personnel_note)
+        )
+        ORDER BY latest_id DESC
+        LIMIT 8
+        ''',
+        (current_workplace,),
+    )
+    personnel_note_suggestions = [row['note_text'] for row in cursor.fetchall() if row['note_text']]
+
     conn.close()
 
     return render_template(
@@ -2291,6 +2333,7 @@ def production_detail(production_id):
         total_raw_remain_qty=total_raw_remain_qty,
         total_raw_yield_rate=total_raw_yield_rate,
         material_shortage_popup=material_shortage_popup,
+        personnel_note_suggestions=personnel_note_suggestions,
     )
 
 
@@ -2966,6 +3009,32 @@ def update_production_usage(production_id):
             conn.close()
 
     return redirect(url_for('production.production_detail', production_id=production_id))
+
+
+@bp.route('/production/personnel-note-suggestions/hide', methods=['POST'])
+@role_required('production')
+def hide_personnel_note_suggestion():
+    note_text = (request.form.get('note_text') or '').strip()
+    workplace = (get_workplace() or session.get('workplace') or '').strip()
+    if not note_text or not workplace:
+        return jsonify({'ok': False, 'message': 'invalid_request'}), 400
+
+    conn = get_db()
+    try:
+        conn.execute(
+            '''
+            INSERT OR IGNORE INTO production_personnel_note_hidden (workplace, note_text)
+            VALUES (?, ?)
+            ''',
+            (workplace, note_text),
+        )
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'ok': False, 'message': str(e)}), 500
+    finally:
+        conn.close()
 
 
 @bp.route('/production/<int:production_id>/delete', methods=['POST'])

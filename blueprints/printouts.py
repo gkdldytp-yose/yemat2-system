@@ -5,25 +5,15 @@ import math
 import calendar
 
 from core import get_db, login_required, get_workplace
+from .production import _get_production_material_section, _get_production_material_sort_key
 
 bp = Blueprint('printouts', __name__)
 
 
-def _packaging_order(row):
-    category = (row.get('category') or '').strip()
+def _exclude_from_production_print(row):
     name = (row.get('material_name') or '').strip()
-    text = f"{category} {name}"
-    if '내포' in text:
-        return 0
-    if '외포' in text:
-        return 1
-    if '박스' in text:
-        return 2
-    if '실리카' in text:
-        return 3
-    if '트레이' in text:
-        return 4
-    return 5
+    excluded_keywords = ('뚜껑', '밑판', '앵글')
+    return any(keyword in name for keyword in excluded_keywords)
 
 
 def _round_1(value):
@@ -130,6 +120,7 @@ def production_print(production_id):
             pmu.expected_quantity,
             pmu.actual_quantity,
             pmu.loss_quantity,
+            m.code as material_code,
             m.name as material_name,
             m.category,
             m.unit,
@@ -157,16 +148,9 @@ def production_print(production_id):
         if row['lot_used_quantity'] is not None:
             usage_totals[row['usage_id']] += float(row['lot_used_quantity'] or 0)
 
-    packaging_categories = {'포장재', '내포', '외포', '실리카', '실리카겔', '트레이', '박스'}
-    packaging_keywords = ['내포', '외포', '박스', '트레이', '실리카']
-    packaging = []
-    others = []
+    grouped_materials = defaultdict(list)
     for row in material_usage_rows:
         item = dict(row)
-        cat = (item.get('category') or '')
-        name = (item.get('material_name') or '')
-        is_pack = cat in packaging_categories or any(k in name for k in packaging_keywords)
-
         total_loss = item.get('loss_quantity')
         lot_used_quantity = item.get('lot_used_quantity')
         total_lot_used = usage_totals.get(item['usage_id'], 0.0)
@@ -178,20 +162,26 @@ def production_print(production_id):
             allocated_loss = float(total_loss or 0)
         item['allocated_loss_quantity'] = allocated_loss
         item['display_loss_quantity'] = _round_1(allocated_loss)
+        if _exclude_from_production_print(item):
+            continue
+        item['base_sort_key'] = _get_production_material_sort_key(item)
+        grouped_materials[_get_production_material_section(item)].append(item)
 
-        if is_pack:
-            packaging.append(item)
-        else:
-            others.append(item)
-
-    packaging.sort(
-        key=lambda item: (
-            _packaging_order(item),
-            item.get('material_name') or '',
-            item.get('lot_receiving_date') or '',
-            item.get('lot_seq') or 0,
-            item.get('usage_id') or 0,
-        )
+    sort_key = lambda item: (
+        item.get('base_sort_key') or '',
+        item.get('material_name') or '',
+        item.get('lot_receiving_date') or '',
+        item.get('lot_seq') or 0,
+        item.get('usage_id') or 0,
+    )
+    material_usages = sorted(grouped_materials['base'], key=sort_key)
+    packaging_usages = (
+        sorted(grouped_materials['pack_inner'], key=sort_key)
+        + sorted(grouped_materials['pack_outer'], key=sort_key)
+        + sorted(grouped_materials['pack_box'], key=sort_key)
+        + sorted(grouped_materials['pack_silica'], key=sort_key)
+        + sorted(grouped_materials['pack_tray'], key=sort_key)
+        + sorted(grouped_materials['pack_other'], key=sort_key)
     )
 
     conn.close()
@@ -211,8 +201,8 @@ def production_print(production_id):
         user=session['user'],
         production=production,
         raw_usages=raw_usages,
-        material_usages=others,
-        packaging_usages=packaging,
+        material_usages=material_usages,
+        packaging_usages=packaging_usages,
         date_str=date_str,
         weekday=weekday,
         workplace=workplace,

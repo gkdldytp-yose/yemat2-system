@@ -10,6 +10,12 @@
 .note-textarea{width:100%;padding:0.55rem 0.65rem;border:2px solid #667eea;border-radius:8px;box-sizing:border-box;font-size:0.9rem;line-height:1.45;resize:vertical;min-height:74px;font-family:inherit;}
 .note-textarea[readonly]{background:#f8fafc;color:#475569;}
 .note-textarea.auto-grow{min-height:42px;height:42px;max-height:112px;resize:none;overflow-y:auto;}
+.note-suggestion-row{margin-top:0.45rem;}
+.note-suggestion-wrap{position:relative;}
+.note-suggestion-select{width:100%;min-width:0;padding:0.38rem 2.35rem 0.38rem 0.55rem;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#475569;font-size:0.78rem;}
+.note-suggestion-select:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.2);}
+.note-suggestion-remove{position:absolute;top:50%;right:5px;transform:translateY(-50%);width:24px;height:24px;border:none;border-radius:6px;background:#fff1f2;color:#dc2626;font-size:0.95rem;font-weight:900;cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
+.note-suggestion-remove:hover{background:#ffe4e6;border-color:#fda4af;}
 .raw-card{border:2px solid #e1e8ed;border-radius:8px;padding:1rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.2s;}
 .raw-card:hover{border-color:#667eea;background:#f8f9ff;}
 .raw-card.active{border-color:#27ae60;background:#f0fff4;}
@@ -175,7 +181,20 @@
                    style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">비고</div>
-            <textarea name="personnel_note" rows="1" {% if not can_edit %}readonly{% endif %} class="note-textarea auto-grow" placeholder="인원 관련 비고 입력">{{ production.personnel_note or '' }}</textarea>
+            <textarea id="personnelNote" name="personnel_note" rows="1" {% if not can_edit %}readonly{% endif %} class="note-textarea auto-grow" placeholder="인원 관련 비고 입력">{{ production.personnel_note or '' }}</textarea>
+            {% if can_edit and personnel_note_suggestions %}
+            <div class="note-suggestion-row">
+                <div class="note-suggestion-wrap">
+                    <select id="personnelNoteSuggestionSelect" class="note-suggestion-select" onchange="applyPersonnelNoteSuggestion(this.value);">
+                        <option value="">최근 비고 불러오기</option>
+                        {% for suggestion in personnel_note_suggestions %}
+                        <option value="{{ suggestion|e }}">{{ suggestion }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="note-suggestion-remove" onclick="hideSelectedPersonnelNoteSuggestion()" title="선택한 최근 비고 숨기기">×</button>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -680,6 +699,48 @@ function initAutoGrowNotes(){
         autoGrowTextarea(textarea);
         textarea.addEventListener('input', () => autoGrowTextarea(textarea));
     });
+}
+
+function applyPersonnelNoteSuggestion(note){
+    const textarea = document.getElementById('personnelNote');
+    if(!textarea || textarea.readOnly) return;
+    if(!note) return;
+    textarea.value = note || '';
+    autoGrowTextarea(textarea);
+    textarea.focus();
+}
+
+async function hideSelectedPersonnelNoteSuggestion(){
+    const select = document.getElementById('personnelNoteSuggestionSelect');
+    if(!select) return;
+    const note = (select.value || '').trim();
+    if(!note){
+        alert('숨길 최근 비고를 먼저 선택해주세요.');
+        return;
+    }
+    if(!confirm('선택한 최근 비고를 목록에서 숨길까요?')){
+        return;
+    }
+    const body = new URLSearchParams();
+    body.set('note_text', note);
+    try{
+        const response = await fetch('/production/personnel-note-suggestions/hide', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+            body: body.toString()
+        });
+        const payload = await response.json();
+        if(!response.ok || !payload.ok){
+            throw new Error(payload.message || 'request_failed');
+        }
+        const option = select.options[select.selectedIndex];
+        if(option && option.value){
+            option.remove();
+        }
+        select.selectedIndex = 0;
+    }catch(err){
+        alert('최근 비고를 숨기지 못했습니다.');
+    }
 }
 
 function checkRawOver(id, maxStock){
