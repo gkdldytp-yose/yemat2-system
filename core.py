@@ -464,6 +464,17 @@ def _ensure_production_schema(conn):
         if 'raw_sok_mode' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN raw_sok_mode INTEGER DEFAULT 1")
         conn.execute("UPDATE productions SET raw_sok_mode = 1 WHERE raw_sok_mode IS NULL OR raw_sok_mode < 1")
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS production_personnel_note_hidden (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workplace TEXT NOT NULL,
+                note_text TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(workplace, note_text)
+            )
+            '''
+        )
         usage_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_material_usage)").fetchall()]
         if 'usage_note' not in usage_cols:
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN usage_note TEXT")
