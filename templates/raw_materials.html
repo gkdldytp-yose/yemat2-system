@@ -488,8 +488,6 @@ function applyRawCodeProfile(code){
         jaHoEl.value = '';
         return;
     }
-    const totalQty = logs.reduce((sum, log) => sum + Number(log.quantity || 0), 0);
-    if(totalEl) totalEl.textContent = totalQty.toFixed(1);
 
     const p = RAW_CODE_PROFILES.find(x => (x.code || '').trim() === selectedCode);
     codeEl.value = selectedCode;
