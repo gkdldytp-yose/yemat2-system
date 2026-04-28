@@ -65,6 +65,17 @@ def _can_manage_material_master():
     return bool(user.get('is_admin')) or role != 'readonly'
 
 
+def _alert_back(message):
+    safe_message = json.dumps(str(message or ''), ensure_ascii=False)
+    return f"<meta charset='utf-8'><script>alert({safe_message}); history.back();</script>"
+
+
+def _alert_redirect(message, target_url):
+    safe_message = json.dumps(str(message or ''), ensure_ascii=False)
+    safe_target = json.dumps(str(target_url or ''), ensure_ascii=False)
+    return f"<meta charset='utf-8'><script>alert({safe_message}); location.href={safe_target};</script>"
+
+
 def _notify_users(conn, usernames, title, body='', link=None):
     seen = set()
     for username in usernames or []:
@@ -114,6 +125,10 @@ def _normalize_date_token(value):
 
 def _round_to_1_decimal(value):
     return round(float(value or 0) + 1e-9, 1)
+
+
+def _has_enough_quantity(available, required):
+    return _round_to_1_decimal(available) + 1e-9 >= _round_to_1_decimal(required)
 
 
 def _normalize_material_unit(unit):
@@ -227,6 +242,114 @@ def _get_inventory_location_id(cursor, name):
         (name, name, name),
     ).fetchone()
     return int(row['id']) if row else None
+
+
+def _unused_broken_get_inventory_location_ids(cursor, name):
+    target_name = (name or '').strip()
+    if not target_name:
+        return []
+    if target_name in {LOGISTICS_WORKPLACE, '臾쇰쪟李쎄퀬'}:
+        rows = cursor.execute(
+            '''
+            SELECT id
+            FROM inv_locations
+            WHERE name = '臾쇰쪟李쎄퀬'
+               OR (loc_type = 'WAREHOUSE' AND COALESCE(workplace_code, '') = 'WH')
+               OR COALESCE(workplace_code, '') = ?
+            ORDER BY CASE WHEN name = '臾쇰쪟李쎄퀬' THEN 0
+                          WHEN COALESCE(workplace_code, '') = 'WH' THEN 1
+                          WHEN COALESCE(workplace_code, '') = ? THEN 2
+                          ELSE 3 END,
+                     id
+            ''',
+            (LOGISTICS_WORKPLACE, LOGISTICS_WORKPLACE),
+        ).fetchall()
+        return [int(row['id']) for row in rows if int(row['id'] or 0) > 0]
+    rows = cursor.execute(
+        '''
+        SELECT id
+        FROM inv_locations
+        WHERE name = ?
+           OR COALESCE(workplace_code, '') = ?
+           OR REPLACE(COALESCE(name, ''), ' ', '') = REPLACE(?, ' ', '')
+           OR REPLACE(COALESCE(workplace_code, ''), ' ', '') = REPLACE(?, ' ', '')
+        ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id
+        ''',
+        (target_name, target_name, target_name, target_name, target_name),
+    ).fetchall()
+    return [int(row['id']) for row in rows if int(row['id'] or 0) > 0]
+
+
+def _unused_broken_get_workplace_lot_quantity(cursor, workplace, material_id, lot_id):
+    location_ids = _get_inventory_location_ids(cursor, workplace)
+    if not location_ids:
+        return 0.0
+    placeholders = ','.join(['?'] * len(location_ids))
+    row = cursor.execute(
+        f'''
+        SELECT COALESCE(SUM(b.qty), 0) AS qty
+        FROM inv_material_lot_balances b
+        JOIN material_lots ml ON ml.id = b.material_lot_id
+        WHERE ml.id = ?
+          AND ml.material_id = ?
+          AND b.location_id IN ({placeholders})
+          AND COALESCE(ml.is_disposed, 0) = 0
+          AND COALESCE(b.qty, 0) > 0
+        ''',
+        [lot_id, material_id, *location_ids],
+    ).fetchone()
+    return float((row['qty'] if row else 0) or 0)
+
+
+def _unused_broken_consume_workplace_lot_quantity(cursor, workplace, material_lot_id, quantity):
+    qty_needed = float(quantity or 0)
+    if qty_needed <= 0:
+        return 0.0
+    location_ids = _get_inventory_location_ids(cursor, workplace)
+    if not location_ids:
+        return 0.0
+    placeholders = ','.join(['?'] * len(location_ids))
+    rows = cursor.execute(
+        f'''
+        SELECT location_id, COALESCE(qty, 0) AS qty
+        FROM inv_material_lot_balances
+        WHERE material_lot_id = ?
+          AND location_id IN ({placeholders})
+          AND COALESCE(qty, 0) > 0
+        ORDER BY qty DESC, location_id
+        ''',
+        [material_lot_id, *location_ids],
+    ).fetchall()
+    consumed = 0.0
+    for row in rows:
+        available = float(row['qty'] or 0)
+        if available <= 0:
+            continue
+        take_qty = min(available, qty_needed - consumed)
+        if take_qty <= 0:
+            break
+        cursor.execute(
+            '''
+            UPDATE inv_material_lot_balances
+            SET qty = qty - ?, updated_at = CURRENT_TIMESTAMP
+            WHERE material_lot_id = ?
+              AND location_id = ?
+            ''',
+            (take_qty, material_lot_id, int(row['location_id'])),
+        )
+        cursor.execute(
+            '''
+            DELETE FROM inv_material_lot_balances
+            WHERE material_lot_id = ?
+              AND location_id = ?
+              AND COALESCE(qty, 0) <= 0
+            ''',
+            (material_lot_id, int(row['location_id'])),
+        )
+        consumed += take_qty
+        if consumed >= qty_needed:
+            break
+    return consumed
 
 
 def _get_material_stock_map_for_location(cursor, material_ids, location_name):
@@ -578,6 +701,7 @@ def _cleanup_orphan_material_refs(conn):
 
 
 def _register_export_request_row(cursor, workplace, req_user, req_username, material_id, lot_id, quantity, reason, reason_detail, note):
+    quantity = _round_to_1_decimal(quantity)
     if material_id <= 0 or lot_id <= 0 or quantity <= 0:
         raise ValueError('자재, 로트, 반출 수량을 확인해주세요.')
     if reason not in ('정리', '불량', '기타'):
@@ -590,8 +714,8 @@ def _register_export_request_row(cursor, workplace, req_user, req_username, mate
     if not mat:
         raise ValueError('자재를 찾을 수 없습니다.')
 
-    workplace_location_id = _get_inventory_location_id(cursor, workplace)
-    if not workplace_location_id:
+    workplace_location_ids = _get_inventory_location_ids(cursor, workplace)
+    if not workplace_location_ids:
         raise ValueError('작업장 재고 위치를 찾을 수 없습니다.')
 
     cursor.execute(
@@ -599,29 +723,24 @@ def _register_export_request_row(cursor, workplace, req_user, req_username, mate
         SELECT
             ml.id,
             ml.material_id,
-            ml.lot,
-            COALESCE(SUM(b.qty), 0) AS current_quantity
+            ml.lot
         FROM material_lots ml
-        JOIN inv_material_lot_balances b ON b.material_lot_id = ml.id
         WHERE ml.id = ?
           AND ml.material_id = ?
-          AND b.location_id = ?
           AND COALESCE(ml.is_disposed, 0) = 0
-          AND COALESCE(b.qty, 0) > 0
-        GROUP BY ml.id, ml.material_id, ml.lot
         ''',
-        (lot_id, material_id, workplace_location_id),
+        (lot_id, material_id),
     )
     lot = cursor.fetchone()
     if not lot:
         raise ValueError('선택한 로트를 찾을 수 없습니다.')
 
-    lot_qty = float(lot['current_quantity'] or 0)
+    lot_qty = _round_to_1_decimal(_get_workplace_lot_quantity(cursor, workplace, material_id, lot_id))
     workplace_stock_map = _get_material_stock_map_for_location(cursor, [material_id], workplace)
-    mat_qty = float(workplace_stock_map.get(int(material_id), 0) or 0)
-    if lot_qty < quantity:
+    mat_qty = _round_to_1_decimal(workplace_stock_map.get(int(material_id), 0) or 0)
+    if not _has_enough_quantity(lot_qty, quantity):
         raise ValueError('선택한 로트 재고가 부족합니다.')
-    if mat_qty < quantity:
+    if not _has_enough_quantity(mat_qty, quantity):
         raise ValueError('작업장 재고가 부족합니다.')
 
     pool_code = _pool_code_from_row(mat)
@@ -655,6 +774,224 @@ def _register_export_request_row(cursor, workplace, req_user, req_username, mate
         VALUES (?, ?, 'export_request_pending', ?, ?)
         ''',
         (lot_id, material_id, quantity, f'{workplace} 반출 요청 ({reason})'),
+    )
+    return cursor.lastrowid, pool_code, lot['lot']
+
+
+def _describe_export_request_item(cursor, material_id, lot_id):
+    cursor.execute(
+        '''
+        SELECT m.code, m.name, ml.lot
+        FROM materials m
+        LEFT JOIN material_lots ml ON ml.id = ?
+        WHERE m.id = ?
+        ''',
+        (lot_id, material_id),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return f'자재 ID {material_id}'
+    code = (row['code'] or '').strip()
+    name = (row['name'] or '').strip() or f'자재 ID {material_id}'
+    lot = (row['lot'] or '').strip()
+    prefix = f'[{code}] ' if code else ''
+    suffix = f' / 로트:{lot}' if lot else ''
+    return f'{prefix}{name}{suffix}'
+
+
+def _describe_export_request_by_id(cursor, req_id):
+    cursor.execute(
+        '''
+        SELECT material_id, material_lot_id
+        FROM logistics_issue_requests
+        WHERE id = ?
+        ''',
+        (req_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return f'요청 ID {req_id}'
+    return _describe_export_request_item(cursor, int(row['material_id'] or 0), int(row['material_lot_id'] or 0))
+
+
+def _get_inventory_location_ids(cursor, name):
+    target_name = (name or '').strip()
+    if not target_name:
+        return []
+    if target_name in {LOGISTICS_WORKPLACE, '臾쇰쪟李쎄퀬'}:
+        rows = cursor.execute(
+            '''
+            SELECT id
+            FROM inv_locations
+            WHERE name = '臾쇰쪟李쎄퀬'
+               OR (loc_type = 'WAREHOUSE' AND COALESCE(workplace_code, '') = 'WH')
+               OR COALESCE(workplace_code, '') = ?
+            ORDER BY CASE WHEN name = '臾쇰쪟李쎄퀬' THEN 0
+                          WHEN COALESCE(workplace_code, '') = 'WH' THEN 1
+                          WHEN COALESCE(workplace_code, '') = ? THEN 2
+                          ELSE 3 END,
+                     id
+            ''',
+            (LOGISTICS_WORKPLACE, LOGISTICS_WORKPLACE),
+        ).fetchall()
+        return [int(row['id']) for row in rows if int(row['id'] or 0) > 0]
+    rows = cursor.execute(
+        '''
+        SELECT id
+        FROM inv_locations
+        WHERE name = ?
+           OR COALESCE(workplace_code, '') = ?
+           OR REPLACE(COALESCE(name, ''), ' ', '') = REPLACE(?, ' ', '')
+           OR REPLACE(COALESCE(workplace_code, ''), ' ', '') = REPLACE(?, ' ', '')
+        ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id
+        ''',
+        (target_name, target_name, target_name, target_name, target_name),
+    ).fetchall()
+    return [int(row['id']) for row in rows if int(row['id'] or 0) > 0]
+
+
+def _get_workplace_lot_quantity(cursor, workplace, material_id, lot_id):
+    location_ids = _get_inventory_location_ids(cursor, workplace)
+    if not location_ids:
+        return 0.0
+    placeholders = ','.join(['?'] * len(location_ids))
+    row = cursor.execute(
+        f'''
+        SELECT COALESCE(SUM(b.qty), 0) AS qty
+        FROM inv_material_lot_balances b
+        JOIN material_lots ml ON ml.id = b.material_lot_id
+        WHERE ml.id = ?
+          AND ml.material_id = ?
+          AND b.location_id IN ({placeholders})
+          AND COALESCE(ml.is_disposed, 0) = 0
+          AND COALESCE(b.qty, 0) > 0
+        ''',
+        [lot_id, material_id, *location_ids],
+    ).fetchone()
+    return float((row['qty'] if row else 0) or 0)
+
+
+def _consume_workplace_lot_quantity(cursor, workplace, material_lot_id, quantity):
+    qty_needed = float(quantity or 0)
+    if qty_needed <= 0:
+        return 0.0
+    location_ids = _get_inventory_location_ids(cursor, workplace)
+    if not location_ids:
+        return 0.0
+    placeholders = ','.join(['?'] * len(location_ids))
+    rows = cursor.execute(
+        f'''
+        SELECT location_id, COALESCE(qty, 0) AS qty
+        FROM inv_material_lot_balances
+        WHERE material_lot_id = ?
+          AND location_id IN ({placeholders})
+          AND COALESCE(qty, 0) > 0
+        ORDER BY qty DESC, location_id
+        ''',
+        [material_lot_id, *location_ids],
+    ).fetchall()
+    consumed = 0.0
+    for row in rows:
+        available = float(row['qty'] or 0)
+        if available <= 0:
+            continue
+        take_qty = min(available, qty_needed - consumed)
+        if take_qty <= 0:
+            break
+        cursor.execute(
+            '''
+            UPDATE inv_material_lot_balances
+            SET qty = qty - ?, updated_at = CURRENT_TIMESTAMP
+            WHERE material_lot_id = ?
+              AND location_id = ?
+            ''',
+            (take_qty, material_lot_id, int(row['location_id'])),
+        )
+        cursor.execute(
+            '''
+            DELETE FROM inv_material_lot_balances
+            WHERE material_lot_id = ?
+              AND location_id = ?
+              AND COALESCE(qty, 0) <= 0
+            ''',
+            (material_lot_id, int(row['location_id'])),
+        )
+        consumed += take_qty
+        if consumed >= qty_needed:
+            break
+    return consumed
+
+
+def _unused_broken_register_export_request_row(cursor, workplace, req_user, req_username, material_id, lot_id, quantity, reason, reason_detail, note):
+    if material_id <= 0 or lot_id <= 0 or quantity <= 0:
+        raise ValueError('?먯옱, 濡쒗듃, 諛섏텧 ?섎웾???뺤씤?댁＜?몄슂.')
+    if reason not in ('?뺣━', '遺덈웾', '湲고?'):
+        raise ValueError('諛섏텧 ?ъ쑀瑜??좏깮?댁＜?몄슂.')
+    if reason in ('遺덈웾', '湲고?') and not reason_detail:
+        raise ValueError('遺덈웾/湲고? ?ъ쑀???곸꽭 ?댁슜???낅젰?댁＜?몄슂.')
+
+    cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (material_id,))
+    mat = cursor.fetchone()
+    if not mat:
+        raise ValueError('?먯옱瑜?李얠쓣 ???놁뒿?덈떎.')
+
+    workplace_location_ids = _get_inventory_location_ids(cursor, workplace)
+    if not workplace_location_ids:
+        raise ValueError('?묒뾽???ш퀬 ?꾩튂瑜?李얠쓣 ???놁뒿?덈떎.')
+
+    cursor.execute(
+        '''
+        SELECT ml.id, ml.material_id, ml.lot
+        FROM material_lots ml
+        WHERE ml.id = ?
+          AND ml.material_id = ?
+          AND COALESCE(ml.is_disposed, 0) = 0
+        ''',
+        (lot_id, material_id),
+    )
+    lot = cursor.fetchone()
+    if not lot:
+        raise ValueError('?좏깮??濡쒗듃瑜?李얠쓣 ???놁뒿?덈떎.')
+
+    lot_qty = _get_workplace_lot_quantity(cursor, workplace, material_id, lot_id)
+    workplace_stock_map = _get_material_stock_map_for_location(cursor, [material_id], workplace)
+    mat_qty = float(workplace_stock_map.get(int(material_id), 0) or 0)
+    if lot_qty < quantity:
+        raise ValueError('?좏깮??濡쒗듃 ?ш퀬媛 遺議깊빀?덈떎.')
+    if mat_qty < quantity:
+        raise ValueError('?묒뾽???ш퀬媛 遺議깊빀?덈떎.')
+
+    pool_code = _pool_code_from_row(mat)
+    cursor.execute(
+        '''
+        INSERT INTO logistics_issue_requests
+        (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, approved_quantity,
+         request_type, reason, reason_detail, material_lot_id, status, note, requested_by, requester_username)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'RETURN', ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        (
+            material_id,
+            pool_code,
+            mat['name'],
+            mat['unit'],
+            workplace,
+            quantity,
+            0,
+            reason,
+            reason_detail or None,
+            lot_id,
+            ISSUE_STATUS_REQUESTED,
+            note,
+            req_user,
+            req_username,
+        ),
+    )
+    cursor.execute(
+        '''
+        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+        VALUES (?, ?, 'export_request_pending', ?, ?)
+        ''',
+        (lot_id, material_id, quantity, f'{workplace} 諛섏텧 ?붿껌 ({reason})'),
     )
     return cursor.lastrowid, pool_code, lot['lot']
 
@@ -1260,6 +1597,11 @@ def materials():
     )
     request_materials = [dict(r) for r in cursor.fetchall()]
     request_materials.sort(key=_material_row_sort_key)
+    request_material_id_set = {
+        int(row.get('id') or 0)
+        for row in request_materials
+        if int(row.get('id') or 0) > 0
+    }
 
     if is_logistics_role:
         export_request_materials = []
@@ -1291,6 +1633,65 @@ def materials():
         )
         export_request_materials = [dict(r) for r in cursor.fetchall()]
         export_request_materials.sort(key=_material_row_sort_key)
+    export_material_id_set = {
+        int(row.get('id') or 0)
+        for row in export_request_materials
+        if int(row.get('id') or 0) > 0
+    }
+
+    issue_bom_products = []
+    export_bom_products = []
+    issue_bom_map = {}
+    export_bom_map = {}
+    if not is_logistics_role:
+        cursor.execute(
+            '''
+            SELECT
+                p.id AS product_id,
+                p.name AS product_name,
+                m.id AS material_id,
+                m.code AS material_code,
+                m.name AS material_name,
+                m.unit,
+                m.upper_unit,
+                m.upper_unit_qty,
+                COALESCE(b.quantity_per_box, 0) AS quantity_per_box
+            FROM bom b
+            JOIN products p ON p.id = b.product_id
+            JOIN materials m ON m.id = b.material_id
+            WHERE p.workplace = ?
+              AND b.material_id IS NOT NULL
+            ORDER BY p.name, m.category, m.name
+            ''',
+            (workplace,),
+        )
+        for row in cursor.fetchall():
+            product_id = int(row['product_id'] or 0)
+            material_id = int(row['material_id'] or 0)
+            qty = float(row['quantity_per_box'] or 0)
+            if product_id <= 0 or material_id <= 0 or qty <= 0:
+                continue
+            item = {
+                'material_id': material_id,
+                'code': (row['material_code'] or '').strip() if row['material_code'] else _pool_code_from_row(row),
+                'name': row['material_name'],
+                'unit': _normalize_material_unit(row['unit']),
+                'upper_unit': row['upper_unit'] or '',
+                'upper_unit_qty': float(row['upper_unit_qty'] or 0),
+                'quantity_per_box': qty,
+            }
+            if material_id in request_material_id_set:
+                issue_bom_map.setdefault(product_id, []).append(item)
+            if material_id in export_material_id_set:
+                export_bom_map.setdefault(product_id, []).append(dict(item))
+        issue_bom_products = [
+            product for product in filter_products
+            if issue_bom_map.get(int(product.get('id') or 0))
+        ]
+        export_bom_products = [
+            product for product in filter_products
+            if export_bom_map.get(int(product.get('id') or 0))
+        ]
 
     material_lots_by_material = {}
     if not is_logistics_role:
@@ -1419,6 +1820,10 @@ def materials():
         current_workplace=workplace,
         request_materials=request_materials,
         export_request_materials=export_request_materials,
+        issue_bom_products=issue_bom_products,
+        export_bom_products=export_bom_products,
+        issue_bom_map_json=json.dumps(issue_bom_map, ensure_ascii=False),
+        export_bom_map_json=json.dumps(export_bom_map, ensure_ascii=False),
         material_lots_by_material_json=json.dumps(material_lots_by_material, ensure_ascii=False),
         issue_requests=all_issue_requests,
         issue_requests_pending=issue_requests_pending,
@@ -4441,7 +4846,7 @@ def bulk_add_issue_request():
 def add_export_request():
     workplace = get_workplace()
     if workplace == LOGISTICS_WORKPLACE:
-        return "<script>alert('물류 작업장에서는 반출 요청을 등록할 수 없습니다.'); history.back();</script>"
+        return _alert_back('물류 작업장에서는 반출 요청을 등록할 수 없습니다.')
 
     material_id = int(request.form.get('material_id') or 0)
     lot_id = int(request.form.get('material_lot_id') or 0)
@@ -4449,7 +4854,7 @@ def add_export_request():
     reason_detail = (request.form.get('reason_detail') or '').strip()
     note = (request.form.get('note') or '').strip()
     try:
-        quantity = float(request.form.get('requested_quantity') or 0)
+        quantity = _round_to_1_decimal(request.form.get('requested_quantity') or 0)
     except ValueError:
         quantity = 0
 
@@ -4482,7 +4887,10 @@ def add_export_request():
         conn.commit()
     except ValueError as e:
         conn.rollback()
-        return f"<script>alert('{str(e)}'); history.back();</script>"
+        return _alert_back(str(e))
+    except Exception:
+        conn.rollback()
+        return _alert_back('반출 요청 등록 중 오류가 발생했습니다.')
     finally:
         conn.close()
 
@@ -4494,7 +4902,7 @@ def add_export_request():
 def bulk_add_export_request():
     workplace = get_workplace()
     if workplace == LOGISTICS_WORKPLACE:
-        return "<script>alert('물류 작업장에서는 반출 요청을 등록할 수 없습니다.'); history.back();</script>"
+        return _alert_back('물류 작업장에서는 반출 요청을 등록할 수 없습니다.')
 
     material_ids = request.form.getlist('material_id[]')
     lot_ids = request.form.getlist('material_lot_id[]')
@@ -4514,7 +4922,7 @@ def bulk_add_export_request():
         except ValueError:
             lid = 0
         try:
-            qty = float((quantities[i] if i < len(quantities) else 0) or 0)
+            qty = _round_to_1_decimal((quantities[i] if i < len(quantities) else 0) or 0)
         except ValueError:
             qty = 0
         reason = (reasons[i] if i < len(reasons) else '').strip()
@@ -4525,40 +4933,50 @@ def bulk_add_export_request():
         rows.append((mid, lid, qty, reason, reason_detail, note))
 
     if not rows:
-        return "<script>alert('반출 요청할 항목을 추가해주세요.'); history.back();</script>"
+        return _alert_back('반출 요청할 항목을 추가해주세요.')
 
     conn = get_db()
     cursor = conn.cursor()
     req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     req_username = session.get('user', {}).get('username')
+    success_count = 0
+    failed_items = []
     try:
         for idx, (mid, lid, qty, reason, reason_detail, note) in enumerate(rows, start=1):
-            req_id, pool_code, lot_text = _register_export_request_row(
-                cursor, workplace, req_user, req_username, mid, lid, qty, reason, reason_detail, note
-            )
-            audit_log(
-                conn,
-                'create',
-                'logistics_return_request',
-                req_id,
-                {
-                    'material_id': mid,
-                    'material_code': pool_code,
-                    'material_lot_id': lid,
-                    'lot': lot_text,
-                    'workplace': workplace,
-                    'quantity': qty,
-                    'reason': reason,
-                    'reason_detail': reason_detail,
-                    'note': note,
-                    'bulk': True,
-                    'row_index': idx,
-                },
-            )
+            try:
+                req_id, pool_code, lot_text = _register_export_request_row(
+                    cursor, workplace, req_user, req_username, mid, lid, qty, reason, reason_detail, note
+                )
+                audit_log(
+                    conn,
+                    'create',
+                    'logistics_return_request',
+                    req_id,
+                    {
+                        'material_id': mid,
+                        'material_code': pool_code,
+                        'material_lot_id': lid,
+                        'lot': lot_text,
+                        'workplace': workplace,
+                        'quantity': qty,
+                        'reason': reason,
+                        'reason_detail': reason_detail,
+                        'note': note,
+                        'bulk': True,
+                        'row_index': idx,
+                    },
+                )
+                success_count += 1
+            except ValueError as e:
+                failed_items.append(f'{idx}. {_describe_export_request_item(cursor, mid, lid)} - {str(e)}')
         conn.commit()
-    except ValueError as e:
+        if failed_items:
+            summary_lines = [f'반출 요청 등록 완료 {success_count}건, 실패 {len(failed_items)}건']
+            summary_lines.extend(failed_items)
+            return _alert_redirect('\n'.join(summary_lines), url_for('materials.materials', req_tab='export'))
+    except Exception:
         conn.rollback()
-        return f"<script>alert('{str(e)}'); history.back();</script>"
+        return _alert_back('반출 요청 등록 중 오류가 발생했습니다.')
     finally:
         conn.close()
 
@@ -4917,10 +5335,10 @@ def reject_issue_request(req_id):
 @bp.route('/export-requests/<int:req_id>/complete', methods=['POST'])
 @login_required
 def complete_export_request(req_id):
-    approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
+    approved_qty = _round_to_1_decimal(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
     if approved_qty <= 0:
-        return "<script>alert('실제 반출 수량을 확인해 주세요.'); history.back();</script>"
+        return _alert_back('실제 반출 수량을 확인해 주세요.')
 
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     current_username = (session.get('user', {}) or {}).get('username')
@@ -4928,92 +5346,15 @@ def complete_export_request(req_id):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
-        req_row = cursor.fetchone()
-        if not req_row:
-            return "<script>alert('반출 요청을 찾을 수 없습니다.'); history.back();</script>"
-        if (req_row['request_type'] or 'ISSUE') != 'RETURN':
-            return "<script>alert('반출 요청 건만 처리할 수 있습니다.'); history.back();</script>"
-        if req_row['status'] != ISSUE_STATUS_REQUESTED:
-            return "<script>alert('이미 처리된 반출 요청입니다.'); history.back();</script>"
-        if approved_qty > float(req_row['requested_quantity'] or 0):
-            return "<script>alert('실제 반출 수량은 요청 수량을 초과할 수 없습니다.'); history.back();</script>"
-        requester_username = (req_row['requester_username'] or '').strip()
-        requester_name = (req_row['requested_by'] or '').strip()
-        if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
-            return "<script>alert('요청을 등록한 사용자만 반출 완료 처리할 수 있습니다.'); history.back();</script>"
-
-        workplace_location_id = _get_inventory_location_id(cursor, req_row['requester_workplace'])
-        if not workplace_location_id:
-            return "<script>alert('작업장 재고 위치를 찾을 수 없습니다.'); history.back();</script>"
-
-        cursor.execute(
-            '''
-            SELECT COALESCE(SUM(qty), 0) AS qty
-            FROM inv_material_lot_balances
-            WHERE material_lot_id = ?
-              AND location_id = ?
-            ''',
-            (req_row['material_lot_id'], workplace_location_id),
-        )
-        lot_balance_row = cursor.fetchone()
-        workplace_lot_qty = float((lot_balance_row['qty'] if lot_balance_row else 0) or 0)
-        if workplace_lot_qty < approved_qty:
-            return "<script>alert('현재 로트 재고가 실제 반출 수량보다 부족합니다.'); history.back();</script>"
-
-        cursor.execute(
-            '''
-            UPDATE inv_material_lot_balances
-            SET qty = qty - ?, updated_at = CURRENT_TIMESTAMP
-            WHERE material_lot_id = ?
-              AND location_id = ?
-            ''',
-            (approved_qty, req_row['material_lot_id'], workplace_location_id),
-        )
-        cursor.execute(
-            '''
-            DELETE FROM inv_material_lot_balances
-            WHERE material_lot_id = ?
-              AND location_id = ?
-              AND COALESCE(qty, 0) <= 0
-            ''',
-            (req_row['material_lot_id'], workplace_location_id),
-        )
-        _sync_material_stock_with_lots(conn, int(req_row['material_id']))
-
-        cursor.execute(
-            '''
-            UPDATE logistics_issue_requests
-            SET status = ?, approved_quantity = ?, processed_by = ?, processed_at = CURRENT_TIMESTAMP, process_note = ?
-            WHERE id = ?
-            ''',
-            (ISSUE_STATUS_COMPLETED, approved_qty, manager_name, process_note, req_id),
-        )
-        cursor.execute(
-            '''
-            INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-            VALUES (?, ?, 'export_request_complete', ?, ?)
-            ''',
-            (
-                req_row['material_lot_id'],
-                req_row['material_id'],
-                approved_qty,
-                f"{req_row['requester_workplace']} ?? ??" + (f" / {process_note}" if process_note else ''),
-            ),
-        )
-        audit_log(
+        req_row = _complete_export_request_row(
             conn,
-            'update',
-            'logistics_return_request',
+            cursor,
             req_id,
-            {
-                'status': ISSUE_STATUS_COMPLETED,
-                'approved_quantity': approved_qty,
-                'processed_by': manager_name,
-                'material_code': req_row['material_code'],
-                'material_id': req_row['material_id'],
-                'requester_workplace': req_row['requester_workplace'],
-            },
+            approved_qty,
+            process_note,
+            manager_name,
+            current_username,
+            current_name,
         )
         cursor.execute(
             '''
@@ -5028,11 +5369,160 @@ def complete_export_request(req_id):
         pending_row = cursor.fetchone()
         remaining_pending_count = int((pending_row['cnt'] if pending_row else 0) or 0)
         conn.commit()
+    except ValueError as e:
+        conn.rollback()
+        return _alert_back(str(e))
+    except Exception:
+        conn.rollback()
+        return _alert_back('반출 완료 처리 중 오류가 발생했습니다.')
     finally:
         conn.close()
 
     next_status = 'pending' if remaining_pending_count > 0 else 'completed'
     return redirect(url_for('materials.materials', req_tab='export', export_status=next_status))
+
+
+def _complete_export_request_row(conn, cursor, req_id, approved_qty, process_note, manager_name, current_username, current_name):
+    cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
+    req_row = cursor.fetchone()
+    if not req_row:
+        raise ValueError('반출 요청을 찾을 수 없습니다.')
+    if (req_row['request_type'] or 'ISSUE') != 'RETURN':
+        raise ValueError('반출 요청 건만 처리할 수 있습니다.')
+    if req_row['status'] != ISSUE_STATUS_REQUESTED:
+        raise ValueError('이미 처리된 반출 요청입니다.')
+    requested_qty = _round_to_1_decimal(req_row['requested_quantity'] or 0)
+    if approved_qty > requested_qty + 1e-9:
+        raise ValueError('실제 반출 수량은 요청 수량을 초과할 수 없습니다.')
+    requester_username = (req_row['requester_username'] or '').strip()
+    requester_name = (req_row['requested_by'] or '').strip()
+    if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
+        raise ValueError('요청을 등록한 사용자만 반출 완료 처리할 수 있습니다.')
+
+    workplace_location_ids = _get_inventory_location_ids(cursor, req_row['requester_workplace'])
+    if not workplace_location_ids:
+        raise ValueError('작업장 재고 위치를 찾을 수 없습니다.')
+
+    workplace_lot_qty = _round_to_1_decimal(_get_workplace_lot_quantity(
+        cursor,
+        req_row['requester_workplace'],
+        req_row['material_id'],
+        req_row['material_lot_id'],
+    ))
+    if not _has_enough_quantity(workplace_lot_qty, approved_qty):
+        raise ValueError('현재 로트 재고가 실제 반출 수량보다 부족합니다.')
+
+    consumed_qty = _consume_workplace_lot_quantity(
+        cursor,
+        req_row['requester_workplace'],
+        req_row['material_lot_id'],
+        approved_qty,
+    )
+    if not _has_enough_quantity(consumed_qty, approved_qty):
+        raise ValueError('반출 처리 중 로트 재고가 변경되었습니다. 다시 시도해 주세요.')
+    _sync_material_stock_with_lots(conn, int(req_row['material_id']))
+
+    cursor.execute(
+        '''
+        UPDATE logistics_issue_requests
+        SET status = ?, approved_quantity = ?, processed_by = ?, processed_at = CURRENT_TIMESTAMP, process_note = ?
+        WHERE id = ?
+        ''',
+        (ISSUE_STATUS_COMPLETED, approved_qty, manager_name, process_note, req_id),
+    )
+    cursor.execute(
+        '''
+        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+        VALUES (?, ?, 'export_request_complete', ?, ?)
+        ''',
+        (
+            req_row['material_lot_id'],
+            req_row['material_id'],
+            approved_qty,
+            f"{req_row['requester_workplace']} 반출 완료" + (f" / {process_note}" if process_note else ''),
+        ),
+    )
+    audit_log(
+        conn,
+        'update',
+        'logistics_return_request',
+        req_id,
+        {
+            'status': ISSUE_STATUS_COMPLETED,
+            'approved_quantity': approved_qty,
+            'processed_by': manager_name,
+            'material_code': req_row['material_code'],
+            'material_id': req_row['material_id'],
+            'requester_workplace': req_row['requester_workplace'],
+        },
+    )
+    return req_row
+
+
+@bp.route('/export-requests/complete-selected', methods=['POST'])
+@login_required
+def complete_selected_export_requests():
+    req_ids = []
+    for raw_id in request.form.getlist('request_ids[]'):
+        try:
+            req_id = int(raw_id or 0)
+        except ValueError:
+            req_id = 0
+        if req_id > 0:
+            req_ids.append(req_id)
+    if not req_ids:
+        return _alert_back('일괄 반출 완료 처리할 항목을 선택해 주세요.')
+
+    manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
+    current_username = (session.get('user', {}) or {}).get('username')
+    current_name = (session.get('user', {}) or {}).get('name')
+    conn = get_db()
+    cursor = conn.cursor()
+    completed_count = 0
+    failed_items = []
+    last_workplace = None
+    try:
+        for req_id in req_ids:
+            savepoint_name = f'export_bulk_complete_{req_id}'
+            cursor.execute(f'SAVEPOINT {savepoint_name}')
+            try:
+                cursor.execute('SELECT requester_workplace, requested_quantity FROM logistics_issue_requests WHERE id = ?', (req_id,))
+                row = cursor.fetchone()
+                if not row:
+                    raise ValueError('반출 요청을 찾을 수 없습니다.')
+                last_workplace = row['requester_workplace']
+                approved_qty = _round_to_1_decimal(row['requested_quantity'] or 0)
+                _complete_export_request_row(
+                    conn,
+                    cursor,
+                    req_id,
+                    approved_qty,
+                    '',
+                    manager_name,
+                    current_username,
+                    current_name,
+                )
+                cursor.execute(f'RELEASE SAVEPOINT {savepoint_name}')
+                completed_count += 1
+            except Exception as e:
+                cursor.execute(f'ROLLBACK TO SAVEPOINT {savepoint_name}')
+                cursor.execute(f'RELEASE SAVEPOINT {savepoint_name}')
+                failed_items.append(f'{_describe_export_request_by_id(cursor, req_id)} - {str(e)}')
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        return _alert_back('일괄 반출 완료 처리 중 오류가 발생했습니다.')
+    finally:
+        conn.close()
+
+    target_url = url_for('materials.materials', req_tab='export', export_status='pending')
+    if completed_count > 0 and not failed_items:
+        return _alert_redirect(f'선택한 {completed_count}건을 일괄 반출 완료 처리했습니다.', target_url)
+    if failed_items:
+        summary_lines = [f'일괄 반출 완료 {completed_count}건, 실패 {len(failed_items)}건']
+        summary_lines.extend(failed_items)
+        return _alert_redirect('\n'.join(summary_lines), target_url)
+    return _alert_back('일괄 반출 완료 처리할 항목이 없습니다.')
 
 
 @bp.route('/export-requests/<int:req_id>/reject', methods=['POST'])

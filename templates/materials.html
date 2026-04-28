@@ -102,6 +102,7 @@
 .request-builder-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;margin-bottom:0.85rem;}
 .request-builder-title{margin:0;font-size:1rem;font-weight:900;color:#0f172a;}
 .request-builder-caption{margin:0.2rem 0 0;font-size:0.82rem;color:#64748b;line-height:1.45;}
+.request-draft-container{overflow:visible;max-height:none;}
 .request-list-table{width:100%;border-collapse:separate;border-spacing:0 10px;}
 .request-list-table thead th{font-size:0.74rem;text-transform:uppercase;letter-spacing:.04em;background:transparent!important;border:none!important;color:#475569;padding:0 0.65rem 0.35rem;}
 .request-list-table tbody tr{background:#fff;box-shadow:0 10px 24px rgba(15,23,42,.05);}
@@ -122,6 +123,31 @@
 .request-note-input{width:100%;height:38px;border:1px solid #cbd5e1;border-radius:12px;padding:0 0.8rem;background:linear-gradient(180deg,#ffffff,#f8fbff);color:#0f172a;font-size:0.9rem;box-shadow:0 2px 8px rgba(15,23,42,.05);}
 .request-note-input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
 .request-note-chip{display:inline-flex;align-items:center;max-width:220px;padding:0.45rem 0.7rem;border-radius:12px;background:#f8fafc;border:1px solid #dbe5f0;color:#334155;font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.export-draft-cell{padding:0.9rem 1rem!important;}
+.export-draft-card{display:flex;flex-direction:column;gap:0.75rem;}
+.export-draft-top{display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;}
+.export-draft-code{display:inline-flex;align-items:center;padding:0.28rem 0.55rem;border-radius:999px;background:#e8f0ff;color:#1d4ed8;font-weight:900;font-size:0.78rem;letter-spacing:.02em;}
+.export-draft-name{margin-top:0.35rem;font-size:0.95rem;font-weight:900;color:#0f172a;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere;}
+.export-draft-delete{flex:0 0 auto;}
+.export-draft-grid{display:grid;grid-template-columns:minmax(320px,2.4fr) minmax(160px,0.9fr) minmax(180px,1fr);gap:0.65rem 0.8rem;align-items:end;}
+.export-draft-grid-bottom{display:grid;grid-template-columns:minmax(240px,1.15fr) minmax(340px,1.85fr);gap:0.65rem 0.8rem;align-items:end;}
+.export-draft-field{display:flex;flex-direction:column;gap:0.32rem;min-width:0;}
+.export-draft-label{font-size:0.72rem;font-weight:800;color:#64748b;padding-left:0.1rem;}
+.export-draft-field .request-select,
+.export-draft-field .request-note-input{width:100%;min-width:0;height:40px;box-sizing:border-box;}
+.export-draft-field .request-qty-box{width:100%;justify-content:space-between;box-sizing:border-box;}
+.export-draft-field .request-qty-input{width:100%!important;min-width:0;}
+.export-draft-field .request-qty-unit{flex:0 0 auto;}
+.export-draft-field-wide{grid-column:auto;}
+@media (max-width: 980px){
+  .export-draft-grid,.export-draft-grid-bottom{grid-template-columns:1fr 1fr;}
+}
+@media (max-width: 640px){
+  .export-draft-top{flex-direction:column;}
+  .export-draft-delete{width:100%;}
+  .export-draft-delete .btn{width:100%;}
+  .export-draft-grid,.export-draft-grid-bottom{grid-template-columns:1fr;}
+}
 .issue-unit-toggle{border:1px solid #0ea5e9;background:#eff6ff;color:#0369a1;border-radius:999px;padding:0.28rem 0.7rem;font-size:0.78rem;font-weight:900;cursor:pointer;line-height:1;}
 .issue-unit-toggle.base{border-color:#94a3b8;background:#f8fafc;color:#334155;}
 .issue-converted-hint{font-size:0.78rem;font-weight:800;color:#0f172a;}
@@ -153,6 +179,11 @@
 .issue-date-pane{display:none;}
 .issue-date-pane.active{display:block;}
 .issue-status-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.8rem;}
+.issue-status-actions{display:flex;align-items:center;justify-content:flex-end;gap:.55rem;flex-wrap:wrap;}
+.issue-status-actions form{margin:0;}
+.bulk-mode-actions{display:none;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.bulk-mode-actions.active{display:flex;}
+.bulk-mode-toggle.active{background:linear-gradient(135deg,#1d4ed8,#1e3a8a);border-color:#1d4ed8;color:#fff;}
 .issue-status-title{font-size:1rem;font-weight:900;color:#0f172a;}
 .issue-status-caption{font-size:0.82rem;color:#64748b;margin-top:0.15rem;}
 .issue-status-table{width:100%;border-collapse:separate;border-spacing:0 10px;}
@@ -178,13 +209,30 @@
 .issue-manage-stack input[type="number"]{width:92px;}
 .issue-manage-stack input[type="text"]{width:130px;}
 .export-complete-row{display:flex;align-items:center;gap:.55rem;flex-wrap:nowrap;min-width:0;}
-.export-complete-form{display:flex;align-items:center;gap:.55rem;flex:1;min-width:0;flex-wrap:nowrap;margin:0;}
+.export-complete-form{display:flex;align-items:center;gap:.55rem;flex:0 0 auto;min-width:0;flex-wrap:nowrap;margin:0;}
 .export-complete-qty{width:92px!important;height:38px;border:1px solid #cbd5e1;border-radius:12px;padding:0 .72rem;background:linear-gradient(180deg,#ffffff,#f8fbff);color:#0f172a;font-size:.92rem;font-weight:900;text-align:right;box-shadow:0 3px 10px rgba(15,23,42,.05);}
 .export-complete-note{flex:1;min-width:150px;height:38px;border:1px solid #cbd5e1;border-radius:12px;padding:0 .82rem;background:linear-gradient(180deg,#ffffff,#f8fbff);color:#0f172a;font-size:.88rem;box-shadow:0 3px 10px rgba(15,23,42,.05);}
 .export-complete-qty:focus,.export-complete-note:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
 .export-complete-actions{display:flex;align-items:center;gap:.45rem;flex:0 0 auto;}
 .export-complete-delete{margin:0;flex:0 0 auto;}
 .export-complete-form .btn,.export-complete-delete .btn{height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
+.export-pending-card-cell{padding:1rem!important;}
+.export-pending-card{display:flex;flex-direction:column;gap:.85rem;}
+.export-pending-card.is-select-mode{padding-left:3rem;position:relative;}
+.export-select-check{display:none;position:absolute;top:1rem;left:1rem;width:18px;height:18px;accent-color:#2563eb;cursor:pointer;}
+.export-pending-card.is-select-mode .export-select-check{display:block;}
+.export-pending-top{display:grid;grid-template-columns:minmax(110px,.85fr) minmax(110px,.85fr) minmax(250px,1.9fr) minmax(150px,1.05fr) minmax(110px,.9fr) minmax(92px,.72fr);gap:.85rem;align-items:center;}
+.export-pending-bottom{display:grid;grid-template-columns:minmax(220px,1.05fr) minmax(260px,1.35fr) auto;gap:.85rem;align-items:end;}
+.export-pending-stack{display:flex;flex-direction:column;gap:.24rem;min-width:0;}
+.export-pending-stack.process{justify-content:flex-end;align-items:flex-end;justify-self:end;min-width:fit-content;}
+.export-pending-kicker{font-size:.7rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;}
+.export-pending-value{font-size:.92rem;font-weight:800;color:#0f172a;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere;}
+.export-pending-code-line{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.export-pending-table .issue-note-box{max-width:none;width:100%;min-height:42px;box-sizing:border-box;}
+.export-pending-table .issue-state-badge{justify-content:center;}
+.export-pending-table .export-complete-row{align-items:center;justify-content:flex-end;gap:.6rem;}
+.export-pending-table .export-complete-form{justify-content:flex-end;flex:0 0 auto;}
+.export-pending-table .export-complete-note{min-width:0;flex:1 1 150px;}
 .receipt-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.56);z-index:900;align-items:center;justify-content:center;padding:1rem;}
 .receipt-modal-bg.open{display:flex;}
 .receipt-modal{width:min(720px,96vw);max-height:min(92vh,920px);display:flex;flex-direction:column;background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbe5f0;border-radius:24px;box-shadow:0 28px 70px rgba(15,23,42,.24);overflow:hidden;}
@@ -239,10 +287,15 @@
   .issue-status-board{padding:0.75rem;}
   .issue-status-table{min-width:860px;}
   .issue-note-box{max-width:260px;}
+  .export-pending-top{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .export-pending-bottom{grid-template-columns:1fr;}
+  .export-pending-stack.process{align-items:flex-start;justify-self:stretch;min-width:0;}
 }
 @media (max-width: 760px){
   .export-complete-row,.export-complete-form{flex-wrap:wrap;}
   .export-complete-qty,.export-complete-note{width:100%!important;min-width:0;}
+  .export-pending-top{grid-template-columns:1fr;}
+  .export-pending-stack.process{justify-content:flex-start;align-items:flex-start;}
 }
 
 </style>
@@ -612,6 +665,18 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>상품 BOM으로 한 번에 추가</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                        <select id="issueBomProductSelect" style="flex:1;min-width:220px;">
+                            <option value="">상품 선택</option>
+                            {% for product in issue_bom_products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="addIssueBomItems()">BOM 전체 추가</button>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>부자재 검색</label>
                     <input type="text" id="issueSearch" lang="ko" style="ime-mode: active;" placeholder="코드 또는 부자재명 검색, 쉼표 구분 AND 검색" onfocus="prepareKoreanInput(this)" oninput="filterIssueMaterials()">
                 </div>
@@ -640,7 +705,7 @@
                     <button type="button" class="btn btn-small btn-danger" onclick="clearIssueItems(true)">전체 삭제</button>
                 </div>
                 <form method="POST" action="/issue-requests/bulk-add" id="issueBulkForm">
-                    <div class="table-container" style="max-height:360px;overflow:auto;">
+                    <div class="table-container request-draft-container">
                         <table class="request-list-table">
                             <thead><tr><th>코드</th><th>자재명</th><th>단위</th><th>요청수량</th><th>환산수량</th><th>비고</th><th></th></tr></thead>
                             <tbody id="issueItemsBody">
@@ -803,8 +868,21 @@
                 <div class="request-builder-head">
                     <div>
                         <h3 class="request-builder-title">반출 자재 검색/추가</h3>
-                        <p class="request-builder-caption">작업장에서 실제 반출할 자재와 로트를 선택해 반출 요청을 구성합니다.</p>
+                        <p class="request-builder-caption">반출할 부자재를 먼저 목록에 담고, 오른쪽 요청 목록에서 자재별 로트와 사유를 입력합니다.</p>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label>상품 BOM으로 한 번에 추가</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                        <select id="exportBomProductSelect" style="flex:1;min-width:220px;">
+                            <option value="">상품 선택</option>
+                            {% for product in export_bom_products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-small" style="background:#ea580c;" onclick="addExportBomItems()">BOM 전체 추가</button>
+                    </div>
+                    <div style="margin-top:0.35rem;font-size:0.78rem;color:#64748b;">추가된 자재는 오른쪽 목록에서 로트와 반출 사유를 각각 지정한 뒤 요청 등록합니다.</div>
                 </div>
                 <div class="form-group">
                     <label>부자재 검색</label>
@@ -812,45 +890,13 @@
                 </div>
                 <div class="form-group">
                     <label>부자재 목록</label>
-                    <select id="exportMaterialList" size="12" class="request-select" style="width:100%;" onchange="syncExportLots()" ondblclick="addExportItemFromList()">
+                    <select id="exportMaterialList" size="12" class="request-select" style="width:100%;" ondblclick="addExportItemFromList()">
                         {% for m in export_request_materials %}
                         <option value="{{ m.id }}" data-code="{{ m.code or '-' }}" data-name="{{ m.name }}" data-unit="{{ m.unit or '' }}">
                             [{{ m.code or '-' }}] {{ m.name }}{% if m.unit %} ({{ m.unit }}){% endif %}
                         </option>
                         {% endfor %}
                     </select>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label>로트</label>
-                    <select id="export_req_lot">
-                        <option value="">자재를 먼저 선택하세요</option>
-                    </select>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-                    <div class="form-group" style="margin:0;">
-                        <label>반출수량</label>
-                        <div class="request-qty-box">
-                            <input type="number" id="export_req_qty" class="request-qty-input" step="0.01" min="0.01">
-                            <span class="request-qty-unit" id="export_req_qty_unit">수량</span>
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label>반출사유</label>
-                        <select id="export_req_reason" onchange="toggleReasonDetail()">
-                            <option value="">선택</option>
-                            <option value="정리">정리</option>
-                            <option value="불량">불량</option>
-                            <option value="기타">기타</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label>상세사유</label>
-                    <input type="text" id="export_req_reason_detail" maxlength="200" placeholder="불량/기타 사유 입력" disabled>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label>메모</label>
-                    <input type="text" id="export_req_note" class="request-note-input" maxlength="200" placeholder="메모 입력">
                 </div>
                 <div class="request-inline-actions">
                     <button type="button" class="btn btn-small" style="background:#f97316;" onclick="addExportItemFromList()">+추가</button>
@@ -866,9 +912,9 @@
                     </div>
                 </div>
                 <form method="POST" action="/export-requests/bulk-add" id="exportBulkForm">
-                    <div class="table-container" style="max-height:360px;overflow:auto;">
+                    <div class="table-container request-draft-container">
                         <table class="request-list-table">
-                            <thead><tr><th>코드</th><th>자재명</th><th>로트</th><th>수량</th><th>사유</th><th>상세사유</th><th>메모</th><th></th></tr></thead>
+                            <thead><tr><th colspan="8">반출 항목</th></tr></thead>
                             <tbody id="exportItemsBody">
                                 <tr id="exportEmptyRow"><td colspan="8" class="request-empty">추가된 반출 항목이 없습니다.</td></tr>
                             </tbody>
@@ -893,41 +939,84 @@
                     <div class="issue-status-caption">요청자가 실제 반출 수량을 확인하고 완료 처리할 수 있는 반출 요청입니다.</div>
                 </div>
                 {% if not is_logistics_role and export_requests_pending %}
-                <form method="POST" action="/export-requests/delete-all-pending" onsubmit="return confirm('현재 작업장의 반출 요청 중 항목을 모두 삭제하시겠습니까?');">
-                    <button type="submit" class="btn btn-small btn-danger">전체 삭제</button>
-                </form>
+                <div class="issue-status-actions">
+                    <button type="button" class="btn btn-small bulk-mode-toggle" id="exportBulkModeToggleBtn" onclick="handleExportBulkPrimaryAction()">일괄 반출</button>
+                    <div class="bulk-mode-actions" id="exportBulkModeActions">
+                        <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;font-weight:800;color:#334155;padding:0 .2rem;">
+                            <input type="checkbox" id="exportBulkSelectAll" onchange="toggleExportBulkSelectAll(this.checked)">
+                            전체 선택
+                        </label>
+                        <button type="button" class="btn btn-small btn-secondary" onclick="toggleExportBulkCompleteMode(false)">취소</button>
+                    </div>
+                    <form method="POST" action="/export-requests/delete-all-pending" onsubmit="return confirm('현재 작업장의 반출 요청 중 항목을 모두 삭제하시겠습니까?');">
+                        <button type="submit" class="btn btn-small btn-danger">전체 삭제</button>
+                    </form>
+                </div>
                 {% endif %}
             </div>
         <div class="table-container">
-            <table class="issue-status-table">
-                <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>상태</th><th>사유</th><th>메모</th><th>처리</th></tr></thead>
+            <form method="POST" action="/export-requests/complete-selected" id="exportBulkCompleteForm">
+            <table class="issue-status-table export-pending-table">
                 <tbody>
                 {% if export_requests_pending %}
                     {% for r in export_requests_pending %}
                     <tr>
-                        <td class="issue-meta-cell">
-                            <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
-                            <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
-                        </td>
-                        <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
-                        <td class="issue-name-cell">{{ r.material_name }}</td>
-                        <td>{{ r.material_lot or '-' }}</td>
-                        <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
-                        <td><span class="issue-state-badge pending">{{ r.status }}</span></td>
-                        <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
-                        <td><span class="issue-note-box">{{ (r.note or '-')|e }}</span></td>
-                        <td>
-                            <div class="export-complete-row">
-                                <form method="POST" action="/export-requests/{{ r.id }}/complete" class="export-complete-form" onsubmit="return confirm('실제 반출 수량으로 완료 처리하시겠습니까?');">
-                                    <input type="number" name="actual_quantity" class="export-complete-qty" value="{{ "%.1f"|format(r.requested_quantity or 0) }}" step="0.01" min="0.01">
-                                    <input type="text" name="process_note" class="export-complete-note" placeholder="반출 메모 입력">
-                                    <div class="export-complete-actions">
-                                        <button type="submit" class="btn btn-small" style="background:#f97316;">반출 완료</button>
+                        <td colspan="9" class="export-pending-card-cell">
+                            <div class="export-pending-card" data-export-pending-card="1">
+                                <input type="checkbox" class="export-select-check" name="request_ids[]" value="{{ r.id }}" aria-label="{{ r.material_name }} 선택">
+                                <div class="export-pending-top">
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">요청 정보</span>
+                                        <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
+                                        <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
                                     </div>
-                                </form>
-                                <form method="POST" action="/export-requests/{{ r.id }}/delete" class="export-complete-delete" onsubmit="return confirm('해당 반출 요청을 삭제하시겠습니까?');">
-                                    <button type="submit" class="btn btn-small btn-danger">삭제</button>
-                                </form>
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">코드</span>
+                                        <div class="export-pending-code-line">
+                                            <span class="issue-code-badge">{{ r.material_code or '-' }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">자재명</span>
+                                        <span class="export-pending-value">{{ r.material_name }}</span>
+                                    </div>
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">로트</span>
+                                        <span class="export-pending-value">{{ (r.material_lot or '-')|replace(((r.material_code or '') ~ '-'), '', 1) }}</span>
+                                    </div>
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">반출수량</span>
+                                        <span class="export-pending-value">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span>
+                                    </div>
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">상태</span>
+                                        <span class="issue-state-badge pending">{{ r.status }}</span>
+                                    </div>
+                                </div>
+                                <div class="export-pending-bottom">
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">사유</span>
+                                        <span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span>
+                                    </div>
+                                    <div class="export-pending-stack">
+                                        <span class="export-pending-kicker">메모</span>
+                                        <span class="issue-note-box">{{ (r.note or '-')|e }}</span>
+                                    </div>
+                                    <div class="export-pending-stack process">
+                                        <span class="export-pending-kicker">처리</span>
+                                        <div class="export-complete-row">
+                                            <form method="POST" action="/export-requests/{{ r.id }}/complete" class="export-complete-form" onsubmit="return confirm('실제 반출 수량으로 완료 처리하시겠습니까?');">
+                                                <input type="hidden" name="actual_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}">
+                                                <div class="export-complete-actions">
+                                                    <button type="submit" class="btn btn-small" style="background:#f97316;">반출 완료</button>
+                                                </div>
+                                            </form>
+                                            <form method="POST" action="/export-requests/{{ r.id }}/delete" class="export-complete-delete" onsubmit="return confirm('해당 반출 요청을 삭제하시겠습니까?');">
+                                                <button type="submit" class="btn btn-small btn-danger">삭제</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -937,6 +1026,7 @@
                 {% endif %}
                 </tbody>
             </table>
+            </form>
         </div>
         </div>
         </div>
@@ -1165,6 +1255,8 @@ let issueCompletedCalendarMonth = null;
 let exportCompletedCalendarMonth = null;
 const ISSUE_MATERIAL_ROWS = {{ request_materials|tojson }};
 const EXPORT_MATERIAL_ROWS = {{ export_request_materials|tojson }};
+const ISSUE_BOM_MAP = {{ issue_bom_map_json|safe }};
+const EXPORT_BOM_MAP = {{ export_bom_map_json|safe }};
 const DASHBOARD_ISSUE_PREFILL = {{ dashboard_issue_prefill_json|safe }};
 let reqExpanded = false;
 let currentMaterialId = null;
@@ -1623,6 +1715,59 @@ function addIssueItemFromList(){
     });
 }
 
+function formatBomDisplayQuantity(quantity, upperUnitQty){
+    const qty = Number(quantity || 0);
+    const factor = Number(upperUnitQty || 0);
+    if(!(qty > 0)) return '';
+    if(!(factor > 0)) return String(qty);
+    const display = qty / factor;
+    if(!Number.isFinite(display) || display <= 0) return String(qty);
+    return display.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+}
+
+function addIssueBomItems(){
+    const select = document.getElementById('issueBomProductSelect');
+    if(!select) return;
+    const productId = String(select.value || '');
+    if(!productId){
+        alert('상품을 먼저 선택해주세요.');
+        return;
+    }
+    const items = ISSUE_BOM_MAP[productId] || ISSUE_BOM_MAP[Number(productId)] || [];
+    if(!items.length){
+        alert('선택한 상품에 추가할 부자재 BOM이 없습니다.');
+        return;
+    }
+    let added = 0;
+    let skipped = 0;
+    items.forEach((item) => {
+        const rowId = `issue_item_${String(item.material_id || '')}`;
+        if(document.getElementById(rowId)){
+            skipped += 1;
+            return;
+        }
+        appendIssueItemRow({
+            id: String(item.material_id || ''),
+            code: item.code || '-',
+            name: item.name || '',
+            unit: item.unit || '',
+            upper_unit: item.upper_unit || '',
+            upper_unit_qty: item.upper_unit_qty || '',
+        }, {
+            requestedQuantity: Number(item.quantity_per_box || 0),
+            displayQuantity: formatBomDisplayQuantity(item.quantity_per_box, item.upper_unit_qty),
+        });
+        added += 1;
+    });
+    if(added === 0){
+        alert(skipped > 0 ? '이미 목록에 있는 BOM 자재입니다.' : '추가할 BOM 자재가 없습니다.');
+        return;
+    }
+    if(skipped > 0){
+        alert(`BOM 자재 ${added}개를 추가했고, 이미 있던 ${skipped}개는 건너뛰었습니다.`);
+    }
+}
+
 function syncIssueConvertedQty(inputEl){
     const row = inputEl ? inputEl.closest('tr') : null;
     if(!row) return;
@@ -1705,7 +1850,6 @@ function filterExportMaterials(){
             return keywords.every((keyword) => hay.includes(keyword));
         });
     renderMaterialOptions(list, filtered, list.value);
-    syncExportLots();
 }
 
 function prepareKoreanInput(input){
@@ -1957,90 +2101,257 @@ document.addEventListener('click', (event) => {
     }
 });
 
-function syncExportLots(){
-    const matId = Number((document.getElementById('exportMaterialList') || {}).value || 0);
-    const lotSelect = document.getElementById('export_req_lot');
-    const unitChip = document.getElementById('export_req_qty_unit');
-    const matSelect = document.getElementById('exportMaterialList');
-    if(unitChip && matSelect && matSelect.selectedIndex >= 0){
-        unitChip.textContent = matSelect.options[matSelect.selectedIndex].dataset.unit || '수량';
+function getMaterialLots(materialId){
+    const mid = String(materialId || '');
+    return MATERIAL_LOTS_BY_MATERIAL[mid] || MATERIAL_LOTS_BY_MATERIAL[Number(mid)] || [];
+}
+
+function getMaterialTotalLotQty(materialId){
+    return getMaterialLots(materialId).reduce((sum, lot) => {
+        return sum + Number(lot.current_quantity || 0);
+    }, 0);
+}
+
+function formatLotWithoutMaterialCode(lotText, materialCode = ''){
+    const rawLot = String(lotText || '').trim();
+    const rawCode = String(materialCode || '').trim();
+    if(!rawLot) return '-';
+    if(rawCode && rawLot.startsWith(`${rawCode}-`)){
+        return rawLot.slice(rawCode.length + 1) || rawLot;
     }
-    if(!lotSelect) return;
-    const lots = MATERIAL_LOTS_BY_MATERIAL[String(matId)] || MATERIAL_LOTS_BY_MATERIAL[matId] || [];
+    return rawLot;
+}
+
+function getPreferredExportLot(materialId, preferredLotId = '', desiredQty = 0){
+    const lots = getMaterialLots(materialId);
     if(!lots.length){
-        lotSelect.innerHTML = '<option value="">선택 가능한 로트 없음</option>';
-        return;
+        return { lot: null, quantity: Math.max(0, Number(desiredQty || 0)) };
     }
-    lotSelect.innerHTML = '<option value="">선택</option>' + lots.map((lot) => {
+    const preferredId = String(preferredLotId || '');
+    const desired = Math.max(0, Number(desiredQty || 0));
+    let chosen = null;
+    if(preferredId){
+        chosen = lots.find((lot) => String(lot.id || '') === preferredId) || null;
+    }
+    if(!chosen && desired > 0){
+        chosen = lots.find((lot) => Number(lot.current_quantity || 0) >= desired) || null;
+    }
+    if(!chosen){
+        chosen = lots.reduce((best, lot) => {
+            if(!best) return lot;
+            return Number(lot.current_quantity || 0) > Number(best.current_quantity || 0) ? lot : best;
+        }, null);
+    }
+    const chosenQty = Number(chosen?.current_quantity || 0);
+    return {
+        lot: chosen,
+        quantity: desired > 0 ? Math.min(desired, chosenQty || desired) : chosenQty,
+    };
+}
+
+function buildExportLotOptions(materialId, selectedLotId = '', materialCode = ''){
+    const lots = getMaterialLots(materialId);
+    if(!lots.length){
+        return '<option value="">선택 가능한 로트 없음</option>';
+    }
+    const selectedValue = String(selectedLotId || '');
+    return '<option value="">로트 선택</option>' + lots.map((lot) => {
+        const lotId = String(lot.id || '');
         const qty = Number(lot.current_quantity || 0).toFixed(1);
         const dateText = lot.receiving_date ? ` / 입고:${lot.receiving_date}` : '';
-        return `<option value="${lot.id}">${lot.lot} / 잔량:${qty}${dateText}</option>`;
+        const selectedAttr = lotId === selectedValue ? ' selected' : '';
+        const displayLot = formatLotWithoutMaterialCode(lot.lot, materialCode);
+        return `<option value="${lotId}"${selectedAttr}>${displayLot} / 잔량:${qty}${dateText}</option>`;
     }).join('');
 }
 
-function toggleReasonDetail(){
-    const reasonEl = document.getElementById('export_req_reason');
-    const detailEl = document.getElementById('export_req_reason_detail');
+function toggleExportReasonDetailForRow(row){
+    if(!row) return;
+    const reasonEl = row.querySelector('.js-export-reason');
+    const detailEl = row.querySelector('.js-export-reason-detail');
     if(!reasonEl || !detailEl) return;
-    const reason = reasonEl.value;
+    const reason = reasonEl.value || '';
     const needDetail = (reason === '불량' || reason === '기타');
     detailEl.disabled = !needDetail;
     detailEl.required = needDetail;
     if(!needDetail) detailEl.value = '';
 }
 
+function syncExportRowQuantityToSelectedLot(row, preserveSmaller = true){
+    if(!row) return;
+    const lotEl = row.querySelector('.js-export-lot');
+    const qtyEl = row.querySelector('.js-export-qty');
+    const materialEl = row.querySelector('input[name="material_id[]"]');
+    if(!lotEl || !qtyEl || !materialEl) return;
+    const materialId = String(materialEl.value || '');
+    const selectedLotId = String(lotEl.value || '');
+    if(!materialId || !selectedLotId) return;
+    const selectedLot = getMaterialLots(materialId).find((lot) => String(lot.id || '') === selectedLotId);
+    if(!selectedLot) return;
+    const lotQty = Math.max(0, Number(selectedLot.current_quantity || 0));
+    const currentQty = Math.max(0, Number(qtyEl.value || 0));
+    if(!preserveSmaller){
+        qtyEl.value = lotQty > 0 ? lotQty.toFixed(1) : '';
+        return;
+    }
+    if(currentQty <= 0) return;
+    if(currentQty > lotQty){
+        qtyEl.value = lotQty > 0 ? lotQty.toFixed(1) : '';
+    }
+}
+
+function appendExportItemRow(materialData, defaults = {}){
+    const body = document.getElementById('exportItemsBody');
+    if(!body || !materialData) return false;
+    const materialId = String(materialData.id || materialData.material_id || '');
+    if(!materialId) return false;
+
+    const rowId = `export_item_${materialId}`;
+    if(document.getElementById(rowId)) return false;
+
+    const empty = document.getElementById('exportEmptyRow');
+    if(empty) empty.remove();
+    const rawQty = defaults.quantity ?? materialData.quantity_per_box;
+    const hasDesiredQty = !(rawQty === undefined || rawQty === null || rawQty === '');
+    const desiredQty = hasDesiredQty ? Number(rawQty || 0) : 0;
+    const preferredLot = getPreferredExportLot(materialId, defaults.lotId || materialData.lot_id || '', desiredQty);
+    const selectedLotId = String(preferredLot.lot?.id || '');
+    const qty = hasDesiredQty ? Number(preferredLot.quantity || 0) : 0;
+    const reason = String(defaults.reason || '').trim();
+    const reasonDetail = String(defaults.reasonDetail || '').trim();
+    const note = String(defaults.note || '').trim();
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.innerHTML = `
+        <td colspan="8" class="export-draft-cell">
+            <div class="export-draft-card">
+                <div class="export-draft-top">
+                    <div>
+                        <div class="export-draft-code">${materialData.code || '-'}</div>
+                        <div class="export-draft-name">${materialData.name || ''}</div>
+                        <input type="hidden" name="material_id[]" value="${materialId}">
+                    </div>
+                    <div class="export-draft-delete">
+                        <button type="button" class="btn btn-small btn-secondary" onclick="removeExportItem('${rowId}')">삭제</button>
+                    </div>
+                </div>
+                <div class="export-draft-grid">
+                    <div class="export-draft-field">
+                        <label class="export-draft-label">로트</label>
+                        <select name="material_lot_id[]" class="request-select js-export-lot">${buildExportLotOptions(materialId, selectedLotId, materialData.code || '')}</select>
+                    </div>
+                    <div class="export-draft-field">
+                        <label class="export-draft-label">수량</label>
+                        <div class="request-qty-box">
+                            <input type="number" name="requested_quantity[]" class="request-qty-input js-export-qty" step="0.1" min="0.1" value="${qty > 0 ? qty.toFixed(1) : ''}">
+                            <span class="request-qty-unit">${materialData.unit || ''}</span>
+                        </div>
+                    </div>
+                    <div class="export-draft-field">
+                        <label class="export-draft-label">사유</label>
+                        <select name="reason[]" class="request-select js-export-reason">
+                            <option value="">선택</option>
+                            <option value="정리"${reason === '정리' ? ' selected' : ''}>정리</option>
+                            <option value="불량"${reason === '불량' ? ' selected' : ''}>불량</option>
+                            <option value="기타"${reason === '기타' ? ' selected' : ''}>기타</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="export-draft-grid-bottom">
+                    <div class="export-draft-field">
+                        <label class="export-draft-label">상세사유</label>
+                        <input type="text" name="reason_detail[]" class="request-note-input js-export-reason-detail" maxlength="200" placeholder="불량/기타 사유 입력" value="${reasonDetail}">
+                    </div>
+                    <div class="export-draft-field export-draft-field-wide">
+                        <label class="export-draft-label">메모</label>
+                        <input type="text" name="note[]" class="request-note-input" maxlength="200" placeholder="메모 입력" value="${note}">
+                    </div>
+                </div>
+            </div>
+        </td>
+    `;
+    body.appendChild(tr);
+    const reasonSelect = tr.querySelector('.js-export-reason');
+    const lotSelect = tr.querySelector('.js-export-lot');
+    if(reasonSelect){
+        reasonSelect.addEventListener('change', () => toggleExportReasonDetailForRow(tr));
+    }
+    if(lotSelect){
+        lotSelect.addEventListener('change', () => syncExportRowQuantityToSelectedLot(tr, true));
+    }
+    toggleExportReasonDetailForRow(tr);
+    if(hasDesiredQty){
+        syncExportRowQuantityToSelectedLot(tr, true);
+    }
+    return true;
+}
+
 function addExportItemFromList(){
     const list = document.getElementById('exportMaterialList');
-    const lotSel = document.getElementById('export_req_lot');
-    const qtyEl = document.getElementById('export_req_qty');
-    const reasonEl = document.getElementById('export_req_reason');
-    const detailEl = document.getElementById('export_req_reason_detail');
-    const noteEl = document.getElementById('export_req_note');
     const body = document.getElementById('exportItemsBody');
-    if(!list || !lotSel || !qtyEl || !reasonEl || !detailEl || !noteEl || !body || list.selectedIndex < 0) return;
+    if(!list || !body || list.selectedIndex < 0) return;
 
     const opt = list.options[list.selectedIndex];
     if(opt.hidden) return;
     const materialId = String(opt.value || '');
-    const lotId = String(lotSel.value || '');
-    const lotText = lotSel.options[lotSel.selectedIndex]?.text || '';
-    const qty = Number(qtyEl.value || 0);
-    const reason = reasonEl.value || '';
-    const reasonDetail = (detailEl.value || '').trim();
-    const note = (noteEl.value || '').trim();
-    if(!materialId || !lotId || qty <= 0 || !reason){
-        alert('자재/로트/수량/사유를 입력해주세요.');
+
+    const appended = appendExportItemRow({
+        id: materialId,
+        code: opt.dataset.code || '-',
+        name: opt.dataset.name || '',
+        unit: opt.dataset.unit || '',
+    });
+    if(!appended){
+        alert('같은 자재 항목이 이미 추가되어 있습니다.');
         return;
     }
-    if((reason === '불량' || reason === '기타') && !reasonDetail){
-        alert('불량/기타 사유는 상세사유를 입력해주세요.');
+}
+
+function addExportBomItems(){
+    const select = document.getElementById('exportBomProductSelect');
+    if(!select) return;
+    const productId = String(select.value || '');
+    if(!productId){
+        alert('상품을 먼저 선택해주세요.');
         return;
     }
-
-    const rowId = `export_item_${materialId}_${lotId}`;
-    if(document.getElementById(rowId)){
-        alert('같은 자재/로트 항목이 이미 추가되어 있습니다.');
+    const items = EXPORT_BOM_MAP[productId] || EXPORT_BOM_MAP[Number(productId)] || [];
+    if(!items.length){
+        alert('선택한 상품에 추가할 부자재 BOM이 없습니다.');
         return;
     }
-
-    const empty = document.getElementById('exportEmptyRow');
-    if(empty) empty.remove();
-    const tr = document.createElement('tr');
-    tr.id = rowId;
-    tr.innerHTML = `
-        <td>${opt.dataset.code || '-'}<input type="hidden" name="material_id[]" value="${materialId}"></td>
-        <td>${opt.dataset.name || ''}</td>
-        <td>${lotText}<input type="hidden" name="material_lot_id[]" value="${lotId}"></td>
-        <td><div class="request-qty-box" style="display:inline-flex;"><span class="request-qty-input" style="display:inline-flex;align-items:center;justify-content:flex-end;background:#fff;">${qty.toFixed(1)}</span><span class="request-qty-unit">${opt.dataset.unit || ''}</span></div><input type="hidden" name="requested_quantity[]" value="${qty}"></td>
-        <td><span class="request-note-chip">${reason}</span><input type="hidden" name="reason[]" value="${reason}"></td>
-        <td><span class="request-note-chip">${reasonDetail || '-'}</span><input type="hidden" name="reason_detail[]" value="${reasonDetail}"></td>
-        <td><span class="request-note-chip">${note || '-'}</span><input type="hidden" name="note[]" value="${note}"></td>
-        <td><button type="button" class="btn btn-small btn-secondary" onclick="removeExportItem('${rowId}')">삭제</button></td>
-    `;
-    body.appendChild(tr);
-
-    qtyEl.value = '';
-    noteEl.value = '';
+    let added = 0;
+    let skipped = 0;
+    items.forEach((item) => {
+        const materialId = Number(item.material_id || 0);
+        const lots = getMaterialLots(materialId);
+        const firstLot = lots[0] || null;
+        const totalLotQty = getMaterialTotalLotQty(materialId);
+        const appended = appendExportItemRow({
+            id: String(materialId),
+            code: item.code || '-',
+            name: item.name || '',
+            unit: item.unit || '',
+            quantity_per_box: Number(item.quantity_per_box || 0),
+        }, {
+            quantity: totalLotQty > 0 ? totalLotQty : Number(item.quantity_per_box || 0),
+            lotId: firstLot ? String(firstLot.id || '') : '',
+            reason: '기타',
+            reasonDetail: '반출',
+        });
+        if(appended){
+            added += 1;
+        } else {
+            skipped += 1;
+        }
+    });
+    if(added === 0){
+        alert(skipped > 0 ? '이미 목록에 있는 BOM 자재입니다.' : '추가할 BOM 자재가 없습니다.');
+        return;
+    }
+    if(skipped > 0){
+        alert(`BOM 자재 ${added}개를 추가했고, 이미 있던 ${skipped}개는 건너뛰었습니다.`);
+    }
 }
 
 function removeExportItem(rowId){
@@ -2058,13 +2369,92 @@ function clearExportItems(){
     body.innerHTML = '<tr id="exportEmptyRow"><td colspan="8" style="text-align:center;color:#94a3b8;">추가된 반출 항목이 없습니다.</td></tr>';
 }
 
+let exportBulkCompleteMode = false;
+
+function getExportBulkCheckboxes(){
+    return Array.from(document.querySelectorAll('.export-select-check'));
+}
+
+function syncExportBulkModeUI(){
+    const modeBtn = document.getElementById('exportBulkModeToggleBtn');
+    const actions = document.getElementById('exportBulkModeActions');
+    const selectAll = document.getElementById('exportBulkSelectAll');
+    document.querySelectorAll('[data-export-pending-card="1"]').forEach((card) => {
+        card.classList.toggle('is-select-mode', exportBulkCompleteMode);
+    });
+    if(modeBtn){
+        modeBtn.classList.toggle('active', exportBulkCompleteMode);
+        modeBtn.textContent = exportBulkCompleteMode ? '일괄 반출 완료' : '일괄 반출';
+    }
+    if(actions){
+        actions.classList.toggle('active', exportBulkCompleteMode);
+    }
+    if(!exportBulkCompleteMode){
+        getExportBulkCheckboxes().forEach((checkbox) => {
+            checkbox.checked = false;
+        });
+        if(selectAll){
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
+    } else {
+        syncExportBulkSelectAllState();
+    }
+}
+
+function handleExportBulkPrimaryAction(){
+    if(!exportBulkCompleteMode){
+        toggleExportBulkCompleteMode(true);
+        return;
+    }
+    submitSelectedExportCompletions();
+}
+
+function toggleExportBulkCompleteMode(forceOpen){
+    exportBulkCompleteMode = typeof forceOpen === 'boolean' ? forceOpen : !exportBulkCompleteMode;
+    syncExportBulkModeUI();
+}
+
+function syncExportBulkSelectAllState(){
+    const selectAll = document.getElementById('exportBulkSelectAll');
+    const checkboxes = getExportBulkCheckboxes();
+    if(!selectAll) return;
+    if(!checkboxes.length){
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        return;
+    }
+    const checkedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+    selectAll.checked = checkedCount > 0 && checkedCount === checkboxes.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+}
+
+function toggleExportBulkSelectAll(checked){
+    getExportBulkCheckboxes().forEach((checkbox) => {
+        checkbox.checked = !!checked;
+    });
+    syncExportBulkSelectAllState();
+}
+
+function submitSelectedExportCompletions(){
+    const form = document.getElementById('exportBulkCompleteForm');
+    const checked = getExportBulkCheckboxes().filter((checkbox) => checkbox.checked);
+    if(!form) return;
+    if(!checked.length){
+        alert('일괄 반출 처리할 항목을 선택해주세요.');
+        return;
+    }
+    if(!confirm(`선택한 ${checked.length}개 항목을 일괄 반출 완료 처리하시겠습니까?`)){
+        return;
+    }
+    form.requestSubmit();
+}
+
 switchReqTab(currentReqTab);
 switchIssueStatusTab(currentIssueStatusTab);
 switchExportStatusTab(currentExportStatusTab);
 switchIssueCompletedDate(currentIssueCompletedDateTab);
 switchExportCompletedDate(currentExportCompletedDateTab);
-toggleReasonDetail();
-syncExportLots();
 let reqExpandedDefault = true;
 try {
     const savedReqPanelState = localStorage.getItem(REQ_PANEL_STATE_KEY);
@@ -2143,9 +2533,51 @@ if(exportBulkForm){
         if(rows.length === 0){
             e.preventDefault();
             alert('반출 요청할 항목을 추가해주세요.');
+            return;
+        }
+        const missingLot = rows.some((tr) => {
+            const lotEl = tr.querySelector('select[name="material_lot_id[]"]');
+            return !lotEl || !String(lotEl.value || '').trim();
+        });
+        if(missingLot){
+            e.preventDefault();
+            alert('각 반출 항목의 로트를 모두 선택해주세요.');
+            return;
+        }
+        const invalidQty = rows.some((tr) => {
+            const qtyEl = tr.querySelector('input[name="requested_quantity[]"]');
+            return !qtyEl || Number(qtyEl.value || 0) <= 0;
+        });
+        if(invalidQty){
+            e.preventDefault();
+            alert('각 반출 항목의 수량을 모두 입력해주세요.');
+            return;
+        }
+        const missingReason = rows.some((tr) => {
+            const reasonEl = tr.querySelector('select[name="reason[]"]');
+            return !reasonEl || !String(reasonEl.value || '').trim();
+        });
+        if(missingReason){
+            e.preventDefault();
+            alert('각 반출 항목의 사유를 모두 선택해주세요.');
+            return;
+        }
+        const missingReasonDetail = rows.some((tr) => {
+            const reasonEl = tr.querySelector('select[name="reason[]"]');
+            const detailEl = tr.querySelector('input[name="reason_detail[]"]');
+            const reason = String(reasonEl?.value || '').trim();
+            return (reason === '불량' || reason === '기타') && !String(detailEl?.value || '').trim();
+        });
+        if(missingReasonDetail){
+            e.preventDefault();
+            alert('불량/기타 사유 항목은 상세사유를 입력해주세요.');
         }
     });
 }
+getExportBulkCheckboxes().forEach((checkbox) => {
+    checkbox.addEventListener('change', syncExportBulkSelectAllState);
+});
+syncExportBulkModeUI();
 restoreMaterialsScrollPosition();
 
 function closeMaterialDetailModal(){
