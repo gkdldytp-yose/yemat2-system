@@ -503,6 +503,11 @@ async function toggleNoteEdit() {
 }
 
 window.addEventListener('load', syncAllNoteEditors);
+if (new URLSearchParams(window.location.search).get('autoprint') === '1') {
+    window.addEventListener('load', () => {
+        setTimeout(() => window.print(), 150);
+    });
+}
 </script>
 </body>
 </html>

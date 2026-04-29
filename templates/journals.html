@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}일지관리{% endblock %}
+{% block extra_css %}
+<style>
+.journals-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
+.journals-hero p{margin:0;color:#64748b;line-height:1.5;}
+.journals-panel{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:1rem;box-shadow:0 8px 24px rgba(15,23,42,0.06);}
+.journals-section{display:none;}
+.journals-section.active{display:block;}
+.journals-actions{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;}
+.journals-inline-form{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
+.journals-actions input[type="date"]{padding:.55rem .7rem;border:1px solid #cbd5e1;border-radius:10px;}
+.journals-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.journals-table th,.journals-table td{padding:.7rem .6rem;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:middle;}
+.journals-table th{background:#f8fafc;font-weight:800;color:#334155;}
+.journals-table tr:hover td{background:#fafcff;}
+.journals-empty{padding:2rem 1rem;text-align:center;color:#6b7280;}
+.journals-help{font-size:.8rem;color:#64748b;}
+.journals-subtabs{display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.85rem;}
+.journals-subtab-btn{padding:.42rem .9rem;border:1px solid #d1d5db;border-radius:999px;background:#fff;color:#475569;font-size:.82rem;font-weight:700;cursor:pointer;}
+.journals-subtab-btn.active{background:#111827;color:#fff;border-color:#111827;}
+@media (max-width:768px){
+  .journals-table{font-size:.8rem;}
+  .journals-table th,.journals-table td{padding:.55rem .45rem;}
+  .journals-inline-form{width:100%;}
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="journals-hero">
+    <div>
+        <h1 style="margin-bottom:.35rem;">일지관리</h1>
+        <p>생산일지, 원재료 입출고 점검표, 부재료 입출고 점검표를 한 곳에서 확인하고 출력할 수 있습니다.</p>
+    </div>
+    <div class="journals-help">현재 작업장: {{ current_workplace }}</div>
+</div>
+
+<div class="tabs" style="margin-bottom:1rem;">
+    <button type="button" class="tab-btn {% if selected_tab == 'production' %}active{% endif %}" id="journalTabProduction" onclick="switchJournalTab('production')">생산일지</button>
+    <button type="button" class="tab-btn {% if selected_tab == 'raw' %}active{% endif %}" id="journalTabRaw" onclick="switchJournalTab('raw')">원재료 점검표</button>
+    <button type="button" class="tab-btn {% if selected_tab == 'material' %}active{% endif %}" id="journalTabMaterial" onclick="switchJournalTab('material')">부재료 점검표</button>
+</div>
+
+<div class="journals-panel">
+    <section id="journalSectionProduction" class="journals-section {% if selected_tab == 'production' %}active{% endif %}">
+        <div class="journals-actions">
+            <form method="GET" action="/journals" class="journals-inline-form">
+                <input type="hidden" name="tab" value="production">
+                <input type="date" name="date_from" value="{{ date_from }}">
+                <span class="journals-help">~</span>
+                <input type="date" name="date_to" value="{{ date_to }}">
+                <button type="submit" class="btn btn-small">조회</button>
+            </form>
+            <span class="journals-help">기본값은 최근 1주일입니다.</span>
+        </div>
+        <div class="table-container">
+            <table class="journals-table">
+                <thead>
+                    <tr>
+                        <th>생산일</th>
+                        <th>생산번호</th>
+                        <th>상품코드</th>
+                        <th>상품명</th>
+                        <th>박스수</th>
+                        <th>출력</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in production_rows %}
+                    <tr>
+                        <td>{{ row.production_date or '' }}</td>
+                        <td>PROD-{{ row.id }}</td>
+                        <td>{{ row.product_code or '' }}</td>
+                        <td>{{ row.product_name or '' }}</td>
+                        <td>{{ row.actual_boxes or row.planned_boxes or '' }}</td>
+                        <td style="white-space:nowrap;">
+                            <a href="/production/{{ row.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_preview_{{ row.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">미리보기</a>
+                            <a href="/production/{{ row.id }}/print?autoprint=1" class="btn btn-small btn-secondary" onclick="window.open(this.href, 'production_print_{{ row.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">출력</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="journals-empty">선택한 기간에 완료된 생산일지가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="journalSectionRaw" class="journals-section {% if selected_tab == 'raw' %}active{% endif %}">
+        <div class="journals-help" style="margin-bottom:.9rem;">원재료는 재고가 남아 있는 항목과 사용 완료된 항목을 나눠서 볼 수 있습니다.</div>
+        <div class="journals-subtabs">
+            <button type="button" class="journals-subtab-btn {% if raw_status == 'active' %}active{% endif %}" id="rawSubtabActive" onclick="switchRawStatus('active')">사용중</button>
+            <button type="button" class="journals-subtab-btn {% if raw_status == 'done' %}active{% endif %}" id="rawSubtabDone" onclick="switchRawStatus('done')">사용완료</button>
+        </div>
+
+        <div id="rawStatusActive" style="{% if raw_status != 'active' %}display:none;{% endif %}">
+            <div class="table-container">
+                <table class="journals-table">
+                    <thead>
+                        <tr>
+                            <th>코드</th>
+                            <th>원재료명</th>
+                            <th>입고일</th>
+                            <th>현재고</th>
+                            <th>출력</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in raw_active_items %}
+                        <tr>
+                            <td>{{ row.code or '' }}</td>
+                            <td>{{ row.name or '' }}</td>
+                            <td>{{ row.receiving_date or '' }}</td>
+                            <td>{{ "{:,.0f}".format((row.current_stock or 0)|float) }}</td>
+                            <td style="white-space:nowrap;">
+                            <a href="/raw-materials/{{ row.id }}/checksheet-preview" class="btn btn-small" onclick="window.open(this.href, 'raw_checksheet_preview_{{ row.id }}', 'width=1200,height=900,scrollbars=yes,resizable=yes'); return false;">미리보기</a>
+                            <a href="/raw-materials/{{ row.id }}/checksheet-preview?autoprint=1" class="btn btn-small btn-secondary" onclick="window.open(this.href, 'raw_checksheet_print_{{ row.id }}', 'width=1200,height=900,scrollbars=yes,resizable=yes'); return false;">출력</a>
+                        </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="journals-empty">사용중인 원재료가 없습니다.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="rawStatusDone" style="{% if raw_status != 'done' %}display:none;{% endif %}">
+            <div class="table-container">
+                <table class="journals-table">
+                    <thead>
+                        <tr>
+                            <th>코드</th>
+                            <th>원재료명</th>
+                            <th>입고일</th>
+                            <th>사용량</th>
+                            <th>출력</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in raw_done_items %}
+                        <tr>
+                            <td>{{ row.code or '' }}</td>
+                            <td>{{ row.name or '' }}</td>
+                            <td>{{ row.receiving_date or '' }}</td>
+                            <td>{{ "{:,.0f}".format((row.used_quantity or 0)|float) }}</td>
+                            <td style="white-space:nowrap;">
+                            <a href="/raw-materials/{{ row.id }}/checksheet-preview" class="btn btn-small" onclick="window.open(this.href, 'raw_checksheet_preview_{{ row.id }}', 'width=1200,height=900,scrollbars=yes,resizable=yes'); return false;">????</a>
+                            <a href="/raw-materials/{{ row.id }}/checksheet-preview?autoprint=1" class="btn btn-small btn-secondary" onclick="window.open(this.href, 'raw_checksheet_print_{{ row.id }}', 'width=1200,height=900,scrollbars=yes,resizable=yes'); return false;">??</a>
+                        </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="journals-empty">사용완료된 원재료가 없습니다.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="journalSectionMaterial" class="journals-section {% if selected_tab == 'material' %}active{% endif %}">
+        <div class="journals-actions">
+            <form method="GET" action="/journals" class="journals-inline-form">
+                <input type="hidden" name="tab" value="material">
+                <input type="date" name="date_from" value="{{ date_from }}">
+                <span class="journals-help">~</span>
+                <input type="date" name="date_to" value="{{ date_to }}">
+                <button type="submit" class="btn btn-small">조회</button>
+            </form>
+            <span class="journals-help">선택한 기간 동안 실제 사용된 기름/소금 기준으로 일별 점검표를 엽니다.</span>
+        </div>
+        <div class="table-container">
+            <table class="journals-table">
+                <thead>
+                    <tr>
+                        <th>일자</th>
+                        <th>사용 품목 수</th>
+                        <th>당일 출고 합계</th>
+                        <th>출력</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in material_journal_dates %}
+                    <tr>
+                        <td>{{ row.production_date or '' }}</td>
+                        <td>{{ row.item_count or 0 }}</td>
+                        <td>{{ "{:,.1f}".format((row.outgoing_total or 0)|float) }}</td>
+                        <td style="white-space:nowrap;">
+                            <a href="/materials/checksheet-preview?date={{ row.production_date|urlencode }}" class="btn btn-small" onclick="window.open(this.href, 'material_checksheet_preview_{{ loop.index }}', 'width=1200,height=920,scrollbars=yes,resizable=yes'); return false;">미리보기</a>
+                            <a href="/materials/checksheet-preview?date={{ row.production_date|urlencode }}&autoprint=1" class="btn btn-small btn-secondary" onclick="window.open(this.href, 'material_checksheet_print_{{ loop.index }}', 'width=1200,height=920,scrollbars=yes,resizable=yes'); return false;">출력</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="journals-empty">선택한 기간에 사용할 부재료 점검표 데이터가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+function switchJournalTab(tab){
+    const tabs = ['production','raw','material'];
+    tabs.forEach((name) => {
+        const btn = document.getElementById(`journalTab${name.charAt(0).toUpperCase() + name.slice(1)}`);
+        const section = document.getElementById(`journalSection${name.charAt(0).toUpperCase() + name.slice(1)}`);
+        if(btn) btn.classList.toggle('active', name === tab);
+        if(section) section.classList.toggle('active', name === tab);
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url);
+}
+
+function switchRawStatus(status){
+    const activeBtn = document.getElementById('rawSubtabActive');
+    const doneBtn = document.getElementById('rawSubtabDone');
+    const activePane = document.getElementById('rawStatusActive');
+    const donePane = document.getElementById('rawStatusDone');
+    if(activeBtn) activeBtn.classList.toggle('active', status === 'active');
+    if(doneBtn) doneBtn.classList.toggle('active', status === 'done');
+    if(activePane) activePane.style.display = status === 'active' ? '' : 'none';
+    if(donePane) donePane.style.display = status === 'done' ? '' : 'none';
+    const url = new URL(window.location.href);
+    url.searchParams.set('raw_status', status);
+    url.searchParams.set('tab', 'raw');
+    window.history.replaceState({}, '', url);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    const rawStatus = params.get('raw_status');
+    if(tab === 'raw' || tab === 'material'){
+        switchJournalTab(tab);
+    }
+    if(rawStatus === 'done'){
+        switchRawStatus('done');
+    }
+});
+</script>
+{% endblock %}

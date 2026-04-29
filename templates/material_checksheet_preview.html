@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>부재료 입·출고 점검표</title>
+    <style>
+        @page { size: A4 landscape; margin: 4mm 5mm 4mm 5mm; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            color: #000;
+            font-family: "Malgun Gothic", "Apple SD Gothic Neo", Gulim, sans-serif;
+        }
+        body { padding: 2px; }
+        .sheet {
+            width: 100%;
+            max-width: 286mm;
+            margin: 0 auto;
+        }
+        .actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .actions button {
+            padding: 6px 12px;
+            border: 1px solid #94a3b8;
+            border-radius: 999px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 2px 4px;
+            font-size: 10.5px;
+            text-align: center;
+            vertical-align: middle;
+            word-break: keep-all;
+        }
+        .fill {
+            background: #d9def4;
+            font-weight: 800;
+        }
+        .left { text-align: left; }
+        .title-cell {
+            text-align: center;
+            vertical-align: middle;
+            padding: 6px 10px;
+        }
+        .title {
+            font-size: 30px;
+            font-weight: 800;
+            text-decoration: underline;
+            letter-spacing: -0.03em;
+            line-height: 1.04;
+        }
+        .subtitle {
+            margin-top: 4px;
+            font-size: 21px;
+            font-weight: 700;
+            text-decoration: underline;
+            letter-spacing: -0.03em;
+            line-height: 1.04;
+        }
+        .cycle-head { font-size: 11px; }
+        .cycle-body { font-size: 14px; font-weight: 700; }
+        .approval-vertical {
+            background: #d9def4;
+            font-weight: 800;
+            font-size: 12px;
+            line-height: 1.25;
+        }
+        .approval-sign { height: 82px; }
+        .meta td {
+            border-top: none;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+        .data-table th {
+            background: #d9def4;
+            font-weight: 800;
+            font-size: 11px;
+            height: 42px;
+        }
+        .data-table td {
+            height: 24px;
+            font-size: 10.5px;
+        }
+        .data-table td.name-cell {
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .data-table td.supplier-cell,
+        .data-table td.note-cell {
+            white-space: normal;
+            word-break: break-word;
+        }
+        .note-table td {
+            height: 58px;
+            vertical-align: top;
+        }
+        .note-label {
+            width: 72px;
+            font-weight: 800;
+            text-align: left;
+            padding-top: 5px;
+        }
+        .note-box {
+            text-align: left;
+        }
+        .footer-table th {
+            background: #d9def4;
+            font-weight: 800;
+            font-size: 11px;
+            height: 34px;
+        }
+        .footer-table td {
+            height: 34px;
+        }
+        .doc-row td {
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            height: 20px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+        }
+        .doc-code {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .company-name {
+            text-align: right;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        @media print {
+            body { padding: 0; }
+            .actions { display: none !important; }
+            .fill,
+            .approval-vertical,
+            .data-table th,
+            .footer-table th {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background: #d9def4 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="sheet">
+    <div class="actions">
+        <button type="button" onclick="window.print()">A4 출력</button>
+    </div>
+
+    <table>
+        <colgroup>
+            <col style="width:8%">
+            <col style="width:62%">
+            <col style="width:2.6%">
+            <col style="width:9%">
+            <col style="width:9%">
+            <col style="width:9.4%">
+        </colgroup>
+        <tr>
+            <td class="fill cycle-head">작성주기</td>
+            <td class="title-cell" rowspan="2">
+                <div class="title">부재료 입·출고 점검표</div>
+                <div class="subtitle">[{{ workplace_title }}]</div>
+            </td>
+            <td class="approval-vertical" rowspan="2">결<br>재</td>
+            <td class="fill">작 성</td>
+            <td class="fill">검 토</td>
+            <td class="fill">승 인</td>
+        </tr>
+        <tr>
+            <td class="cycle-body">입 · 출고 시</td>
+            <td class="approval-sign"></td>
+            <td class="approval-sign"></td>
+            <td class="approval-sign"></td>
+        </tr>
+    </table>
+
+    <table class="meta">
+        <colgroup>
+            <col style="width:69%">
+            <col style="width:31%">
+        </colgroup>
+        <tr>
+            <td class="left">작성일자 : {{ period_text }}</td>
+            <td class="left">작성자 : {{ author_name }}</td>
+        </tr>
+    </table>
+
+    <table class="data-table" style="margin-top:6px;">
+        <colgroup>
+            <col style="width:10.6%">
+            <col style="width:4.4%">
+            <col style="width:9.8%">
+            <col style="width:9.8%">
+            <col style="width:10%">
+            <col style="width:8.3%">
+            <col style="width:8.3%">
+            <col style="width:8.3%">
+            <col style="width:8.4%">
+            <col style="width:22.1%">
+        </colgroup>
+        <tr>
+            <th>품 명</th>
+            <th>단위</th>
+            <th>제조사</th>
+            <th>입고일자</th>
+            <th>소비기한/제조일자</th>
+            <th>전일재고</th>
+            <th>입고</th>
+            <th>출고</th>
+            <th>당일재고</th>
+            <th>비고</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td class="name-cell">{{ row.name }}</td>
+            <td>{{ row.unit }}</td>
+            <td class="supplier-cell">{{ row.supplier_name }}</td>
+            <td>{{ row.receiving_date }}</td>
+            <td>{{ row.expiry_or_mfg }}</td>
+            <td>{% if row.opening_stock != '' %}{{ "{:,.1f}".format(row.opening_stock) }}{% endif %}</td>
+            <td>{% if row.received_today != '' %}{{ "{:,.1f}".format(row.received_today) }}{% endif %}</td>
+            <td>{% if row.outgoing_today != '' %}{{ "{:,.1f}".format(row.outgoing_today) }}{% endif %}</td>
+            <td>{% if row.closing_stock != '' %}{{ "{:,.1f}".format(row.closing_stock) }}{% endif %}</td>
+            <td class="left note-cell">{{ row.note }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <table class="note-table" style="margin-top:6px;">
+        <colgroup>
+            <col style="width:6.6%">
+            <col style="width:93.4%">
+        </colgroup>
+        <tr>
+            <td class="note-label">Note.</td>
+            <td class="note-box"></td>
+        </tr>
+    </table>
+
+    <table class="footer-table" style="margin-top:8px;">
+        <colgroup>
+            <col style="width:21.8%">
+            <col style="width:50.8%">
+            <col style="width:14.2%">
+            <col style="width:13.2%">
+        </colgroup>
+        <tr>
+            <th>이탈사항</th>
+            <th>조치결과</th>
+            <th>조치일자</th>
+            <th>승 인</th>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="doc-row">
+            <td class="doc-code">YEMAT-HAF-101-27-6</td>
+            <td colspan="2"></td>
+            <td class="company-name">예맛상사(주)</td>
+        </tr>
+    </table>
+</div>
+<script>
+if (new URLSearchParams(window.location.search).get('autoprint') === '1') {
+    window.addEventListener('load', () => {
+        setTimeout(() => window.print(), 150);
+    });
+}
+</script>
+</body>
+</html>

@@ -539,7 +539,9 @@
   </div>
 
   <script>
-    window.onload = () => { window.print(); };
+    if (new URLSearchParams(window.location.search).get('autoprint') === '1') {
+      window.onload = () => { window.print(); };
+    }
   </script>
 </body>
 </html>
