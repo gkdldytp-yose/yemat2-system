@@ -2455,8 +2455,10 @@ def integrated_management():
     if not session['user']['is_admin']:
         return "??????????????源낆┰?????????곸죩", 403
 
-    tab = request.args.get('tab', 'products')  # products, raw_materials, materials, productions, requirements_calculator, meeting_eval, inventory_audit, db_backups
-    if tab in ('stats', 'audit_logs'):
+    tab = request.args.get('tab', 'products')  # products, raw_materials, materials, productions, stats, requirements_calculator, meeting_eval, inventory_audit, db_backups
+    if tab == 'stats':
+        return redirect('/production-statistics?persist=1')
+    if tab == 'audit_logs':
         tab = 'products'
     wp_filter = request.args.get('wp', 'all')
     q = request.args.get('q', '').strip()
