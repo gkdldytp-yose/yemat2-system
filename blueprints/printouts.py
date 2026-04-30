@@ -167,6 +167,38 @@ def journals():
         raw_active_items = [row for row in raw_all_items if float(row.get('current_stock') or 0) > 0]
         raw_done_items = [row for row in raw_all_items if float(row.get('current_stock') or 0) <= 0 and float(row.get('used_quantity') or 0) > 0]
 
+        production_date_set = []
+        seen_production_dates = set()
+        for row in production_rows:
+            production_date = (row.get('production_date') or '').strip()
+            if production_date and production_date not in seen_production_dates:
+                seen_production_dates.add(production_date)
+                production_date_set.append(production_date)
+
+        stocked_base_material_ids = set()
+        location_ids = _get_print_inventory_location_ids(cursor, workplace)
+        if location_ids:
+            loc_placeholders = ','.join(['?'] * len(location_ids))
+            cursor.execute(
+                f'''
+                SELECT DISTINCT m.id, COALESCE(m.category, '') as category
+                FROM materials m
+                JOIN material_lots ml
+                  ON ml.material_id = m.id
+                 AND COALESCE(ml.is_disposed, 0) = 0
+                JOIN inv_material_lot_balances b
+                  ON b.material_lot_id = ml.id
+                 AND COALESCE(b.qty, 0) > 0
+                WHERE b.location_id IN ({loc_placeholders})
+                ''',
+                location_ids,
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                material_id = int(row['id'] or 0)
+                if material_id > 0 and _base_material_category(row.get('category')):
+                    stocked_base_material_ids.add(material_id)
+
         cursor.execute(
             '''
             SELECT
@@ -195,20 +227,26 @@ def journals():
             if not _base_material_category(row.get('category')):
                 continue
             key = (row.get('production_date') or '').strip()
-            if not key:
+            material_id = int(row.get('material_id') or 0)
+            if not key or material_id <= 0:
                 continue
             bucket = material_map.setdefault(key, {'production_date': key, 'item_ids': set(), 'outgoing_total': 0.0})
-            if row.get('material_id'):
-                bucket['item_ids'].add(int(row['material_id']))
+            bucket['item_ids'].add(material_id)
             bucket['outgoing_total'] += float(row.get('qty') or 0)
-        material_journal_dates = [
-            {
-                'production_date': key,
-                'item_count': len(bucket['item_ids']),
-                'outgoing_total': round(bucket['outgoing_total'], 1),
-            }
-            for key, bucket in sorted(material_map.items(), key=lambda item: item[0], reverse=True)
-        ]
+
+        material_journal_dates = []
+        for production_date in sorted(production_date_set, reverse=True):
+            bucket = material_map.get(production_date, {'item_ids': set(), 'outgoing_total': 0.0})
+            visible_item_ids = bucket['item_ids'] or stocked_base_material_ids
+            if not visible_item_ids:
+                continue
+            material_journal_dates.append(
+                {
+                    'production_date': production_date,
+                    'item_count': len(visible_item_ids),
+                    'outgoing_total': round(float(bucket.get('outgoing_total') or 0.0), 1),
+                }
+            )
 
         return render_template(
             'journals.html',
@@ -294,6 +332,53 @@ def material_checksheet_preview():
             )
             item['outgoing_today'] += float(row.get('qty') or 0)
 
+        location_ids = _get_print_inventory_location_ids(cursor, workplace)
+        if location_ids:
+            loc_placeholders = ','.join(['?'] * len(location_ids))
+            cursor.execute(
+                f'''
+                SELECT
+                    m.id,
+                    COALESCE(m.code, '') as code,
+                    COALESCE(m.name, '') as name,
+                    COALESCE(m.category, '') as category,
+                    COALESCE(m.unit, '') as unit,
+                    COALESCE(s.name, '') as supplier_name,
+                    COALESCE(SUM(b.qty), 0) as workplace_stock
+                FROM materials m
+                LEFT JOIN suppliers s ON s.id = m.supplier_id
+                JOIN material_lots ml
+                  ON ml.material_id = m.id
+                 AND COALESCE(ml.is_disposed, 0) = 0
+                JOIN inv_material_lot_balances b
+                  ON b.material_lot_id = ml.id
+                 AND COALESCE(b.qty, 0) > 0
+                WHERE b.location_id IN ({loc_placeholders})
+                GROUP BY m.id, m.code, m.name, m.category, m.unit, s.name
+                ORDER BY m.name
+                ''',
+                location_ids,
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                if not _base_material_category(row.get('category')):
+                    continue
+                material_id = int(row.get('id') or 0)
+                if material_id <= 0:
+                    continue
+                material_map.setdefault(
+                    material_id,
+                    {
+                        'id': material_id,
+                        'code': row.get('code') or '',
+                        'name': row.get('name') or '',
+                        'category': row.get('category') or '',
+                        'unit': row.get('unit') or '',
+                        'supplier_name': row.get('supplier_name') or '',
+                        'outgoing_today': 0.0,
+                    },
+                )
+
         materials = list(material_map.values())
         for row in materials:
             row['base_sort_key'] = _get_production_material_sort_key({'category': row.get('category'), 'material_name': row.get('name')})
@@ -301,116 +386,186 @@ def material_checksheet_preview():
 
         material_ids = [int(row['id']) for row in materials if int(row.get('id') or 0) > 0]
         primary_lot_map = {}
-        opening_stock_map = {}
-        received_today_map = {}
-        outgoing_today_map = {}
-        closing_stock_map = {}
-
+        received_today_map = defaultdict(float)
+        non_production_outgoing_today_map = defaultdict(float)
+        future_net_delta_map = defaultdict(float)
+        future_production_outgoing_map = defaultdict(float)
+        workplace_stock_map = {}
         if material_ids:
             placeholders = ','.join(['?'] * len(material_ids))
-            prod_placeholders = ','.join(['?'] * len(completed_production_ids)) if completed_production_ids else ''
             workplace_prefix = (workplace or '').strip()
 
-            if completed_production_ids:
+            if location_ids:
+                loc_placeholders = ','.join(['?'] * len(location_ids))
                 cursor.execute(
                     f'''
                     SELECT
-                        pmlu.material_id,
-                        pmlu.material_lot_id,
+                        ml.material_id,
+                        COALESCE(SUM(b.qty), 0) as workplace_stock
+                    FROM material_lots ml
+                    JOIN inv_material_lot_balances b
+                      ON b.material_lot_id = ml.id
+                     AND COALESCE(b.qty, 0) > 0
+                    WHERE ml.material_id IN ({placeholders})
+                      AND COALESCE(ml.is_disposed, 0) = 0
+                      AND b.location_id IN ({loc_placeholders})
+                    GROUP BY ml.material_id
+                    ''',
+                    [*material_ids, *location_ids],
+                )
+                workplace_stock_map = {
+                    int(row['material_id']): float(row['workplace_stock'] or 0)
+                    for row in cursor.fetchall()
+                    if int(row['material_id'] or 0) > 0
+                }
+
+                cursor.execute(
+                    f'''
+                    SELECT
+                        ml.material_id,
+                        ml.id as material_lot_id,
                         ml.receiving_date,
                         ml.manufacture_date,
                         ml.expiry_date,
-                        SUM(COALESCE(pmlu.quantity, 0)) as used_qty
-                    FROM production_material_lot_usage pmlu
-                    LEFT JOIN material_lots ml ON ml.id = pmlu.material_lot_id
-                    WHERE pmlu.production_id IN ({prod_placeholders})
-                      AND pmlu.material_id IN ({placeholders})
-                    GROUP BY pmlu.material_id, pmlu.material_lot_id, ml.receiving_date, ml.manufacture_date, ml.expiry_date
-                    ORDER BY pmlu.material_id, used_qty DESC, pmlu.material_lot_id DESC
+                        COALESCE(SUM(b.qty), 0) as workplace_stock
+                    FROM material_lots ml
+                    JOIN inv_material_lot_balances b
+                      ON b.material_lot_id = ml.id
+                     AND COALESCE(b.qty, 0) > 0
+                    WHERE ml.material_id IN ({placeholders})
+                      AND COALESCE(ml.is_disposed, 0) = 0
+                      AND b.location_id IN ({loc_placeholders})
+                    GROUP BY ml.material_id, ml.id, ml.receiving_date, ml.manufacture_date, ml.expiry_date
+                    ORDER BY ml.material_id, ml.receiving_date ASC, ml.id ASC
                     ''',
-                    [*completed_production_ids, *material_ids],
+                    [*material_ids, *location_ids],
                 )
                 for row in cursor.fetchall():
                     material_id = int(row['material_id'] or 0)
                     if material_id > 0 and material_id not in primary_lot_map:
                         primary_lot_map[material_id] = dict(row)
 
-            primary_lot_ids = [int(info['material_lot_id']) for info in primary_lot_map.values() if int(info.get('material_lot_id') or 0) > 0]
-            if primary_lot_ids:
-                lot_placeholders = ','.join(['?'] * len(primary_lot_ids))
-                stock_state_map = {}
-                cursor.execute(
-                    f'''
-                    SELECT material_lot_id, material_id, action, quantity, note, created_at
-                    FROM material_lot_logs
-                    WHERE material_lot_id IN ({lot_placeholders})
-                    ORDER BY id
-                    ''',
-                    primary_lot_ids,
-                )
-                for row in cursor.fetchall():
-                    row = dict(row)
-                    material_id = int(row.get('material_id') or 0)
-                    if material_id <= 0:
-                        continue
-                    primary_lot_id = int(primary_lot_map.get(material_id, {}).get('material_lot_id') or 0)
-                    if primary_lot_id and int(row.get('material_lot_id') or 0) != primary_lot_id:
-                        continue
+            cursor.execute(
+                f'''
+                SELECT
+                    ml.material_id,
+                    ml.id as material_lot_id,
+                    ml.receiving_date,
+                    ml.manufacture_date,
+                    ml.expiry_date
+                FROM material_lots ml
+                WHERE ml.material_id IN ({placeholders})
+                  AND COALESCE(ml.is_disposed, 0) = 0
+                ORDER BY ml.material_id, ml.receiving_date ASC, ml.id ASC
+                ''',
+                material_ids,
+            )
+            for row in cursor.fetchall():
+                material_id = int(row['material_id'] or 0)
+                if material_id > 0 and material_id not in primary_lot_map:
+                    primary_lot_map[material_id] = dict(row)
 
-                    action = (row.get('action') or '').strip()
-                    note = (row.get('note') or '').strip()
-                    action_date = _get_print_workday(row.get('created_at'))
-                    qty = float(row.get('quantity') or 0)
-                    previous_stock = stock_state_map.get(material_id, 0.0)
+            cursor.execute(
+                f'''
+                SELECT material_id, action, quantity, note, created_at
+                FROM material_lot_logs
+                WHERE material_id IN ({placeholders})
+                ORDER BY id
+                ''',
+                material_ids,
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                material_id = int(row.get('material_id') or 0)
+                if material_id <= 0:
+                    continue
 
-                    delta = 0.0
-                    incoming_qty = 0.0
-                    outgoing_qty = 0.0
+                action = (row.get('action') or '').strip()
+                note = (row.get('note') or '').strip()
+                action_date = _get_print_workday(row.get('created_at'))
+                qty = float(row.get('quantity') or 0)
+                if not action_date:
+                    continue
 
-                    if action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
-                        delta = abs(qty)
+                delta = 0.0
+                incoming_qty = 0.0
+                outgoing_qty = 0.0
+
+                if action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
+                    delta = abs(qty)
+                    incoming_qty = abs(qty)
+                elif action == 'rollback':
+                    delta = abs(qty)
+                    incoming_qty = abs(qty)
+                elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
+                    delta = -abs(qty)
+                    outgoing_qty = abs(qty)
+                elif action == 'adjustment' and note in ('inventory_audit_apply_workplace_plus', 'inventory_audit_apply_workplace_minus'):
+                    delta = qty
+                    if qty >= 0:
                         incoming_qty = abs(qty)
-                    elif action == 'consume':
-                        delta = -abs(qty)
-                        outgoing_qty = abs(qty)
-                    elif action == 'rollback':
-                        delta = abs(qty)
-                        incoming_qty = abs(qty)
-                    elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
-                        delta = -abs(qty)
-                        outgoing_qty = abs(qty)
-                    elif action == 'adjustment' and note in ('inventory_audit_apply_workplace_plus', 'inventory_audit_apply_workplace_minus'):
-                        delta = qty
-                        if qty >= 0:
-                            incoming_qty = abs(qty)
-                        else:
-                            outgoing_qty = abs(qty)
-                    elif action == 'update':
-                        delta = qty - previous_stock
                     else:
-                        continue
+                        outgoing_qty = abs(qty)
+                else:
+                    continue
 
-                    next_stock = previous_stock + delta
+                if action_date == selected_date:
+                    received_today_map[material_id] += incoming_qty
+                    non_production_outgoing_today_map[material_id] += outgoing_qty
+                elif action_date > selected_date:
+                    future_net_delta_map[material_id] += delta
 
-                    if action_date < selected_date:
-                        opening_stock_map[material_id] = next_stock
-                        closing_stock_map[material_id] = next_stock
-                    elif action_date == selected_date:
-                        if material_id not in opening_stock_map:
-                            opening_stock_map[material_id] = previous_stock
-                        received_today_map[material_id] = received_today_map.get(material_id, 0.0) + incoming_qty
-                        outgoing_today_map[material_id] = outgoing_today_map.get(material_id, 0.0) + outgoing_qty
-                        closing_stock_map[material_id] = next_stock
-
-                    stock_state_map[material_id] = next_stock
+            cursor.execute(
+                f'''
+                SELECT
+                    p.status,
+                    pmu.material_id,
+                    COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as qty
+                FROM production_material_usage pmu
+                JOIN productions p ON p.id = pmu.production_id
+                LEFT JOIN production_material_lot_usage pmlu
+                  ON pmlu.production_usage_id = pmu.id
+                WHERE p.workplace = ?
+                  AND pmu.material_id IN ({placeholders})
+                  AND pmu.material_id IS NOT NULL
+                  AND COALESCE(p.production_date, '') > ?
+                ORDER BY pmu.material_id, pmu.id
+                ''',
+                [workplace, *material_ids, selected_date],
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                if not _normalize_completed_status(row.get('status')):
+                    continue
+                material_id = int(row['material_id'] or 0)
+                if material_id <= 0:
+                    continue
+                future_production_outgoing_map[material_id] += float(row['qty'] or 0)
 
         rows = []
         for item in materials:
             material_id = int(item['id'])
-            opening_stock = opening_stock_map.get(material_id, 0.0)
-            received_today = received_today_map.get(material_id, 0.0)
-            outgoing_today = outgoing_today_map.get(material_id, float(item.get('outgoing_today') or 0))
-            closing_stock = closing_stock_map.get(material_id, opening_stock)
+            current_workplace_stock = float(workplace_stock_map.get(material_id, 0.0) or 0.0)
+            production_outgoing_today = float(item.get('outgoing_today') or 0.0)
+            received_today = float(received_today_map.get(material_id, 0.0) or 0.0)
+            outgoing_today = production_outgoing_today + float(non_production_outgoing_today_map.get(material_id, 0.0) or 0.0)
+            future_net_delta = float(future_net_delta_map.get(material_id, 0.0) or 0.0) - float(future_production_outgoing_map.get(material_id, 0.0) or 0.0)
+            closing_stock = current_workplace_stock - future_net_delta
+            opening_stock = closing_stock - received_today + outgoing_today
+
+            if abs(closing_stock) < 1e-6:
+                closing_stock = 0.0
+            if abs(opening_stock) < 1e-6:
+                opening_stock = 0.0
+            if closing_stock < 0:
+                closing_stock = 0.0
+            if opening_stock < 0:
+                opening_stock = 0.0
+
+            current_workplace_stock = workplace_stock_map.get(material_id, 0.0)
+
+            if current_workplace_stock <= 0 and closing_stock <= 0:
+                continue
             lot_info = primary_lot_map.get(material_id, {})
             expiry_date = (lot_info.get('expiry_date') or '').strip()
             manufacture_date = (lot_info.get('manufacture_date') or '').strip()

@@ -612,6 +612,14 @@ def _consume_raw_by_code_fifo(cursor, source_raw_material_id, required_qty, prod
 def _rollback_raw_usage_for_production(cursor, production_id, created_by=None, note_prefix='production_resave'):
     cursor.execute(
         '''
+        DELETE FROM raw_material_logs
+        WHERE production_id = ?
+          AND COALESCE(type, '') IN ('production', 'RETURN')
+        ''',
+        (production_id,),
+    )
+    cursor.execute(
+        '''
         SELECT raw_material_id, SUM(COALESCE(actual_quantity, 0)) as qty
         FROM production_material_usage
         WHERE production_id = ?

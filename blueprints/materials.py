@@ -3169,26 +3169,23 @@ def raw_material_checksheet_preview(raw_material_id):
         cursor.execute(
             '''
             SELECT
-                COALESCE(substr(p.production_date, 1, 10), substr(rml.created_at, 1, 10)) as use_date,
-                CASE
-                    WHEN COALESCE(SUM(COALESCE(rml.quantity, 0)), 0) < 0
-                    THEN ABS(COALESCE(SUM(COALESCE(rml.quantity, 0)), 0))
-                    ELSE 0
-                END as used_quantity,
+                substr(p.production_date, 1, 10) as use_date,
+                COALESCE(SUM(COALESCE(pmu.actual_quantity, 0)), 0) as used_quantity,
                 GROUP_CONCAT(DISTINCT pr.name) as product_names,
                 COALESCE(rcn.note, '') as checksheet_note
-            FROM raw_material_logs rml
+            FROM production_material_usage pmu
             JOIN productions p
-              ON p.id = rml.production_id
+              ON p.id = pmu.production_id
              AND COALESCE(p.production_date, '') <> ''
             LEFT JOIN products pr ON pr.id = p.product_id
             LEFT JOIN raw_material_checksheet_notes rcn
-              ON rcn.raw_material_id = rml.raw_material_id
-              AND rcn.use_date = COALESCE(substr(p.production_date, 1, 10), substr(rml.created_at, 1, 10))
-            WHERE rml.raw_material_id = ?
-              AND COALESCE(rml.type, '') IN ('production', 'RETURN')
+              ON rcn.raw_material_id = pmu.raw_material_id
+              AND rcn.use_date = substr(p.production_date, 1, 10)
+            WHERE pmu.raw_material_id = ?
+              AND COALESCE(p.status, '') = '완료'
+              AND COALESCE(pmu.actual_quantity, 0) > 0
             GROUP BY
-                COALESCE(substr(p.production_date, 1, 10), substr(rml.created_at, 1, 10)),
+                substr(p.production_date, 1, 10),
                 COALESCE(rcn.note, '')
             HAVING used_quantity > 0
             ORDER BY use_date DESC
@@ -3199,24 +3196,25 @@ def raw_material_checksheet_preview(raw_material_id):
         usage_logs = [dict(row) for row in cursor.fetchall()]
 
         total_stock = float(raw['total_stock'] or 0)
-        ordered_logs = list(reversed(usage_logs))
-        running_before = total_stock
-        usage_rows = []
-        for log in ordered_logs:
+        current_stock = float(raw['current_stock'] or 0)
+        reconstructed_rows = []
+        running_after = current_stock
+        for log in usage_logs:
             used_qty = float(log.get('used_quantity') or 0)
             default_note = ', '.join([x.strip() for x in (log.get('product_names') or '').split(',') if x.strip()])
             note = (log.get('checksheet_note') or '').strip() or default_note
-            usage_rows.append(
+            reconstructed_rows.append(
                 {
                     'use_date': log.get('use_date') or '',
-                    'site_stock': f'{running_before:,.0f}',
+                    'site_stock': f'{running_after:,.0f}',
                     'warehouse_stock': f'{0:,.0f}',
-                    'total_stock': f'{running_before:,.0f}',
+                    'total_stock': f'{running_after:,.0f}',
                     'used_quantity': f'{used_qty:,.0f}',
                     'note': note,
                 }
             )
-            running_before = max(running_before - used_qty, 0)
+            running_after = max(running_after + used_qty, 0)
+        usage_rows = list(reversed(reconstructed_rows))
         while len(usage_rows) < 12:
             usage_rows.append(
                 {
