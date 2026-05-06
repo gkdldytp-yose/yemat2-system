@@ -501,6 +501,9 @@ def _ensure_products_schema(conn):
         if 'sheets_per_pack_3' not in cols:
             conn.execute("ALTER TABLE products ADD COLUMN sheets_per_pack_3 INTEGER")
         conn.execute("UPDATE products SET expiry_months = 12 WHERE expiry_months IS NULL")
+        bom_cols = [row['name'] for row in conn.execute("PRAGMA table_info(bom)").fetchall()]
+        if bom_cols and 'quantity_per_box_expr' not in bom_cols:
+            conn.execute("ALTER TABLE bom ADD COLUMN quantity_per_box_expr TEXT")
     except Exception:
         pass
     _products_schema_checked = True
@@ -666,6 +669,19 @@ def _ensure_material_lot_schema(conn):
         )
         conn.execute(
             '''
+            CREATE TABLE IF NOT EXISTS logistics_issue_receipt_lots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_id INTEGER NOT NULL,
+                material_lot_id INTEGER NOT NULL,
+                quantity REAL NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (request_id) REFERENCES logistics_issue_requests(id),
+                FOREIGN KEY (material_lot_id) REFERENCES material_lots(id)
+            )
+            '''
+        )
+        conn.execute(
+            '''
             CREATE TABLE IF NOT EXISTS production_material_lot_usage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 production_id INTEGER NOT NULL,
@@ -683,6 +699,7 @@ def _ensure_material_lot_schema(conn):
         )
         conn.execute('CREATE INDEX IF NOT EXISTS idx_material_lots_material_id ON material_lots(material_id)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_material_lot_logs_material_id ON material_lot_logs(material_id)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_logistics_issue_receipt_lots_request_id ON logistics_issue_receipt_lots(request_id)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_pmlu_production_id ON production_material_lot_usage(production_id)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_pmlu_lot_id ON production_material_lot_usage(material_lot_id)')
         cols = [row['name'] for row in conn.execute("PRAGMA table_info(material_lots)").fetchall()]
