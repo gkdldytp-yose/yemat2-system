@@ -1213,6 +1213,60 @@ def _create_request_receipt_lot(
     return lot_id, lot
 
 
+def _record_issue_receipt_lot(cursor, request_id, material_lot_id, quantity):
+    cursor.execute(
+        '''
+        INSERT INTO logistics_issue_receipt_lots (request_id, material_lot_id, quantity)
+        VALUES (?, ?, ?)
+        ''',
+        (int(request_id), int(material_lot_id), float(quantity or 0)),
+    )
+
+
+def _load_issue_receipt_lots(cursor, request_id):
+    rows = cursor.execute(
+        '''
+        SELECT ril.material_lot_id, ml.material_id, ril.quantity
+        FROM logistics_issue_receipt_lots ril
+        JOIN material_lots ml ON ml.id = ril.material_lot_id
+        WHERE ril.request_id = ?
+        ORDER BY ril.id
+        ''',
+        (int(request_id),),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _infer_issue_receipt_lots(cursor, req_row):
+    processed_at = (req_row['processed_at'] or '').strip()
+    workplace = (req_row['requester_workplace'] or '').strip()
+    if not processed_at or not workplace:
+        return []
+    rows = cursor.execute(
+        '''
+        SELECT material_lot_id, material_id, quantity
+        FROM material_lot_logs
+        WHERE material_id = ?
+          AND action = 'issue_request_complete'
+          AND note LIKE ?
+          AND created_at BETWEEN datetime(?, '-5 seconds') AND datetime(?, '+5 seconds')
+        ORDER BY id
+        ''',
+        (
+            int(req_row['material_id']),
+            f'{workplace}%',
+            processed_at[:19],
+            processed_at[:19],
+        ),
+    ).fetchall()
+    result = [dict(row) for row in rows if int(row['material_lot_id'] or 0) > 0]
+    target_qty = _round_to_1_decimal(req_row['approved_quantity'] or req_row['requested_quantity'] or 0)
+    total_qty = _round_to_1_decimal(sum(float(row.get('quantity') or 0) for row in result))
+    if result and abs(total_qty - target_qty) <= 0.11:
+        return result
+    return []
+
+
 def _build_receipt_split_rows(form, total_qty):
     split_enabled = (form.get('split_enabled') or '').strip() == '1'
     if not split_enabled:
@@ -5212,8 +5266,9 @@ def complete_issue_request(req_id):
         if (req_row['requester_username'] or '') != current_username:
             return "<script>alert('요청을 등록한 사용자만 실입고 완료 처리할 수 있습니다.'); history.back();</script>"
 
+        created_receipt_rows = []
         for row in split_rows:
-            _create_request_receipt_lot(
+            lot_id, _lot_name = _create_request_receipt_lot(
                 cursor,
                 int(req_row['material_id']),
                 req_row['material_code'],
@@ -5225,6 +5280,9 @@ def complete_issue_request(req_id):
                 int(row.get('manufacture_date_unknown') or 0),
                 int(row.get('expiry_date_unknown') or 0),
             )
+            created_receipt_rows.append((int(lot_id), float(row.get('quantity') or 0)))
+        for lot_id, quantity in created_receipt_rows:
+            _record_issue_receipt_lot(cursor, req_id, lot_id, quantity)
         _sync_material_stock_with_lots(conn, int(req_row['material_id']))
         cursor.execute(
             '''
@@ -5266,6 +5324,99 @@ def complete_issue_request(req_id):
 
     next_issue_status = 'pending' if remaining_pending_count > 0 else 'completed'
     return redirect(url_for('materials.materials', req_tab='issue', issue_status=next_issue_status))
+
+
+@bp.route('/issue-requests/<int:req_id>/cancel-complete', methods=['POST'])
+@login_required
+def cancel_completed_issue_request(req_id):
+    current_username = (session.get('user', {}) or {}).get('username')
+    current_name = (session.get('user', {}) or {}).get('name')
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
+        req_row = cursor.fetchone()
+        if not req_row:
+            return _alert_back('불출 요청을 찾을 수 없습니다.')
+        if (req_row['request_type'] or 'ISSUE') != 'ISSUE':
+            return _alert_back('불출 요청 건만 취소할 수 있습니다.')
+        if req_row['status'] != ISSUE_STATUS_COMPLETED:
+            return _alert_back('완료된 불출 요청만 취소할 수 있습니다.')
+        requester_username = (req_row['requester_username'] or '').strip()
+        requester_name = (req_row['requested_by'] or '').strip()
+        if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
+            return _alert_back('요청을 등록한 사용자만 완료 취소할 수 있습니다.')
+
+        receipt_rows = _load_issue_receipt_lots(cursor, req_id)
+        if not receipt_rows:
+            receipt_rows = _infer_issue_receipt_lots(cursor, req_row)
+        if not receipt_rows:
+            return _alert_back('완료 취소에 필요한 lot 정보를 찾을 수 없습니다.')
+
+        for row in receipt_rows:
+            lot_qty = _get_workplace_lot_quantity(cursor, req_row['requester_workplace'], int(row['material_id']), int(row['material_lot_id']))
+            if not _has_enough_quantity(lot_qty, float(row['quantity'] or 0)):
+                return _alert_back('이미 사용되었거나 이동된 재고가 있어 완료 취소할 수 없습니다.')
+
+        for row in receipt_rows:
+            rollback_qty = float(row['quantity'] or 0)
+            consumed_qty = _consume_workplace_lot_quantity(cursor, req_row['requester_workplace'], int(row['material_lot_id']), rollback_qty)
+            if not _has_enough_quantity(consumed_qty, rollback_qty):
+                raise ValueError('재고 롤백 중 수량이 변경되었습니다. 다시 시도해 주세요.')
+            cursor.execute(
+                '''
+                UPDATE material_lots
+                SET received_quantity = MAX(COALESCE(received_quantity, 0) - ?, 0),
+                    current_quantity = MAX(COALESCE(current_quantity, 0) - ?, 0),
+                    quantity = MAX(COALESCE(quantity, 0) - ?, 0)
+                WHERE id = ?
+                ''',
+                (rollback_qty, rollback_qty, rollback_qty, int(row['material_lot_id'])),
+            )
+            cursor.execute(
+                '''
+                INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+                VALUES (?, ?, 'issue_request_cancel', ?, ?)
+                ''',
+                (
+                    int(row['material_lot_id']),
+                    int(row['material_id']),
+                    rollback_qty,
+                    f"{req_row['requester_workplace']} 실입고 완료 취소",
+                ),
+            )
+
+        cursor.execute('DELETE FROM logistics_issue_receipt_lots WHERE request_id = ?', (req_id,))
+        cursor.execute(
+            '''
+            UPDATE logistics_issue_requests
+            SET status = ?, approved_quantity = 0, processed_by = NULL, processed_at = NULL, process_note = NULL
+            WHERE id = ?
+            ''',
+            (ISSUE_STATUS_REQUESTED, req_id),
+        )
+        _sync_material_stock_with_lots(conn, int(req_row['material_id']))
+        audit_log(
+            conn,
+            'update',
+            'logistics_issue_request',
+            req_id,
+            {
+                'status': ISSUE_STATUS_REQUESTED,
+                'cancel_completed': True,
+                'material_code': req_row['material_code'],
+                'material_id': req_row['material_id'],
+                'requester_workplace': req_row['requester_workplace'],
+            },
+        )
+        conn.commit()
+    except ValueError as e:
+        conn.rollback()
+        return _alert_back(str(e))
+    finally:
+        conn.close()
+
+    return redirect(url_for('materials.materials', req_tab='issue', issue_status='completed'))
 
 
 @bp.route('/issue-requests/<int:req_id>/reject', methods=['POST'])
@@ -5378,6 +5529,79 @@ def complete_export_request(req_id):
 
     next_status = 'pending' if remaining_pending_count > 0 else 'completed'
     return redirect(url_for('materials.materials', req_tab='export', export_status=next_status))
+
+
+@bp.route('/export-requests/<int:req_id>/cancel-complete', methods=['POST'])
+@login_required
+def cancel_completed_export_request(req_id):
+    current_username = (session.get('user', {}) or {}).get('username')
+    current_name = (session.get('user', {}) or {}).get('name')
+    manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
+        req_row = cursor.fetchone()
+        if not req_row:
+            return _alert_back('반출 요청을 찾을 수 없습니다.')
+        if (req_row['request_type'] or 'ISSUE') != 'RETURN':
+            return _alert_back('반출 요청 건만 취소할 수 있습니다.')
+        if req_row['status'] != ISSUE_STATUS_COMPLETED:
+            return _alert_back('완료된 반출 요청만 취소할 수 있습니다.')
+        requester_username = (req_row['requester_username'] or '').strip()
+        requester_name = (req_row['requested_by'] or '').strip()
+        if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
+            return _alert_back('요청을 등록한 사용자만 완료 취소할 수 있습니다.')
+
+        location_id = _get_inventory_location_id(cursor, req_row['requester_workplace'])
+        if not location_id:
+            return _alert_back('작업장 재고 위치를 찾을 수 없습니다.')
+        rollback_qty = _round_to_1_decimal(req_row['approved_quantity'] or req_row['requested_quantity'] or 0)
+        if rollback_qty <= 0:
+            return _alert_back('롤백할 반출 수량이 없습니다.')
+
+        _increase_material_lot_balance(cursor, location_id, int(req_row['material_lot_id']), rollback_qty)
+        cursor.execute(
+            '''
+            INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+            VALUES (?, ?, 'export_request_cancel', ?, ?)
+            ''',
+            (
+                int(req_row['material_lot_id']),
+                int(req_row['material_id']),
+                rollback_qty,
+                f"{req_row['requester_workplace']} 반출 완료 취소",
+            ),
+        )
+        cursor.execute(
+            '''
+            UPDATE logistics_issue_requests
+            SET status = ?, approved_quantity = 0, processed_by = NULL, processed_at = NULL, process_note = NULL
+            WHERE id = ?
+            ''',
+            (ISSUE_STATUS_REQUESTED, req_id),
+        )
+        _sync_material_stock_with_lots(conn, int(req_row['material_id']))
+        audit_log(
+            conn,
+            'update',
+            'logistics_return_request',
+            req_id,
+            {
+                'status': ISSUE_STATUS_REQUESTED,
+                'cancel_completed': True,
+                'approved_quantity': rollback_qty,
+                'processed_by': manager_name,
+                'material_code': req_row['material_code'],
+                'material_id': req_row['material_id'],
+                'requester_workplace': req_row['requester_workplace'],
+            },
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return redirect(url_for('materials.materials', req_tab='export', export_status='completed'))
 
 
 def _complete_export_request_row(conn, cursor, req_id, approved_qty, process_note, manager_name, current_username, current_name):

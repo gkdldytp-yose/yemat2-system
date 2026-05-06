@@ -829,7 +829,7 @@
             <div id="issueCompletedDatePane{{ loop.index0 }}" class="issue-date-pane {% if loop.first %}active{% endif %}">
                 <div class="table-container">
                     <table class="issue-status-table">
-                        <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>지급수량</th><th>완료일</th><th>비고</th></tr></thead>
+                        <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>지급수량</th><th>완료일</th><th>비고</th>{% if not is_logistics %}<th>처리</th>{% endif %}</tr></thead>
                         <tbody>
                         {% for r in group['items'] %}
                         <tr>
@@ -843,6 +843,13 @@
                             <td><span class="issue-qty-main">{{ "%.1f"|format(r.approved_quantity or 0) }} {{ r.unit or '' }}</span><span class="issue-qty-sub">실입고</span></td>
                             <td class="issue-meta-cell"><div class="issue-date">{{ r.processed_at[:16] if r.processed_at else '-' }}</div><div class="issue-subtext">처리 완료</div></td>
                             <td><span class="issue-note-box">{{ (r.process_note or r.note or '-')|e }}</span></td>
+                            {% if not is_logistics %}
+                            <td>
+                                <form method="POST" action="/issue-requests/{{ r.id }}/cancel-complete" onsubmit="return confirm('해당 불출 완료건을 취소하고 재고를 롤백하시겠습니까?');">
+                                    <button type="submit" class="btn btn-small btn-danger">취소</button>
+                                </form>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                         </tbody>
@@ -853,7 +860,7 @@
         {% else %}
         <div class="table-container">
             <table class="issue-status-table">
-                <tbody><tr><td colspan="7" class="issue-empty">불출 완료 내역이 없습니다.</td></tr></tbody>
+                <tbody><tr><td colspan="{% if not is_logistics %}8{% else %}7{% endif %}" class="issue-empty">불출 완료 내역이 없습니다.</td></tr></tbody>
             </table>
         </div>
         {% endif %}
@@ -1068,7 +1075,7 @@
             <div id="exportCompletedDatePane{{ loop.index0 }}" class="issue-date-pane {% if loop.first %}active{% endif %}">
                 <div class="table-container">
                     <table class="issue-status-table">
-                        <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>완료일</th><th>사유</th><th>메모</th></tr></thead>
+                        <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>완료일</th><th>사유</th><th>메모</th>{% if not is_logistics %}<th>처리</th>{% endif %}</tr></thead>
                         <tbody>
                         {% for r in group['items'] %}
                         <tr>
@@ -1083,6 +1090,13 @@
                             <td class="issue-meta-cell"><div class="issue-date">{{ r.processed_at[:16] if r.processed_at else '-' }}</div><div class="issue-subtext">처리 완료</div></td>
                             <td><span class="issue-note-box">{{ (r.reason or '-') ~ ((r.reason_detail and r.reason_detail|trim) and (' / ' ~ r.reason_detail) or '') }}</span></td>
                             <td><span class="issue-note-box">{{ (r.process_note or r.note or '-')|e }}</span></td>
+                            {% if not is_logistics %}
+                            <td>
+                                <form method="POST" action="/export-requests/{{ r.id }}/cancel-complete" onsubmit="return confirm('해당 반출 완료건을 취소하고 재고를 롤백하시겠습니까?');">
+                                    <button type="submit" class="btn btn-small btn-danger">취소</button>
+                                </form>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                         </tbody>
@@ -1093,7 +1107,7 @@
         {% else %}
         <div class="table-container">
             <table class="issue-status-table">
-                <tbody><tr><td colspan="8" class="issue-empty">반출 완료 내역이 없습니다.</td></tr></tbody>
+                <tbody><tr><td colspan="{% if not is_logistics %}9{% else %}8{% endif %}" class="issue-empty">반출 완료 내역이 없습니다.</td></tr></tbody>
             </table>
         </div>
         {% endif %}

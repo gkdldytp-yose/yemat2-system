@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
 import sqlite3
+from fractions import Fraction
 
 from core import get_db, login_required, role_required, get_workplace, SHARED_WORKPLACE
 
@@ -23,6 +24,21 @@ def _round_to_2_decimal(value, default=0.0):
         return round(float(value or 0) + 1e-9, 2)
     except (TypeError, ValueError):
         return float(default or 0)
+
+
+def _parse_bom_quantity_input(raw_value):
+    text = str(raw_value or '').strip()
+    if not text:
+        raise ValueError('사용량을 입력해주세요.')
+    normalized = text.replace(' ', '')
+    try:
+        value = float(Fraction(normalized))
+    except (ValueError, ZeroDivisionError):
+        raise ValueError('사용량은 숫자 또는 1/3 같은 분수 형태로 입력해주세요.')
+    if value <= 0:
+        raise ValueError('사용량은 0보다 커야 합니다.')
+    expr = normalized if '/' in normalized else ''
+    return float(value), expr
 
 
 def _parse_raw_option_values(form):
@@ -124,7 +140,12 @@ def delete_product(product_id):
     # 상품 삭제
     cursor.execute('DELETE FROM products WHERE id = ?', (product_id,))
 
-    conn.commit()
+    try:
+        conn.commit()
+    except ValueError as e:
+        conn.rollback()
+        conn.close()
+        return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
     conn.close()
 
     return redirect(url_for('products.products'))
@@ -145,6 +166,7 @@ def product_bom(product_id):
     # 현재 BOM (원초 정보 포함 - 입고일, 자호 추가)
     cursor.execute('''
         SELECT b.*, 
+               COALESCE(b.quantity_per_box_expr, '') as quantity_per_box_expr,
                m.name as material_name, m.unit, m.category,
                rm.name as raw_material_display_name,
                rm.code as raw_code,
@@ -275,7 +297,7 @@ def add_bom_individual(product_id):
     try:
         if item_type == 'raw':
             raw_id = request.form.get('raw_id')
-            qty = request.form.get('raw_quantity')
+            qty, qty_expr = _parse_bom_quantity_input(request.form.get('raw_quantity'))
 
             cursor.execute(
                 '''
@@ -305,28 +327,32 @@ def add_bom_individual(product_id):
             )
             row = cursor.fetchone()
             if row:
-                cursor.execute('UPDATE bom SET quantity_per_box = ?, sok_per_box = ? WHERE id = ?', (qty, qty, row['id']))
+                cursor.execute('UPDATE bom SET quantity_per_box = ?, quantity_per_box_expr = ?, sok_per_box = ? WHERE id = ?', (qty, qty_expr, qty, row['id']))
             else:
                 cursor.execute(
                     '''
-                    INSERT INTO bom (product_id, raw_material_id, sok_per_box, quantity_per_box)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO bom (product_id, raw_material_id, sok_per_box, quantity_per_box, quantity_per_box_expr)
+                    VALUES (?, ?, ?, ?, ?)
                     ''',
-                    (product_id, raw_id, qty, qty),
+                    (product_id, raw_id, qty, qty, qty_expr),
                 )
 
         else: # 부자재 다중 처리
             mat_ids = request.form.getlist('mat_ids[]')
             mat_qtys = request.form.getlist('mat_quantities[]')
             for m_id, m_qty in zip(mat_ids, mat_qtys):
+                qty, qty_expr = _parse_bom_quantity_input(m_qty)
                 cursor.execute('SELECT id FROM bom WHERE product_id = ? AND material_id = ?', (product_id, m_id))
                 row = cursor.fetchone()
                 if row:
-                    cursor.execute('UPDATE bom SET quantity_per_box = ? WHERE id = ?', (m_qty, row['id']))
+                    cursor.execute('UPDATE bom SET quantity_per_box = ?, quantity_per_box_expr = ? WHERE id = ?', (qty, qty_expr, row['id']))
                 else:
-                    cursor.execute('INSERT INTO bom (product_id, material_id, quantity_per_box) VALUES (?, ?, ?)', (product_id, m_id, m_qty))
+                    cursor.execute('INSERT INTO bom (product_id, material_id, quantity_per_box, quantity_per_box_expr) VALUES (?, ?, ?, ?)', (product_id, m_id, qty, qty_expr))
 
         conn.commit()
+    except ValueError as e:
+        conn.rollback()
+        return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
     except Exception as e:
         conn.rollback()
         return f"DB 오류: {e}", 500
@@ -347,20 +373,20 @@ def add_bom_multi(product_id):
 
     if item_type == 'raw':
         # 원초
-        quantity = request.form.get('raw_quantity')
+        quantity, quantity_expr = _parse_bom_quantity_input(request.form.get('raw_quantity'))
         for raw_id in selected_ids:
             cursor.execute('''
-                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box)
-                VALUES (?, NULL, ?, NULL, ?, ?)
-            ''', (product_id, raw_id, quantity, quantity))
+                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box, quantity_per_box_expr)
+                VALUES (?, NULL, ?, NULL, ?, ?, ?)
+            ''', (product_id, raw_id, quantity, quantity, quantity_expr))
     else:
         # 부자재
-        quantity = request.form.get('mat_quantity')
+        quantity, quantity_expr = _parse_bom_quantity_input(request.form.get('mat_quantity'))
         for mat_id in selected_ids:
             cursor.execute('''
-                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box)
-                VALUES (?, ?, NULL, NULL, NULL, ?)
-            ''', (product_id, mat_id, quantity))
+                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box, quantity_per_box_expr)
+                VALUES (?, ?, NULL, NULL, NULL, ?, ?)
+            ''', (product_id, mat_id, quantity, quantity_expr))
 
     conn.commit()
     conn.close()
@@ -380,23 +406,23 @@ def add_bom_item(product_id):
     if item_type == 'raw_material':
         # 원초 다중 선택
         raw_material_ids = request.form.getlist('raw_material_id')
-        sok_per_box = request.form.get('sok_per_box')
+        sok_per_box, quantity_expr = _parse_bom_quantity_input(request.form.get('sok_per_box'))
 
         for raw_id in raw_material_ids:
             cursor.execute('''
-                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box)
-                VALUES (?, NULL, ?, NULL, ?, ?)
-            ''', (product_id, raw_id, sok_per_box, sok_per_box))
+                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box, quantity_per_box_expr)
+                VALUES (?, NULL, ?, NULL, ?, ?, ?)
+            ''', (product_id, raw_id, sok_per_box, sok_per_box, quantity_expr))
     else:
         # 부자재 다중 선택
         material_ids = request.form.getlist('material_id')
-        quantity_per_box = request.form.get('quantity_per_box')
+        quantity_per_box, quantity_expr = _parse_bom_quantity_input(request.form.get('quantity_per_box'))
 
         for mat_id in material_ids:
             cursor.execute('''
-                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box)
-                VALUES (?, ?, NULL, NULL, NULL, ?)
-            ''', (product_id, mat_id, quantity_per_box))
+                INSERT INTO bom (product_id, material_id, raw_material_id, raw_material_name, sok_per_box, quantity_per_box, quantity_per_box_expr)
+                VALUES (?, ?, NULL, NULL, NULL, ?, ?)
+            ''', (product_id, mat_id, quantity_per_box, quantity_expr))
 
     conn.commit()
     conn.close()
@@ -434,7 +460,7 @@ def update_bom_item(bom_id):
     try:
         cursor.execute(
             '''
-            SELECT b.id, b.product_id, b.material_id, b.raw_material_id, b.sok_per_box, b.quantity_per_box, p.sok_per_box as product_sok_per_box
+            SELECT b.id, b.product_id, b.material_id, b.raw_material_id, b.sok_per_box, b.quantity_per_box, COALESCE(b.quantity_per_box_expr, '') as quantity_per_box_expr, p.sok_per_box as product_sok_per_box
             FROM bom b
             JOIN products p ON p.id = b.product_id
             WHERE b.id = ?
@@ -450,13 +476,10 @@ def update_bom_item(bom_id):
 
         # 부자재 BOM 수량 수정
         if bom['material_id']:
-            qty = request.form.get('quantity_per_box', type=float)
-            if qty is None or qty <= 0:
-                conn.close()
-                return "<script>alert('사용량은 0보다 커야 합니다.');history.back();</script>"
+            qty, qty_expr = _parse_bom_quantity_input(request.form.get('quantity_per_box'))
             cursor.execute(
-                'UPDATE bom SET quantity_per_box = ? WHERE id = ?',
-                (qty, bom_id),
+                'UPDATE bom SET quantity_per_box = ?, quantity_per_box_expr = ? WHERE id = ?',
+                (qty, qty_expr, bom_id),
             )
             conn.commit()
             conn.close()
@@ -524,6 +547,10 @@ def update_bom_item(bom_id):
 
         conn.close()
         return redirect(url_for('products.product_bom', product_id=product_id))
+    except ValueError as e:
+        conn.rollback()
+        conn.close()
+        return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
     except Exception:
         conn.rollback()
         conn.close()
