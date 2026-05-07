@@ -78,6 +78,105 @@
 .material-modal-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;padding-bottom:0.6rem;border-bottom:1px solid #e2e8f0;}
 .material-header-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0.55rem;margin:0.75rem 0 1rem;}
 .material-header-item{background:#ffffff;border:1px solid #dbe5f0;border-radius:10px;padding:0.6rem 0.7rem;box-shadow:0 1px 2px rgba(15,23,42,0.04);}
+.subcontract-shell{display:flex;flex-direction:column;gap:1rem;}
+.subcontract-toolbar{display:flex;flex-direction:column;gap:0.95rem;margin-bottom:0.2rem;padding:1rem 1.05rem;border:1px solid #dbe7f3;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%);box-shadow:0 14px 32px rgba(15,23,42,0.05);}
+.subcontract-toolbar-top{display:grid;grid-template-columns:minmax(0,2.2fr) repeat(2,minmax(170px,0.9fr)) auto;gap:0.8rem;align-items:end;}
+.subcontract-toolbar .field{display:flex;flex-direction:column;gap:0.35rem;min-width:160px;}
+.subcontract-toolbar label{font-size:0.82rem;color:#475569;font-weight:800;}
+.subcontract-toolbar select,
+.subcontract-toolbar input[type="date"]{padding:0.7rem 0.8rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.04);}
+.subcontract-toolbar select:focus,
+.subcontract-toolbar input[type="date"]:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.14);}
+.subcontract-toolbar-actions{display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;}
+.subcontract-quickpick{display:flex;flex-direction:column;gap:0.5rem;}
+.subcontract-quickpick-head{display:flex;justify-content:space-between;align-items:center;gap:0.6rem;flex-wrap:wrap;}
+.subcontract-quickpick-head span{font-size:0.8rem;color:#64748b;font-weight:800;}
+.subcontract-quickpick-wrap{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.subcontract-quickpick-empty{font-size:0.8rem;color:#94a3b8;}
+.subcontract-quickpick-btn{display:inline-flex;align-items:center;gap:0.35rem;padding:0.58rem 0.9rem;border-radius:999px;border:1px solid #d6e6f8;background:#fff;color:#1e3a8a;font-size:0.82rem;font-weight:800;cursor:pointer;transition:all 0.18s ease;box-shadow:0 3px 10px rgba(37,99,235,0.08);}
+.subcontract-quickpick-btn:hover{transform:translateY(-1px);background:#eff6ff;border-color:#93c5fd;}
+.subcontract-quickpick-btn.active{background:#1d4ed8;color:#fff;border-color:#1d4ed8;box-shadow:0 8px 18px rgba(29,78,216,0.22);}
+.subcontract-actions{display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.15rem;}
+.subcontract-print-group{display:inline-flex;align-items:center;gap:0.35rem;padding:0.28rem;border:1px solid #dbe7f3;border-radius:999px;background:#f8fbff;}
+.subcontract-print-label{font-size:0.78rem;color:#64748b;font-weight:800;padding:0 0.35rem 0 0.2rem;}
+.subcontract-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0.75rem;margin-bottom:0.1rem;}
+.subcontract-summary-card{padding:0.95rem 1rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(180deg,#f8fbff,#eef6ff);box-shadow:0 10px 24px rgba(37,99,235,0.07);}
+.subcontract-summary-card .label{font-size:0.78rem;color:#64748b;font-weight:800;margin-bottom:0.35rem;}
+.subcontract-summary-card .value{font-size:1.16rem;color:#0f172a;font-weight:800;line-height:1.35;}
+.subcontract-note{font-size:0.84rem;color:#64748b;margin-bottom:0.1rem;padding:0 0.1rem;}
+.subcontract-table-card{border:1px solid #dbe7f3;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);box-shadow:0 16px 34px rgba(15,23,42,0.05);overflow:hidden;}
+.subcontract-table-head{display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;flex-wrap:wrap;padding:0.95rem 1rem 0.85rem;border-bottom:1px solid #e5edf5;}
+.subcontract-table-head h3{margin:0;font-size:1rem;color:#0f172a;}
+.subcontract-table-head p{margin:0.28rem 0 0;font-size:0.82rem;color:#64748b;}
+.subcontract-table{min-width:1320px;table-layout:auto;}
+.subcontract-table th,.subcontract-table td{text-align:center;white-space:nowrap;vertical-align:middle;}
+.subcontract-table thead th{background:#f8fafc;color:#475569;font-size:0.79rem;border-bottom:1px solid #e5edf5;position:sticky;top:0;z-index:1;}
+.subcontract-table tbody td{border-bottom:1px solid #eef2f7;}
+.subcontract-table tbody tr:nth-child(even){background:#fcfdff;}
+.subcontract-table tbody tr:hover{background:#f6faff;}
+.subcontract-table th.left,.subcontract-table td.left{text-align:left;}
+.subcontract-table .type-chip{display:inline-flex;align-items:center;justify-content:center;padding:0.26rem 0.62rem;border-radius:999px;font-size:0.74rem;font-weight:800;border:1px solid transparent;}
+.subcontract-table .type-chip.raw{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.subcontract-table .type-chip.oil{background:#ffe7c2;color:#9a3412;border-color:#fed7aa;}
+.subcontract-table .type-chip.salt{background:#e2e8f0;color:#334155;border-color:#cbd5e1;}
+.subcontract-table .type-chip.inner{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+.subcontract-table .type-chip.outer{background:#ffedd5;color:#c2410c;border-color:#fed7aa;}
+.subcontract-table .type-chip.box{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.subcontract-table .type-chip.silica{background:#f3e8ff;color:#7e22ce;border-color:#e9d5ff;}
+.subcontract-table .type-chip.tray{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+.subcontract-table .type-chip.lid{background:#fee2e2;color:#b91c1c;border-color:#fecaca;}
+.subcontract-table .type-chip.angle{background:#dbeafe;color:#1e40af;border-color:#bfdbfe;}
+.subcontract-table .type-chip.default{background:#e2e8f0;color:#334155;border-color:#cbd5e1;}
+.subcontract-table .extra-chip{display:inline-flex;align-items:center;padding:0.18rem 0.45rem;border-radius:999px;background:#fef3c7;color:#92400e;font-size:0.72rem;font-weight:700;margin-left:0.35rem;}
+.subcontract-sort-btn{display:inline-flex;align-items:center;gap:0.28rem;background:none;border:none;padding:0;color:inherit;font:inherit;font-weight:inherit;cursor:pointer;}
+.subcontract-sort-btn:hover{color:#1d4ed8;}
+.subcontract-sort-indicator{font-size:0.72rem;color:#94a3b8;min-width:0.95rem;text-align:center;}
+.subcontract-number{font-variant-numeric:tabular-nums;}
+.subcontract-table .code-col{display:none;}
+.subcontract-table .usage-col{background:linear-gradient(180deg,#fff7ed 0%,#fffbeb 100%);color:#9a3412;font-weight:800;}
+.subcontract-table .current-col{background:linear-gradient(180deg,#ecfeff 0%,#f0fdfa 100%);color:#0f766e;font-weight:800;}
+.subcontract-unit-text{display:inline-block;margin-left:0.18rem;font-size:0.82em;font-weight:700;opacity:0.82;}
+.subcontract-empty{padding:2.2rem 1rem;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;}
+@media (max-width: 1100px){
+  .subcontract-toolbar-top{grid-template-columns:1fr;}
+  .subcontract-toolbar-actions{justify-content:flex-start;}
+}
+@media print{
+  body.printing-subcontract .integrated-page-title,
+  body.printing-subcontract .integrated-page-desc,
+  body.printing-subcontract .sidebar,
+  body.printing-subcontract .mobile-menu-toggle,
+  body.printing-subcontract nav,
+  body.printing-subcontract .tabs,
+  body.printing-subcontract .subtabs,
+  body.printing-subcontract .card-header,
+  body.printing-subcontract .subcontract-toolbar,
+  body.printing-subcontract .subcontract-actions,
+  body.printing-subcontract .btn,
+  body.printing-subcontract .modal-bg{display:none !important;}
+  body.printing-subcontract main{max-width:none !important;padding:0 !important;margin:0 !important;}
+  body.printing-subcontract .card{box-shadow:none;border:none;padding:0;margin:0;background:transparent;}
+  body.printing-subcontract .table-container{overflow:visible !important;}
+  body.printing-subcontract .subcontract-print-scope{display:block !important;}
+  body.printing-subcontract .subcontract-table{min-width:0 !important;width:100% !important;}
+  body.printing-subcontract .subcontract-summary{gap:0.28rem;margin-bottom:0.25rem;grid-template-columns:repeat(5,minmax(0,1fr));}
+  body.printing-subcontract .subcontract-summary-card{padding:0.28rem 0.38rem;border-radius:7px;box-shadow:none;background:#fff;border:1px solid #dbe7f3;}
+  body.printing-subcontract .subcontract-summary-card .label{font-size:12px;margin-bottom:0.12rem;}
+  body.printing-subcontract .subcontract-summary-card .value{font-size:16px;line-height:1.2;}
+  body.printing-subcontract .subcontract-note{display:block !important;font-size:12px;padding:0;margin:0 0 0.2rem;color:#475569;}
+  body.printing-subcontract .subcontract-table-card{border:none;box-shadow:none;background:transparent;border-radius:0;}
+  body.printing-subcontract .subcontract-table-head{padding:0 0 0.15rem;border-bottom:none;}
+  body.printing-subcontract .subcontract-table-head h3{font-size:16px;}
+  body.printing-subcontract .subcontract-table-head p{display:none !important;}
+  body.printing-subcontract table{font-size:11.4px;}
+  body.printing-subcontract th,
+  body.printing-subcontract td{padding:2px 2px;}
+  body.printing-subcontract th{font-weight:800;}
+  body.printing-subcontract td{font-weight:600;}
+  body.printing-subcontract .subcontract-print-scope{transform-origin:top left;}
+  body.printing-subcontract.print-landscape .subcontract-print-scope{transform:scale(0.955);width:103%;}
+  body.printing-subcontract.print-portrait .subcontract-print-scope{transform:scale(0.73);width:133%;}
+}
 .material-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
 .material-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
 .material-detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.75rem;}
@@ -339,8 +438,8 @@
 {% endblock %}
 
 {% block content %}
-<h1 style="margin-bottom:1rem;">🧭 통합 관리 모드</h1>
-<p style="color:#666;margin-bottom:1.5rem;">전체 작업장의 데이터를 한 곳에서 조회하고 관리합니다</p>
+<h1 class="integrated-page-title" style="margin-bottom:1rem;">🧭 통합 관리 모드</h1>
+<p class="integrated-page-desc" style="color:#666;margin-bottom:1.5rem;">전체 작업장의 데이터를 한 곳에서 조회하고 관리합니다</p>
 
 <!-- 탭 메뉴 -->
 <div class="tabs">
@@ -348,7 +447,7 @@
     <button class="tab-btn {% if tab == 'raw_materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=raw_materials'">🌿 원초</button>
     <button class="tab-btn {% if tab == 'materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=materials'">🧰 부자재</button>
     <button class="tab-btn {% if tab == 'productions' %}active{% endif %}" onclick="location.href='/integrated-management?tab=productions'">🏭 생산관리</button>
-    <button class="tab-btn" onclick="location.href='/production-statistics?persist=1'">📊 생산통계</button>
+    <button class="tab-btn {% if tab == 'subcontract_production' %}active{% endif %}" onclick="location.href='/integrated-management?tab=subcontract_production'">📋 임가공 생산관리</button>
     <button class="tab-btn {% if tab == 'requirements_calculator' %}active{% endif %}" onclick="location.href='/integrated-management?tab=requirements_calculator'">🧮 원부자재 계산기</button>
     <button class="tab-btn {% if tab == 'meeting_eval' %}active{% endif %}" onclick="location.href='/integrated-management?tab=meeting_eval'">📈 회의/평가 자료</button>
     <button class="tab-btn {% if tab == 'inventory_audit' %}active{% endif %}" onclick="location.href='/integrated-management?tab=inventory_audit'">📊 재고 조사</button>
@@ -392,11 +491,12 @@
                 {% elif tab == 'materials' %}전체 부자재 관리
                 {% elif tab == 'productions' %}전체 생산 관리
                 {% elif tab == 'requirements_calculator' %}원부자재 계산기
+                {% elif tab == 'subcontract_production' %}임가공 생산관리
                 {% elif tab == 'meeting_eval' %}주간회의 / 경영평가 자료
                 {% elif tab == 'inventory_audit' %}전체 재고 조사 현황
                 {% elif tab == 'db_backups' %}전체 DB 백업 관리
                 {% endif %}
-                {% if tab not in ['requirements_calculator', 'meeting_eval'] %}
+                {% if tab not in ['requirements_calculator', 'meeting_eval', 'subcontract_production'] %}
                 <span style="color:#999;font-size:0.9rem;font-weight:normal;">({{ data|length }}건)</span>
                 {% endif %}
             </h2>
@@ -443,7 +543,7 @@
                 {% if tab == 'db_backups' %}
                 <input type="hidden" name="keep_count" value="{{ backup_keep_count or 10 }}">
                 {% endif %}
-                {% if tab not in ['inventory_audit', 'requirements_calculator', 'meeting_eval'] %}
+                {% if tab not in ['inventory_audit', 'requirements_calculator', 'meeting_eval', 'subcontract_production'] %}
                 <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="키워드 검색">
                 <button type="submit" class="btn btn-small">검색</button>
                 {% endif %}
@@ -475,7 +575,7 @@
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">지금 백업</button>
             </form>
             {% endif %}
-            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions'] %}
+            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions', 'subcontract_production'] %}
             <button class="btn btn-small" onclick="openAddModal()">+ 추가</button>
             {% endif %}
             </div>
@@ -710,6 +810,156 @@
                 </div>
             </div>
         </div>
+    </div>
+    {% elif tab == 'subcontract_production' %}
+    <div class="subcontract-shell">
+        <form method="GET" action="/integrated-management" class="subcontract-toolbar" id="subcontractToolbarForm">
+            <input type="hidden" name="tab" value="subcontract_production">
+            <input type="hidden" name="wp" value="{{ wp_filter }}">
+            <div class="subcontract-toolbar-top">
+                <div class="field" style="min-width:280px;flex:1 1 320px;">
+                    <label for="subcontractProductSelect">임가공 상품 지정</label>
+                    <select id="subcontractProductSelect" name="subcontract_product_id">
+                        <option value="">상품 선택</option>
+                        {% for group in subcontract_payload.product_option_groups if subcontract_payload %}
+                        <optgroup label="{{ group['workplace'] }}">
+                            {% for product in group['items'] %}
+                            <option value="{{ product.id }}" data-name="{{ product.name }}{% if product.code %} [{{ product.code }}]{% endif %}" {% if subcontract_payload.selected_product_id == (product.id|string) %}selected{% endif %}>
+                                {{ product.name }}{% if product.code %} [{{ product.code }}]{% endif %}
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="subcontractDateFrom">조회 시작일</label>
+                    <input type="date" id="subcontractDateFrom" name="subcontract_date_from" value="{{ subcontract_date_from }}">
+                </div>
+                <div class="field">
+                    <label for="subcontractDateTo">조회 종료일</label>
+                    <input type="date" id="subcontractDateTo" name="subcontract_date_to" value="{{ subcontract_date_to }}">
+                </div>
+                <div class="subcontract-toolbar-actions">
+                    <button type="submit" class="btn btn-small">조회</button>
+                    <a href="/integrated-management?tab=subcontract_production{% if wp_filter and wp_filter != 'all' %}&wp={{ wp_filter|urlencode }}{% endif %}" class="btn btn-small btn-secondary">초기화</a>
+                </div>
+            </div>
+            <div class="subcontract-quickpick">
+                <div class="subcontract-quickpick-head">
+                    <span>빠른 상품 선택</span>
+                    <small style="color:#94a3b8;">최근 선택 3개까지 표시됩니다.</small>
+                </div>
+                <div id="subcontractQuickPickWrap" class="subcontract-quickpick-wrap">
+                    <div class="subcontract-quickpick-empty">선택한 상품이 아직 없습니다.</div>
+                </div>
+            </div>
+        </form>
+
+        {% if subcontract_payload and subcontract_payload.selected_product %}
+        <div class="subcontract-actions">
+            <div class="subcontract-print-group">
+                <span class="subcontract-print-label">A4 출력</span>
+                <button type="button" class="btn btn-small btn-secondary" onclick="printSubcontractProductionSheet('landscape')">가로</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="printSubcontractProductionSheet('portrait')">세로</button>
+            </div>
+            <a class="btn btn-small" style="background:#0f766e;" href="/integrated-management/subcontract-production/export?product_id={{ subcontract_payload.selected_product_id|urlencode }}&wp={{ wp_filter|urlencode }}&date_from={{ subcontract_date_from|urlencode }}&date_to={{ subcontract_date_to|urlencode }}">엑셀 출력</a>
+        </div>
+        <div class="subcontract-print-scope">
+        <div class="subcontract-summary">
+            <div class="subcontract-summary-card">
+                <div class="label">선택 상품</div>
+                <div class="value" style="font-size:1rem;">{{ subcontract_payload.selected_product.name }}{% if subcontract_payload.selected_product.code %} [{{ subcontract_payload.selected_product.code }}]{% endif %}</div>
+            </div>
+            <div class="subcontract-summary-card">
+                <div class="label">작업장</div>
+                <div class="value">{{ subcontract_payload.summary.workplace }}</div>
+            </div>
+            <div class="subcontract-summary-card">
+                <div class="label">생산건수</div>
+                <div class="value">{{ subcontract_payload.summary.production_count or 0 }}</div>
+            </div>
+            <div class="subcontract-summary-card">
+                <div class="label">총 생산 BOX</div>
+                <div class="value">{{ "{:,.1f}".format(subcontract_payload.summary.total_boxes or 0) }}</div>
+            </div>
+            <div class="subcontract-summary-card">
+                <div class="label">집계 품목수</div>
+                <div class="value">{{ subcontract_payload.summary.item_count or 0 }}</div>
+            </div>
+        </div>
+        <div class="subcontract-note">
+            상품 BOM의 원초와 부자재를 한 표로 합쳐서 재고 흐름과 일별 사용량을 확인합니다. 재고 값은 선택 기간 기준으로 계산되고, 오른쪽 날짜 열에서 일자별 사용량을 바로 볼 수 있습니다.
+        </div>
+            {% if subcontract_payload.rows %}
+            <div class="subcontract-table-card">
+                <div class="subcontract-table-head">
+                    <div>
+                        <h3>원부자재 사용/재고 현황</h3>
+                        <p>컬럼명을 클릭하면 정렬할 수 있고, 날짜 열에서는 일별 사용량만 빠르게 비교할 수 있습니다.</p>
+                    </div>
+                </div>
+            <div class="table-container">
+                <table class="subcontract-table">
+                    <thead>
+                        <tr>
+                            <th><button type="button" class="subcontract-sort-btn" data-sort-key="category" data-sort-type="text">카테고리 <span class="subcontract-sort-indicator"></span></button></th>
+                            <th class="code-col"><button type="button" class="subcontract-sort-btn" data-sort-key="code" data-sort-type="text">코드 <span class="subcontract-sort-indicator"></span></button></th>
+                            <th class="left"><button type="button" class="subcontract-sort-btn" data-sort-key="name" data-sort-type="text">품목명 <span class="subcontract-sort-indicator"></span></button></th>
+                            <th><button type="button" class="subcontract-sort-btn" data-sort-key="total" data-sort-type="number">총재고 <span class="subcontract-sort-indicator"></span></button></th>
+                            <th class="usage-col"><button type="button" class="subcontract-sort-btn" data-sort-key="used" data-sort-type="number">사용량 <span class="subcontract-sort-indicator"></span></button></th>
+                            <th class="current-col"><button type="button" class="subcontract-sort-btn" data-sort-key="current" data-sort-type="number">현재고 <span class="subcontract-sort-indicator"></span></button></th>
+                            {% for col in subcontract_payload.date_columns %}
+                            <th><button type="button" class="subcontract-sort-btn" data-sort-key="daily-{{ loop.index0 }}" data-sort-type="number">{{ col.label }} <span class="subcontract-sort-indicator"></span></button></th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in subcontract_payload.rows %}
+                        <tr
+                            data-sort-category="{{ item.category or (item.item_type == 'raw' and '원초' or '-') }}"
+                            data-sort-code="{{ item.code }}"
+                            data-sort-name="{{ item.name }}"
+                            data-sort-unit="{{ item.unit }}"
+                            data-sort-received="{{ item.received_stock or 0 }}"
+                            data-sort-total="{{ item.total_stock or 0 }}"
+                            data-sort-used="{{ item.used_quantity or 0 }}"
+                            data-sort-current="{{ item.current_stock or 0 }}"
+                            {% for qty in item.daily_usage_values %}
+                            data-sort-daily-{{ loop.index0 }}="{{ qty or 0 }}"
+                            {% endfor %}
+                        >
+                            <td>
+                                <span class="type-chip {% if item.item_type == 'raw' %}raw{% elif item.category == '기름' %}oil{% elif item.category == '소금' %}salt{% elif item.category == '내포' %}inner{% elif item.category == '외포' %}outer{% elif item.category == '박스' %}box{% elif item.category == '실리카' %}silica{% elif item.category == '트레이' %}tray{% elif item.category == '뚜껑' %}lid{% elif item.category == '각대' %}angle{% else %}default{% endif %}">
+                                    {{ item.category or (item.item_type == 'raw' and '원초' or '-') }}
+                                </span>
+                            </td>
+                            <td class="code-col">{{ item.code }}</td>
+                            <td class="left">
+                                {{ item.name }}
+                                {% if item.is_extra_usage %}
+                                <span class="extra-chip">실사용 추가</span>
+                                {% endif %}
+                            </td>
+                            <td class="subcontract-number">{{ "{:,.1f}".format(item.total_stock or 0) }}<span class="subcontract-unit-text">{{ item.unit }}</span></td>
+                            <td class="subcontract-number usage-col"><strong>{{ "{:,.1f}".format(item.used_quantity or 0) }}</strong><span class="subcontract-unit-text">{{ item.unit }}</span></td>
+                            <td class="subcontract-number current-col">{{ "{:,.1f}".format(item.current_stock or 0) }}<span class="subcontract-unit-text">{{ item.unit }}</span></td>
+                            {% for qty in item.daily_usage_values %}
+                            <td class="subcontract-number">{% if qty %}{{ "{:,.1f}".format(qty or 0) }}<span class="subcontract-unit-text">{{ item.unit }}</span>{% else %}-{% endif %}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            </div>
+            {% else %}
+            <div class="subcontract-empty">선택한 기간에 집계할 임가공 생산 사용 데이터가 없습니다.</div>
+            {% endif %}
+        {% else %}
+        <div class="subcontract-empty">상품을 선택하면 임가공 생산건의 원초/부자재 재고와 일별 사용량을 한 표에서 확인할 수 있습니다.</div>
+        {% endif %}
     </div>
     {% elif tab == 'meeting_eval' %}
     <div class="meeting-eval-grid">
@@ -2242,7 +2492,7 @@ let requirementCalcUsageValues = {};
 let requirementCalcActiveDraftId = null;
 const requirementCalcProductsMaster = {{ (calculator_products or [])|tojson }};
 const requirementCalcCategoryOptions = ['원초', '기름', '소금', '내포', '외포', '박스', '실리카', '트레이', '뚜껑', '각대', '기타'];
-const requirementCalcDraftStorageKey = 'integrated_requirement_calc_drafts_v1';
+const requirementCalcDraftStorageKey = 'integrated_requirement_calc_drafts_v2';
 let requirementCalcDrafts = [];
 const requirementCalcTwoMonthPreset = [
     { code: 'A-EP-F002V1', boxes: 10589 },
@@ -2959,17 +3209,26 @@ function saveCurrentRequirementCalcDraft(){
     alert(existingIndex >= 0 ? '임시저장된 계산 결과를 업데이트했습니다.' : '계산 결과를 임시저장했습니다.');
 }
 
-function loadRequirementCalcDraft(draftId){
+async function loadRequirementCalcDraft(draftId){
     const draft = requirementCalcDrafts.find((item) => item.id === draftId);
     if(!draft) return;
     requirementCalcItems = Array.isArray(draft.items) ? JSON.parse(JSON.stringify(draft.items)) : [];
     requirementCalcSelectedCategories = Array.isArray(draft.selected_categories) ? [...draft.selected_categories] : [];
-    requirementCalcLastPayload = draft.payload ? JSON.parse(JSON.stringify(draft.payload)) : null;
     requirementCalcUsageMode = !!draft.usage_mode;
     requirementCalcUsageValues = draft.usage_values ? { ...draft.usage_values } : {};
     requirementCalcActiveDraftId = draft.id;
     renderRequirementCalcInputRows();
     renderRequirementCalcDraftTabs();
+    const ok = await calculateIntegratedRequirements(requirementCalcSelectedCategories, {
+        preserveDraft: true,
+        preserveResultTab: true,
+        activateUsageMode: !!draft.usage_mode,
+    });
+    if(!ok){
+        requirementCalcLastPayload = draft.payload ? JSON.parse(JSON.stringify(draft.payload)) : null;
+        renderCurrentRequirementCalcPayload();
+    }
+    requirementCalcUsageValues = draft.usage_values ? { ...draft.usage_values } : {};
     renderCurrentRequirementCalcPayload();
     switchRequirementCalcResultTab(draft.result_tab === 'products' ? 'products' : 'summary');
 }
@@ -4341,6 +4600,153 @@ function syncMeetingEvalLinkedInputs(sourceInput, formatted=false){
         input.value = nextValue;
     });
 }
+
+function printSubcontractProductionSheet(orientation='landscape'){
+    const printStyleId = 'subcontract-print-orientation-style';
+    let styleEl = document.getElementById(printStyleId);
+    if(!styleEl){
+        styleEl = document.createElement('style');
+        styleEl.id = printStyleId;
+        styleEl.media = 'print';
+        document.head.appendChild(styleEl);
+    }
+    const normalizedOrientation = orientation === 'portrait' ? 'portrait' : 'landscape';
+    styleEl.textContent = `@page { size: A4 ${normalizedOrientation}; margin: 6mm; }`;
+    document.body.classList.add('printing-subcontract');
+    document.body.classList.remove('print-landscape', 'print-portrait');
+    document.body.classList.add(normalizedOrientation === 'portrait' ? 'print-portrait' : 'print-landscape');
+    const cleanup = () => {
+        document.body.classList.remove('printing-subcontract');
+        document.body.classList.remove('print-landscape', 'print-portrait');
+        window.removeEventListener('afterprint', cleanup);
+        if(styleEl){
+            styleEl.remove();
+        }
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    setTimeout(cleanup, 800);
+}
+
+const subcontractQuickPickStorageKey = 'subcontract-production-recent-products';
+
+function loadSubcontractQuickPicks(){
+    try{
+        const raw = localStorage.getItem(subcontractQuickPickStorageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    }catch(_error){
+        return [];
+    }
+}
+
+function saveSubcontractQuickPicks(items){
+    localStorage.setItem(subcontractQuickPickStorageKey, JSON.stringify((items || []).slice(0, 3)));
+}
+
+function updateSubcontractQuickPicksFromSelect(){
+    const select = document.getElementById('subcontractProductSelect');
+    if(!select || !select.value) return;
+    const selectedOption = select.options[select.selectedIndex];
+    const item = {
+        id: String(select.value),
+        name: selectedOption?.dataset?.name || selectedOption?.textContent?.trim() || String(select.value),
+    };
+    const next = loadSubcontractQuickPicks().filter(entry => String(entry.id) !== item.id);
+    next.unshift(item);
+    saveSubcontractQuickPicks(next.slice(0, 3));
+}
+
+function renderSubcontractQuickPicks(){
+    const wrap = document.getElementById('subcontractQuickPickWrap');
+    const select = document.getElementById('subcontractProductSelect');
+    const selectedId = select?.value ? String(select.value) : '';
+    if(!wrap) return;
+    const items = loadSubcontractQuickPicks();
+    if(!items.length){
+        wrap.innerHTML = '<div class="subcontract-quickpick-empty">선택한 상품이 아직 없습니다.</div>';
+        return;
+    }
+    wrap.innerHTML = items.map(item => {
+        const activeClass = String(item.id) === selectedId ? ' active' : '';
+        const safeName = String(item.name || '').replace(/"/g, '&quot;');
+        return `<button type="button" class="subcontract-quickpick-btn${activeClass}" data-product-id="${item.id}" title="${safeName}">${safeName}</button>`;
+    }).join('');
+    wrap.querySelectorAll('.subcontract-quickpick-btn').forEach(btn => {
+        btn.addEventListener('click', function(){
+            const productId = this.getAttribute('data-product-id') || '';
+            const productSelect = document.getElementById('subcontractProductSelect');
+            const form = document.getElementById('subcontractToolbarForm');
+            if(!productSelect || !form || !productId) return;
+            productSelect.value = productId;
+            updateSubcontractQuickPicksFromSelect();
+            form.submit();
+        });
+    });
+}
+
+function initSubcontractQuickPicks(){
+    const select = document.getElementById('subcontractProductSelect');
+    if(!select) return;
+    if(select.value){
+        updateSubcontractQuickPicksFromSelect();
+    }
+    renderSubcontractQuickPicks();
+    select.addEventListener('change', function(){
+        updateSubcontractQuickPicksFromSelect();
+        renderSubcontractQuickPicks();
+    });
+}
+
+function initSubcontractSorting(){
+    const table = document.querySelector('.subcontract-table');
+    if(!table) return;
+    const tbody = table.querySelector('tbody');
+    const buttons = Array.from(table.querySelectorAll('.subcontract-sort-btn'));
+    if(!tbody || !buttons.length) return;
+    let currentKey = '';
+    let currentDirection = 'asc';
+
+    const updateIndicators = () => {
+        buttons.forEach(btn => {
+            const indicator = btn.querySelector('.subcontract-sort-indicator');
+            if(!indicator) return;
+            if(btn.dataset.sortKey !== currentKey){
+                indicator.textContent = '';
+            }else{
+                indicator.textContent = currentDirection === 'asc' ? '▲' : '▼';
+            }
+        });
+    };
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function(){
+            const sortKey = this.dataset.sortKey || '';
+            const sortType = this.dataset.sortType || 'text';
+            if(!sortKey) return;
+            currentDirection = currentKey === sortKey && currentDirection === 'asc' ? 'desc' : 'asc';
+            currentKey = sortKey;
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                const aRaw = a.dataset[`sort${sortKey.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`] ?? a.getAttribute(`data-sort-${sortKey}`) ?? '';
+                const bRaw = b.dataset[`sort${sortKey.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`] ?? b.getAttribute(`data-sort-${sortKey}`) ?? '';
+                let compare = 0;
+                if(sortType === 'number'){
+                    compare = (parseFloat(aRaw) || 0) - (parseFloat(bRaw) || 0);
+                }else{
+                    compare = String(aRaw).localeCompare(String(bRaw), 'ko');
+                }
+                return currentDirection === 'asc' ? compare : -compare;
+            });
+            rows.forEach(row => tbody.appendChild(row));
+            updateIndicators();
+        });
+    });
+    updateIndicators();
+}
+
+initSubcontractQuickPicks();
+initSubcontractSorting();
 
 document.querySelectorAll('.meeting-eval-price-input').forEach(input => {
     input.addEventListener('focus', function(){

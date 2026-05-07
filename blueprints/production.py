@@ -890,19 +890,34 @@ def schedule_requirements_data():
         )
         raw_stock_map = {str(r['code']): float(r['stock'] or 0) for r in cursor.fetchall()}
 
-        stock_workplaces = [workplace]
-        if workplace != '공통':
-            stock_workplaces.append('공통')
-        wp_placeholders = ','.join(['?'] * len(stock_workplaces))
-        cursor.execute(
-            f'''
-            SELECT id, COALESCE(current_stock, 0) as stock
-            FROM materials
-            WHERE workplace IN ({wp_placeholders})
-            ''',
-            stock_workplaces,
-        )
-        material_stock_map = {int(r['id']): float(r['stock'] or 0) for r in cursor.fetchall()}
+        material_ids = sorted({int(row.get('material_id') or 0) for row in bom_rows if int(row.get('material_id') or 0) > 0})
+        material_stock_map = {}
+        if material_ids:
+            workplace_location = cursor.execute(
+                '''
+                SELECT id
+                FROM inv_locations
+                WHERE name = ? OR workplace_code = ?
+                ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id
+                LIMIT 1
+                ''',
+                (workplace, workplace, workplace),
+            ).fetchone()
+            if workplace_location:
+                material_placeholders = ','.join(['?'] * len(material_ids))
+                cursor.execute(
+                    f'''
+                    SELECT ml.material_id, COALESCE(SUM(b.qty), 0) as qty
+                    FROM inv_material_lot_balances b
+                    JOIN material_lots ml ON ml.id = b.material_lot_id
+                    WHERE b.location_id = ?
+                      AND ml.material_id IN ({material_placeholders})
+                      AND COALESCE(ml.is_disposed, 0) = 0
+                    GROUP BY ml.material_id
+                    ''',
+                    [int(workplace_location['id']), *material_ids],
+                )
+                material_stock_map = {int(r['material_id']): float(r['qty'] or 0) for r in cursor.fetchall()}
 
         summary_raw = {}
         summary_base = {}
