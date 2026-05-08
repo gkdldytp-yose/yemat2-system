@@ -496,20 +496,24 @@
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>사용일</th><th>생산번호</th><th>상품명</th><th>사용 로트</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
+                    <thead><tr><th>사용일시</th><th>생산번호</th><th>상품명</th><th>사용 로트</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
                     <tbody id="usageLogTableBody"></tbody>
                 </table>
             </div>
         </div>
 
         <div id="materialReceivePanel" class="material-panel">
-            <p class="material-section-title">부자재 입고 로그</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
+                <p class="material-section-title" style="margin:0;">부자재 입고 로그</p>
+                <button type="button" class="btn btn-small btn-secondary" id="disposedReceiveToggleBtn" onclick="toggleDisposedReceiveLogs()">폐기 이력 보기</button>
+            </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>입고일</th><th>제조일</th><th>소비기한</th><th>입고수량</th><th>구분</th><th>비고</th></tr></thead>
+                    <thead><tr><th>입고일시</th><th>제조일</th><th>소비기한</th><th>입고수량</th><th>구분</th><th>비고</th></tr></thead>
                     <tbody id="receiveLogTableBody"></tbody>
                 </table>
             </div>
+            <div id="disposedReceiveHint" style="display:none;margin-top:0.5rem;font-size:0.82rem;color:#64748b;">폐기된 로트의 입고 이력을 함께 보고 있습니다.</div>
         </div>
     </div>
 </div>
@@ -832,6 +836,7 @@
                         <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>요청수량</th><th>지급수량</th><th>완료일</th><th>비고</th>{% if not is_logistics %}<th>처리</th>{% endif %}</tr></thead>
                         <tbody>
                         {% for r in group['items'] %}
+                        {% set first_receipt_row = (r.receipt_edit_rows[0] if r.receipt_edit_rows else None) %}
                         <tr>
                             <td class="issue-meta-cell">
                                 <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
@@ -840,14 +845,43 @@
                             <td><span class="issue-code-badge">{{ r.material_code or '-' }}</span></td>
                             <td class="issue-name-cell">{{ r.material_name }}</td>
                             <td><span class="issue-qty-main">{{ "%.1f"|format(r.requested_quantity or 0) }} {{ r.unit or '' }}</span></td>
-                            <td><span class="issue-qty-main">{{ "%.1f"|format(r.approved_quantity or 0) }} {{ r.unit or '' }}</span><span class="issue-qty-sub">실입고</span></td>
-                            <td class="issue-meta-cell"><div class="issue-date">{{ r.processed_at[:16] if r.processed_at else '-' }}</div><div class="issue-subtext">처리 완료</div></td>
+                            <td>
+                                <span class="issue-qty-main">{{ "%.1f"|format(r.approved_quantity or 0) }} {{ r.unit or '' }}</span>
+                                <span class="issue-qty-sub">실입고</span>
+                                {% if r.receipt_updated and r.approved_quantity_changed %}
+                                <div class="issue-subtext" style="color:#2563eb;font-weight:700;">{{ "%.1f"|format(r.original_approved_quantity_display or 0) }} &gt; {{ "%.1f"|format(r.approved_quantity or 0) }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="issue-meta-cell">
+                                <div class="issue-date">{{ r.processed_at[:16] if r.processed_at else '-' }}</div>
+                                <div class="issue-subtext">{% if r.receipt_updated_at %}수정 {{ r.receipt_updated_at[:16] }}{% else %}처리 완료{% endif %}</div>
+                            </td>
                             <td><span class="issue-note-box">{{ (r.process_note or r.note or '-')|e }}</span></td>
                             {% if not is_logistics %}
                             <td>
-                                <form method="POST" action="/issue-requests/{{ r.id }}/cancel-complete" onsubmit="return confirm('해당 불출 완료건을 취소하고 재고를 롤백하시겠습니까?');">
-                                    <button type="submit" class="btn btn-small btn-danger">취소</button>
-                                </form>
+                                <div class="issue-manage-stack">
+                                    <button
+                                        type="button"
+                                        class="btn btn-small js-open-receipt-complete"
+                                        style="background:#2563eb;"
+                                        {% if r.receipt_disposed_locked %}disabled title="폐기된 로트가 포함된 완료건은 수정할 수 없습니다."{% endif %}
+                                        data-mode="edit"
+                                        data-req-id="{{ r.id }}"
+                                        data-qty="{{ "%.2f"|format(r.approved_quantity or 0) }}"
+                                        data-unit="{{ r.unit or '' }}"
+                                        data-code="{{ r.material_code or '-' }}"
+                                        data-name="{{ r.material_name or '' }}"
+                                        data-process-note="{{ r.process_note or '' }}"
+                                        data-receiving-date="{{ first_receipt_row.receiving_date if first_receipt_row else '' }}"
+                                        data-manufacture-date="{{ first_receipt_row.manufacture_date if first_receipt_row else '' }}"
+                                        data-expiry-date="{{ first_receipt_row.expiry_date if first_receipt_row else '' }}"
+                                        data-manufacture-unknown="{{ first_receipt_row.manufacture_date_unknown if first_receipt_row else 0 }}"
+                                        data-expiry-unknown="{{ first_receipt_row.expiry_date_unknown if first_receipt_row else 0 }}"
+                                        data-receipt-rows='{{ (r.receipt_edit_rows or [])|tojson|forceescape }}'>수정</button>
+                                    <form method="POST" action="/issue-requests/{{ r.id }}/cancel-complete" onsubmit="return confirm('해당 불출 완료건을 취소하고 재고를 롤백하시겠습니까?');">
+                                        <button type="submit" class="btn btn-small btn-danger" {% if r.receipt_disposed_locked %}disabled title="폐기된 로트가 포함된 완료건은 취소할 수 없습니다."{% endif %}>취소</button>
+                                    </form>
+                                </div>
                             </td>
                             {% endif %}
                         </tr>
@@ -1122,8 +1156,8 @@
     <div class="receipt-modal" onclick="event.stopPropagation()">
         <div class="receipt-modal-head">
             <div>
-                <h3 class="receipt-modal-title">불출 입고 완료</h3>
-                <p class="receipt-modal-caption">실제 받은 수량과 lot 정보를 확인한 뒤 완료 처리합니다. 입고일은 필수이며 제조일, 소비기한은 선택하거나 없음으로 표시할 수 있습니다.</p>
+                <h3 class="receipt-modal-title" id="receiptModalTitle">불출 입고 완료</h3>
+                <p class="receipt-modal-caption" id="receiptModalCaption">실제 받은 수량과 lot 정보를 확인한 뒤 완료 처리합니다. 입고일은 필수이며 제조일, 소비기한은 선택하거나 없음으로 표시할 수 있습니다.</p>
             </div>
             <button type="button" class="receipt-modal-close" onclick="closeReceiptCompleteModal()">×</button>
         </div>
@@ -1194,7 +1228,7 @@
                 </div>
                 <div class="receipt-modal-actions">
                     <button type="button" class="btn btn-small btn-secondary" onclick="closeReceiptCompleteModal()">취소</button>
-                    <button type="submit" class="btn btn-small" style="background:#0ea5e9;">입고 완료 처리</button>
+                    <button type="submit" class="btn btn-small" id="receiptSubmitBtn" style="background:#0ea5e9;">입고 완료 처리</button>
                 </div>
             </div>
         </form>
@@ -1274,6 +1308,8 @@ const EXPORT_BOM_MAP = {{ export_bom_map_json|safe }};
 const DASHBOARD_ISSUE_PREFILL = {{ dashboard_issue_prefill_json|safe }};
 let reqExpanded = false;
 let currentMaterialId = null;
+let currentDisposedReceiveLogs = [];
+let showDisposedReceiveLogs = false;
 const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
 const MATERIALS_SCROLL_Y_KEY = 'materials_scroll_y';
 const MATERIALS_SCROLL_PATH_KEY = 'materials_scroll_path';
@@ -2056,12 +2092,44 @@ function resetReceiptSplit(){
     if(totalEl) totalEl.textContent = '';
 }
 
-function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, manufactureDate, expiryDate, manufactureUnknown, expiryUnknown){
+function openReceiptSplitRows(rows){
+    const wrap = document.getElementById('receiptSplitWrap');
+    const toggleBtn = document.getElementById('receiptSplitToggleBtn');
+    const enabled = document.getElementById('receiptSplitEnabled');
+    const rowsWrap = document.getElementById('receiptSplitRows');
+    if(!wrap || !toggleBtn || !enabled || !rowsWrap) return;
+    rowsWrap.innerHTML = '';
+    wrap.classList.add('open');
+    enabled.value = '1';
+    toggleBtn.textContent = '로트 나누기 취소';
+    (rows || []).forEach((item, idx) => {
+        rowsWrap.appendChild(buildReceiptSplitRow(idx, {
+            quantity: item.quantity || '',
+            receivingDate: item.receiving_date || item.receivingDate || '',
+            manufactureDate: item.manufacture_date || item.manufactureDate || '',
+            expiryDate: item.expiry_date || item.expiryDate || '',
+            manufactureUnknown: String(item.manufacture_date_unknown ?? item.manufactureUnknown ?? '0'),
+            expiryUnknown: String(item.expiry_date_unknown ?? item.expiryUnknown ?? '0'),
+        }));
+    });
+    updateReceiptSplitSummary();
+}
+
+function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, manufactureDate, expiryDate, manufactureUnknown, expiryUnknown, mode = 'create', processNote = '', receiptRows = []){
     const modal = document.getElementById('receiptCompleteModal');
     const form = document.getElementById('receiptCompleteForm');
     if(!modal || !form) return;
     document.body.style.overflow = 'hidden';
-    form.action = `/issue-requests/${reqId}/complete`;
+    const isEdit = mode === 'edit';
+    form.action = isEdit ? `/issue-requests/${reqId}/update-complete` : `/issue-requests/${reqId}/complete`;
+    const titleEl = document.getElementById('receiptModalTitle');
+    const captionEl = document.getElementById('receiptModalCaption');
+    const submitBtn = document.getElementById('receiptSubmitBtn');
+    if(titleEl) titleEl.textContent = isEdit ? '불출 입고 완료 수정' : '불출 입고 완료';
+    if(captionEl) captionEl.textContent = isEdit
+        ? '기존 완료건의 실입고 수량과 lot 정보를 수정합니다. 수정 시 재고가 다시 계산되어 반영됩니다.'
+        : '실제 받은 수량과 lot 정보를 확인한 뒤 완료 처리합니다. 입고일은 필수이며 제조일, 소비기한은 선택하거나 없음으로 표시할 수 있습니다.';
+    if(submitBtn) submitBtn.textContent = isEdit ? '수정 완료 처리' : '입고 완료 처리';
     document.getElementById('receiptSummaryName').textContent = name || '-';
     document.getElementById('receiptSummaryCode').textContent = code || '-';
     document.getElementById('receiptActualQty').value = Number(qty || 0).toFixed(2).replace(/\.00$/, '');
@@ -2070,8 +2138,11 @@ function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, m
     document.getElementById('receiptExpiryDate').value = expiryDate || '';
     document.getElementById('receiptManufactureUnknown').value = String(manufactureUnknown || '0') === '1' ? '1' : '0';
     document.getElementById('receiptExpiryUnknown').value = String(expiryUnknown || '0') === '1' ? '1' : '0';
-    document.getElementById('receiptProcessNote').value = '';
+    document.getElementById('receiptProcessNote').value = processNote || '';
     resetReceiptSplit();
+    if(Array.isArray(receiptRows) && receiptRows.length > 1){
+        openReceiptSplitRows(receiptRows);
+    }
     syncReceiptNoneState('manufacture');
     syncReceiptNoneState('expiry');
     modal.classList.add('open');
@@ -2089,17 +2160,27 @@ function closeReceiptCompleteModal(event){
 
 document.querySelectorAll('.js-open-receipt-complete').forEach((btn) => {
     btn.addEventListener('click', () => {
+        let receiptRows = [];
+        try{
+            receiptRows = btn.dataset.receiptRows ? JSON.parse(btn.dataset.receiptRows) : [];
+        }catch(_err){
+            receiptRows = [];
+        }
+        const firstRow = receiptRows[0] || {};
         openReceiptCompleteModal(
             btn.dataset.reqId || '',
             btn.dataset.qty || '0',
             btn.dataset.unit || '',
             btn.dataset.code || '-',
             btn.dataset.name || '',
-            btn.dataset.receivingDate || '',
-            btn.dataset.manufactureDate || '',
-            btn.dataset.expiryDate || '',
-            btn.dataset.manufactureUnknown || '0',
-            btn.dataset.expiryUnknown || '0',
+            firstRow.receiving_date || btn.dataset.receivingDate || '',
+            firstRow.manufacture_date || btn.dataset.manufactureDate || '',
+            firstRow.expiry_date || btn.dataset.expiryDate || '',
+            firstRow.manufacture_date_unknown || btn.dataset.manufactureUnknown || '0',
+            firstRow.expiry_date_unknown || btn.dataset.expiryUnknown || '0',
+            btn.dataset.mode || 'create',
+            btn.dataset.processNote || '',
+            receiptRows,
         );
     });
 });
@@ -2693,7 +2774,7 @@ function renderUsageRows(logs){
     }
     tbody.innerHTML = logs.map(log => `
         <tr>
-            <td>${(log.use_date || '-').toString().slice(0,10)}</td>
+            <td>${log.completed_at ? String(log.completed_at).slice(0,16).replace('T', ' ') : (log.use_date || '-').toString().slice(0,10)}</td>
             <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_no || '-'}</a>` : (log.production_no || '-')}</td>
             <td>${log.product_name || '-'}</td>
             <td>${log.lot || '-'}</td>
@@ -2707,20 +2788,41 @@ function renderUsageRows(logs){
 function renderReceiveRows(logs){
     const tbody = document.getElementById('receiveLogTableBody');
     if(!tbody) return;
-    if(!logs || logs.length === 0){
+    const toggleBtn = document.getElementById('disposedReceiveToggleBtn');
+    const hint = document.getElementById('disposedReceiveHint');
+    const rows = Array.isArray(logs) ? logs.slice() : [];
+    if(showDisposedReceiveLogs && Array.isArray(currentDisposedReceiveLogs) && currentDisposedReceiveLogs.length){
+        rows.push(...currentDisposedReceiveLogs);
+    }
+    if(toggleBtn){
+        toggleBtn.textContent = currentDisposedReceiveLogs.length
+            ? (showDisposedReceiveLogs ? '폐기 이력 숨기기' : `폐기 이력 보기 (${currentDisposedReceiveLogs.length})`)
+            : '폐기 이력 보기';
+        toggleBtn.disabled = currentDisposedReceiveLogs.length === 0;
+    }
+    if(hint){
+        hint.style.display = showDisposedReceiveLogs && currentDisposedReceiveLogs.length ? 'block' : 'none';
+    }
+    if(!rows.length){
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">입고 로그가 없습니다.</td></tr>';
         return;
     }
-    tbody.innerHTML = logs.map(log => `
+    tbody.innerHTML = rows.map(log => `
         <tr>
-            <td>${(log.receive_date || '-').toString().slice(0,10)}</td>
+            <td>${log.received_at ? String(log.received_at).slice(0,16).replace('T', ' ') : (log.receive_date || '-').toString().slice(0,10)}</td>
             <td>${(log.manufacture_date || '-').toString().slice(0,10)}</td>
             <td>${(log.expiry_date || '-').toString().slice(0,10)}</td>
             <td>${Number(log.received_quantity || 0).toFixed(1)}</td>
             <td>${log.action_label || '-'}</td>
-            <td>${log.note || '-'}</td>
+            <td>${log.note || '-'}${Number(log.is_disposed || 0) === 1 ? ' <span style="display:inline-flex;align-items:center;margin-left:.35rem;padding:.08rem .4rem;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:.72rem;font-weight:800;">폐기됨</span>' : ''}</td>
         </tr>
     `).join('');
+}
+
+function toggleDisposedReceiveLogs(){
+    if(!currentDisposedReceiveLogs.length) return;
+    showDisposedReceiveLogs = !showDisposedReceiveLogs;
+    renderReceiveRows(window.currentReceiveLogs || []);
 }
 
 async function loadMaterialDetail(materialId){
@@ -2736,9 +2838,12 @@ async function loadMaterialDetail(materialId){
     document.getElementById('md_supplier').textContent = m.supplier_name || '-';
     document.getElementById('md_unit').textContent = m.unit || '-';
     document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
+    window.currentReceiveLogs = payload.receive_logs || [];
+    currentDisposedReceiveLogs = payload.disposed_receive_logs || [];
+    showDisposedReceiveLogs = false;
     renderLotRows(payload.lots || []);
     renderUsageRows(payload.usage_logs || []);
-    renderReceiveRows(payload.receive_logs || []);
+    renderReceiveRows(window.currentReceiveLogs);
     return true;
 }
 

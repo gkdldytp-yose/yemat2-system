@@ -13,6 +13,8 @@ from core import (
     audit_log,
     SHARED_WORKPLACE,
     SHARED_MATERIAL_CATEGORIES,
+    today_local,
+    now_local,
 )
 
 bp = Blueprint('production', __name__)
@@ -673,7 +675,7 @@ def schedules():
     month = request.args.get('month', type=int)
 
     # 湲곕낯媛? ?대쾲 ??
-    today = date.today()
+    today = today_local()
     if not year or not month:
         year = today.year
         month = today.month
@@ -1603,7 +1605,7 @@ def work_days():
     month = request.args.get('month', type=int)
 
     # 湲곕낯媛? ?대쾲 ??
-    today = date.today()
+    today = today_local()
     if not year or not month:
         year = today.year
         month = today.month
@@ -1896,8 +1898,8 @@ def production_list():
         active_count=active_count,
         done_count=done_count,
         available_calendar_dates_json=json.dumps(available_calendar_dates, ensure_ascii=False),
-        search_start=(dt.today() - timedelta(days=90)).strftime('%Y-%m-%d'),
-        search_end=dt.today().strftime('%Y-%m-%d'),
+        search_start=(now_local().date() - timedelta(days=90)).strftime('%Y-%m-%d'),
+        search_end=now_local().date().strftime('%Y-%m-%d'),
     )
 
 
@@ -1985,7 +1987,7 @@ def add_production():
             user=session['user'],
             products=products,
             products_json=products_json,
-            today=date.today(),
+            today=today_local(),
             bom_raw_data=bom_raw_data,
             bom_mat_data=bom_mat_data,
         )

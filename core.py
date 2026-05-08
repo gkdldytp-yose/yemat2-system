@@ -3,6 +3,8 @@ import sqlite3
 from functools import wraps
 import json
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # 공통 작업장 목록 (물류 작업장은 일반 선택 목록에서 제외)
 WORKPLACES = ['\u0031\ub3d9 \uc870\ubbf8', '\u0031\ub3d9 \uc790\ubc18', '\u0032\ub3d9 \uc2e0\uad00 \u0031\uce35', '\u0032\ub3d9 \uc2e0\uad00 \u0032\uce35', '\uae30\ud0c0']
@@ -27,6 +29,22 @@ _import_schema_checked = False
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DB_PATH = PROJECT_ROOT / 'yemat.db'
+try:
+    APP_TIMEZONE = ZoneInfo('Asia/Seoul')
+except ZoneInfoNotFoundError:
+    APP_TIMEZONE = timezone(timedelta(hours=9), name='Asia/Seoul')
+
+
+def now_local():
+    return datetime.now(APP_TIMEZONE)
+
+
+def today_local():
+    return now_local().date()
+
+
+def today_local_str():
+    return now_local().strftime('%Y-%m-%d')
 
 def get_db():
     """데이터베이스 연결 - WAL 모드 + 긴 타임아웃"""
@@ -237,6 +255,10 @@ def _ensure_logistics_schema(conn):
             conn.execute("ALTER TABLE logistics_issue_requests ADD COLUMN rejected_by TEXT")
         if 'rejected_at' not in li_cols:
             conn.execute("ALTER TABLE logistics_issue_requests ADD COLUMN rejected_at TIMESTAMP")
+        if 'receipt_updated_at' not in li_cols:
+            conn.execute("ALTER TABLE logistics_issue_requests ADD COLUMN receipt_updated_at TIMESTAMP")
+        if 'original_approved_quantity' not in li_cols:
+            conn.execute("ALTER TABLE logistics_issue_requests ADD COLUMN original_approved_quantity REAL")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_logistics_issue_status ON logistics_issue_requests(status)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_logistics_issue_workplace ON logistics_issue_requests(requester_workplace)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_logistics_issue_type ON logistics_issue_requests(request_type)")

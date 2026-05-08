@@ -4,7 +4,7 @@ from collections import defaultdict
 import math
 import calendar
 
-from core import get_db, login_required, get_workplace, SHARED_WORKPLACE
+from core import get_db, login_required, get_workplace, SHARED_WORKPLACE, today_local
 from .production import _get_production_material_section, _get_production_material_sort_key
 
 bp = Blueprint('printouts', __name__)
@@ -58,7 +58,7 @@ _normalize_completed_status = _normalize_completed_status_override
 
 
 def _resolve_journal_date_range():
-    today = date.today()
+    today = today_local()
     default_from = today - timedelta(days=6)
     date_from = (request.args.get('date_from') or '').strip()
     date_to = (request.args.get('date_to') or '').strip()
@@ -269,11 +269,11 @@ def journals():
 @login_required
 def material_checksheet_preview():
     workplace = get_workplace()
-    selected_date = (request.args.get('date') or date.today().isoformat()).strip()
+    selected_date = (request.args.get('date') or today_local().isoformat()).strip()
     try:
         report_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
     except Exception:
-        report_date = date.today()
+        report_date = today_local()
         selected_date = report_date.isoformat()
 
     conn = get_db()
