@@ -3,7 +3,7 @@ import hashlib
 import json
 from datetime import datetime, date, timedelta
 
-from core import get_db, login_required, get_workplace, SHARED_WORKPLACE
+from core import get_db, login_required, get_workplace, SHARED_WORKPLACE, today_local
 
 bp = Blueprint('main', __name__)
 
@@ -71,7 +71,7 @@ def index():
     cursor = conn.cursor()
 
     # 금주 생산 스케줄
-    today = date.today()
+    today = today_local()
     week_end = today + timedelta(days=7)
     cursor.execute('''
         SELECT ps.id, ps.scheduled_date, ps.planned_boxes, ps.status, ps.note,

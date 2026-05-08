@@ -1017,9 +1017,6 @@ def _build_subcontract_production_payload(cursor, workplace_filter='all', produc
             elif action == 'issue_request_cancel' and workplace_prefix and note.startswith(workplace_prefix):
                 delta = -abs(qty)
                 received_delta = -abs(qty)
-            elif action == 'rollback':
-                delta = abs(qty)
-                received_delta = abs(qty)
             elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                 delta = -abs(qty)
                 outgoing_delta = abs(qty)
@@ -3128,7 +3125,7 @@ def integrated_management():
     stats = None
     meeting_eval = None
     subcontract_payload = None
-    if tab in ('materials', 'purchase_requests'):
+    if tab in ('materials', 'purchase_requests', 'subcontract_production'):
         _sync_material_stock_with_lots(conn)
 
     workplaces = WORKPLACES
@@ -5505,6 +5502,7 @@ def integrated_subcontract_production_export():
     conn = get_db()
     cursor = conn.cursor()
     try:
+        _sync_material_stock_with_lots(conn)
         payload = _build_subcontract_production_payload(
             cursor,
             workplace_filter=workplace_filter,

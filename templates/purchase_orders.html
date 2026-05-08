@@ -774,7 +774,8 @@ function validatePurchaseRequestForm(form){
 }
 
 function openReceiveModal(reqId, matName, orderedQty, lastUnitPrice, expectedDate){
-    const today = new Date().toISOString().slice(0,10);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     document.getElementById('rm_request_id').value = reqId;
     document.getElementById('rm_name').value = matName;
     document.getElementById('rm_ordered').value = orderedQty;
