@@ -93,6 +93,50 @@ def _round_to_1_decimal(value):
     return round(float(value or 0) + 1e-9, 1)
 
 
+def _subcontract_row_sort_key(row):
+    item = row or {}
+    item_type = (item.get('item_type') or '').strip()
+    category = (item.get('category') or '').strip()
+    name = (item.get('name') or '').strip()
+    code = (item.get('code') or '').strip()
+
+    if item_type == 'raw':
+        rank = 90
+    elif '해바라기유' in name:
+        rank = 10
+    elif '참기름' in name:
+        rank = 11
+    elif category == '내포':
+        rank = 20
+    elif category == '외포':
+        rank = 21
+    elif category == '박스':
+        rank = 22
+    elif '뚜껑' in name:
+        rank = 23
+    elif '밑판' in name:
+        rank = 24
+    elif category == '트레이':
+        rank = 25
+    elif category == '소금':
+        rank = 30
+    elif category == '실리카':
+        rank = 31
+    elif '앵글' in name and '1250' in name:
+        rank = 40
+    elif '앵글' in name and '1150' in name:
+        rank = 41
+    else:
+        rank = 80 if item_type == 'material' else 95
+
+    return (
+        rank,
+        _material_category_sort_key(category)[0],
+        code,
+        name,
+    )
+
+
 def _is_completed_status(status_value):
     text = str(status_value or '').strip()
     return text == '완료' or '완료' in text
@@ -1092,7 +1136,7 @@ def _build_subcontract_production_payload(cursor, workplace_filter='all', produc
         row['current_stock'] = round(float(row.get('current_stock') or 0.0), 1)
         row['daily_usage_values'] = [round(float(row['daily_usage_map'].get(col['date'], 0.0) or 0.0), 1) for col in date_columns]
 
-    rows.sort(key=lambda item: (item.get('sort_rank', 99), _material_category_sort_key(item.get('category') or '')[0], item.get('code') or '', item.get('name') or ''))
+    rows.sort(key=_subcontract_row_sort_key)
     payload['rows'] = rows
     payload['summary']['item_count'] = len(rows)
     return payload

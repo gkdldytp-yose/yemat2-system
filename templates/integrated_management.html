@@ -300,8 +300,9 @@
 .reqcalc-print-header{display:none;}
 .reqcalc-result-panel{display:none;}
 .reqcalc-result-panel.active{display:block;}
-.reqcalc-product-card{border:1px solid #e2e8f0;border-radius:16px;padding:1rem;margin-bottom:1rem;background:#fff;}
-.reqcalc-table{width:100%;table-layout:fixed;}
+.reqcalc-product-card{border:1px solid #d7dee8;border-radius:12px;padding:0.9rem;margin-bottom:1rem;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,0.04);}
+.reqcalc-product-card.excel-mode{border-color:#cbd5e1;border-radius:0;box-shadow:none;background:#fff;}
+.reqcalc-table{width:100%;table-layout:fixed;border-collapse:collapse;background:#fff;}
 .reqcalc-table th:nth-child(1), .reqcalc-table td:nth-child(1){width:110px;}
 .reqcalc-table th:nth-child(2), .reqcalc-table td:nth-child(2){width:auto;}
 .reqcalc-table th:nth-child(3), .reqcalc-table td:nth-child(3),
@@ -312,11 +313,24 @@
 .reqcalc-table th:nth-child(4), .reqcalc-table td:nth-child(4),
 .reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5),
 .reqcalc-table th:nth-child(6), .reqcalc-table td:nth-child(6){text-align:right;white-space:nowrap;}
-.reqcalc-table .reqcalc-num{text-align:right;white-space:nowrap;}
+.reqcalc-table .reqcalc-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.reqcalc-table th{background:#f8fafc;color:#475569;font-size:0.8rem;border:1px solid #dbe2ea;padding:0.62rem 0.55rem;font-weight:800;}
+.reqcalc-table td{border:1px solid #e5e7eb;padding:0.58rem 0.55rem;vertical-align:middle;}
+.reqcalc-table tbody tr:nth-child(even){background:#fcfcfd;}
+.reqcalc-table tbody tr:last-child td{border-bottom:1px solid #e5e7eb;}
+.reqcalc-table.excel-mode th{background:#eef2f7;color:#334155;border-color:#cbd5e1;}
+.reqcalc-table.excel-mode td{border-color:#cbd5e1;background:#fff;}
+.reqcalc-table.excel-mode tbody tr:nth-child(even){background:#fff;}
+.reqcalc-table.excel-mode tbody tr:last-child td{border-bottom:1px solid #cbd5e1;}
 .reqcalc-saved-tab{display:inline-flex;align-items:center;gap:0.45rem;}
 .reqcalc-saved-tab .close{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(15,23,42,0.12);font-size:12px;line-height:1;border:none;cursor:pointer;color:inherit;padding:0;}
 .reqcalc-saved-tab .close:hover{background:rgba(15,23,42,0.2);}
-.reqcalc-usage-input{width:110px;padding:0.35rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;text-align:right;}
+.reqcalc-stock-field{display:inline-flex;align-items:center;justify-content:flex-end;gap:0.35rem;padding:0.22rem 0.28rem 0.22rem 0.38rem;border:1px solid #cbd5e1;border-radius:12px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:inset 0 1px 1px rgba(255,255,255,0.9), 0 1px 2px rgba(15,23,42,0.05);}
+.reqcalc-stock-field:focus-within{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,0.12), inset 0 1px 1px rgba(255,255,255,0.9);}
+.reqcalc-stock-input{width:92px;padding:0.22rem 0.1rem;border:none;border-radius:8px;text-align:right;background:transparent;box-sizing:border-box;font-variant-numeric:tabular-nums;font-weight:700;color:#0f172a;}
+.reqcalc-stock-input:focus{outline:none;box-shadow:none;}
+.reqcalc-unit-inline{display:inline-block;margin-left:0.3rem;font-size:0.82em;color:#64748b;font-weight:700;white-space:nowrap;}
+.reqcalc-stock-print-text{display:none;}
 .reqcalc-post-actions{display:none;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;padding-top:1rem;border-top:1px solid #e5e7eb;}
 .reqcalc-post-actions.active{display:flex;}
 .meeting-eval-grid{display:grid;grid-template-columns:1fr;gap:1rem;}
@@ -430,9 +444,31 @@
   body.printing-req-summary table,
   body.printing-req-products table{font-size:11px;}
   body.printing-req-summary th, body.printing-req-summary td,
-  body.printing-req-products th, body.printing-req-products td{padding:6px 5px;}
-  body.printing-req-summary .reqcalc-usage-input,
-  body.printing-req-products .reqcalc-usage-input{width:68px !important;min-width:68px !important;padding:2px 4px !important;font-size:11px !important;}
+  body.printing-req-products th, body.printing-req-products td{padding:6px 5px;vertical-align:middle;}
+  body.printing-req-summary .reqcalc-table,
+  body.printing-req-products .reqcalc-table{table-layout:fixed;}
+  body.printing-req-summary .reqcalc-table th:nth-child(1), body.printing-req-summary .reqcalc-table td:nth-child(1),
+  body.printing-req-products .reqcalc-table th:nth-child(1), body.printing-req-products .reqcalc-table td:nth-child(1){width:10%;}
+  body.printing-req-summary .reqcalc-table th:nth-child(2), body.printing-req-summary .reqcalc-table td:nth-child(2),
+  body.printing-req-products .reqcalc-table th:nth-child(2), body.printing-req-products .reqcalc-table td:nth-child(2){width:32%;}
+  body.printing-req-summary .reqcalc-table th:nth-child(3), body.printing-req-summary .reqcalc-table td:nth-child(3),
+  body.printing-req-summary .reqcalc-table th:nth-child(4), body.printing-req-summary .reqcalc-table td:nth-child(4),
+  body.printing-req-summary .reqcalc-table th:nth-child(5), body.printing-req-summary .reqcalc-table td:nth-child(5),
+  body.printing-req-summary .reqcalc-table th:nth-child(6), body.printing-req-summary .reqcalc-table td:nth-child(6),
+  body.printing-req-products .reqcalc-table th:nth-child(3), body.printing-req-products .reqcalc-table td:nth-child(3),
+  body.printing-req-products .reqcalc-table th:nth-child(4), body.printing-req-products .reqcalc-table td:nth-child(4),
+  body.printing-req-products .reqcalc-table th:nth-child(5), body.printing-req-products .reqcalc-table td:nth-child(5),
+  body.printing-req-products .reqcalc-table th:nth-child(6), body.printing-req-products .reqcalc-table td:nth-child(6){width:14.5%;text-align:right;white-space:nowrap;}
+  body.printing-req-summary .reqcalc-stock-field,
+  body.printing-req-products .reqcalc-stock-field{display:inline-flex !important;align-items:center !important;justify-content:flex-end !important;gap:0 !important;padding:0 !important;border:none !important;background:transparent !important;box-shadow:none !important;width:auto !important;max-width:100% !important;}
+  body.printing-req-summary .reqcalc-stock-input,
+  body.printing-req-products .reqcalc-stock-input{width:auto !important;min-width:0 !important;padding:0 !important;font-size:11px !important;text-align:right;border:none !important;background:transparent !important;box-shadow:none !important;pointer-events:none !important;}
+  body.printing-req-summary .reqcalc-unit-inline,
+  body.printing-req-products .reqcalc-unit-inline{margin-left:0 !important;color:#111827 !important;}
+  body.printing-req-summary .reqcalc-stock-field,
+  body.printing-req-products .reqcalc-stock-field{display:none !important;}
+  body.printing-req-summary .reqcalc-stock-print-text,
+  body.printing-req-products .reqcalc-stock-print-text{display:inline !important;font-variant-numeric:tabular-nums;color:#111827 !important;}
 }
 </style>
 {% endblock %}
@@ -787,9 +823,14 @@
                 <div id="reqCalcProductsWrap" style="display:none;"></div>
             </div>
             <div id="reqCalcPostActions" class="reqcalc-post-actions reqcalc-hide-print">
-                <div id="reqCalcPostHint" style="color:#64748b;font-size:0.9rem;">계산 결과를 확인한 뒤 추가 계산을 활성화하면 사용량, 로스량, 남은재고량을 같이 볼 수 있습니다.</div>
+                <div id="reqCalcPostHint" style="color:#64748b;font-size:0.9rem;">계산 결과를 확인한 뒤 추가 계산을 활성화하면 현재 총재고를 직접 조정하며 부족량과 예상 현재고를 바로 비교할 수 있습니다.</div>
                 <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                    <label id="reqCalcExtraPercentWrap" style="display:none;align-items:center;gap:0.4rem;color:#475569;font-size:0.88rem;font-weight:700;">
+                        <span>여유분 %</span>
+                        <input type="number" id="reqCalcExtraPercentInput" min="0" step="0.1" value="0" style="width:88px;padding:0.4rem 0.5rem;border:1px solid #cbd5e1;border-radius:10px;text-align:right;" oninput="updateRequirementCalcExtraPercent(this.value)">
+                    </label>
                     <button type="button" id="reqCalcUsageActionBtn" class="btn btn-small" style="background:#7c3aed;" onclick="handleRequirementCalcUsageAction()">추가 계산 활성화</button>
+                    <button type="button" id="reqCalcDraftSaveBtn" class="btn btn-small" style="display:none;background:#0f766e;" onclick="saveCurrentRequirementCalcDraft()">임시저장</button>
                 </div>
             </div>
         </div>
@@ -2489,6 +2530,7 @@ let requirementCalcLastPayload = null;
 let requirementCalcLastCalculatedSignature = '';
 let requirementCalcUsageMode = false;
 let requirementCalcUsageValues = {};
+let requirementCalcExtraPercent = 0;
 let requirementCalcActiveDraftId = null;
 const requirementCalcProductsMaster = {{ (calculator_products or [])|tojson }};
 const requirementCalcCategoryOptions = ['원초', '기름', '소금', '내포', '외포', '박스', '실리카', '트레이', '뚜껑', '각대', '기타'];
@@ -2849,11 +2891,21 @@ function printRequirementCalc(mode){
             .sub{margin:0 0 18px;color:#4b5563;font-size:13px;}
             h3,h4{margin:0 0 8px;color:#111827;}
             table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;}
-            th,td{border:1px solid #cbd5e1;padding:6px 7px;text-align:left;vertical-align:top;}
+            th,td{border:1px solid #cbd5e1;padding:6px 7px;text-align:left;vertical-align:middle;}
             th{background:#f8fafc;}
             .table-container{overflow:visible !important;}
             .reqcalc-product-card{page-break-inside:avoid;border:1px solid #dbe2ea;border-radius:12px;padding:12px;margin-bottom:14px;}
-            .reqcalc-usage-input{width:64px !important;min-width:64px !important;padding:2px 4px !important;font-size:11px !important;text-align:right;border:1px solid #cbd5e1;border-radius:6px;box-sizing:border-box;}
+            .reqcalc-table{table-layout:fixed;}
+            .reqcalc-table th:nth-child(1), .reqcalc-table td:nth-child(1){width:10%;}
+            .reqcalc-table th:nth-child(2), .reqcalc-table td:nth-child(2){width:32%;}
+            .reqcalc-table th:nth-child(3), .reqcalc-table td:nth-child(3),
+            .reqcalc-table th:nth-child(4), .reqcalc-table td:nth-child(4),
+            .reqcalc-table th:nth-child(5), .reqcalc-table td:nth-child(5),
+            .reqcalc-table th:nth-child(6), .reqcalc-table td:nth-child(6){width:14.5%;text-align:right;white-space:nowrap;}
+            .reqcalc-stock-field{display:none !important;}
+            .reqcalc-stock-input{width:auto !important;min-width:0 !important;padding:0 !important;font-size:11px !important;text-align:right;border:none !important;border-radius:0 !important;background:transparent !important;box-sizing:border-box;pointer-events:none !important;}
+            .reqcalc-unit-inline{margin-left:0 !important;color:#111827 !important;white-space:nowrap !important;}
+            .reqcalc-stock-print-text{display:inline !important;font-variant-numeric:tabular-nums;color:#111827 !important;}
         </style>
     `;
     printWindow.document.open();
@@ -3007,6 +3059,7 @@ function clearRequirementCalcItems(){
     requirementCalcLastPayload = null;
     requirementCalcUsageMode = false;
     requirementCalcUsageValues = {};
+    requirementCalcExtraPercent = 0;
     requirementCalcActiveDraftId = null;
     renderRequirementCalcInputRows();
     renderRequirementCalcDraftTabs();
@@ -3028,7 +3081,10 @@ function getRequirementCalcUsageKey(scopeKey, item){
 
 function getRequirementCalcUsageValue(scopeKey, item){
     const key = getRequirementCalcUsageKey(scopeKey, item);
-    return Number(requirementCalcUsageValues[key] || 0);
+    if(!Object.prototype.hasOwnProperty.call(requirementCalcUsageValues, key)){
+        return NaN;
+    }
+    return Number(requirementCalcUsageValues[key]);
 }
 
 function syncRequirementCalcItemsFromInputs(){
@@ -3103,18 +3159,26 @@ function updateRequirementCalcPostActions(){
     const wrap = document.getElementById('reqCalcPostActions');
     const hint = document.getElementById('reqCalcPostHint');
     const btn = document.getElementById('reqCalcUsageActionBtn');
+    const saveBtn = document.getElementById('reqCalcDraftSaveBtn');
+    const extraWrap = document.getElementById('reqCalcExtraPercentWrap');
+    const extraInput = document.getElementById('reqCalcExtraPercentInput');
     if(!wrap || !hint || !btn) return;
     const hasPayload = !!(requirementCalcLastPayload && requirementCalcLastPayload.ok);
     wrap.classList.toggle('active', hasPayload);
     if(!hasPayload) return;
     if(requirementCalcUsageMode){
-        hint.textContent = '사용량을 입력하면 로스량과 남은재고량이 함께 계산됩니다. 저장하면 결과 탭으로 다시 불러올 수 있습니다.';
-        btn.textContent = '임시저장';
-        btn.style.background = '#0f766e';
+        hint.textContent = '현재 총재고와 여유분 %를 조정하면서 필요량, 부족량, 예상 현재고를 엑셀처럼 바로 비교할 수 있습니다.';
+        btn.textContent = '추가 계산 비활성화';
+        btn.style.background = '#475569';
+        if(saveBtn) saveBtn.style.display = 'inline-flex';
+        if(extraWrap) extraWrap.style.display = 'inline-flex';
+        if(extraInput) extraInput.value = Number(requirementCalcExtraPercent || 0).toFixed(1).replace(/\.0$/, '');
     } else {
-        hint.textContent = '계산 결과를 확인한 뒤 추가 계산을 활성화하면 사용량, 로스량, 남은재고량을 같이 볼 수 있습니다.';
+        hint.textContent = '계산 결과를 확인한 뒤 추가 계산을 활성화하면 현재 총재고를 직접 조정하며 부족량과 예상 현재고를 바로 비교할 수 있습니다.';
         btn.textContent = '추가 계산 활성화';
         btn.style.background = '#7c3aed';
+        if(saveBtn) saveBtn.style.display = 'none';
+        if(extraWrap) extraWrap.style.display = 'none';
     }
 }
 
@@ -3166,21 +3230,19 @@ async function handleRequirementCalcUsageAction(){
         alert('먼저 계산을 완료해주세요.');
         return;
     }
+    const nextMode = !requirementCalcUsageMode;
     const currentSignature = getRequirementCalcItemsSignature();
     if(currentSignature !== requirementCalcLastCalculatedSignature){
-        const ok = await calculateIntegratedRequirements(requirementCalcSelectedCategories, { preserveResultTab: true, activateUsageMode: true });
+        const ok = await calculateIntegratedRequirements(requirementCalcSelectedCategories, { preserveResultTab: true, activateUsageMode: nextMode });
         if(!ok) return;
     }
-    if(!requirementCalcUsageMode){
-        requirementCalcUsageMode = true;
-        renderCurrentRequirementCalcPayload();
-        return;
-    }
-    saveCurrentRequirementCalcDraft();
+    requirementCalcUsageMode = nextMode;
+    renderCurrentRequirementCalcPayload();
 }
 
 function saveCurrentRequirementCalcDraft(){
     syncRequirementCalcItemsFromInputs();
+    syncRequirementCalcUsageValuesFromInputs();
     if(!requirementCalcLastPayload){
         alert('임시저장할 계산 결과가 없습니다.');
         return;
@@ -3195,6 +3257,7 @@ function saveCurrentRequirementCalcDraft(){
         result_tab: requirementCalcResultTab,
         usage_mode: !!requirementCalcUsageMode,
         usage_values: { ...requirementCalcUsageValues },
+        extra_percent: Number(requirementCalcExtraPercent || 0),
         payload: JSON.parse(JSON.stringify(requirementCalcLastPayload)),
     };
     const existingIndex = requirementCalcDrafts.findIndex((item) => item.id === draftId);
@@ -3216,6 +3279,7 @@ async function loadRequirementCalcDraft(draftId){
     requirementCalcSelectedCategories = Array.isArray(draft.selected_categories) ? [...draft.selected_categories] : [];
     requirementCalcUsageMode = !!draft.usage_mode;
     requirementCalcUsageValues = draft.usage_values ? { ...draft.usage_values } : {};
+    requirementCalcExtraPercent = Number(draft.extra_percent || 0) || 0;
     requirementCalcActiveDraftId = draft.id;
     renderRequirementCalcInputRows();
     renderRequirementCalcDraftTabs();
@@ -3229,6 +3293,7 @@ async function loadRequirementCalcDraft(draftId){
         renderCurrentRequirementCalcPayload();
     }
     requirementCalcUsageValues = draft.usage_values ? { ...draft.usage_values } : {};
+    requirementCalcExtraPercent = Number(draft.extra_percent || 0) || 0;
     renderCurrentRequirementCalcPayload();
     switchRequirementCalcResultTab(draft.result_tab === 'products' ? 'products' : 'summary');
 }
@@ -3242,15 +3307,44 @@ function deleteRequirementCalcDraft(draftId){
     renderRequirementCalcDraftTabs();
 }
 
+function updateRequirementCalcExtraPercent(value){
+    const num = Number(value || 0);
+    requirementCalcExtraPercent = Number.isFinite(num) && num >= 0 ? num : 0;
+    if(requirementCalcUsageMode){
+        renderCurrentRequirementCalcPayload();
+    }
+}
+
+function syncRequirementCalcUsageValuesFromInputs(){
+    const inputs = Array.from(document.querySelectorAll('.reqcalc-stock-input'));
+    inputs.forEach((input) => {
+        const scopeKey = input.dataset.scopeKey || '';
+        const codeKey = input.dataset.codeKey || '';
+        if(!scopeKey || !codeKey) return;
+        const mapKey = `${scopeKey}::${codeKey}`;
+        const num = Number(input.value || 0);
+        requirementCalcUsageValues[mapKey] = Number.isFinite(num) && num >= 0 ? num : 0;
+    });
+}
+
 function updateRequirementCalcUsageValue(scopeKey, codeKey, value){
     const mapKey = `${scopeKey}::${codeKey}`;
     const num = Number(value || 0);
-    requirementCalcUsageValues[mapKey] = Number.isFinite(num) && num > 0 ? num : 0;
+    requirementCalcUsageValues[mapKey] = Number.isFinite(num) && num >= 0 ? num : 0;
+}
+
+function commitRequirementCalcStockInput(input){
+    if(!input) return;
+    updateRequirementCalcUsageValue(
+        input.dataset.scopeKey || '',
+        input.dataset.codeKey || '',
+        input.value
+    );
     renderCurrentRequirementCalcPayload();
 }
 
 function focusRequirementCalcUsageInputByIndex(targetIndex){
-    const inputs = Array.from(document.querySelectorAll('.reqcalc-usage-input'));
+    const inputs = Array.from(document.querySelectorAll('.reqcalc-stock-input'));
     const target = inputs[targetIndex];
     if(target){
         target.focus();
@@ -3259,21 +3353,26 @@ function focusRequirementCalcUsageInputByIndex(targetIndex){
 }
 
 function bindRequirementCalcUsageInputKeyHandlers(){
-    const inputs = Array.from(document.querySelectorAll('.reqcalc-usage-input'));
+    const inputs = Array.from(document.querySelectorAll('.reqcalc-stock-input'));
     inputs.forEach((input, index) => {
         if(input.dataset.keyBound === '1') return;
         input.dataset.keyBound = '1';
+        input.addEventListener('blur', function(){
+            commitRequirementCalcStockInput(this);
+        });
         input.addEventListener('keydown', function(e){
             if(e.key === 'Tab'){
                 e.preventDefault();
-                updateRequirementCalcUsageValue(
-                    this.dataset.scopeKey || '',
-                    this.dataset.codeKey || '',
-                    this.value
-                );
+                commitRequirementCalcStockInput(this);
                 window.setTimeout(() => {
                     const nextIndex = e.shiftKey ? index - 1 : index + 1;
                     focusRequirementCalcUsageInputByIndex(nextIndex);
+                }, 0);
+            } else if(e.key === 'Enter'){
+                e.preventDefault();
+                commitRequirementCalcStockInput(this);
+                window.setTimeout(() => {
+                    focusRequirementCalcUsageInputByIndex(index + 1);
                 }, 0);
             }
         });
@@ -3286,14 +3385,9 @@ function renderRequirementCalcTable(items, options){
     if(!items || !items.length){
         return '<div style="color:#64748b;padding:0.4rem 0;">데이터가 없습니다.</div>';
     }
-    const usageHeader = requirementCalcUsageMode ? `
-        <th class="reqcalc-num">사용량</th>
-        <th class="reqcalc-num">로스량</th>
-        <th class="reqcalc-num">남은재고량</th>
-    ` : '';
     return `
         <div class="table-container">
-            <table class="reqcalc-table">
+            <table class="reqcalc-table ${requirementCalcUsageMode ? 'excel-mode' : ''}">
                 <thead>
                     <tr>
                         <th>코드</th>
@@ -3302,34 +3396,33 @@ function renderRequirementCalcTable(items, options){
                         <th>필요량</th>
                         <th>부족량</th>
                         <th>예상 현재고</th>
-                        ${usageHeader}
                     </tr>
                 </thead>
                 <tbody>
-                    ${items.map(item => `
+                        ${items.map(item => `
                         ${(() => {
                             const usageValue = getRequirementCalcUsageValue(scopeKey, item);
-                            const required = Number(item.required || 0);
+                            const baseRequired = Number(item.required || 0);
+                            const extraFactor = requirementCalcUsageMode ? (1 + (Number(requirementCalcExtraPercent || 0) / 100)) : 1;
+                            const required = baseRequired * extraFactor;
                             const stock = Number(item.stock || 0);
-                            const projectedStock = Math.max(stock - required, 0);
-                            const loss = Math.max(usageValue - required, 0);
-                            const remaining = stock - usageValue;
+                            const effectiveStock = requirementCalcUsageMode && usageValue >= 0 ? usageValue : stock;
+                            const shortage = Math.max(required - effectiveStock, 0);
+                            const projectedStock = Math.max(effectiveStock - required, 0);
                             const codeKey = escapeRequirementCalcHtml(String(item.code || item.name || '-'));
                             return `
                                 <tr>
                                     <td>${escapeRequirementCalcHtml(item.code || '-')}</td>
                                     <td>${escapeRequirementCalcHtml(item.name || '-')}</td>
-                                    <td class="reqcalc-num">${Number(stock).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
+                                    <td class="reqcalc-num">
+                                        ${requirementCalcUsageMode
+                                            ? `<span class="reqcalc-stock-field"><input type="number" min="0" step="0.1" class="reqcalc-stock-input" data-scope-key="${escapeRequirementCalcHtml(scopeKey)}" data-code-key="${codeKey}" value="${Number(effectiveStock).toFixed(1)}"><span class="reqcalc-unit-inline">${escapeRequirementCalcHtml(item.unit || '')}</span></span><span class="reqcalc-stock-print-text">${Number(effectiveStock).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</span>`
+                                            : `${Number(stock).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}`
+                                        }
+                                    </td>
                                     <td class="reqcalc-num"><strong>${Number(required).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</strong></td>
-                                    <td class="reqcalc-num" style="color:${Number(item.shortage || 0) > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">${Number(item.shortage || 0).toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
+                                    <td class="reqcalc-num" style="color:${shortage > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">${shortage.toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
                                     <td class="reqcalc-num" style="color:${projectedStock > 0 ? '#0f766e' : '#64748b'};font-weight:700;">${projectedStock.toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
-                                    ${requirementCalcUsageMode ? `
-                                        <td class="reqcalc-num">
-                                            <input type="number" min="0" step="0.1" class="reqcalc-usage-input" data-scope-key="${escapeRequirementCalcHtml(scopeKey)}" data-code-key="${codeKey}" value="${usageValue > 0 ? Number(usageValue).toFixed(1) : ''}" onchange="updateRequirementCalcUsageValue('${escapeRequirementCalcHtml(scopeKey)}', '${codeKey}', this.value)">
-                                        </td>
-                                        <td class="reqcalc-num" style="color:${loss > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">${loss.toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
-                                        <td class="reqcalc-num" style="color:${remaining < 0 ? '#dc2626' : '#0f766e'};font-weight:700;">${remaining.toFixed(1)} ${escapeRequirementCalcHtml(item.unit || '')}</td>
-                                    ` : ''}
                                 </tr>
                             `;
                         })()}
@@ -3353,7 +3446,7 @@ function renderRequirementCalcProducts(products){
     empty.style.display = 'none';
     wrap.style.display = 'block';
     wrap.innerHTML = products.map(product => `
-        <div class="reqcalc-product-card">
+        <div class="reqcalc-product-card ${requirementCalcUsageMode ? 'excel-mode' : ''}">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
                 <div>
                     <strong style="font-size:1rem;color:#0f172a;">${product.product_name}</strong>
