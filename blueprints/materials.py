@@ -3003,11 +3003,14 @@ def raw_materials():
         selected_raw_search_field = 'all'
     raw_search_keyword = (request.args.get('raw_search_keyword') or '').strip()
     selected_raw_name = (request.args.get('raw_name') or '').strip()
+    selected_done_kind = (request.args.get('done_kind') or 'all').strip() or 'all'
+    if selected_done_kind not in ('all', 'production', 'export'):
+        selected_done_kind = 'all'
     conn = get_db()
     cursor = conn.cursor()
 
     # ?? ?? (???? ??)
-    month_param = request.args.get('month', '')
+    selected_done_date = (request.args.get('done_date') or '').strip()
     logistics_workplace_filter = (request.args.get('logistics_workplace') or '??').strip() if is_logistics else '??'
     logistics_workplace_tabs = ['??'] + [wp for wp in WORKPLACES if wp != LOGISTICS_WORKPLACE]
 
@@ -3054,7 +3057,103 @@ def raw_materials():
             id ASC
     '''
     cursor.execute(raw_query, raw_params)
-    raw_materials = cursor.fetchall()
+    raw_materials = [dict(row) for row in cursor.fetchall()]
+
+    raw_ids = [int(row.get('id') or 0) for row in raw_materials if int(row.get('id') or 0) > 0]
+    raw_done_meta = {}
+    if raw_ids:
+        raw_placeholders = ','.join(['?'] * len(raw_ids))
+        cursor.execute(
+            f'''
+            WITH production_done AS (
+                SELECT
+                    pmu.raw_material_id as raw_material_id,
+                    substr(MAX(COALESCE(p.production_date, '')), 1, 10) as done_date,
+                    GROUP_CONCAT(DISTINCT pr.name) as product_names
+                FROM production_material_usage pmu
+                JOIN productions p
+                  ON p.id = pmu.production_id
+                 AND COALESCE(p.status, '') = '완료'
+                LEFT JOIN products pr ON pr.id = p.product_id
+                WHERE pmu.raw_material_id IN ({raw_placeholders})
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                GROUP BY pmu.raw_material_id
+            ),
+            export_done AS (
+                SELECT
+                    rml.raw_material_id as raw_material_id,
+                    substr(MAX(COALESCE(rml.created_at, '')), 1, 10) as done_date,
+                    ABS(SUM(COALESCE(rml.quantity, 0))) as moved_quantity,
+                    MIN(COALESCE(NULLIF(TRIM(rml.note), ''), '')) as export_note
+                FROM raw_material_logs rml
+                WHERE rml.raw_material_id IN ({raw_placeholders})
+                  AND COALESCE(rml.type, '') = 'export'
+                  AND COALESCE(rml.quantity, 0) < 0
+                GROUP BY rml.raw_material_id, substr(COALESCE(rml.created_at, ''), 1, 10), COALESCE(NULLIF(TRIM(rml.note), ''), '')
+            ),
+            export_done_latest AS (
+                SELECT ed.*
+                FROM export_done ed
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM export_done newer
+                    WHERE newer.raw_material_id = ed.raw_material_id
+                      AND (
+                          COALESCE(newer.done_date, '') > COALESCE(ed.done_date, '')
+                          OR (
+                              COALESCE(newer.done_date, '') = COALESCE(ed.done_date, '')
+                              AND COALESCE(newer.export_note, '') > COALESCE(ed.export_note, '')
+                          )
+                      )
+                )
+            )
+            SELECT
+                rm.id as raw_material_id,
+                COALESCE(pd.done_date, '') as production_done_date,
+                COALESCE(pd.product_names, '') as product_names,
+                COALESCE(ed.done_date, '') as export_done_date,
+                COALESCE(ed.moved_quantity, 0) as moved_quantity,
+                COALESCE(ed.export_note, '') as export_note
+            FROM raw_materials rm
+            LEFT JOIN production_done pd ON pd.raw_material_id = rm.id
+            LEFT JOIN export_done_latest ed ON ed.raw_material_id = rm.id
+            WHERE rm.id IN ({raw_placeholders})
+            ''',
+            [*raw_ids, *raw_ids, *raw_ids],
+        )
+        for row in cursor.fetchall():
+            item = dict(row)
+            raw_id = int(item.get('raw_material_id') or 0)
+            if raw_id <= 0:
+                continue
+            export_date = str(item.get('export_done_date') or '').strip()
+            production_date = str(item.get('production_done_date') or '').strip()
+            moved_qty = float(item.get('moved_quantity') or 0)
+            export_note = str(item.get('export_note') or '').strip()
+            product_names = str(item.get('product_names') or '').strip()
+            done_kind = 'export' if export_date else 'production'
+            done_date = export_date or production_date
+            done_note = export_note if export_date else product_names
+            if export_date and moved_qty > 0:
+                done_note = f'이동 원초량 {moved_qty:,.0f}속 / {export_note}' if export_note else f'이동 원초량 {moved_qty:,.0f}속'
+            raw_done_meta[raw_id] = {
+                'done_kind': done_kind,
+                'done_date': done_date,
+                'done_note': done_note,
+            }
+
+    for row in raw_materials:
+        meta = raw_done_meta.get(int(row.get('id') or 0), {})
+        row['done_kind'] = meta.get('done_kind', 'production')
+        row['done_date'] = meta.get('done_date', '')
+        row['done_note'] = meta.get('done_note', '')
+
+    if selected_done_kind != 'all':
+        for row in raw_materials:
+            row['_done_kind_match'] = (row.get('done_kind') == selected_done_kind)
+    else:
+        for row in raw_materials:
+            row['_done_kind_match'] = True
 
     if is_logistics:
         cursor.execute(
@@ -3154,16 +3253,18 @@ def raw_materials():
         )
     raw_code_profiles = [dict(r) for r in cursor.fetchall()]
 
-    # ?? 6?? ?? ??
-    today = now_local()
-    month_anchor = today.replace(day=1)
-    months = []
-    for i in range(6):
-        if month_anchor.month - i > 0:
-            m = month_anchor.replace(month=month_anchor.month - i)
-        else:
-            m = month_anchor.replace(year=month_anchor.year - 1, month=12 + (month_anchor.month - i))
-        months.append(m.strftime('%Y-%m'))
+    done_dates = sorted(
+        {
+            str(row.get('done_date') or '').strip()
+            for row in raw_materials
+            if (
+                float(row.get('current_stock') or 0) <= 0
+                and str(row.get('done_date') or '').strip()
+                and bool(row.get('_done_kind_match'))
+            )
+        },
+        reverse=True,
+    )
 
     conn.close()
 
@@ -3173,8 +3274,9 @@ def raw_materials():
         raw_materials=raw_materials,
         raw_code_profiles=raw_code_profiles,
         raw_code_profiles_json=json.dumps(raw_code_profiles, ensure_ascii=False),
-        months=months,
-        selected_month=month_param,
+        done_dates=done_dates,
+        selected_done_date=selected_done_date,
+        selected_done_kind=selected_done_kind,
         selected_raw_search_field=selected_raw_search_field,
         raw_search_keyword=raw_search_keyword,
         selected_raw_name=selected_raw_name,
@@ -3498,30 +3600,52 @@ def raw_material_checksheet_preview(raw_material_id):
 
         cursor.execute(
             '''
-            SELECT
-                substr(p.production_date, 1, 10) as use_date,
-                COALESCE(SUM(COALESCE(pmu.actual_quantity, 0)), 0) as used_quantity,
-                GROUP_CONCAT(DISTINCT pr.name) as product_names,
-                COALESCE(rcn.note, '') as checksheet_note
-            FROM production_material_usage pmu
-            JOIN productions p
-              ON p.id = pmu.production_id
-             AND COALESCE(p.production_date, '') <> ''
-            LEFT JOIN products pr ON pr.id = p.product_id
-            LEFT JOIN raw_material_checksheet_notes rcn
-              ON rcn.raw_material_id = pmu.raw_material_id
-              AND rcn.use_date = substr(p.production_date, 1, 10)
-            WHERE pmu.raw_material_id = ?
-              AND COALESCE(p.status, '') = '완료'
-              AND COALESCE(pmu.actual_quantity, 0) > 0
-            GROUP BY
-                substr(p.production_date, 1, 10),
-                COALESCE(rcn.note, '')
-            HAVING used_quantity > 0
-            ORDER BY use_date DESC
+            WITH production_usage AS (
+                SELECT
+                    substr(p.production_date, 1, 10) as use_date,
+                    COALESCE(SUM(COALESCE(pmu.actual_quantity, 0)), 0) as used_quantity,
+                    GROUP_CONCAT(DISTINCT pr.name) as product_names,
+                    COALESCE(rcn.note, '') as checksheet_note,
+                    1 as sort_group,
+                    'production' as log_kind
+                FROM production_material_usage pmu
+                JOIN productions p
+                  ON p.id = pmu.production_id
+                 AND COALESCE(p.production_date, '') <> ''
+                LEFT JOIN products pr ON pr.id = p.product_id
+                LEFT JOIN raw_material_checksheet_notes rcn
+                  ON rcn.raw_material_id = pmu.raw_material_id
+                  AND rcn.use_date = substr(p.production_date, 1, 10)
+                WHERE pmu.raw_material_id = ?
+                  AND COALESCE(p.status, '') = '완료'
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                GROUP BY substr(p.production_date, 1, 10), COALESCE(rcn.note, '')
+            ),
+            export_usage AS (
+                SELECT
+                    substr(rml.created_at, 1, 10) as use_date,
+                    ABS(COALESCE(SUM(COALESCE(rml.quantity, 0)), 0)) as used_quantity,
+                    '' as product_names,
+                    COALESCE(NULLIF(TRIM(rml.note), ''), '') as checksheet_note,
+                    2 as sort_group,
+                    'export' as log_kind
+                FROM raw_material_logs rml
+                WHERE rml.raw_material_id = ?
+                  AND COALESCE(rml.type, '') = 'export'
+                  AND COALESCE(rml.quantity, 0) < 0
+                GROUP BY substr(rml.created_at, 1, 10), COALESCE(NULLIF(TRIM(rml.note), ''), '')
+            )
+            SELECT *
+            FROM (
+                SELECT * FROM production_usage
+                UNION ALL
+                SELECT * FROM export_usage
+            ) logs
+            WHERE COALESCE(used_quantity, 0) > 0
+            ORDER BY use_date DESC, sort_group ASC
             LIMIT 12
             ''',
-            (raw_material_id,),
+            (raw_material_id, raw_material_id),
         )
         usage_logs = [dict(row) for row in cursor.fetchall()]
 
@@ -3531,15 +3655,21 @@ def raw_material_checksheet_preview(raw_material_id):
         running_after = current_stock
         for log in usage_logs:
             used_qty = float(log.get('used_quantity') or 0)
+            log_kind = str(log.get('log_kind') or 'production').strip()
             default_note = ', '.join([x.strip() for x in (log.get('product_names') or '').split(',') if x.strip()])
             note = (log.get('checksheet_note') or '').strip() or default_note
+            display_used_qty = used_qty
+            if log_kind == 'export':
+                display_used_qty = 0.0
+                move_text = f'이동 원초량 {used_qty:,.0f}속'
+                note = f'{move_text} / {note}' if note else move_text
             reconstructed_rows.append(
                 {
                     'use_date': log.get('use_date') or '',
                     'site_stock': f'{running_after:,.0f}',
                     'warehouse_stock': f'{0:,.0f}',
                     'total_stock': f'{running_after:,.0f}',
-                    'used_quantity': f'{used_qty:,.0f}',
+                    'used_quantity': f'{display_used_qty:,.0f}',
                     'note': note,
                 }
             )

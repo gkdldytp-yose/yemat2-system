@@ -9,6 +9,18 @@
 .material-panel.active{display:block;}
 .raw-checksheet-btn{background:linear-gradient(135deg,#2563eb 0%, #1d4ed8 100%) !important;border:1px solid #1d4ed8 !important;color:#fff !important;box-shadow:0 10px 20px rgba(37,99,235,0.28);}
 .raw-checksheet-btn-enhanced{background:linear-gradient(135deg,#2563eb 0%, #1d4ed8 100%) !important;border:1px solid #1d4ed8 !important;color:#fff !important;box-shadow:0 10px 20px rgba(37,99,235,0.28);}
+.done-calendar{margin-bottom:1rem;padding:1rem 1.1rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);}
+.done-calendar-head{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;margin-bottom:0.8rem;flex-wrap:wrap;}
+.done-calendar-title{font-weight:800;color:#0f172a;}
+.done-calendar-nav{display:flex;align-items:center;gap:0.5rem;}
+.done-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0.35rem;}
+.done-calendar-weekday,.done-calendar-day{display:flex;align-items:center;justify-content:center;border-radius:10px;min-height:42px;font-size:0.88rem;}
+.done-calendar-weekday{font-weight:800;color:#64748b;background:#f8fafc;}
+.done-calendar-day{border:1px solid #e2e8f0;background:#fff;color:#94a3b8;}
+.done-calendar-day.has-history{color:#0f172a;font-weight:700;cursor:pointer;background:#eff6ff;border-color:#93c5fd;}
+.done-calendar-day.has-history:hover{background:#dbeafe;}
+.done-calendar-day.active{background:#2563eb;color:#fff;border-color:#1d4ed8;box-shadow:0 10px 20px rgba(37,99,235,0.22);}
+.done-calendar-day.empty{background:transparent;border:none;min-height:42px;}
 </style>
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
 {%- set can_prod  = _r in ['admin','production'] -%}
@@ -59,8 +71,11 @@
     <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
         <form method="GET" action="/raw-materials" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
             <input type="hidden" name="tab" value="{{ request.args.get('tab', 'active') }}">
-            {% if selected_month %}
-            <input type="hidden" name="month" value="{{ selected_month }}">
+            {% if selected_done_date and request.args.get('tab', 'active') == 'done' %}
+            <input type="hidden" name="done_date" value="{{ selected_done_date }}">
+            {% endif %}
+            {% if selected_done_kind and selected_done_kind != 'all' and request.args.get('tab', 'active') == 'done' %}
+            <input type="hidden" name="done_kind" value="{{ selected_done_kind }}">
             {% endif %}
             <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
                 <label for="rawSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">&#xAC80;&#xC0C9; &#xAE30;&#xC900;</label>
@@ -87,7 +102,7 @@
             </div>
             <div style="grid-column:span 2;display:flex;gap:0.5rem;justify-content:flex-end;align-items:end;flex-wrap:wrap;">
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">&#xC801;&#xC6A9;</button>
-                <a href="/raw-materials?tab={{ request.args.get('tab', 'active') }}{% if selected_month %}&month={{ selected_month|urlencode }}{% endif %}" class="btn btn-small btn-secondary">&#xCD08;&#xAE30;&#xD654;</a>
+                <a href="/raw-materials?tab={{ request.args.get('tab', 'active') }}" class="btn btn-small btn-secondary">&#xCD08;&#xAE30;&#xD654;</a>
             </div>
         </form>
     </div>
@@ -153,29 +168,42 @@
     <!-- 사용완료 탭 -->
     <div id="pane_done" style="display:none;">
     
-    <!-- 월별 필터 -->
-    <div class="subtabs">
-        <a href="/raw-materials?tab=done" class="subtab-btn {% if not selected_month %}active{% endif %}">전체</a>
-        {% for m in months %}
-        <a href="/raw-materials?tab=done&month={{ m }}{% if raw_search_keyword %}&raw_search_keyword={{ raw_search_keyword|urlencode }}{% endif %}{% if selected_raw_search_field and selected_raw_search_field != 'all' %}&raw_search_field={{ selected_raw_search_field|urlencode }}{% endif %}" class="subtab-btn {% if selected_month == m %}active{% endif %}">{{ m }}</a>
-        {% endfor %}
+    <div class="done-calendar">
+        <div class="done-calendar-head">
+            <div>
+                <div class="done-calendar-title">완료 이력 캘린더</div>
+                <div style="font-size:0.82rem;color:#64748b;">이력이 있는 날짜만 선택할 수 있습니다.</div>
+            </div>
+            <div class="done-calendar-nav">
+                <select id="doneKindFilter" style="padding:0.4rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;" onchange="applyDoneKindFilter(this.value)">
+                    <option value="all" {% if selected_done_kind == 'all' %}selected{% endif %}>전체</option>
+                    <option value="production" {% if selected_done_kind == 'production' %}selected{% endif %}>사용완료</option>
+                    <option value="export" {% if selected_done_kind == 'export' %}selected{% endif %}>반출 완료</option>
+                </select>
+                <button type="button" class="btn btn-small btn-secondary" onclick="moveDoneCalendarMonth(-1)">◀</button>
+                <strong id="doneCalendarLabel" style="min-width:120px;text-align:center;color:#0f172a;"></strong>
+                <button type="button" class="btn btn-small btn-secondary" onclick="moveDoneCalendarMonth(1)">▶</button>
+                <a href="/raw-materials?tab=done{% if raw_search_keyword %}&raw_search_keyword={{ raw_search_keyword|urlencode }}{% endif %}{% if selected_raw_search_field and selected_raw_search_field != 'all' %}&raw_search_field={{ selected_raw_search_field|urlencode }}{% endif %}{% if selected_raw_name %}&raw_name={{ selected_raw_name|urlencode }}{% endif %}" class="btn btn-small btn-secondary">전체</a>
+            </div>
+        </div>
+        <div id="doneCalendarGrid" class="done-calendar-grid"></div>
     </div>
-    
-    {% if selected_month %}
-        {% set done_candidates = raw_materials | selectattr('current_stock', 'le', 0) | selectattr('receiving_date', 'defined') | list %}
+
+    {% if selected_done_date %}
+        {% set done_candidates = raw_materials | selectattr('current_stock', 'le', 0) | selectattr('_done_kind_match') | list %}
         {% set done_ns = namespace(items=[]) %}
         {% for rm in done_candidates %}
-            {% if rm.receiving_date and rm.receiving_date[:7] == selected_month %}
+            {% if rm.done_date and rm.done_date == selected_done_date %}
                 {% set done_ns.items = done_ns.items + [rm] %}
             {% endif %}
         {% endfor %}
         {% set done_list = done_ns.items %}
     {% else %}
-        {% set done_list = raw_materials | selectattr('current_stock', 'le', 0) | list %}
+        {% set done_list = raw_materials | selectattr('current_stock', 'le', 0) | selectattr('_done_kind_match') | list %}
     {% endif %}
     
     {% if done_list %}
-    <div class="table-container"><table><thead><tr><th>원초명</th><th>1박스당 속수</th><th>입고일</th><th>자호</th><th>총재고</th><th>사용량</th><th>완료일</th><th>관리</th></tr></thead>
+    <div class="table-container"><table><thead><tr><th>원초명</th><th>1박스당 속수</th><th>입고일</th><th>자호</th><th>총재고</th><th>완료일</th><th>완료사유</th><th>관리</th></tr></thead>
     <tbody>{% for rm in done_list %}
     <tr style="cursor:pointer;opacity:0.7;" onclick="showLogs({{ rm.id }},'{{ rm.name|e }}')">
         <td>
@@ -187,8 +215,15 @@
         <td>{{ rm.receiving_date or '-' }}</td>
         <td>{{ rm.car_number or '-' }}</td>
         <td>{{ rm.total_stock|int }}속</td>
-        <td>{{ rm.used_quantity|int }}속</td>
-        <td><span style="background:#e8f5e9;color:#27ae60;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;">소진완료</span></td>
+        <td>
+            <div>{{ rm.done_date or '-' }}</div>
+            {% if rm.done_kind == 'export' %}
+            <span style="background:#fff7ed;color:#c2410c;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">반출완료</span>
+            {% else %}
+            <span style="background:#e8f5e9;color:#27ae60;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">사용완료</span>
+            {% endif %}
+        </td>
+        <td style="max-width:280px;white-space:normal;line-height:1.45;">{{ rm.done_note or '-' }}</td>
         <td onclick="event.stopPropagation()">
             {% if can_raw %}
             <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">입고</button>
@@ -501,6 +536,9 @@ function applyRawCodeProfile(code){
 
 const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
 let rawActivityWorkplace = 'all';
+const rawDoneDates = {{ done_dates|tojson }};
+const rawSelectedDoneDate = {{ selected_done_date|tojson }};
+let doneCalendarAnchor = rawSelectedDoneDate ? new Date(`${rawSelectedDoneDate}T00:00:00`) : (rawDoneDates.length ? new Date(`${rawDoneDates[0]}T00:00:00`) : new Date());
 
 function switchTab(tab){
     document.getElementById('pane_active').style.display = tab==='active' ? '' : 'none';
@@ -516,9 +554,72 @@ window.onload = function(){
     if(tab === 'done'){
         switchTab('done');
     }
+    renderDoneCalendar();
 };
 
 let currentStock = 0;
+
+function buildDoneCalendarUrl(dateStr){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'done');
+    if(dateStr){
+        params.set('done_date', dateStr);
+    } else {
+        params.delete('done_date');
+    }
+    return `/raw-materials?${params.toString()}`;
+}
+
+function applyDoneKindFilter(kind){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'done');
+    if(kind && kind !== 'all'){
+        params.set('done_kind', kind);
+    } else {
+        params.delete('done_kind');
+    }
+    params.delete('done_date');
+    window.location.href = `/raw-materials?${params.toString()}`;
+}
+
+function moveDoneCalendarMonth(delta){
+    doneCalendarAnchor = new Date(doneCalendarAnchor.getFullYear(), doneCalendarAnchor.getMonth() + delta, 1);
+    renderDoneCalendar();
+}
+
+function renderDoneCalendar(){
+    const grid = document.getElementById('doneCalendarGrid');
+    const label = document.getElementById('doneCalendarLabel');
+    if(!grid || !label) return;
+    if(!rawDoneDates.length){
+        grid.innerHTML = '<div style="grid-column:1 / -1;text-align:center;color:#94a3b8;padding:1rem 0;">완료 이력 날짜가 없습니다.</div>';
+        label.textContent = '';
+        return;
+    }
+    const dateSet = new Set(rawDoneDates);
+    const year = doneCalendarAnchor.getFullYear();
+    const month = doneCalendarAnchor.getMonth();
+    label.textContent = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
+    const weekdays = ['일','월','화','수','목','금','토'];
+    const firstDay = new Date(year, month, 1);
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const startWeekday = firstDay.getDay();
+    let html = weekdays.map(day => `<div class="done-calendar-weekday">${day}</div>`).join('');
+    for(let i = 0; i < startWeekday; i += 1){
+        html += '<div class="done-calendar-day empty"></div>';
+    }
+    for(let day = 1; day <= lastDate; day += 1){
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const hasHistory = dateSet.has(dateStr);
+        const activeClass = rawSelectedDoneDate === dateStr ? ' active' : '';
+        if(hasHistory){
+            html += `<a class="done-calendar-day has-history${activeClass}" href="${buildDoneCalendarUrl(dateStr)}">${day}</a>`;
+        } else {
+            html += `<div class="done-calendar-day">${day}</div>`;
+        }
+    }
+    grid.innerHTML = html;
+}
 
 // 오늘 날짜를 YYYY-MM-DD 형식으로
 function getTodayDate() {
