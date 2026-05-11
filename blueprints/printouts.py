@@ -164,8 +164,25 @@ def journals():
             (workplace,),
         )
         raw_all_items = [dict(row) for row in cursor.fetchall()]
+        cursor.execute(
+            '''
+            SELECT DISTINCT raw_material_id
+            FROM raw_material_logs
+            WHERE raw_material_id IS NOT NULL
+              AND COALESCE(type, '') = 'export'
+              AND COALESCE(quantity, 0) < 0
+            '''
+        )
+        exported_raw_ids = {int(row['raw_material_id'] or 0) for row in cursor.fetchall() if int(row['raw_material_id'] or 0) > 0}
         raw_active_items = [row for row in raw_all_items if float(row.get('current_stock') or 0) > 0]
-        raw_done_items = [row for row in raw_all_items if float(row.get('current_stock') or 0) <= 0 and float(row.get('used_quantity') or 0) > 0]
+        raw_done_items = [
+            row for row in raw_all_items
+            if float(row.get('current_stock') or 0) <= 0
+            and (
+                float(row.get('used_quantity') or 0) > 0
+                or int(row.get('id') or 0) in exported_raw_ids
+            )
+        ]
 
         production_date_set = []
         seen_production_dates = set()
