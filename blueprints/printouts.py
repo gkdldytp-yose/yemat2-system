@@ -33,6 +33,37 @@ def _format_print_workplace(workplace):
     return mapping.get(text, text)
 
 
+def _build_production_expiry_rows(production_row, default_expiry_date=''):
+    rows = []
+    raw_dates = [
+        (production_row['expiry_date'] or '').strip() or (default_expiry_date or ''),
+        (production_row['expiry_date_2'] or '').strip(),
+        (production_row['expiry_date_3'] or '').strip(),
+    ]
+    raw_boxes = [
+        production_row['expiry_boxes_1'],
+        production_row['expiry_boxes_2'],
+        production_row['expiry_boxes_3'],
+    ]
+    if raw_boxes[0] in (None, ''):
+        raw_boxes[0] = production_row['actual_boxes'] or ''
+
+    for idx, (expiry_date, boxes) in enumerate(zip(raw_dates, raw_boxes), start=1):
+        if idx > 1 and not expiry_date and boxes in (None, ''):
+            rows.append({'expiry_date': '', 'actual_boxes': '', 'units': ''})
+            continue
+        box_value = float(boxes or 0) if boxes not in (None, '') else 0.0
+        units = box_value * float(production_row['box_quantity'] or 0) if box_value and production_row['box_quantity'] else 0.0
+        rows.append(
+            {
+                'expiry_date': expiry_date,
+                'actual_boxes': box_value if box_value else '',
+                'units': units if units else '',
+            }
+        )
+    return rows
+
+
 def _base_material_category(category):
     text = (category or '').strip()
     return text == '기름' or text == '소금' or '기름' in text or '유지' in text or '소금' in text
@@ -94,6 +125,11 @@ def _get_print_inventory_location_ids(cursor, workplace):
     return [int(row['id']) for row in rows if int(row['id'] or 0) > 0]
 
 
+def _material_checksheet_scope(code_value):
+    code = (code_value or '').strip().upper()
+    return 'sinan' if '_S' in code else 'yemat'
+
+
 def _get_print_workday(timestamp_text, cutoff_hour=6):
     text = (timestamp_text or '').strip()
     if not text:
@@ -116,8 +152,11 @@ def journals():
     workplace = get_workplace()
     selected_tab = (request.args.get('tab') or 'production').strip()
     raw_status = (request.args.get('raw_status') or 'active').strip()
+    material_scope = (request.args.get('material_scope') or 'yemat').strip().lower()
     if raw_status not in ('active', 'done'):
         raw_status = 'active'
+    if material_scope not in ('yemat', 'sinan'):
+        material_scope = 'yemat'
     date_from, date_to = _resolve_journal_date_range()
 
     conn = get_db()
@@ -221,6 +260,7 @@ def journals():
             SELECT
                 p.production_date,
                 p.status,
+                COALESCE(m.code, '') as code,
                 COALESCE(m.category, '') as category,
                 pmu.material_id,
                 COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as qty
@@ -236,7 +276,7 @@ def journals():
             ''',
             (workplace, date_from, date_to),
         )
-        material_map = {}
+        material_map = {'yemat': {}, 'sinan': {}}
         for row in cursor.fetchall():
             row = dict(row)
             if not _normalize_completed_status(row.get('status')):
@@ -247,23 +287,43 @@ def journals():
             material_id = int(row.get('material_id') or 0)
             if not key or material_id <= 0:
                 continue
-            bucket = material_map.setdefault(key, {'production_date': key, 'item_ids': set(), 'outgoing_total': 0.0})
+            scope = _material_checksheet_scope(row.get('code'))
+            scope_map = material_map.setdefault(scope, {})
+            bucket = scope_map.setdefault(key, {'production_date': key, 'item_ids': set(), 'outgoing_total': 0.0})
             bucket['item_ids'].add(material_id)
             bucket['outgoing_total'] += float(row.get('qty') or 0)
 
-        material_journal_dates = []
-        for production_date in sorted(production_date_set, reverse=True):
-            bucket = material_map.get(production_date, {'item_ids': set(), 'outgoing_total': 0.0})
-            visible_item_ids = bucket['item_ids'] or stocked_base_material_ids
-            if not visible_item_ids:
-                continue
-            material_journal_dates.append(
-                {
-                    'production_date': production_date,
-                    'item_count': len(visible_item_ids),
-                    'outgoing_total': round(float(bucket.get('outgoing_total') or 0.0), 1),
-                }
+        stocked_scope_material_ids = {'yemat': set(), 'sinan': set()}
+        if stocked_base_material_ids:
+            cursor.execute(
+                f'''
+                SELECT id, COALESCE(code, '') as code
+                FROM materials
+                WHERE id IN ({','.join(['?'] * len(stocked_base_material_ids))})
+                ''',
+                list(stocked_base_material_ids),
             )
+            for row in cursor.fetchall():
+                scope = _material_checksheet_scope(row['code'])
+                stocked_scope_material_ids.setdefault(scope, set()).add(int(row['id'] or 0))
+
+        material_journal_dates_map = {'yemat': [], 'sinan': []}
+        for scope in ('yemat', 'sinan'):
+            scope_map = material_map.get(scope, {})
+            default_visible_ids = stocked_scope_material_ids.get(scope, set())
+            for production_date in sorted(production_date_set, reverse=True):
+                bucket = scope_map.get(production_date, {'item_ids': set(), 'outgoing_total': 0.0})
+                visible_item_ids = bucket['item_ids'] or default_visible_ids
+                if not visible_item_ids:
+                    continue
+                material_journal_dates_map[scope].append(
+                    {
+                        'production_date': production_date,
+                        'item_count': len(visible_item_ids),
+                        'outgoing_total': round(float(bucket.get('outgoing_total') or 0.0), 1),
+                        'scope': scope,
+                    }
+                )
 
         return render_template(
             'journals.html',
@@ -276,7 +336,9 @@ def journals():
             production_rows=production_rows,
             raw_active_items=raw_active_items,
             raw_done_items=raw_done_items,
-            material_journal_dates=material_journal_dates,
+            material_scope=material_scope,
+            material_journal_dates_yemat=material_journal_dates_map['yemat'],
+            material_journal_dates_sinan=material_journal_dates_map['sinan'],
         )
     finally:
         conn.close()
@@ -287,6 +349,9 @@ def journals():
 def material_checksheet_preview():
     workplace = get_workplace()
     selected_date = (request.args.get('date') or today_local().isoformat()).strip()
+    material_scope = (request.args.get('scope') or 'yemat').strip().lower()
+    if material_scope not in ('yemat', 'sinan'):
+        material_scope = 'yemat'
     try:
         report_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
     except Exception:
@@ -330,6 +395,8 @@ def material_checksheet_preview():
             if not _normalize_completed_status(row.get('status')):
                 continue
             if not _base_material_category(row.get('category')):
+                continue
+            if _material_checksheet_scope(row.get('code')) != material_scope:
                 continue
             material_id = int(row.get('id') or 0)
             if material_id <= 0:
@@ -379,6 +446,8 @@ def material_checksheet_preview():
             for row in cursor.fetchall():
                 row = dict(row)
                 if not _base_material_category(row.get('category')):
+                    continue
+                if _material_checksheet_scope(row.get('code')) != material_scope:
                     continue
                 material_id = int(row.get('id') or 0)
                 if material_id <= 0:
@@ -511,6 +580,9 @@ def material_checksheet_preview():
                 if action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     delta = abs(qty)
                     incoming_qty = abs(qty)
+                elif action == 'issue_request_cancel' and workplace_prefix and note.startswith(workplace_prefix):
+                    delta = -abs(qty)
+                    incoming_qty = -abs(qty)
                 elif action == 'rollback':
                     delta = abs(qty)
                     incoming_qty = abs(qty)
@@ -608,9 +680,22 @@ def material_checksheet_preview():
         author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''
         weekday_labels = ['\uc6d4', '\ud654', '\uc218', '\ubaa9', '\uae08', '\ud1a0', '\uc77c']
         period_text = f'{report_date.year}\ub144 {report_date.month}\uc6d4 {report_date.day}\uc77c ({weekday_labels[report_date.weekday()]}\uc694\uc77c)'
-        workplace_title = _format_print_workplace(workplace).replace('\uc2e0\uad00 2\uce35', '\uc2e0\uad00 2F').replace('\uc2e0\uad00 1\uce35', '\uc2e0\uad00 1F').replace('2\uce35', '2F').replace('1\uce35', '1F')
+        workplace_title = _format_print_workplace(workplace).replace('\uc2e0\uad00 2\uce35', '\uc2e0\uad00_2F').replace('\uc2e0\uad00 1\uce35', '\uc2e0\uad00_1F').replace('2\uce35', '2F').replace('1\uce35', '1F')
+        if workplace_title:
+            workplace_title = f'{workplace_title} 조미김 작업장'
+        scope_label = '신안' if material_scope == 'sinan' else '예맛'
 
-        return render_template('material_checksheet_preview.html', user=session['user'], report_date=selected_date, period_text=period_text, workplace_title=workplace_title, author_name=author_name, rows=rows[:max(min_rows, len(rows))])
+        return render_template(
+            'material_checksheet_preview.html',
+            user=session['user'],
+            report_date=selected_date,
+            period_text=period_text,
+            workplace_title=workplace_title,
+            author_name=author_name,
+            rows=rows[:max(min_rows, len(rows))],
+            material_scope=material_scope,
+            scope_label=scope_label,
+        )
     finally:
         conn.close()
 
@@ -678,6 +763,7 @@ def production_print(production_id):
             display_expiry = (datetime(expiry_year, expiry_month, expiry_day) - timedelta(days=1)).strftime('%Y-%m-%d')
         except Exception:
             display_expiry = ''
+    expiry_rows = _build_production_expiry_rows(production, display_expiry)
 
     # 원재료(원초) 사용 내역
     cursor.execute(
@@ -790,6 +876,7 @@ def production_print(production_id):
         workplace=workplace,
         workplace_label=_format_print_workplace(workplace),
         display_expiry=display_expiry,
+        expiry_rows=expiry_rows,
         same_day_index=same_day_index,
         same_day_total=same_day_total,
     )

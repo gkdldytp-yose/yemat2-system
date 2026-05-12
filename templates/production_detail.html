@@ -72,6 +72,21 @@
 .lot-gap-apply:hover{filter:brightness(.98);}
 .ainfo{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
 .ainfo .ainput{flex:0 0 110px;}
+.actual-boxes-input[readonly]{background:#f8fafc;color:#1e293b;font-weight:700;}
+.expiry-split-panel{display:flex;flex-direction:column;gap:.7rem;}
+.expiry-split-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;}
+.expiry-split-add{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .8rem;border:1px solid #667eea;border-radius:999px;background:#eef2ff;color:#3b4fd1;font-size:.8rem;font-weight:800;cursor:pointer;}
+.expiry-split-add:disabled{opacity:.45;cursor:not-allowed;}
+.expiry-split-guide{font-size:.76rem;color:#64748b;line-height:1.45;}
+.expiry-split-rows{display:flex;flex-direction:column;gap:.55rem;}
+.expiry-split-row{display:grid;grid-template-columns:minmax(160px,190px) minmax(120px,150px) 64px;gap:.5rem;align-items:end;}
+.expiry-split-row[hidden]{display:none !important;}
+.expiry-split-field label{display:block;font-size:.72rem;color:#64748b;margin-bottom:.25rem;font-weight:700;}
+.expiry-split-field input{width:100%;padding:.52rem .65rem;border:2px solid #667eea;border-radius:10px;box-sizing:border-box;font-size:.9rem;}
+.expiry-split-field input[readonly]{background:#f8fafc;}
+.expiry-split-remove{display:inline-flex;align-items:center;justify-content:center;align-self:end;width:56px;height:32px;padding:0;border:1px solid #d7deea;border-radius:8px;background:#f8fafc;color:#64748b;font-size:.7rem;font-weight:700;cursor:pointer;line-height:1;white-space:nowrap;box-shadow:none;transition:all .15s ease;}
+.expiry-split-remove:hover{background:#eef2f7;border-color:#a8b4c7;color:#334155;}
+.expiry-split-summary{font-size:.76rem;color:#64748b;}
 
 @media (max-width: 768px) {
     .info-grid{grid-template-columns:1fr !important;}
@@ -82,6 +97,7 @@
     .mat-tbl th,.mat-tbl td{padding:0.4rem 0.2rem !important;}
     .lot-gap-panel{grid-template-columns:1fr;}
     .lot-gap-fields{grid-template-columns:1fr;}
+    .expiry-split-row{grid-template-columns:1fr;}
 }
 </style>
 {% endblock %}
@@ -104,7 +120,7 @@
         <a href="/production/{{ production.id }}" class="btn btn-small btn-secondary">수정 취소</a>
         {% endif %}
         {% if production.status == '완료' %}
-        <a href="/production/{{ production.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ A4 출력</a>
+        <a href="/production/{{ production.id }}/print?autoprint=1" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ A4 출력</a>
         {% endif %}
         <a href="/production" class="btn btn-secondary btn-small">← 목록</a>
     </div>
@@ -136,22 +152,72 @@
             {% else %}
             <input type="number" name="actual_boxes" id="actualBoxes"
                    value="{{ production.actual_boxes or production.planned_boxes }}"
-                   min="1" style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:120px;"
-                   oninput="recalcAll()">
+                   min="1" readonly
+                   class="actual-boxes-input"
+                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:120px;">
+            <div class="lbl" style="margin-top:0.25rem;">소비기한별 박스 수 합계가 자동 반영됩니다.</div>
             {% endif %}
         </div>
         <div class="info-item"><div class="lbl">박스당 수량</div><div class="val">{{ production.box_quantity }}개</div></div>
-        <div class="info-item">
+        <div class="info-item" style="grid-column:1 / -1;">
             <div class="lbl">소비기한 *</div>
             {% if not can_edit %}
-            <div class="val">{{ production.expiry_date or calculated_expiry_date }}</div>
+            <div class="expiry-split-panel">
+                <div class="expiry-split-rows">
+                    {% for row in expiry_rows if row.date or row.boxes %}
+                    <div class="expiry-split-row">
+                        <div class="expiry-split-field">
+                            <label>{{ ['첫 번째', '두 번째', '세 번째'][loop.index0] }} 소비기한</label>
+                            <div class="val">{{ row.date }}</div>
+                        </div>
+                        <div class="expiry-split-field">
+                            <label>박스 수</label>
+                            <div class="val">{{ row.boxes }} BOX</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
             {% else %}
-            <input type="text" name="expiry_date"
-                   value="{{ production.expiry_date or calculated_expiry_date }}"
-                   placeholder="예: 2026-03-15A"
-                   {% if can_edit %}required{% else %}readonly{% endif %}
-                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:180px;">
-            <div class="lbl" style="margin-top:0.25rem;">자동 계산: {{ calculated_expiry_date }} (생산일 + {{ production.expiry_months or 12 }}개월)</div>
+            <div class="expiry-split-panel">
+                <div class="expiry-split-head">
+                    <button type="button" class="expiry-split-add" id="addExpiryRowBtn" onclick="addExpiryRow()">+ 소비기한 추가</button>
+                    <div class="expiry-split-guide">최대 3개까지 등록할 수 있고, 각 박스 수 합계가 실제 생산 박스 수로 자동 계산됩니다.</div>
+                </div>
+                <div class="expiry-split-rows">
+                    {% for row in expiry_rows %}
+                    <div class="expiry-split-row js-expiry-row" data-index="{{ row.index }}" {% if row.index > expiry_visible_count %}hidden{% endif %}>
+                        <div class="expiry-split-field">
+                            <label>{{ ['첫 번째', '두 번째', '세 번째'][loop.index0] }} 소비기한</label>
+                            <input type="text"
+                                   name="{{ 'expiry_date' if row.index == 1 else 'expiry_date_' ~ row.index }}"
+                                   id="expiryDate{{ row.index }}"
+                                   value="{{ row.date }}"
+                                   placeholder="예: 2026-03-15A"
+                                   {% if row.index == 1 %}required{% endif %}
+                                   oninput="syncExpiryRows()">
+                        </div>
+                        <div class="expiry-split-field">
+                            <label>박스 수</label>
+                            <input type="number"
+                                   name="expiry_boxes_{{ row.index }}"
+                                   id="expiryBoxes{{ row.index }}"
+                                   value="{{ row.boxes }}"
+                                   min="0"
+                                   step="0.1"
+                                   placeholder="박스 수 입력"
+                                   oninput="syncExpiryRows()">
+                        </div>
+                        {% if row.index > 1 %}
+                        <button type="button" class="expiry-split-remove" onclick="removeExpiryRow({{ row.index }})" title="이 소비기한 행 삭제">지우기</button>
+                        {% else %}
+                        <div></div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="expiry-split-summary">자동 계산 기준: {{ calculated_expiry_date }} (생산일 + {{ production.expiry_months or 12 }}개월)</div>
+            </div>
             {% endif %}
         </div>
     </div>
@@ -527,8 +593,10 @@ const DEFAULT_BOXES = {{ production.actual_boxes or production.planned_boxes }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
 const INITIAL_TOTAL_RAW_SELECTED = {{ total_raw_selected_qty or 0 }};
 const INITIAL_TOTAL_RAW_NEED = {{ total_raw_need_qty or 0 }};
+let expiryVisibleCount = {{ expiry_visible_count or 1 }};
 
 window.onload = () => {
+    syncExpiryRows();
     syncRawSokUi();
     recalcAll();
     initLotGapNoneButtons();
@@ -538,6 +606,85 @@ window.onload = () => {
 function getActualBoxes(){
     const el = document.getElementById('actualBoxes');
     return parseFloat(el && el.value) || DEFAULT_BOXES;
+}
+
+function addExpiryRow(){
+    const rows = Array.from(document.querySelectorAll('.js-expiry-row'));
+    if(!rows.length) return;
+    if(expiryVisibleCount >= rows.length){
+        syncExpiryRows();
+        return;
+    }
+    expiryVisibleCount += 1;
+    const row = rows.find(item => Number(item.dataset.index) === expiryVisibleCount);
+    if(row){
+        row.hidden = false;
+    }
+    syncExpiryRows();
+    const dateInput = document.getElementById(`expiryDate${expiryVisibleCount}`);
+    if(dateInput){
+        dateInput.focus();
+    }
+}
+
+function removeExpiryRow(index){
+    const row = document.querySelector(`.js-expiry-row[data-index="${index}"]`);
+    if(!row || index <= 1) return;
+    const dateInput = document.getElementById(`expiryDate${index}`);
+    const boxInput = document.getElementById(`expiryBoxes${index}`);
+    if(dateInput) dateInput.value = '';
+    if(boxInput) boxInput.value = '';
+    row.hidden = true;
+
+    while(expiryVisibleCount > 1){
+        const currentRow = document.querySelector(`.js-expiry-row[data-index="${expiryVisibleCount}"]`);
+        const currentDateInput = document.getElementById(`expiryDate${expiryVisibleCount}`);
+        const currentBoxInput = document.getElementById(`expiryBoxes${expiryVisibleCount}`);
+        const hasValue = !!((currentDateInput && currentDateInput.value) || (currentBoxInput && currentBoxInput.value));
+        if(hasValue){
+            break;
+        }
+        if(currentRow){
+            currentRow.hidden = true;
+        }
+        expiryVisibleCount -= 1;
+    }
+    syncExpiryRows();
+}
+
+function syncExpiryRows(){
+    const actualBoxesEl = document.getElementById('actualBoxes');
+    const rows = Array.from(document.querySelectorAll('.js-expiry-row'));
+    if(!actualBoxesEl || !rows.length){
+        return;
+    }
+    let totalBoxes = 0;
+    let hasAnyBoxInput = false;
+    rows.forEach(row => {
+        const idx = Number(row.dataset.index || 0);
+        const boxInput = document.getElementById(`expiryBoxes${idx}`);
+        const dateInput = document.getElementById(`expiryDate${idx}`);
+        if(!boxInput) return;
+        if(!row.hidden && (dateInput?.value || boxInput.value)){
+            expiryVisibleCount = Math.max(expiryVisibleCount, idx);
+        }
+        const boxValue = parseFloat(boxInput.value);
+        if(!Number.isNaN(boxValue) && boxValue > 0){
+            totalBoxes += boxValue;
+            hasAnyBoxInput = true;
+        }
+    });
+    const normalizedTotal = Math.round(totalBoxes * 100) / 100;
+    actualBoxesEl.value = hasAnyBoxInput ? String(normalizedTotal) : String(DEFAULT_BOXES);
+    rows.forEach(row => {
+        const idx = Number(row.dataset.index || 0);
+        row.hidden = idx > expiryVisibleCount;
+    });
+    const addBtn = document.getElementById('addExpiryRowBtn');
+    if(addBtn){
+        addBtn.disabled = expiryVisibleCount >= rows.length;
+    }
+    recalcAll();
 }
 
 function getCurrentPerBox(){

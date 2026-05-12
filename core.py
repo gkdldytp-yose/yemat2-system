@@ -483,6 +483,16 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE productions ADD COLUMN personnel_note TEXT")
         if 'expiry_date' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN expiry_date TEXT")
+        if 'expiry_date_2' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN expiry_date_2 TEXT")
+        if 'expiry_date_3' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN expiry_date_3 TEXT")
+        if 'expiry_boxes_1' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN expiry_boxes_1 REAL")
+        if 'expiry_boxes_2' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN expiry_boxes_2 REAL")
+        if 'expiry_boxes_3' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN expiry_boxes_3 REAL")
         if 'raw_sok_mode' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN raw_sok_mode INTEGER DEFAULT 1")
         conn.execute("UPDATE productions SET raw_sok_mode = 1 WHERE raw_sok_mode IS NULL OR raw_sok_mode < 1")
