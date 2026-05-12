@@ -63,9 +63,13 @@
             letter-spacing: -0.03em;
             line-height: 1.04;
         }
+        .title-scope {
+            font-size: 33px;
+            font-weight: 900;
+        }
         .subtitle {
             margin-top: 4px;
-            font-size: 21px;
+            font-size: 20pt;
             font-weight: 700;
             text-decoration: underline;
             letter-spacing: -0.03em;
@@ -178,7 +182,7 @@
         <tr>
             <td class="fill cycle-head">작성주기</td>
             <td class="title-cell" rowspan="2">
-                <div class="title">부재료 입·출고 점검표</div>
+                <div class="title">부재료 입·출고 점검표 <span class="title-scope">({{ scope_label }})</span></div>
                 <div class="subtitle">[{{ workplace_title }}]</div>
             </td>
             <td class="approval-vertical" rowspan="2">결<br>재</td>

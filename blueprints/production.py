@@ -67,6 +67,38 @@ def _normalize_production_status(status_value):
     return s
 
 
+def _build_production_expiry_rows(production_row, default_expiry_date=''):
+    rows = []
+    raw_dates = [
+        (production_row.get('expiry_date') or '').strip() or (default_expiry_date or ''),
+        (production_row.get('expiry_date_2') or '').strip(),
+        (production_row.get('expiry_date_3') or '').strip(),
+    ]
+    raw_boxes = [
+        production_row.get('expiry_boxes_1'),
+        production_row.get('expiry_boxes_2'),
+        production_row.get('expiry_boxes_3'),
+    ]
+    if raw_boxes[0] in (None, ''):
+        raw_boxes[0] = production_row.get('actual_boxes') or production_row.get('planned_boxes') or ''
+
+    visible_count = 1
+    for idx, (expiry_date, box_value) in enumerate(zip(raw_dates, raw_boxes), start=1):
+        has_date = bool((expiry_date or '').strip())
+        has_box = box_value not in (None, '')
+        if idx > 1 and (has_date or has_box):
+            visible_count = idx
+        rows.append(
+            {
+                'index': idx,
+                'date': expiry_date,
+                'boxes': box_value,
+                'has_value': has_date or has_box,
+            }
+        )
+    return rows, visible_count
+
+
 def _get_product_raw_options(product_row):
     values = []
     for sok_key, sheet_key in (
@@ -2098,6 +2130,7 @@ def production_detail(production_id):
         calculated_expiry_date = (date(expiry_year, expiry_month, expiry_day) - timedelta(days=1)).isoformat()
     except Exception:
         calculated_expiry_date = production['production_date'] or ''
+    expiry_rows, expiry_visible_count = _build_production_expiry_rows(production, calculated_expiry_date)
 
     # ???곹뭹??BOM ?먯큹 紐⑸줉
     # - 완료???앹궛: ?ㅼ젣 ?ъ슜???먯큹留??쒖떆 (production_material_usage 湲곗?)
@@ -2353,6 +2386,8 @@ def production_detail(production_id):
         bom_raw_items=bom_raw_items,
         calculated_expiry_date=calculated_expiry_date,
         raw_saved_map=raw_saved_map,
+        expiry_rows=expiry_rows,
+        expiry_visible_count=expiry_visible_count,
         total_raw_selected_qty=total_raw_selected_qty,
         total_raw_need_qty=total_raw_need_qty,
         total_raw_remain_qty=total_raw_remain_qty,
@@ -2444,6 +2479,8 @@ def update_production_usage(production_id):
         work_time = (request.form.get('work_time') or '').strip()
         personnel_note = (request.form.get('personnel_note') or '').strip()
         expiry_date_input = (request.form.get('expiry_date') or '').strip()
+        expiry_date_2_input = (request.form.get('expiry_date_2') or '').strip()
+        expiry_date_3_input = (request.form.get('expiry_date_3') or '').strip()
         requested_raw_sok_mode = (request.form.get('raw_sok_mode') or '').strip() or str(prod_row['raw_sok_mode'] or 1)
 
         production_date_str = prod_row['production_date'] if prod_row and prod_row['production_date'] else ''
@@ -2468,6 +2505,55 @@ def update_production_usage(production_id):
         if expiry_date and not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_date):
             conn.execute('ROLLBACK')
             return "<script>alert('?뚮퉬湲고븳 ?뺤떇? YYYY-MM-DD ?먮뒗 YYYY-MM-DDA ?뺥깭濡??낅젰?댁＜?몄슂.'); window.history.back();</script>"
+
+        expiry_box_inputs = [(request.form.get(f'expiry_boxes_{idx}') or '').strip() for idx in range(1, 4)]
+        parsed_expiry_boxes = []
+        for idx, raw_box in enumerate(expiry_box_inputs, start=1):
+            if not raw_box:
+                parsed_expiry_boxes.append(None)
+                continue
+            try:
+                box_value = float(raw_box)
+            except ValueError:
+                conn.execute('ROLLBACK')
+                return f"<script>alert('{idx}번째 소비기한 박스 수는 숫자로 입력해주세요.'); window.history.back();</script>"
+            if box_value <= 0:
+                conn.execute('ROLLBACK')
+                return f"<script>alert('{idx}번째 소비기한 박스 수는 0보다 커야 합니다.'); window.history.back();</script>"
+            parsed_expiry_boxes.append(box_value)
+
+        has_secondary_expiry = bool(expiry_date_2_input or expiry_date_3_input or expiry_box_inputs[1] or expiry_box_inputs[2])
+        if parsed_expiry_boxes[0] is None:
+            if has_secondary_expiry:
+                conn.execute('ROLLBACK')
+                return "<script>alert('첫 번째 소비기한의 박스 수를 먼저 입력해주세요.'); window.history.back();</script>"
+            parsed_expiry_boxes[0] = actual_boxes if actual_boxes > 0 else planned_boxes
+
+        for idx, (expiry_input, box_value) in enumerate(
+            (
+                (expiry_date_2_input, parsed_expiry_boxes[1]),
+                (expiry_date_3_input, parsed_expiry_boxes[2]),
+            ),
+            start=2,
+        ):
+            has_date = bool(expiry_input)
+            has_box = box_value is not None
+            if has_date != has_box:
+                conn.execute('ROLLBACK')
+                return f"<script>alert('{idx}번째 소비기한은 날짜와 박스 수를 함께 입력해주세요.'); window.history.back();</script>"
+
+        expiry_date_2 = expiry_date_2_input
+        expiry_date_3 = expiry_date_3_input
+        for idx, expiry_value in enumerate((expiry_date_2, expiry_date_3), start=2):
+            if expiry_value and not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_value):
+                conn.execute('ROLLBACK')
+                return f"<script>alert('{idx}번째 소비기한은 YYYY-MM-DD 또는 YYYY-MM-DDA 형식으로 입력해주세요.'); window.history.back();</script>"
+
+        computed_actual_boxes = sum(float(box or 0) for box in parsed_expiry_boxes if box is not None)
+        if computed_actual_boxes > 0:
+            actual_boxes = computed_actual_boxes
+        else:
+            parsed_expiry_boxes[0] = actual_boxes if actual_boxes > 0 else planned_boxes
 
         missing = []
         if supply_people is None:
@@ -2504,7 +2590,8 @@ def update_production_usage(production_id):
             SET supply_line = ?, supply_people = ?,
                 packing_line = ?, packing_people = ?,
                 outer_packing_line = ?, outer_packing_people = ?,
-                work_time = ?, personnel_note = ?, expiry_date = ?, raw_sok_mode = ?
+                work_time = ?, personnel_note = ?, expiry_date = ?, expiry_date_2 = ?, expiry_date_3 = ?,
+                expiry_boxes_1 = ?, expiry_boxes_2 = ?, expiry_boxes_3 = ?, raw_sok_mode = ?
             WHERE id = ?
             ''',
             (
@@ -2517,6 +2604,11 @@ def update_production_usage(production_id):
                 work_time,
                 personnel_note,
                 expiry_date,
+                expiry_date_2,
+                expiry_date_3,
+                parsed_expiry_boxes[0],
+                parsed_expiry_boxes[1],
+                parsed_expiry_boxes[2],
                 raw_sok_mode,
                 production_id,
             ),

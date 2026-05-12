@@ -323,9 +323,13 @@
               <col style="width:33.333%">
               <col style="width:29.412%">
             </colgroup>
-            <tr class="input-row"><td>{{ display_expiry }}</td><td>{{ fmt0comma((production.actual_boxes or 0) * (production.box_quantity or 0)) if production.actual_boxes and production.box_quantity else '' }}</td><td>{{ fmt0comma(production.actual_boxes) }}</td></tr>
-            <tr class="input-row"><td></td><td></td><td></td></tr>
-            <tr class="input-row"><td></td><td></td><td></td></tr>
+            {% for row in expiry_rows %}
+            <tr class="input-row">
+              <td>{{ row.expiry_date }}</td>
+              <td>{{ fmt0comma(row.units) if row.units != '' else '' }}</td>
+              <td>{{ fmt0comma(row.actual_boxes) if row.actual_boxes != '' else '' }}</td>
+            </tr>
+            {% endfor %}
             <tr>
               <th class="sum-head">합계 수량</th>
               <td>{{ fmt0comma((production.actual_boxes or 0) * (production.box_quantity or 0)) if production.actual_boxes and production.box_quantity else '' }}</td>
