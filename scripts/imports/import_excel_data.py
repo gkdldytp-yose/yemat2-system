@@ -166,7 +166,7 @@ def create_admin_user(db: Session):
     db.commit()
     print("✓ 관리자 계정 생성 완료!")
     print("  - 아이디: admin")
-    print("  - 비밀번호: 1111")
+    print("  - 비밀번호: 초기 설정값 확인 후 즉시 변경")
 
 def main():
     """메인 실행 함수"""

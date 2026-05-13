@@ -221,6 +221,88 @@
         }
         .spacer-8 { height: 10px; }
         .spacer-10 { height: 12px; }
+        @media (max-width: 768px) {
+            body {
+                padding: 8px 6px 12px;
+            }
+            .sheet {
+                max-width: 100%;
+                min-height: auto;
+            }
+            .preview-actions {
+                align-items: flex-start;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .preview-guide,
+            .preview-status {
+                white-space: normal;
+                text-align: left;
+            }
+            .preview-btn {
+                width: 100%;
+            }
+            td, th {
+                padding: 4px 3px;
+                font-size: 9.5px;
+                white-space: normal;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+            }
+            .meta-table td,
+            .usage-top th,
+            .usage-row td,
+            .footer-table td {
+                font-size: 9.5px;
+            }
+            .title-cell {
+                padding: 6px 4px 5px;
+            }
+            .title {
+                font-size: 22px;
+                line-height: 1.08;
+                word-break: keep-all;
+            }
+            .subtitle {
+                font-size: 14px;
+                line-height: 1.15;
+                word-break: keep-all;
+            }
+            .approval-sign {
+                height: 48px;
+            }
+            .section-title {
+                font-size: 12px;
+            }
+            .usage-top th {
+                height: auto;
+                font-size: 10px;
+                line-height: 1.2;
+            }
+            .usage-sub th {
+                height: auto;
+                font-size: 9px;
+            }
+            .usage-row td {
+                height: auto;
+                line-height: 1.35;
+            }
+            .usage-balance .main {
+                font-size: 9px;
+            }
+            .usage-balance .sub {
+                font-size: 8px;
+            }
+            .note-editor {
+                min-height: 40px;
+                font-size: 11px;
+                line-height: 1.4;
+            }
+            .doc-code,
+            .company-name {
+                font-size: 10px;
+            }
+        }
         @media print {
             body { padding: 0; }
             .sheet {

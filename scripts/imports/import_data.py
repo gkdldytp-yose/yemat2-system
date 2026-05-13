@@ -300,7 +300,7 @@ def create_admin_user():
             )
             db.add(admin)
             db.commit()
-            print("✓ 관리자 계정 생성 완료 (ID: admin, PW: 1111)")
+            print("✓ 관리자 계정 생성 완료 (초기 비밀번호는 즉시 변경하세요)")
         else:
             print("✓ 관리자 계정이 이미 존재합니다.")
     

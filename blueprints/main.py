@@ -1,9 +1,16 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
-import hashlib
 import json
 from datetime import datetime, date, timedelta
 
-from core import get_db, login_required, get_workplace, SHARED_WORKPLACE, today_local
+from core import (
+    SHARED_WORKPLACE,
+    get_db,
+    get_workplace,
+    hash_password,
+    login_required,
+    today_local,
+    verify_password,
+)
 
 bp = Blueprint('main', __name__)
 
@@ -506,8 +513,7 @@ def change_password():
     cursor.execute('SELECT password_hash FROM users WHERE id = ?', (user_id,))
     user = cursor.fetchone()
 
-    current_hash = hashlib.sha256(current_password.encode()).hexdigest()
-    if user['password_hash'] != current_hash:
+    if not verify_password(user['password_hash'], current_password):
         conn.close()
         return '''
             <!DOCTYPE html>
@@ -520,7 +526,7 @@ def change_password():
         '''
 
     # 새 비밀번호 저장
-    new_hash = hashlib.sha256(new_password.encode()).hexdigest()
+    new_hash = hash_password(new_password)
     cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_hash, user_id))
 
     conn.commit()

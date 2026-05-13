@@ -16,6 +16,7 @@ from core import (
     get_workplace,
     login_required,
     admin_required,
+    now_local,
     WORKPLACES,
     LOGISTICS_WORKPLACE,
     SHARED_WORKPLACE,
@@ -29,6 +30,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = PROJECT_ROOT / 'yemat.db'
 BACKUP_DIR = PROJECT_ROOT / 'backups'
 BACKUP_KEEP_DEFAULT = 10
+AUTO_BACKUP_RETENTION_DAYS = 60
+MANUAL_BACKUP_PREFIX = 'yemat_manual_'
+LEGACY_BACKUP_PREFIX = 'yemat_'
+AUTO_BACKUP_PREFIX = 'yemat_auto_'
+RESTORE_POINT_PREFIX = 'yemat_restore_point_'
 
 WORKPLACE_SORT_ORDER = {
     '1동 조미': 1,
@@ -2623,14 +2629,117 @@ def _parse_keep_count(raw):
     return value
 
 
+def _parse_backup_time(raw):
+    value = (raw or '').strip()
+    if not value:
+        return ''
+    if not re.fullmatch(r'\d{2}:\d{2}', value):
+        raise ValueError('invalid backup time')
+    hour = int(value[:2])
+    minute = int(value[3:5])
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+        raise ValueError('invalid backup time')
+    return f'{hour:02d}:{minute:02d}'
+
+
+def _is_valid_backup_filename(filename):
+    safe_name = Path(filename).name
+    if safe_name != filename or not safe_name.endswith('.db'):
+        return False
+    return safe_name.startswith(
+        (
+            MANUAL_BACKUP_PREFIX,
+            LEGACY_BACKUP_PREFIX,
+            AUTO_BACKUP_PREFIX,
+            RESTORE_POINT_PREFIX,
+        )
+    )
+
+
+def _classify_backup_file(path):
+    filename = path.name
+    if filename.startswith(AUTO_BACKUP_PREFIX):
+        return 'auto', '자동'
+    if filename.startswith(RESTORE_POINT_PREFIX):
+        return 'restore_point', '복원 전 보관'
+    return 'manual', '수동'
+
+
+def _get_db_backup_settings(conn):
+    row = conn.execute(
+        '''
+        SELECT
+            auto_backup_enabled,
+            auto_backup_time,
+            auto_retention_days,
+            manual_keep_count,
+            last_auto_backup_at,
+            last_auto_backup_name
+        FROM db_backup_settings
+        WHERE id = 1
+        '''
+    ).fetchone()
+    if row:
+        settings = dict(row)
+    else:
+        settings = {}
+    settings['auto_backup_enabled'] = int(settings.get('auto_backup_enabled') or 0)
+    settings['auto_backup_time'] = (settings.get('auto_backup_time') or '').strip()
+    settings['auto_retention_days'] = int(settings.get('auto_retention_days') or AUTO_BACKUP_RETENTION_DAYS)
+    settings['manual_keep_count'] = _parse_keep_count(settings.get('manual_keep_count'))
+    settings['last_auto_backup_at'] = (settings.get('last_auto_backup_at') or '').strip()
+    settings['last_auto_backup_name'] = (settings.get('last_auto_backup_name') or '').strip()
+    return settings
+
+
+def _save_db_backup_settings(conn, auto_enabled, auto_time, manual_keep_count):
+    conn.execute(
+        '''
+        UPDATE db_backup_settings
+        SET auto_backup_enabled = ?,
+            auto_backup_time = ?,
+            auto_retention_days = ?,
+            manual_keep_count = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1
+        ''',
+        (
+            1 if auto_enabled else 0,
+            auto_time or None,
+            AUTO_BACKUP_RETENTION_DAYS,
+            _parse_keep_count(manual_keep_count),
+        ),
+    )
+
+
+def _cleanup_expired_auto_backups(retention_days=AUTO_BACKUP_RETENTION_DAYS):
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    cutoff = now_local() - timedelta(days=max(int(retention_days or AUTO_BACKUP_RETENTION_DAYS), 1))
+    deleted = 0
+    for path in BACKUP_DIR.glob(f'{AUTO_BACKUP_PREFIX}*.db'):
+        try:
+            modified_at = datetime.fromtimestamp(path.stat().st_mtime, now_local().tzinfo)
+            if modified_at <= cutoff:
+                path.unlink(missing_ok=True)
+                deleted += 1
+        except Exception:
+            continue
+    return deleted
+
+
 def _list_db_backups():
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     rows = []
-    for path in sorted(BACKUP_DIR.glob('yemat_*.db'), key=lambda p: p.stat().st_mtime, reverse=True):
+    for path in sorted(BACKUP_DIR.glob('yemat*.db'), key=lambda p: p.stat().st_mtime, reverse=True):
+        if not _is_valid_backup_filename(path.name):
+            continue
         stat = path.stat()
+        backup_kind, backup_kind_label = _classify_backup_file(path)
         rows.append(
             {
                 'filename': path.name,
+                'backup_kind': backup_kind,
+                'backup_kind_label': backup_kind_label,
                 'size_bytes': int(stat.st_size),
                 'size_mb': round(stat.st_size / (1024 * 1024), 2),
                 'created_at': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
@@ -2824,10 +2933,15 @@ def _query_inventory_audit_rows(
 
 
 
-def _create_db_backup(keep_count):
+def _create_db_backup(keep_count, backup_kind='manual'):
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
-    backup_name = f'yemat_{timestamp}.db'
+    if backup_kind == 'auto':
+        backup_name = f'{AUTO_BACKUP_PREFIX}{timestamp}.db'
+    elif backup_kind == 'restore_point':
+        backup_name = f'{RESTORE_POINT_PREFIX}{timestamp}.db'
+    else:
+        backup_name = f'{MANUAL_BACKUP_PREFIX}{timestamp}.db'
     backup_path = BACKUP_DIR / backup_name
 
     src_conn = sqlite3.connect(str(DB_PATH))
@@ -2840,14 +2954,92 @@ def _create_db_backup(keep_count):
         finally:
             src_conn.close()
 
-    all_backups = sorted(BACKUP_DIR.glob('yemat_*.db'), key=lambda p: p.stat().st_mtime, reverse=True)
     deleted_count = 0
-    for old_path in all_backups[keep_count:]:
+    if backup_kind == 'manual':
+        all_backups = []
+        for path in BACKUP_DIR.glob('yemat*.db'):
+            if not path.is_file():
+                continue
+            if path.name.startswith(AUTO_BACKUP_PREFIX) or path.name.startswith(RESTORE_POINT_PREFIX):
+                continue
+            if path.name.startswith(MANUAL_BACKUP_PREFIX) or (
+                path.name.startswith(LEGACY_BACKUP_PREFIX)
+                and not path.name.startswith(AUTO_BACKUP_PREFIX)
+                and not path.name.startswith(RESTORE_POINT_PREFIX)
+            ):
+                all_backups.append(path)
+        all_backups.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        for old_path in all_backups[keep_count:]:
+            try:
+                old_path.unlink(missing_ok=True)
+                deleted_count += 1
+            except Exception:
+                pass
+    return backup_name, deleted_count
+
+
+def _restore_db_backup(backup_path):
+    src_conn = sqlite3.connect(str(backup_path))
+    dst_conn = sqlite3.connect(str(DB_PATH))
+    try:
+        src_conn.backup(dst_conn)
+    finally:
         try:
-            old_path.unlink(missing_ok=True)
-            deleted_count += 1
-        except Exception:
-            pass
+            dst_conn.close()
+        finally:
+            src_conn.close()
+
+
+def _run_scheduled_auto_backup_if_due(conn):
+    settings = _get_db_backup_settings(conn)
+    _cleanup_expired_auto_backups(settings.get('auto_retention_days'))
+    if not settings.get('auto_backup_enabled'):
+        return None, 0
+    scheduled_time = settings.get('auto_backup_time') or ''
+    if not scheduled_time:
+        return None, 0
+    try:
+        hour = int(scheduled_time[:2])
+        minute = int(scheduled_time[3:5])
+    except Exception:
+        return None, 0
+    now_dt = now_local()
+    scheduled_dt = now_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if now_dt < scheduled_dt:
+        return None, 0
+    last_auto_raw = settings.get('last_auto_backup_at') or ''
+    if last_auto_raw:
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'):
+            try:
+                last_auto_dt = datetime.strptime(last_auto_raw, fmt)
+                if last_auto_dt.date() == now_dt.date():
+                    return None, 0
+                break
+            except ValueError:
+                continue
+    backup_name, _ = _create_db_backup(settings.get('manual_keep_count'), backup_kind='auto')
+    conn.execute(
+        '''
+        UPDATE db_backup_settings
+        SET last_auto_backup_at = ?,
+            last_auto_backup_name = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1
+        ''',
+        (now_dt.strftime('%Y-%m-%d %H:%M:%S'), backup_name),
+    )
+    audit_log(
+        conn,
+        'create',
+        'db_backup_auto',
+        0,
+        {
+            'backup_name': backup_name,
+            'scheduled_time': scheduled_time,
+            'retention_days': settings.get('auto_retention_days') or AUTO_BACKUP_RETENTION_DAYS,
+        },
+    )
+    deleted_count = 0
     return backup_name, deleted_count
 
 
@@ -3142,7 +3334,6 @@ def integrated_management():
     if stat_view not in ('table', 'graph'):
         stat_view = 'table'
     stat_anchor = (request.args.get('stat_anchor') or '').strip()
-    keep_count = _parse_keep_count(request.args.get('keep_count'))
     inventory_type = (request.args.get('inventory_type') or 'all').strip() or 'all'
     if inventory_type not in ('all', 'raw', 'material'):
         inventory_type = 'all'
@@ -3166,6 +3357,12 @@ def integrated_management():
     conn = get_db()
     cursor = conn.cursor()
     _ensure_meeting_eval_price_schema(conn)
+    backup_settings = _get_db_backup_settings(conn)
+    auto_backup_name, _ = _run_scheduled_auto_backup_if_due(conn)
+    if auto_backup_name:
+        conn.commit()
+        backup_settings = _get_db_backup_settings(conn)
+    keep_count = _parse_keep_count(request.args.get('keep_count') or backup_settings.get('manual_keep_count'))
     stats = None
     meeting_eval = None
     subcontract_payload = None
@@ -3544,6 +3741,7 @@ def integrated_management():
         cursor.execute(query, params)
         data = cursor.fetchall()
     elif tab == 'db_backups':
+        _cleanup_expired_auto_backups(backup_settings.get('auto_retention_days'))
         data = _list_db_backups()
         if q:
             q_lower = q.lower()
@@ -3594,7 +3792,9 @@ def integrated_management():
                             stat_period=stat_period,
                            stat_view=stat_view,
                             stat_anchor=(stats or {}).get('anchor', stat_anchor),
-                            backup_keep_count=keep_count)
+                            backup_keep_count=keep_count,
+                            backup_settings=backup_settings,
+                            backup_retention_days=AUTO_BACKUP_RETENTION_DAYS)
 
 
 @bp.route('/integrated-management/meeting-eval/save-prices', methods=['POST'])
@@ -4359,10 +4559,16 @@ def integrated_update_raw_material_lot(lot_id):
 @bp.route('/integrated-management/db-backups/create', methods=['POST'])
 @admin_required
 def integrated_create_db_backup():
-    keep_count = _parse_keep_count(request.form.get('keep_count'))
     conn = get_db()
+    settings = _get_db_backup_settings(conn)
+    keep_count = _parse_keep_count(request.form.get('keep_count') or settings.get('manual_keep_count'))
+    auto_enabled = bool(int(settings.get('auto_backup_enabled') or 0))
+    auto_time = settings.get('auto_backup_time') or ''
+    retention_days = settings.get('auto_retention_days') or AUTO_BACKUP_RETENTION_DAYS
+    _cleanup_expired_auto_backups(retention_days)
     try:
-        backup_name, deleted_count = _create_db_backup(keep_count)
+        _save_db_backup_settings(conn, auto_enabled, auto_time, keep_count)
+        backup_name, deleted_count = _create_db_backup(keep_count, backup_kind='manual')
         audit_log(
             conn,
             'create',
@@ -4372,23 +4578,98 @@ def integrated_create_db_backup():
                 'backup_name': backup_name,
                 'keep_count': keep_count,
                 'deleted_old_backups': deleted_count,
+                'backup_kind': 'manual',
             },
         )
         conn.commit()
     except Exception:
         conn.rollback()
-        return "<script>alert('DB backup failed.'); history.back();</script>"
+        return "<script>alert('DB 백업 생성에 실패했습니다.'); history.back();</script>"
     finally:
         conn.close()
 
     return redirect(url_for('admin.integrated_management', tab='db_backups', keep_count=keep_count))
 
 
+@bp.route('/integrated-management/db-backups/settings', methods=['POST'])
+@admin_required
+def integrated_save_db_backup_settings():
+    auto_enabled = request.form.get('auto_backup_enabled') == '1'
+    keep_count = _parse_keep_count(request.form.get('keep_count'))
+    try:
+        auto_time = _parse_backup_time(request.form.get('auto_backup_time'))
+    except ValueError:
+        return "<script>alert('자동 백업 시간을 HH:MM 형식으로 입력해 주세요.'); history.back();</script>"
+    if auto_enabled and not auto_time:
+        return "<script>alert('자동 백업을 사용하려면 시간을 지정해 주세요.'); history.back();</script>"
+
+    conn = get_db()
+    try:
+        _save_db_backup_settings(conn, auto_enabled, auto_time, keep_count)
+        _cleanup_expired_auto_backups(AUTO_BACKUP_RETENTION_DAYS)
+        auto_backup_name, _ = _run_scheduled_auto_backup_if_due(conn)
+        audit_log(
+            conn,
+            'update',
+            'db_backup_settings',
+            0,
+            {
+                'auto_backup_enabled': auto_enabled,
+                'auto_backup_time': auto_time,
+                'keep_count': keep_count,
+                'retention_days': AUTO_BACKUP_RETENTION_DAYS,
+                'auto_backup_name': auto_backup_name,
+            },
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        return "<script>alert('자동 백업 설정 저장에 실패했습니다.'); history.back();</script>"
+    finally:
+        conn.close()
+
+    return redirect(url_for('admin.integrated_management', tab='db_backups', keep_count=keep_count))
+
+
+@bp.route('/integrated-management/db-backups/<path:filename>/restore', methods=['POST'])
+@admin_required
+def integrated_restore_db_backup(filename):
+    safe_name = Path(filename).name
+    if not _is_valid_backup_filename(filename):
+        return "Invalid backup filename.", 400
+    target = BACKUP_DIR / safe_name
+    if not target.exists():
+        return "Backup file not found.", 404
+
+    try:
+        restore_point_name, _ = _create_db_backup(BACKUP_KEEP_DEFAULT, backup_kind='restore_point')
+        _restore_db_backup(target)
+        conn = get_db()
+        try:
+            audit_log(
+                conn,
+                'restore',
+                'db_backup',
+                0,
+                {
+                    'restored_from': safe_name,
+                    'restore_point_backup': restore_point_name,
+                },
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return "<script>alert('백업 롤백에 실패했습니다.'); history.back();</script>"
+
+    return "<script>alert('선택한 백업으로 롤백했습니다. 이 백업 시점 이후 저장된 데이터는 복구되지 않습니다.'); location.href='/integrated-management?tab=db_backups';</script>"
+
+
 @bp.route('/integrated-management/db-backups/<path:filename>/download')
 @admin_required
 def integrated_download_db_backup(filename):
     safe_name = Path(filename).name
-    if safe_name != filename or not safe_name.startswith('yemat_') or not safe_name.endswith('.db'):
+    if not _is_valid_backup_filename(filename):
         return "Invalid backup filename.", 400
     target = BACKUP_DIR / safe_name
     if not target.exists():

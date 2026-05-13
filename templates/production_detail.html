@@ -89,12 +89,37 @@
 .expiry-split-summary{font-size:.76rem;color:#64748b;}
 
 @media (max-width: 768px) {
+    html,body{max-width:100%;overflow-x:hidden;}
     .info-grid{grid-template-columns:1fr !important;}
-    .sec{padding:1rem !important;}
+    .sec{padding:1rem !important;max-width:100%;overflow:hidden;}
     .raw-card{padding:0.75rem !important;}
     .raw-meta{grid-template-columns:1fr 1fr !important;gap:0.5rem !important;}
-    .mat-tbl{font-size:0.75rem !important;}
-    .mat-tbl th,.mat-tbl td{padding:0.4rem 0.2rem !important;}
+    .mat-tbl,
+    .mat-tbl thead,
+    .mat-tbl tbody,
+    .mat-tbl tr,
+    .mat-tbl td{display:block;width:100% !important;min-width:0 !important;max-width:100% !important;box-sizing:border-box;}
+    .mat-tbl colgroup{display:none;}
+    .mat-tbl{font-size:0.88rem !important;border-collapse:separate !important;border-spacing:0 0.75rem !important;table-layout:auto !important;min-width:0 !important;max-width:100% !important;overflow:hidden;}
+    .mat-tbl thead{display:none;}
+    .mat-tbl tbody{display:flex;flex-direction:column;gap:0.8rem;}
+    .mat-tbl tr{border:1px solid #e2e8f0;border-left:4px solid #667eea;border-radius:12px;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.06);overflow:hidden;}
+    .mat-tbl tr:hover td{background:transparent;}
+    .mat-tbl tr.lot-gap-row{border:none;border-radius:0;box-shadow:none;background:transparent;margin-top:-0.6rem;}
+    .mat-tbl tr.lot-gap-row td{display:block !important;padding:0 !important;border-bottom:none;background:transparent !important;}
+    .mat-tbl td{display:grid;grid-template-columns:86px minmax(0,1fr);align-items:center;gap:0.6rem;padding:0.58rem 0.75rem !important;border-bottom:1px solid #eef2f7;white-space:normal !important;overflow:visible !important;text-overflow:clip !important;word-break:keep-all;overflow-wrap:anywhere;}
+    .mat-tbl td::before{font-size:0.74rem;font-weight:800;color:#64748b;}
+    .mat-tbl td:nth-child(1){display:block;padding:0.75rem 0.8rem 0.5rem !important;background:#f8fafc;font-size:0.92rem;line-height:1.35;}
+    .mat-tbl td:nth-child(1)::before{content:'';}
+    .mat-tbl td:nth-child(2)::before{content:'단위';}
+    .mat-tbl td:nth-child(3)::before{content:'예상량';}
+    .mat-tbl td:nth-child(4)::before{content:'실제 사용량';}
+    .mat-tbl td:nth-child(5)::before{content:'로스량';}
+    .mat-tbl td:nth-child(6)::before{content:'수율';}
+    .mat-tbl td:last-child{border-bottom:none;}
+    .mat-tbl .ainfo{justify-content:flex-start;width:100%;min-width:0;}
+    .mat-tbl .ainfo .ainput{flex:1 1 auto;width:100%;max-width:100%;min-width:0;}
+    .ainput{width:100%;max-width:100%;min-width:0;min-height:38px;font-size:0.9rem;}
     .lot-gap-panel{grid-template-columns:1fr;}
     .lot-gap-fields{grid-template-columns:1fr;}
     .expiry-split-row{grid-template-columns:1fr;}
