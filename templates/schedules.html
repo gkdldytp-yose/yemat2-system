@@ -124,6 +124,31 @@
     background: white !important;
     transform: translateY(-1px);
 }
+.calendar-header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.calendar-action-btn {
+    background: rgba(255,255,255,0.95) !important;
+    color: #1a1a2e !important;
+    padding: 0.6rem 1.25rem !important;
+    border: none !important;
+    border-radius: 10px !important;
+    cursor: pointer;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    transition: all 0.2s ease;
+}
+.calendar-action-btn:hover {
+    background: white !important;
+    transform: translateY(-1px);
+}
 .calendar-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr); /* 7칸을 정확히 1/7씩 나눔 */
@@ -138,6 +163,9 @@
 }
 .calendar-weekday:first-child { color: #ef4444; }
 .calendar-weekday:last-child { color: #3b82f6; }
+.mobile-calendar-list {
+    display: none;
+}
 /* 날짜 칸 */
 .calendar-days {
     display: grid;
@@ -191,18 +219,455 @@
     border-radius:999px;
 }
 
-@media (max-width: 600px) {
-    .calendar-nav{width:100%;justify-content:space-between;gap:0.5rem;}
-    .calendar-nav button{min-width:0;flex:1;padding:0.7rem 0.8rem;font-size:0.95rem;min-height:48px;}
-    .calendar-month{min-width:auto;font-size:1.2rem;}
-    .calendar-weekday{padding:0.5rem 0.25rem;font-size:0.75rem;}
-    .calendar-day{min-height:90px;}
-    .day-number{font-size:1.05rem !important;}
-    .day-schedules{max-height:62px;overflow:hidden;}
-    .schedule-item{padding:0.25rem 0.35rem;margin:4px auto;width:92%;font-size:0.7rem;}
-    .schedule-info{display:none;}
-    .schedule-item button{display:none;}
-    .schedule-count{display:inline-flex;}
+@media (max-width: 768px) {
+    .calendar {
+        overflow: hidden;
+    }
+    .calendar-header {
+        padding: 1rem 0.9rem;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+    .calendar-nav {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .calendar-nav button {
+        width: 100%;
+        padding: 0.8rem 0.5rem;
+        font-size: 0.92rem;
+        min-height: 44px;
+        border-radius: 12px;
+    }
+    .calendar-month {
+        grid-column: 1 / -1;
+        order: -1;
+        min-width: auto;
+        font-size: 1.15rem;
+        line-height: 1.2;
+        padding-bottom: 0.1rem;
+    }
+    .calendar-header-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    .calendar-action-btn {
+        width: 100%;
+        padding: 0.7rem 0.5rem !important;
+        font-size: 0.84rem !important;
+        min-height: 42px;
+    }
+    .calendar-weekdays,
+    .calendar-days {
+        display: none;
+    }
+    .mobile-calendar-list {
+        display: block;
+        padding: 0.9rem;
+        background: #f8fafc;
+    }
+    .mobile-day-group {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+    }
+    .mobile-day-group + .mobile-day-group {
+        margin-top: 0.9rem;
+    }
+    .mobile-day-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.9rem 1rem 0.75rem;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+        border-bottom: 1px solid #e5edf7;
+    }
+    .mobile-day-date {
+        display: flex;
+        flex-direction: column;
+        gap: 0.12rem;
+    }
+    .mobile-day-date strong {
+        font-size: 1rem;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    .mobile-day-date span {
+        font-size: 0.78rem;
+        color: #64748b;
+    }
+    .mobile-day-schedules {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        padding: 0.85rem;
+    }
+    .mobile-schedule-card {
+        border: 1px solid #dbe7f3;
+        border-left: 5px solid #3b82f6;
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 0.85rem 0.9rem;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+        cursor: pointer;
+    }
+    .mobile-schedule-card.done {
+        border-left-color: #16a34a;
+        background: #f0fdf4;
+    }
+    .mobile-schedule-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.6rem;
+        margin-bottom: 0.55rem;
+    }
+    .mobile-schedule-name {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.35;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+    .mobile-status-badge {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 26px;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #fff;
+        background: #64748b;
+    }
+    .mobile-status-badge.done {
+        background: #16a34a;
+    }
+    .mobile-status-badge.planned {
+        background: #3b82f6;
+    }
+    .mobile-schedule-meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.55rem 0.75rem;
+    }
+    .mobile-meta-item {
+        min-width: 0;
+    }
+    .mobile-meta-label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 0.15rem;
+    }
+    .mobile-meta-value {
+        display: block;
+        font-size: 0.86rem;
+        color: #0f172a;
+        font-weight: 700;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+    .mobile-empty-state {
+        padding: 1rem;
+        text-align: center;
+        font-size: 0.92rem;
+        color: #64748b;
+        background: #fff;
+        border: 1px dashed #cbd5e1;
+        border-radius: 14px;
+    }
+    .schedule-toolbar {
+        gap: 0.75rem;
+    }
+    .schedule-toolbar .view-toggle {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    .schedule-toolbar .view-toggle button,
+    .schedule-toolbar > .btn {
+        width: 100%;
+    }
+    #listView {
+        overflow: hidden;
+    }
+    #listView > h2 {
+        margin-bottom: 0.7rem !important;
+        padding: 0.9rem 1rem 0 !important;
+        font-size: 1.1rem;
+        line-height: 1.3;
+    }
+    #listView .list-month-nav {
+        display: grid;
+        grid-template-columns: 1fr;
+        margin: 0 1rem 1rem;
+        padding: 0.75rem;
+        gap: 0.7rem;
+        border: 1px solid #dbeafe;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+    #listView .list-month-nav .nav-left,
+    #listView .list-month-nav .nav-right {
+        display: grid;
+        width: 100%;
+        gap: 0.45rem;
+    }
+    #listView .list-month-nav .nav-left {
+        grid-template-columns: 48px minmax(0, 1fr) 48px;
+        align-items: center;
+    }
+    #listView .list-month-nav .nav-right {
+        grid-template-columns: minmax(0, 1fr) 82px 74px;
+        align-items: stretch;
+    }
+    #listView .list-month-nav .month-pill {
+        grid-column: auto;
+        width: 100%;
+        margin-left: 0;
+    }
+    #listView .list-month-nav .month-picker {
+        grid-column: auto;
+        width: 100%;
+    }
+    #listView .status-tabs {
+        grid-column: 1 / -1;
+        width: 100%;
+        margin-left: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.3rem;
+        padding: 0.3rem;
+        border: 1px solid #d8e7f7;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.74);
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    #listView .list-month-nav .nav-btn,
+    #listView .status-tab-btn,
+    #listView .list-month-nav .month-picker,
+    #listView .list-month-nav .month-pill {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.86rem;
+        text-align: center;
+    }
+    #listView .list-month-nav .nav-btn {
+        border-radius: 12px;
+        padding: 0.45rem 0.35rem;
+        background: #ffffff;
+        border-color: #d4e3f5;
+        color: #0f172a;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07);
+    }
+    #listView .list-month-nav .nav-btn:active,
+    #listView .status-tab-btn:active {
+        transform: translateY(1px);
+    }
+    #listView .list-month-nav .nav-left .nav-btn {
+        font-size: 0;
+        padding: 0;
+    }
+    #listView .list-month-nav .nav-left .nav-btn:first-child::before {
+        content: '◀';
+        font-size: 1rem;
+        line-height: 1;
+    }
+    #listView .list-month-nav .nav-left .nav-btn:nth-child(3)::before {
+        content: '▶';
+        font-size: 1rem;
+        line-height: 1;
+    }
+    #listView .list-month-nav .nav-left .nav-btn:first-child::after {
+        content: '이전';
+        font-size: 0.62rem;
+        font-weight: 800;
+        margin-left: 0.15rem;
+    }
+    #listView .list-month-nav .nav-left .nav-btn:nth-child(3)::after {
+        content: '다음';
+        font-size: 0.62rem;
+        font-weight: 800;
+        margin-left: 0.15rem;
+    }
+    #listView .list-month-nav .month-pill {
+        border: 1px solid #c7d9ee;
+        border-radius: 999px;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #0f172a;
+        background: #ffffff;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+    #listView .status-tab-btn {
+        border: none;
+        border-radius: 11px;
+        background: transparent;
+        box-shadow: none;
+        padding: 0.55rem 0.25rem;
+        color: #475569;
+        transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+    }
+    #listView .status-tab-btn.active {
+        background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+        color: #fff;
+        box-shadow: 0 8px 16px rgba(29, 78, 216, 0.22);
+    }
+    #listView .list-month-nav .month-picker {
+        border: 1px solid #d4e3f5;
+        border-radius: 12px;
+        background: #ffffff;
+        min-width: 0;
+        color: #0f172a;
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+    #listView .list-month-nav .nav-right .nav-btn {
+        font-size: 0.8rem;
+        font-weight: 800;
+    }
+    #listView .table-container {
+        overflow: visible;
+        padding: 0 0.75rem 1rem;
+    }
+    #listView table,
+    #listView thead,
+    #listView tbody,
+    #listView tr,
+    #listView td {
+        display: block;
+        width: 100%;
+    }
+    #listView thead {
+        display: none;
+    }
+    #listView tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+    #listView tbody tr {
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid #3b82f6;
+        border-radius: 10px;
+        background: #ffffff;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+        overflow: hidden;
+        padding: 0.65rem 0.75rem;
+    }
+    #listView tbody tr[data-status="완료"] {
+        border-left-color: #16a34a;
+        background: #f8fffb;
+    }
+    #listView tbody tr.list-row-hidden {
+        display: none !important;
+    }
+    #listView tbody td {
+        display: grid;
+        grid-template-columns: 68px minmax(0, 1fr);
+        gap: 0.5rem;
+        align-items: start;
+        border: none;
+        border-bottom: none;
+        padding: 0.28rem 0;
+        font-size: 0.84rem;
+        line-height: 1.3;
+        color: #0f172a;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+    #listView tbody td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    #listView .list-mobile-card-label {
+        display: block;
+        color: #64748b;
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+    #listView .product-link {
+        display: inline;
+        font-size: 0.92rem;
+        line-height: 1.3;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+    #listView tbody td:nth-child(1),
+    #listView tbody td:nth-child(4) {
+        grid-template-columns: 1fr;
+        gap: 0.2rem;
+    }
+    #listView tbody td:nth-child(1) {
+        padding-bottom: 0.4rem;
+    }
+    #listView tbody td:nth-child(1) .list-mobile-card-label,
+    #listView tbody td:nth-child(4) .list-mobile-card-label {
+        display: none;
+    }
+    #listView tbody td:nth-child(1) strong {
+        font-size: 0.95rem;
+        color: #0f172a;
+    }
+    #listView tbody td:nth-child(4) {
+        padding: 0.35rem 0 0.45rem;
+    }
+    #listView tbody td:nth-child(4) .product-link {
+        font-size: 1rem;
+        font-weight: 800;
+        border-bottom: none;
+    }
+    #listView tbody td:nth-child(2),
+    #listView tbody td:nth-child(3),
+    #listView tbody td:nth-child(5),
+    #listView tbody td:nth-child(6),
+    #listView tbody td:nth-child(7) {
+        display: inline-grid;
+        grid-template-columns: auto auto;
+        width: auto;
+        margin: 0 0.35rem 0.25rem 0;
+        padding: 0.12rem 0;
+        gap: 0.25rem;
+        vertical-align: top;
+    }
+    #listView tbody td:nth-child(8) {
+        margin-top: 0.15rem;
+        border-top: 1px solid #eef2f7;
+        padding-top: 0.45rem;
+    }
+    #listView .line-badge {
+        display: inline-flex;
+        margin: 0 0.2rem 0.2rem 0;
+        padding: 0.16rem 0.45rem;
+        font-size: 0.74rem;
+        white-space: normal;
+    }
+    #listView .btn-delete {
+        width: 100%;
+        min-height: 36px;
+        font-size: 0.85rem;
+        margin-top: 0.15rem;
+    }
+    #listView tbody td form {
+        width: 100%;
+    }
 }
 /*.schedule-item {
     background: #ffffff;
@@ -504,6 +969,9 @@
 }
 #listView tbody tr:hover {
     background: #f8fafc;
+}
+#listView .list-mobile-card-label {
+    display: none;
 }
 #listView .product-link {
     color: #0f172a;
@@ -1080,11 +1548,11 @@
             <span class="calendar-month" id="currentMonth">{{ month_start.strftime('%Y년 %m월') }}</span>
             <button onclick="changeMonth(1)">다음 ▶</button>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
-            <button onclick="printCalendar()" style="background: rgba(255,255,255,0.95); color: #1a1a2e; padding: 0.6rem 1.25rem; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+        <div class="calendar-header-actions">
+            <button onclick="printCalendar()" class="calendar-action-btn">
                 🖨️ 인쇄
             </button>
-            <a href="{{ url_for('production.work_days', year=month_start.year, month=month_start.month) }}">
+            <a class="calendar-action-btn" href="{{ url_for('production.work_days', year=month_start.year, month=month_start.month) }}">
                 📅 근무일 관리
             </a>
         </div>
@@ -1097,18 +1565,19 @@
     </div>
     
     <div class="calendar-weekdays">
-        <div class="calendar-weekday" style = "font-size: x-large;" 
-        style="color: #dc3545;" >일</div>
-        <div class="calendar-weekday" style="font-size: x-large;">월</div>
-        <div class="calendar-weekday" style="font-size: x-large;">화</div>
-        <div class="calendar-weekday" style="font-size: x-large;">수</div>
-        <div class="calendar-weekday" style="font-size: x-large;">목</div>
-        <div class="calendar-weekday" style="font-size: x-large;">금</div>
-        <div class="calendar-weekday" style = "font-size: x-large;"
-        style="color: #007bff;">토</div>
+        <div class="calendar-weekday">일</div>
+        <div class="calendar-weekday">월</div>
+        <div class="calendar-weekday">화</div>
+        <div class="calendar-weekday">수</div>
+        <div class="calendar-weekday">목</div>
+        <div class="calendar-weekday">금</div>
+        <div class="calendar-weekday">토</div>
     </div>
     
     <div class="calendar-days" id="calendarDays">
+        <!-- JavaScript로 생성 -->
+    </div>
+    <div class="mobile-calendar-list" id="mobileCalendarList">
         <!-- JavaScript로 생성 -->
     </div>
 </div>
@@ -1194,9 +1663,10 @@
         <tbody>
             {% for schedule in schedules %}
             <tr data-status="{{ schedule.status or '' }}">
-                <td><strong>{{ schedule.scheduled_date }}</strong></td>
-                <td>{{ schedule.display_weekday }}</td>
+                <td><span class="list-mobile-card-label">예정일</span><strong>{{ schedule.scheduled_date }}</strong></td>
+                <td><span class="list-mobile-card-label">요일</span>{{ schedule.display_weekday }}</td>
                 <td>
+                    <span class="list-mobile-card-label">근무</span>
                     {% if schedule.display_work_type == '잔업' %}
                     <span class="badge badge-warning">잔업</span>
                     {% elif schedule.display_work_type == '특근' %}
@@ -1208,14 +1678,16 @@
                     {% endif %}
                 </td>
                 <td>
+                    <span class="list-mobile-card-label">상품명</span>
                     {% if schedule.linked_production_id %}
                     <a class="product-link" href="{{ url_for('production.production_detail', production_id=schedule.linked_production_id) }}">{{ schedule.product_name }}</a>
                     {% else %}
                     <a class="product-link" href="{{ url_for('production.schedule_detail', date=schedule.scheduled_date) }}">{{ schedule.product_name }}</a>
                     {% endif %}
                 </td>
-                <td><span style="font-weight: 600; color: #1e40af;">{{ schedule.planned_boxes }}</span> BOX</td>
+                <td><span class="list-mobile-card-label">계획 박스</span><span style="font-weight: 600; color: #1e40af;">{{ schedule.planned_boxes }}</span> BOX</td>
                 <td>
+                    <span class="list-mobile-card-label">생산 라인</span>
                     {% if schedule.line %}
                     {% for line_num in schedule.line.split(',') %}
                     <span class="line-badge">라인 {{ line_num }}</span>
@@ -1225,6 +1697,7 @@
                     {% endif %}
                 </td>
                 <td>
+                    <span class="list-mobile-card-label">상태</span>
                     {% if schedule.status == '예정' %}
                     <span class="badge badge-info">{{ schedule.status }}</span>
                     {% elif schedule.status == '진행중' %}
@@ -1233,8 +1706,9 @@
                     <span class="badge badge-success">{{ schedule.status }}</span>
                     {% endif %}
                 </td>
-                <td style="color: #64748b;">{{ schedule.note or '-' }}</td>
+                <td style="color: #64748b;"><span class="list-mobile-card-label">비고</span>{{ schedule.note or '-' }}</td>
                 <td>
+                    <span class="list-mobile-card-label">작업</span>
                     <form method="POST" action="{{ url_for('production.delete_schedule', schedule_id=schedule.id) }}" 
                           onsubmit="return confirm('정말 삭제하시겠습니까?');" style="display: inline;">
                         <button type="submit" class="btn-delete" {% if schedule.status == '완료' %}disabled title="완료 건은 삭제할 수 없습니다."{% endif %}>삭제</button>
@@ -1466,6 +1940,149 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function getWorkStatusMeta(dateStr) {
+    const workData = workDays[dateStr];
+    if (!workData) {
+        return { text: '미지정', className: '' };
+    }
+    if (workData.type === 'work') return { text: '근무', className: 'tag-work' };
+    if (workData.type === 'holiday') return { text: '휴무', className: 'tag-holiday' };
+    if (workData.type === 'overtime') {
+        return { text: workData.hours ? `잔업 ${workData.hours}h` : '잔업', className: 'tag-overtime' };
+    }
+    if (workData.type === 'extra') return { text: '특근', className: 'tag-extra' };
+    return { text: '미지정', className: '' };
+}
+
+function formatMobileDateLabel(dateStr) {
+    const date = new Date(`${dateStr}T00:00:00`);
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    return {
+        dateText: `${date.getMonth() + 1}월 ${date.getDate()}일`,
+        weekdayText: `${weekdays[date.getDay()]}요일`
+    };
+}
+
+function formatQuantity(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return '-';
+    return num.toLocaleString('ko-KR');
+}
+
+function openScheduleDetail(schedule) {
+    if (schedule.production_id) {
+        window.location.href = `/production/${schedule.production_id}`;
+    } else {
+        window.location.href = `/schedules/${schedule.scheduled_date}`;
+    }
+}
+
+function renderMobileScheduleList() {
+    const mobileList = document.getElementById('mobileCalendarList');
+    if (!mobileList) return;
+
+    const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    const monthlySchedules = schedules
+        .filter((schedule) => String(schedule.scheduled_date || '').startsWith(monthKey))
+        .sort((a, b) => {
+            if (a.scheduled_date !== b.scheduled_date) {
+                return String(a.scheduled_date).localeCompare(String(b.scheduled_date));
+            }
+            return String(a.product_name || '').localeCompare(String(b.product_name || ''));
+        });
+
+    if (!monthlySchedules.length) {
+        mobileList.innerHTML = '<div class="mobile-empty-state">이번 달에 등록된 생산 일정이 없습니다.</div>';
+        return;
+    }
+
+    const grouped = new Map();
+    monthlySchedules.forEach((schedule) => {
+        const key = schedule.scheduled_date;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(schedule);
+    });
+
+    let html = '';
+    grouped.forEach((items, dateStr) => {
+        const dateMeta = formatMobileDateLabel(dateStr);
+        const workMeta = getWorkStatusMeta(dateStr);
+        const badgeClass = workMeta.className ? `work-status-tag ${workMeta.className}` : 'work-status-tag';
+
+        const cardsHtml = items.map((schedule) => {
+            const isCompleted = Boolean(schedule.is_completed) || String(schedule.status || '').trim() === '완료';
+            const statusText = isCompleted ? '완료' : '예정';
+            const statusClass = isCompleted ? 'done' : 'planned';
+            const actualBoxes = isCompleted ? formatQuantity(schedule.actual_boxes) : '-';
+            const plannedBoxes = formatQuantity(schedule.planned_boxes);
+            const lineText = schedule.line ? `라인 ${escapeHtml(schedule.line)}` : '-';
+            const dateValue = `${dateMeta.dateText}`;
+            const weekdayValue = dateMeta.weekdayText;
+            const detailUrl = schedule.production_id
+                ? `/production/${schedule.production_id}`
+                : `/schedules/${schedule.scheduled_date}`;
+
+            return `
+                <div class="mobile-schedule-card ${isCompleted ? 'done' : ''}" data-detail-url="${detailUrl}">
+                    <div class="mobile-schedule-top">
+                        <div class="mobile-schedule-name">${escapeHtml(schedule.product_name || '')}</div>
+                        <span class="mobile-status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="mobile-schedule-meta">
+                        <div class="mobile-meta-item">
+                            <span class="mobile-meta-label">날짜</span>
+                            <span class="mobile-meta-value">${dateValue}</span>
+                        </div>
+                        <div class="mobile-meta-item">
+                            <span class="mobile-meta-label">요일</span>
+                            <span class="mobile-meta-value">${weekdayValue}</span>
+                        </div>
+                        <div class="mobile-meta-item">
+                            <span class="mobile-meta-label">계획수량</span>
+                            <span class="mobile-meta-value">${plannedBoxes}박스</span>
+                        </div>
+                        <div class="mobile-meta-item">
+                            <span class="mobile-meta-label">실제수량</span>
+                            <span class="mobile-meta-value">${actualBoxes === '-' ? '-' : `${actualBoxes}박스`}</span>
+                        </div>
+                        <div class="mobile-meta-item">
+                            <span class="mobile-meta-label">라인</span>
+                            <span class="mobile-meta-value">${lineText}</span>
+                        </div>
+                        <div class="mobile-meta-item">
+                            <span class="mobile-meta-label">상태</span>
+                            <span class="mobile-meta-value">${statusText}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        html += `
+            <section class="mobile-day-group">
+                <div class="mobile-day-header">
+                    <div class="mobile-day-date">
+                        <strong>${dateMeta.dateText}</strong>
+                        <span>${dateMeta.weekdayText}</span>
+                    </div>
+                    <span class="${badgeClass}">${workMeta.text}</span>
+                </div>
+                <div class="mobile-day-schedules">${cardsHtml}</div>
+            </section>
+        `;
+    });
+
+    mobileList.innerHTML = html;
+    mobileList.querySelectorAll('.mobile-schedule-card').forEach((card) => {
+        card.addEventListener('click', function() {
+            const detailUrl = this.getAttribute('data-detail-url');
+            if (detailUrl) {
+                window.location.href = detailUrl;
+            }
+        });
+    });
+}
+
 function deleteScheduleFromCalendar(scheduleId, isCompleted) {
     if (isCompleted) return;
     if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -1559,22 +2176,15 @@ function renderCalendar() {
         const workData = workDays[dateStr];
         const statusTag = document.createElement('span');
         statusTag.className = 'work-status-tag';
-        
-        // 배지 스타일 강제 적용 (CSS에 추가 안 했을 경우 대비)
-        statusTag.style.fontSize = '1rem';
-        statusTag.style.padding = '2px 6px';
-        statusTag.style.borderRadius = '4px';
-        statusTag.style.color = 'white';
-        statusTag.style.fontWeight = 'bold';
 
         let typeText = '';
-        if (workData.type === 'work') { typeText = '근무'; statusTag.style.backgroundColor = '#4caf50'; }
-        else if (workData.type === 'holiday') { typeText = '휴무'; statusTag.style.backgroundColor = '#f44336'; }
+        if (workData.type === 'work') { typeText = '근무'; statusTag.classList.add('tag-work'); }
+        else if (workData.type === 'holiday') { typeText = '휴무'; statusTag.classList.add('tag-holiday'); }
         else if (workData.type === 'overtime') { 
             typeText = workData.hours ? `잔업(${workData.hours}h)` : '잔업'; 
-            statusTag.style.backgroundColor = '#ff9800'; 
+            statusTag.classList.add('tag-overtime');
         }
-        else if (workData.type === 'extra') { typeText = '특근'; statusTag.style.backgroundColor = '#2196f3'; }
+        else if (workData.type === 'extra') { typeText = '특근'; statusTag.classList.add('tag-extra'); }
 
         statusTag.textContent = typeText;
         dayHeader.appendChild(statusTag);
@@ -1691,6 +2301,7 @@ function renderCalendar() {
     
     // 월 표시 업데이트
     document.getElementById('currentMonth').textContent = `${currentYear}년 ${currentMonth}월`;
+    renderMobileScheduleList();
 }
 
 // 월 변경

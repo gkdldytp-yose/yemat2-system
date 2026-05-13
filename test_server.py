@@ -22,4 +22,4 @@ if __name__ == '__main__':
     print("테스트 서버 시작!")
     print("브라우저에서 http://localhost:5000 접속하세요")
     print("="*60 + "\n")
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)

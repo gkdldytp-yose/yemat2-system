@@ -292,10 +292,198 @@
   .export-pending-stack.process{align-items:flex-start;justify-self:stretch;min-width:0;}
 }
 @media (max-width: 760px){
+  #materialsListCard .table-container{overflow-x:visible;margin:0;padding:0;}
+  #materialsTable{min-width:0!important;}
+  #materialsTable thead{display:none;}
+  #materialsTable,
+  #materialsTable tbody{display:block;width:100%;}
+  #materialsTable tbody tr{
+    display:block;
+    margin-bottom:.8rem;
+    border:1px solid #e6edf5;
+    border-radius:16px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 8px 20px rgba(15,23,42,.05);
+  }
+  #materialsTable tbody td{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.8rem;
+    width:100%;
+    padding:.72rem .82rem;
+    border:none;
+    border-top:1px solid #eef2f7;
+    background:#fff;
+  }
+  #materialsTable tbody td:first-child{border-top:none;}
+  #materialsTable tbody td::before{
+    flex:0 0 88px;
+    font-size:.72rem;
+    font-weight:900;
+    color:#64748b;
+    line-height:1.45;
+    content:'';
+  }
+  #materialsTable tbody td:nth-child(1)::before{content:'코드';}
+  #materialsTable tbody td:nth-child(2)::before{content:'부자재명';}
+  #materialsTable tbody td:nth-child(3)::before{content:'업체';}
+  #materialsTable tbody td:nth-child(4)::before{content:'단위';}
+  #materialsTable tbody td:nth-child(5)::before{content:'작업장 재고';}
+  #materialsTable tbody td:nth-child(6)::before{content:'총재고';}
+  #materialsTable tbody td:nth-child(7)::before{content:'최소';}
+  #materialsTable tbody td:nth-child(8)::before{content:'관리';}
+  #materialsTable tbody td:last-child{flex-direction:column;align-items:stretch;gap:.45rem;}
+  #materialsTable tbody td:last-child::before{flex:none;}
+  #materialsTable tbody td:last-child .btn,
+  #materialsTable tbody td:last-child form,
+  #materialsTable tbody td:last-child form .btn{width:100%;}
+  #materialsTable .mat-name-link{font-size:.92rem!important;line-height:1.45;overflow-wrap:anywhere;}
+  #materialsTable tbody td strong{white-space:normal;text-align:right;}
   .export-complete-row,.export-complete-form{flex-wrap:wrap;}
   .export-complete-qty,.export-complete-note{width:100%!important;min-width:0;}
   .export-pending-top{grid-template-columns:1fr;}
   .export-pending-stack.process{justify-content:flex-start;align-items:flex-start;}
+  #materialsFilterForm{grid-template-columns:1fr!important;}
+  #materialsFilterForm > div{grid-column:1 / -1!important;}
+  #materialsFilterForm .btn,
+  #materialsFilterForm .btn-reset{width:100%;justify-content:center;}
+  .req-tabs,.issue-status-tabs,.issue-date-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.18rem;-webkit-overflow-scrolling:touch;}
+  .req-tab-btn,.issue-status-btn,.issue-date-btn,.issue-date-picker-btn{flex:0 0 auto;}
+  .request-builder-card{padding:.85rem;border-radius:16px;}
+  .request-builder-head,
+  .issue-status-head{flex-direction:column;align-items:stretch;}
+  .issue-status-actions{justify-content:flex-start;}
+  .request-inline-actions,
+  .request-submit-bar{flex-direction:column;align-items:stretch;}
+  .request-submit-bar .btn,
+  .request-inline-actions .btn,
+  .issue-status-actions .btn,
+  .issue-status-actions form,
+  .issue-status-actions form .btn,
+  .bulk-mode-actions{width:100%;}
+  .bulk-mode-actions{justify-content:space-between;}
+  .request-list-table,
+  .issue-status-table{min-width:0!important;border-spacing:0;}
+  #issueBulkForm .request-list-table thead,
+  #issueStatusPendingPane .issue-status-table thead,
+  #issueStatusCompletedPane .issue-status-table thead,
+  #exportStatusCompletedPane .issue-status-table thead{display:none;}
+  #issueBulkForm .request-list-table,
+  #issueBulkForm .request-list-table tbody,
+  #issueStatusPendingPane .issue-status-table,
+  #issueStatusPendingPane .issue-status-table tbody,
+  #issueStatusCompletedPane .issue-status-table,
+  #issueStatusCompletedPane .issue-status-table tbody,
+  #exportStatusCompletedPane .issue-status-table,
+  #exportStatusCompletedPane .issue-status-table tbody{display:block;width:100%;}
+  #issueBulkForm .request-list-table tbody tr,
+  #issueStatusPendingPane .issue-status-table tbody tr,
+  #issueStatusCompletedPane .issue-status-table tbody tr,
+  #exportStatusCompletedPane .issue-status-table tbody tr{
+    display:block;
+    margin-bottom:.8rem;
+    border:1px solid #e6edf5;
+    border-radius:16px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 8px 20px rgba(15,23,42,.05);
+  }
+  #issueBulkForm .request-list-table tbody td,
+  #issueStatusPendingPane .issue-status-table tbody td,
+  #issueStatusCompletedPane .issue-status-table tbody td,
+  #exportStatusCompletedPane .issue-status-table tbody td{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.8rem;
+    width:100%;
+    padding:.72rem .82rem;
+    border:none;
+    border-top:1px solid #eef2f7;
+    background:#fff;
+  }
+  #issueBulkForm .request-list-table tbody td:first-child,
+  #issueStatusPendingPane .issue-status-table tbody td:first-child,
+  #issueStatusCompletedPane .issue-status-table tbody td:first-child,
+  #exportStatusCompletedPane .issue-status-table tbody td:first-child{border-top:none;}
+  #issueBulkForm .request-list-table tbody td::before,
+  #issueStatusPendingPane .issue-status-table tbody td::before,
+  #issueStatusCompletedPane .issue-status-table tbody td::before,
+  #exportStatusCompletedPane .issue-status-table tbody td::before{
+    flex:0 0 92px;
+    font-size:.72rem;
+    font-weight:900;
+    color:#64748b;
+    line-height:1.45;
+    content:'';
+  }
+  #issueBulkForm .request-list-table tbody td{flex-direction:column;align-items:stretch;gap:.45rem;}
+  #issueBulkForm .request-list-table tbody td::before{flex:none;}
+  #issueBulkForm .request-list-table tbody td:nth-child(1)::before{content:'코드';}
+  #issueBulkForm .request-list-table tbody td:nth-child(2)::before{content:'자재명';}
+  #issueBulkForm .request-list-table tbody td:nth-child(4)::before{content:'요청수량';}
+  #issueBulkForm .request-list-table tbody td:nth-child(5)::before{content:'환산수량';}
+  #issueBulkForm .request-list-table tbody td:nth-child(6)::before{content:'비고';}
+  #issueBulkForm .request-list-table tbody td:nth-child(7)::before{content:'관리';}
+  #issueBulkForm .request-list-table tbody td:nth-child(7) .btn{width:100%;}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(1)::before{content:'요청 정보';}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(2)::before{content:'코드';}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(3)::before{content:'자재명';}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(4)::before{content:'요청수량';}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(5)::before{content:'실입고수량';}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(6)::before{content:'상태';}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(7)::before{content:'비고';}
+  #issueStatusPendingPane .issue-status-table tbody td:nth-child(8)::before{content:'처리';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(1)::before{content:'요청 정보';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(2)::before{content:'코드';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(3)::before{content:'자재명';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(4)::before{content:'요청수량';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(5)::before{content:'지급수량';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(6)::before{content:'완료일';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(7)::before{content:'비고';}
+  #issueStatusCompletedPane .issue-status-table tbody td:nth-child(8)::before{content:'처리';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(1)::before{content:'요청 정보';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(2)::before{content:'코드';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(3)::before{content:'자재명';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(4)::before{content:'로트';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(5)::before{content:'반출수량';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(6)::before{content:'완료일';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(7)::before{content:'사유';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(8)::before{content:'메모';}
+  #exportStatusCompletedPane .issue-status-table tbody td:nth-child(9)::before{content:'처리';}
+  #issueStatusPendingPane .issue-note-box,
+  #issueStatusCompletedPane .issue-note-box,
+  #exportStatusCompletedPane .issue-note-box{max-width:none;width:100%;}
+  #issueBulkForm .request-list-table tbody td.request-empty,
+  #issueStatusPendingPane .issue-status-table tbody td.issue-empty,
+  #issueStatusCompletedPane .issue-status-table tbody td.issue-empty,
+  #exportStatusCompletedPane .issue-status-table tbody td.issue-empty{
+    display:block;
+    text-align:center;
+  }
+  #issueBulkForm .request-list-table tbody td.request-empty::before,
+  #issueStatusPendingPane .issue-status-table tbody td.issue-empty::before,
+  #issueStatusCompletedPane .issue-status-table tbody td.issue-empty::before,
+  #exportStatusCompletedPane .issue-status-table tbody td.issue-empty::before{display:none;}
+  #issueStatusPendingPane .issue-name-cell,
+  #issueStatusCompletedPane .issue-name-cell{min-width:0;}
+  #issueStatusPendingPane .issue-manage-stack,
+  #issueStatusCompletedPane .issue-manage-stack{width:100%;justify-content:flex-start;}
+  #issueStatusPendingPane .issue-manage-stack form,
+  #issueStatusCompletedPane .issue-manage-stack form{width:100%;}
+  #issueStatusPendingPane .issue-manage-stack .btn,
+  #issueStatusCompletedPane .issue-manage-stack .btn{width:100%;justify-content:center;}
+  .export-pending-card-cell{padding:.2rem!important;}
+  .export-pending-card{gap:.75rem;}
+  .export-pending-bottom{grid-template-columns:1fr;}
+  .export-complete-row,
+  .export-complete-actions{width:100%;}
+  .export-complete-form,
+  .export-complete-delete{width:100%;}
+  .export-complete-form .btn,
+  .export-complete-delete .btn{width:100%;}
 }
 
 </style>

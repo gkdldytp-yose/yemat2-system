@@ -623,6 +623,44 @@
             <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="applyInventoryAudit()">실재고 반영</button>
             {% endif %}
         </div>
+        {% if tab == 'db_backups' %}
+        <div class="header-row" style="margin-top:0.75rem;padding:0.95rem 1rem;border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);">
+            <form method="POST" action="/integrated-management/db-backups/settings" style="display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap;width:100%;">
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:160px;">
+                    <label style="font-size:0.82rem;color:#475569;font-weight:700;">자동 백업 사용</label>
+                    <label style="display:flex;align-items:center;gap:0.45rem;font-size:0.92rem;color:#0f172a;font-weight:600;">
+                        <input type="checkbox" name="auto_backup_enabled" value="1" {% if backup_settings.auto_backup_enabled %}checked{% endif %}>
+                        지정 시각 자동 백업
+                    </label>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:140px;">
+                    <label style="font-size:0.82rem;color:#475569;font-weight:700;">자동 백업 시간</label>
+                    <input type="time" name="auto_backup_time" value="{{ backup_settings.auto_backup_time or '' }}" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:120px;">
+                    <label style="font-size:0.82rem;color:#475569;font-weight:700;">수동 보관개수</label>
+                    <input type="number" name="keep_count" value="{{ backup_keep_count or 10 }}" min="1" max="200" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:120px;">
+                    <label style="font-size:0.82rem;color:#475569;font-weight:700;">자동 보관기간</label>
+                    <div style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#f8fafc;color:#334155;font-weight:700;">{{ backup_retention_days }}일</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:240px;flex:1 1 240px;">
+                    <label style="font-size:0.82rem;color:#475569;font-weight:700;">안내</label>
+                    <div style="font-size:0.84rem;color:#475569;line-height:1.5;">
+                        자동 백업은 지정 시각 이후 첫 접속 시 생성됩니다. 롤백하면 선택한 백업 시점 이후 저장된 데이터는 손실됩니다.
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:flex-end;margin-left:auto;">
+                    <button type="submit" class="btn btn-small" style="height:42px;background:#0f766e;">자동 백업 저장</button>
+                </div>
+                <div style="width:100%;display:flex;gap:0.75rem;flex-wrap:wrap;font-size:0.82rem;color:#64748b;">
+                    <span>최근 자동 백업: {{ backup_settings.last_auto_backup_at or '-' }}</span>
+                    <span>최근 파일: {{ backup_settings.last_auto_backup_name or '-' }}</span>
+                </div>
+            </form>
+        </div>
+        {% endif %}
         {% if tab == 'materials' %}
         <div class="header-row" style="justify-content:flex-end;margin-top:0.75rem;padding:0.9rem 1rem;border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);">
             <form method="GET" action="/integrated-management" style="display:flex;gap:0.65rem;align-items:flex-end;flex-wrap:wrap;width:100%;">
@@ -1660,6 +1698,7 @@
                     <th>IP</th>
                     <th>일시</th>
                     {% elif tab == 'db_backups' %}
+                    <th>구분</th>
                     <th>파일명</th>
                     <th>크기(MB)</th>
                     <th>생성일시</th>
@@ -1739,11 +1778,15 @@
                     <td>{{ item.ip or '-' }}</td>
                     <td>{{ item.created_at }}</td>
                     {% elif tab == 'db_backups' %}
+                    <td>{{ item.backup_kind_label }}</td>
                     <td><code>{{ item.filename }}</code></td>
                     <td>{{ "%.2f"|format(item.size_mb or 0) }}</td>
                     <td>{{ item.created_at }}</td>
                     <td style="white-space:nowrap;">
                         <a class="btn btn-small" style="background:#0f766e;" href="/integrated-management/db-backups/{{ item.filename|urlencode }}/download">다운로드</a>
+                        <form method="POST" action="/integrated-management/db-backups/{{ item.filename|urlencode }}/restore" style="display:inline;" onsubmit="return confirm('선택한 백업으로 롤백할까요?\\n롤백 시 이 백업 이후 저장된 데이터는 손실됩니다.');">
+                            <button type="submit" class="btn btn-small" style="background:#dc2626;border-color:#dc2626;color:#fff;">롤백</button>
+                        </form>
                     </td>
                     {% else %}
                     {% if tab == 'materials' %}

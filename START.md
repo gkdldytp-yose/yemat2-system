@@ -43,7 +43,7 @@ Default admin account:
 
 ```text
 ID: admin
-PW: 1111
+PW: 초기 설정값 확인 후 즉시 변경
 ```
 
 ## 5. Optional settings

@@ -2,12 +2,28 @@ import hashlib
 import os
 
 from flask import Flask, session
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core import LOGISTICS_WORKPLACE, SHARED_WORKPLACE, get_db, get_workplace
 
 DEFAULT_SECRET_KEY = 'yemat-secret-key-2025'
 DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = 8080
+
+
+def _env_flag(name, default=False):
+    raw = os.getenv(name)
+    if raw is None:
+        return bool(default)
+    return str(raw).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _resolve_secret_key():
+    return (
+        os.getenv('YEMAT_SECRET_KEY')
+        or os.getenv('SECRET_KEY')
+        or DEFAULT_SECRET_KEY
+    )
 
 
 def register_blueprints(app):
@@ -34,7 +50,12 @@ def register_blueprints(app):
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', DEFAULT_SECRET_KEY)
+    app.config['SECRET_KEY'] = _resolve_secret_key()
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('YEMAT_SESSION_COOKIE_SAMESITE', 'Lax')
+    app.config['SESSION_COOKIE_SECURE'] = _env_flag('YEMAT_SESSION_COOKIE_SECURE', default=False)
+    app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['SESSION_COOKIE_SECURE'] else 'http'
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
     register_blueprints(app)
 
@@ -259,7 +280,7 @@ def create_app():
                 names = ', '.join(row['name'] for row in low_stock_rows[:3])
                 push_dynamic_notification(
                     'material_shortage',
-                    f'{workplace} 재고 부족 부자재 {len(low_stock_rows)}건',
+                    f'{workplace} ?? ?? ??? {len(low_stock_rows)}?',
                     names,
                     '/materials?shortage_ids=' + ','.join(str(int(item['id'])) for item in low_stock_rows if int(item.get('id') or 0) > 0),
                 )
@@ -269,20 +290,20 @@ def create_app():
                 names = ', '.join(row['name'] for row in raw_shortage_rows[:3])
                 push_dynamic_notification(
                     'raw_shortage',
-                    f'{workplace} 원초 부족 {len(raw_shortage_rows)}건',
+                    f'{workplace} ?? ?? {len(raw_shortage_rows)}?',
                     names,
                     '/raw-materials',
                 )
 
         if username:
             cursor.execute(
-                '''
+                """
                 SELECT COUNT(*) AS cnt
                 FROM logistics_issue_requests
                 WHERE requester_username = ?
                   AND COALESCE(request_type, 'ISSUE') = 'ISSUE'
-                  AND status = '요청'
-                ''',
+                  AND status = '??'
+                """,
                 (username,),
             )
             pending_issue_row = cursor.fetchone()
@@ -290,8 +311,8 @@ def create_app():
             if pending_issue_count > 0:
                 push_dynamic_notification(
                     'issue_receipt_pending',
-                    f'불출 입고 완료 처리 필요 {pending_issue_count}건',
-                    '실제 받은 수량을 확인하고 입고 완료 처리가 필요한 불출 요청이 있습니다.',
+                    f'?? ?? ?? ?? ?? {pending_issue_count}?',
+                    '?? ?? ??? ???? ?? ?? ???? ?? ?? ??? ????.',
                     '/materials?req_tab=issue&issue_status=pending',
                 )
 
@@ -299,15 +320,11 @@ def create_app():
             cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE status = 'pending'")
             pending_users = int((cursor.fetchone() or {'cnt': 0})['cnt'] or 0)
             if pending_users > 0:
-                notifications.append(
-                    {
-                        'id': None,
-                        'title': f'회원가입 승인 대기 {pending_users}건',
-                        'body': '최고 관리자 확인이 필요한 신규 가입 신청이 있습니다.',
-                        'link': '/users',
-                        'is_read': 1,
-                        'created_at': '',
-                    }
+                push_dynamic_notification(
+                    'pending_users',
+                    f'???? ?? ?? {pending_users}?',
+                    '?? ??? ??? ??? ?? ?? ??? ????.',
+                    '/users',
                 )
 
         return notifications
@@ -360,7 +377,12 @@ def create_app():
         unread_count = int(unread_row['unread_count'] or 0) if unread_row else 0
         dynamic_unread_count = 0
         for nt in dynamic_notifications:
-            is_dynamic_read = dynamic_read_map.get(nt['dynamic_key']) == nt['dynamic_signature']
+            dynamic_key = nt.get('dynamic_key') if isinstance(nt, dict) else None
+            dynamic_signature = nt.get('dynamic_signature') if isinstance(nt, dict) else None
+            if not dynamic_key or not dynamic_signature:
+                nt['is_read'] = 1
+                continue
+            is_dynamic_read = dynamic_read_map.get(dynamic_key) == dynamic_signature
             nt['is_read'] = 1 if is_dynamic_read else 0
             if not is_dynamic_read:
                 dynamic_unread_count += 1
@@ -380,11 +402,15 @@ app = create_app()
 if __name__ == '__main__':
     host = os.getenv('YEMAT_HOST', DEFAULT_HOST)
     port = int(os.getenv('YEMAT_PORT', DEFAULT_PORT))
+    using_default_secret = app.config['SECRET_KEY'] == DEFAULT_SECRET_KEY
     print('\n' + '=' * 80)
     print('예맛 통합 생산관리 시스템 서버 시작')
     print('=' * 80)
     print(f'\n접속 URL: http://localhost:{port}')
-    print('관리자 계정: admin / 1111\n')
-    app.run(host=host, port=port, debug=True)
+    if using_default_secret:
+        print('[warning] Set YEMAT_SECRET_KEY or SECRET_KEY before production deployment.')
+    if app.config['SESSION_COOKIE_SECURE']:
+        print('[security] SESSION_COOKIE_SECURE=ON')
+    app.run(host=host, port=port, debug=False)
 
 

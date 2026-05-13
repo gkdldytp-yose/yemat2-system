@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+import hashlib
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # 공통 작업장 목록 (물류 작업장은 일반 선택 목록에서 제외)
 WORKPLACES = ['\u0031\ub3d9 \uc870\ubbf8', '\u0031\ub3d9 \uc790\ubc18', '\u0032\ub3d9 \uc2e0\uad00 \u0031\uce35', '\u0032\ub3d9 \uc2e0\uad00 \u0032\uce35', '\uae30\ud0c0']
@@ -24,6 +26,7 @@ _material_lot_schema_checked = False
 _logistics_schema_checked = False
 _log_retention_checked = False
 _import_schema_checked = False
+_backup_schema_checked = False
 
 # 데이터베이스 연결
 
@@ -45,6 +48,29 @@ def today_local():
 
 def today_local_str():
     return now_local().strftime('%Y-%m-%d')
+
+
+def hash_password(password):
+    return generate_password_hash(password or '', method='pbkdf2:sha256', salt_length=16)
+
+
+def verify_password(stored_hash, password):
+    stored = (stored_hash or '').strip()
+    candidate = password or ''
+    if not stored:
+        return False
+    if stored.startswith('pbkdf2:') or stored.startswith('scrypt:'):
+        try:
+            return check_password_hash(stored, candidate)
+        except Exception:
+            return False
+    legacy_hash = hashlib.sha256(candidate.encode()).hexdigest()
+    return stored == legacy_hash
+
+
+def password_needs_rehash(stored_hash):
+    stored = (stored_hash or '').strip()
+    return bool(stored) and not (stored.startswith('pbkdf2:') or stored.startswith('scrypt:'))
 
 def get_db():
     """데이터베이스 연결 - WAL 모드 + 긴 타임아웃"""
@@ -73,6 +99,7 @@ def get_db():
     _ensure_material_lot_schema(conn)
     _ensure_logistics_schema(conn)
     _ensure_import_schema(conn)
+    _ensure_backup_schema(conn)
     _cleanup_old_logs(conn)
     return conn
 
@@ -180,6 +207,68 @@ def _ensure_import_schema(conn):
     except Exception:
         pass
     _import_schema_checked = True
+
+
+def _ensure_backup_schema(conn):
+    """Database backup settings table."""
+    global _backup_schema_checked
+    if _backup_schema_checked:
+        return
+    try:
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS db_backup_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                auto_backup_enabled INTEGER DEFAULT 0,
+                auto_backup_time TEXT,
+                auto_retention_days INTEGER DEFAULT 60,
+                manual_keep_count INTEGER DEFAULT 10,
+                last_auto_backup_at TEXT,
+                last_auto_backup_name TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            INSERT INTO db_backup_settings (
+                id,
+                auto_backup_enabled,
+                auto_retention_days,
+                manual_keep_count
+            )
+            VALUES (1, 0, 60, 10)
+            ON CONFLICT(id) DO NOTHING
+            '''
+        )
+        cols = [row['name'] for row in conn.execute("PRAGMA table_info(db_backup_settings)").fetchall()]
+        if 'auto_retention_days' not in cols:
+            conn.execute("ALTER TABLE db_backup_settings ADD COLUMN auto_retention_days INTEGER DEFAULT 60")
+        if 'manual_keep_count' not in cols:
+            conn.execute("ALTER TABLE db_backup_settings ADD COLUMN manual_keep_count INTEGER DEFAULT 10")
+        if 'last_auto_backup_at' not in cols:
+            conn.execute("ALTER TABLE db_backup_settings ADD COLUMN last_auto_backup_at TEXT")
+        if 'last_auto_backup_name' not in cols:
+            conn.execute("ALTER TABLE db_backup_settings ADD COLUMN last_auto_backup_name TEXT")
+        if 'updated_at' not in cols:
+            conn.execute("ALTER TABLE db_backup_settings ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        conn.execute(
+            '''
+            UPDATE db_backup_settings
+            SET auto_retention_days = 60
+            WHERE auto_retention_days IS NULL OR auto_retention_days < 1
+            '''
+        )
+        conn.execute(
+            '''
+            UPDATE db_backup_settings
+            SET manual_keep_count = 10
+            WHERE manual_keep_count IS NULL OR manual_keep_count < 1
+            '''
+        )
+    except Exception:
+        pass
+    _backup_schema_checked = True
 
 
 def _ensure_logistics_schema(conn):

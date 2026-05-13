@@ -206,7 +206,7 @@ def create_admin_user(conn):
         ("admin", password_hash, 1)
     )
     conn.commit()
-    print("✓ 관리자 계정 생성 완료! (ID: admin, PW: 1111)")
+    print("✓ 관리자 계정 생성 완료! 초기 비밀번호는 즉시 변경하세요.")
 
 def import_suppliers_and_materials(conn):
     """업체 및 부자재 데이터 import"""
@@ -319,7 +319,7 @@ def main():
         print("✓ 데이터 import 완료!")
         print("=" * 80)
         print("\n데이터베이스 파일: yemat.db")
-        print("관리자 계정: admin / 1111")
+        print("관리자 계정이 생성되었습니다. 초기 비밀번호는 즉시 변경하세요.")
         
     except Exception as e:
         print(f"\n✗ 에러 발생: {e}")
