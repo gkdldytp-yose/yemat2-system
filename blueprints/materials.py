@@ -22,6 +22,10 @@ from core import (
 
 bp = Blueprint('materials', __name__)
 
+
+def _local_timestamp_str():
+    return now_local().strftime('%Y-%m-%d %H:%M:%S')
+
 PURCHASE_STATUS_NEEDED = '\ubc1c\uc8fc\ud544\uc694'
 PURCHASE_STATUS_ORDERED = '\ubc1c\uc8fc\uc911'
 PURCHASE_STATUS_RECEIVED = '\uc785\uace0\uc644\ub8cc'
@@ -756,12 +760,13 @@ def _register_export_request_row(cursor, workplace, req_user, req_username, mate
         raise ValueError('작업장 재고가 부족합니다.')
 
     pool_code = _pool_code_from_row(mat)
+    requested_at = _local_timestamp_str()
     cursor.execute(
         '''
         INSERT INTO logistics_issue_requests
         (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, approved_quantity,
-         request_type, reason, reason_detail, material_lot_id, status, note, requested_by, requester_username)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'RETURN', ?, ?, ?, ?, ?, ?, ?)
+         request_type, reason, reason_detail, material_lot_id, status, note, requested_by, requester_username, requested_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
         (
             material_id,
@@ -778,6 +783,7 @@ def _register_export_request_row(cursor, workplace, req_user, req_username, mate
             note,
             req_user,
             req_username,
+            requested_at,
         ),
     )
     cursor.execute(
@@ -1000,10 +1006,10 @@ def _unused_broken_register_export_request_row(cursor, workplace, req_user, req_
     )
     cursor.execute(
         '''
-        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-        VALUES (?, ?, 'export_request_pending', ?, ?)
+        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note, created_at)
+        VALUES (?, ?, 'export_request_pending', ?, ?, ?)
         ''',
-        (lot_id, material_id, quantity, f'{workplace} 諛섏텧 ?붿껌 ({reason})'),
+        (lot_id, material_id, quantity, f'{workplace} 諛섏텧 ?붿껌 ({reason})', requested_at),
     )
     return cursor.lastrowid, pool_code, lot['lot']
 
@@ -1162,6 +1168,7 @@ def _create_request_receipt_lot(
     log_action='issue_request_complete',
     log_note=None,
 ):
+    created_at = _local_timestamp_str()
     receiving_date = (receiving_date or '').strip() or today_local_str()
     manufacture_date = (manufacture_date or '').strip() or None
     expiry_date = (expiry_date or '').strip() or None
@@ -1229,8 +1236,8 @@ def _create_request_receipt_lot(
         _increase_material_lot_balance(cursor, location_id, lot_id, quantity)
     cursor.execute(
         '''
-        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         ''',
         (
             lot_id,
@@ -1238,6 +1245,7 @@ def _create_request_receipt_lot(
             (log_action or 'issue_request_complete'),
             quantity,
             log_note or f'{workplace} 실입고 확인',
+            created_at,
         ),
     )
     return lot_id, lot
@@ -5065,6 +5073,7 @@ def bulk_add_purchase_requests_from_materials():
     workplace = get_workplace()
     expected_date = (request.form.get('expected_delivery_date') or '').strip()
     note = (request.form.get('note') or '').strip()
+    ordered_at = _local_timestamp_str()
     selected_material_ids = [mid for mid in request.form.getlist('material_ids') if (mid or '').strip()]
 
     if not expected_date:
@@ -5193,10 +5202,10 @@ def add_issue_request():
         cursor.execute(
             '''
             INSERT INTO logistics_issue_requests
-            (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, request_type, note, requested_by, requester_username)
-            VALUES (?, ?, ?, ?, ?, ?, 'ISSUE', ?, ?, ?)
+            (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, request_type, note, requested_by, requester_username, requested_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'ISSUE', ?, ?, ?, ?)
             ''',
-            (material_id, material_code, mat['name'], mat['unit'], workplace, requested_qty, note, req_user, req_username),
+            (material_id, material_code, mat['name'], mat['unit'], workplace, requested_qty, note, req_user, req_username, requested_at),
         )
         req_id = cursor.lastrowid
         audit_log(
@@ -5256,6 +5265,7 @@ def bulk_add_issue_request():
     created_count = 0
     req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     req_username = session.get('user', {}).get('username')
+    requested_at = _local_timestamp_str()
     try:
         for material_id, qty, note in rows:
             cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (material_id,))
@@ -5266,10 +5276,10 @@ def bulk_add_issue_request():
             cursor.execute(
                 '''
                 INSERT INTO logistics_issue_requests
-                (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, request_type, note, requested_by, requester_username)
-                VALUES (?, ?, ?, ?, ?, ?, 'ISSUE', ?, ?, ?)
+                (material_id, material_code, material_name, unit, requester_workplace, requested_quantity, request_type, note, requested_by, requester_username, requested_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'ISSUE', ?, ?, ?, ?)
                 ''',
-                (material_id, material_code, mat['name'], mat['unit'], workplace, qty, note, req_user, req_username),
+                (material_id, material_code, mat['name'], mat['unit'], workplace, qty, note, req_user, req_username, requested_at),
             )
             req_id = cursor.lastrowid
             created_count += 1
@@ -5642,6 +5652,7 @@ def delete_all_pending_export_requests():
 def complete_issue_request(req_id):
     approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
+    processed_at = _local_timestamp_str()
     if approved_qty <= 0:
         return "<script>alert('?? ?? ??? ??? ???.'); history.back();</script>"
     split_rows = _build_receipt_split_rows(request.form, approved_qty)
@@ -5693,7 +5704,7 @@ def complete_issue_request(req_id):
         cursor.execute(
             '''
             UPDATE logistics_issue_requests
-            SET status = ?, approved_quantity = ?, processed_by = ?, processed_at = CURRENT_TIMESTAMP, process_note = ?,
+            SET status = ?, approved_quantity = ?, processed_by = ?, processed_at = ?, process_note = ?,
                 receipt_updated_at = NULL,
                 original_approved_quantity = ?
             WHERE id = ?
@@ -5702,6 +5713,7 @@ def complete_issue_request(req_id):
                 ISSUE_STATUS_COMPLETED,
                 approved_qty,
                 session.get('user', {}).get('name'),
+                processed_at,
                 process_note,
                 approved_qty,
                 req_id,
@@ -5860,6 +5872,7 @@ def cancel_completed_issue_request(req_id):
 def update_completed_issue_request(req_id):
     approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
+    receipt_updated_at = _local_timestamp_str()
     if approved_qty <= 0:
         return _alert_back('실입고 수량을 입력해주세요.')
     split_rows = _build_receipt_split_rows(request.form, approved_qty)
@@ -5941,7 +5954,7 @@ def update_completed_issue_request(req_id):
             '''
             UPDATE logistics_issue_requests
             SET approved_quantity = ?, processed_by = ?, process_note = ?,
-                receipt_updated_at = CURRENT_TIMESTAMP,
+                receipt_updated_at = ?,
                 original_approved_quantity = COALESCE(original_approved_quantity, ?)
             WHERE id = ?
             ''',
@@ -5949,6 +5962,7 @@ def update_completed_issue_request(req_id):
                 approved_qty,
                 session.get('user', {}).get('name'),
                 process_note,
+                receipt_updated_at,
                 previous_approved_qty,
                 req_id,
             ),
@@ -5995,6 +6009,7 @@ def reject_issue_request(req_id):
         return "<script>alert('\ubc18\ub824 \uc0ac\uc720\ub97c \uc785\ub825\ud574 \uc8fc\uc138\uc694.'); history.back();</script>"
 
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
+    processed_at = _local_timestamp_str()
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -6013,13 +6028,13 @@ def reject_issue_request(req_id):
             SET status = ?,
                 rejected_reason = ?,
                 rejected_by = ?,
-                rejected_at = CURRENT_TIMESTAMP,
+                rejected_at = ?,
                 processed_by = ?,
-                processed_at = CURRENT_TIMESTAMP,
+                processed_at = ?,
                 process_note = ?
             WHERE id = ?
             ''',
-            (ISSUE_STATUS_REJECTED, rejected_reason, manager_name, manager_name, rejected_reason, req_id),
+            (ISSUE_STATUS_REJECTED, rejected_reason, manager_name, processed_at, manager_name, processed_at, rejected_reason, req_id),
         )
         audit_log(
             conn,
@@ -6173,6 +6188,7 @@ def cancel_completed_export_request(req_id):
 
 
 def _complete_export_request_row(conn, cursor, req_id, approved_qty, process_note, manager_name, current_username, current_name):
+    processed_at = _local_timestamp_str()
     cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
     req_row = cursor.fetchone()
     if not req_row:
@@ -6215,21 +6231,22 @@ def _complete_export_request_row(conn, cursor, req_id, approved_qty, process_not
     cursor.execute(
         '''
         UPDATE logistics_issue_requests
-        SET status = ?, approved_quantity = ?, processed_by = ?, processed_at = CURRENT_TIMESTAMP, process_note = ?
+        SET status = ?, approved_quantity = ?, processed_by = ?, processed_at = ?, process_note = ?
         WHERE id = ?
         ''',
-        (ISSUE_STATUS_COMPLETED, approved_qty, manager_name, process_note, req_id),
+        (ISSUE_STATUS_COMPLETED, approved_qty, manager_name, processed_at, process_note, req_id),
     )
     cursor.execute(
         '''
-        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-        VALUES (?, ?, 'export_request_complete', ?, ?)
+        INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note, created_at)
+        VALUES (?, ?, 'export_request_complete', ?, ?, ?)
         ''',
         (
             req_row['material_lot_id'],
             req_row['material_id'],
             approved_qty,
             f"{req_row['requester_workplace']} 반출 완료" + (f" / {process_note}" if process_note else ''),
+            processed_at,
         ),
     )
     audit_log(
@@ -6323,6 +6340,7 @@ def reject_export_request(req_id):
         return "<script>alert('반려 사유를 입력해 주세요.'); history.back();</script>"
 
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
+    processed_at = _local_timestamp_str()
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -6341,13 +6359,13 @@ def reject_export_request(req_id):
             SET status = ?,
                 rejected_reason = ?,
                 rejected_by = ?,
-                rejected_at = CURRENT_TIMESTAMP,
+                rejected_at = ?,
                 processed_by = ?,
-                processed_at = CURRENT_TIMESTAMP,
+                processed_at = ?,
                 process_note = ?
             WHERE id = ?
             ''',
-            (ISSUE_STATUS_REJECTED, rejected_reason, manager_name, manager_name, rejected_reason, req_id),
+            (ISSUE_STATUS_REJECTED, rejected_reason, manager_name, processed_at, manager_name, processed_at, rejected_reason, req_id),
         )
         audit_log(
             conn,

@@ -27,6 +27,14 @@
             gap: 8px;
             margin-bottom: 6px;
         }
+        .zoom-status {
+            min-width: 58px;
+            font-size: 11px;
+            color: #2563eb;
+            text-align: center;
+            white-space: nowrap;
+            font-weight: 700;
+        }
         .preview-guide {
             font-size: 11px;
             color: #475569;
@@ -306,6 +314,7 @@
         @media print {
             body { padding: 0; }
             .sheet {
+                zoom: 1 !important;
                 max-width: 196.5mm;
                 min-height: 270mm;
             }
@@ -328,6 +337,10 @@
 <body>
 <div class="sheet">
     <div class="preview-actions">
+        <button type="button" class="preview-btn" onclick="changePreviewZoom(-0.1)">축소</button>
+        <button type="button" class="preview-btn" onclick="resetPreviewZoom()">기본</button>
+        <span id="previewZoomStatus" class="zoom-status">100%</span>
+        <button type="button" class="preview-btn" onclick="changePreviewZoom(0.1)">확대</button>
         <span class="preview-guide">기본은 미리보기 상태이며, 버튼 클릭 시 비고를 수정할 수 있습니다.</span>
         <span id="noteSaveStatus" class="preview-status"></span>
         <button type="button" id="noteEditToggleBtn" class="preview-btn" onclick="toggleNoteEdit()">비고 입력</button>
@@ -488,7 +501,7 @@
         <tr class="doc-row">
             <td class="doc-code">YEMAT-HAF-101-27-5</td>
             <td colspan="2"></td>
-            <td class="company-name">예맛식품(주)</td>
+            <td class="company-name">예맛상사(주)</td>
         </tr>
     </table>
 </div>
@@ -497,6 +510,35 @@
 document.title = '';
 let noteEditEnabled = false;
 const rawMaterialId = {{ raw_material_id|tojson }};
+const previewZoomStorageKey = 'raw_checksheet_preview_zoom';
+const rawSheet = document.querySelector('.sheet');
+const rawZoomStatus = document.getElementById('previewZoomStatus');
+let rawPreviewZoom = Number(localStorage.getItem(previewZoomStorageKey) || '1');
+
+function clampPreviewZoom(value) {
+    return Math.min(1.8, Math.max(0.7, Math.round(value * 100) / 100));
+}
+
+function applyPreviewZoom() {
+    rawPreviewZoom = clampPreviewZoom(rawPreviewZoom || 1);
+    if (rawSheet) {
+        rawSheet.style.zoom = rawPreviewZoom;
+    }
+    if (rawZoomStatus) {
+        rawZoomStatus.textContent = `${Math.round(rawPreviewZoom * 100)}%`;
+    }
+    localStorage.setItem(previewZoomStorageKey, String(rawPreviewZoom));
+}
+
+function changePreviewZoom(delta) {
+    rawPreviewZoom = clampPreviewZoom((rawPreviewZoom || 1) + delta);
+    applyPreviewZoom();
+}
+
+function resetPreviewZoom() {
+    rawPreviewZoom = 1;
+    applyPreviewZoom();
+}
 
 function autoGrowNote(textarea) {
     if (!textarea) return;
@@ -585,6 +627,28 @@ async function toggleNoteEdit() {
 }
 
 window.addEventListener('load', syncAllNoteEditors);
+window.addEventListener('load', applyPreviewZoom);
+
+document.addEventListener('keydown', (event) => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    if (event.key === '+' || event.key === '=') {
+        event.preventDefault();
+        changePreviewZoom(0.1);
+    } else if (event.key === '-') {
+        event.preventDefault();
+        changePreviewZoom(-0.1);
+    } else if (event.key === '0') {
+        event.preventDefault();
+        resetPreviewZoom();
+    }
+});
+
+document.addEventListener('wheel', (event) => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    changePreviewZoom(event.deltaY < 0 ? 0.1 : -0.1);
+}, { passive: false });
+
 if (new URLSearchParams(window.location.search).get('autoprint') === '1') {
     window.addEventListener('load', () => {
         setTimeout(() => window.print(), 150);

@@ -50,6 +50,8 @@
 .lot-inline-form .btn{white-space:nowrap;}
 .lot-inline-form .lot-submit{grid-column:1 / -1;justify-self:end;min-width:108px;}
 .material-section-title{font-size:0.86rem;font-weight:800;color:#1e293b;margin:0 0 0.45rem;}
+.material-modal .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.material-modal .table-container table{width:100%;min-width:720px;}
 .req-tabs{display:flex;gap:0.55rem;margin-bottom:0.95rem;flex-wrap:wrap;}
 .req-tab-btn{
     padding:0.56rem 1.02rem;
@@ -292,6 +294,100 @@
   .export-pending-stack.process{align-items:flex-start;justify-self:stretch;min-width:0;}
 }
 @media (max-width: 760px){
+  .modal-bg{padding:0.65rem;}
+  .material-modal{width:min(100%,96vw);max-height:92vh;padding:1rem;border-radius:18px;}
+  .material-modal-top{align-items:flex-start;}
+  .material-modal-top .btn{flex:0 0 auto;}
+  .material-header-grid{grid-template-columns:1fr;gap:0.6rem;}
+  .material-header-item{padding:0.75rem 0.8rem;}
+  .material-header-item .value{font-size:0.98rem;word-break:keep-all;overflow-wrap:anywhere;}
+  .material-detail-tabs{flex-wrap:wrap;}
+  .material-detail-tab{flex:1 1 calc(50% - 0.4rem);text-align:center;padding:0.56rem 0.8rem;}
+  .lot-inline-form{grid-template-columns:1fr;}
+  .lot-inline-form .lot-submit{justify-self:stretch;width:100%;}
+  #materialLotsPanel .table-container,
+  #materialLogsPanel .table-container,
+  #materialReceivePanel .table-container{overflow:visible;}
+  #materialLotsPanel table,
+  #materialLogsPanel table,
+  #materialReceivePanel table{min-width:0!important;}
+  #materialLotsPanel thead,
+  #materialLogsPanel thead,
+  #materialReceivePanel thead{display:none;}
+  #materialLotsPanel table,
+  #materialLotsPanel tbody,
+  #materialLogsPanel table,
+  #materialLogsPanel tbody,
+  #materialReceivePanel table,
+  #materialReceivePanel tbody{display:block;width:100%;}
+  #lotTableBody tr,
+  #usageLogTableBody tr,
+  #receiveLogTableBody tr{
+    display:block;
+    margin-bottom:.75rem;
+    border:1px solid #e6edf5;
+    border-radius:16px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 8px 20px rgba(15,23,42,.05);
+  }
+  #lotTableBody td,
+  #usageLogTableBody td,
+  #receiveLogTableBody td{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.7rem;
+    width:100%;
+    padding:.7rem .8rem;
+    border:none;
+    border-top:1px solid #eef2f7;
+    background:#fff;
+    white-space:normal;
+    box-sizing:border-box;
+  }
+  #lotTableBody td:first-child,
+  #usageLogTableBody td:first-child,
+  #receiveLogTableBody td:first-child{border-top:none;}
+  #lotTableBody td::before,
+  #usageLogTableBody td::before,
+  #receiveLogTableBody td::before{
+    flex:0 0 78px;
+    font-size:.72rem;
+    font-weight:900;
+    color:#64748b;
+    line-height:1.4;
+    content:'';
+  }
+  #lotTableBody td:nth-child(1)::before{content:'보유 위치';}
+  #lotTableBody td:nth-child(2)::before{content:'로트';}
+  #lotTableBody td:nth-child(3)::before{content:'입고일';}
+  #lotTableBody td:nth-child(4)::before{content:'제조일';}
+  #lotTableBody td:nth-child(5)::before{content:'소비기한';}
+  #lotTableBody td:nth-child(6)::before{content:'입고수량';}
+  #lotTableBody td:nth-child(7)::before{content:'현재수량';}
+  #lotTableBody td:nth-child(8)::before{content:'관리';}
+  #usageLogTableBody td:nth-child(1)::before{content:'사용일시';}
+  #usageLogTableBody td:nth-child(2)::before{content:'생산번호';}
+  #usageLogTableBody td:nth-child(3)::before{content:'상품명';}
+  #usageLogTableBody td:nth-child(4)::before{content:'사용 로트';}
+  #usageLogTableBody td:nth-child(5)::before{content:'사용수량';}
+  #usageLogTableBody td:nth-child(6)::before{content:'남은수량';}
+  #usageLogTableBody td:nth-child(7)::before{content:'사용자';}
+  #receiveLogTableBody td:nth-child(1)::before{content:'입고일시';}
+  #receiveLogTableBody td:nth-child(2)::before{content:'제조일';}
+  #receiveLogTableBody td:nth-child(3)::before{content:'소비기한';}
+  #receiveLogTableBody td:nth-child(4)::before{content:'입고수량';}
+  #receiveLogTableBody td:nth-child(5)::before{content:'구분';}
+  #receiveLogTableBody td:nth-child(6)::before{content:'비고';}
+  #lotTableBody td:last-child,
+  #usageLogTableBody td:last-child,
+  #receiveLogTableBody td:last-child{align-items:flex-start;}
+  #lotTableBody td:last-child .btn,
+  #lotTableBody td:last-child form,
+  #lotTableBody td:last-child form .btn{width:100%;}
+  .lot-actions{flex-direction:column;align-items:stretch;width:100%;}
+  .lot-code{font-size:0.84rem;word-break:break-all;}
   #materialsListCard .table-container{overflow-x:visible;margin:0;padding:0;}
   #materialsTable{min-width:0!important;}
   #materialsTable thead{display:none;}

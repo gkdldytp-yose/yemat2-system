@@ -130,6 +130,48 @@ def _material_checksheet_scope(code_value):
     return 'sinan' if '_S' in code else 'yemat'
 
 
+def _is_packaging_material_row(row):
+    section = _get_production_material_section(
+        {
+            'category': row.get('category'),
+            'material_name': row.get('material_name') or row.get('name') or '',
+        }
+    )
+    return bool(section and section.startswith('pack'))
+
+
+def _get_packaging_bom_material_map(cursor, workplace):
+    cursor.execute(
+        '''
+        SELECT DISTINCT
+            m.id,
+            COALESCE(m.code, '') as code,
+            COALESCE(m.name, '') as name,
+            COALESCE(m.category, '') as category,
+            COALESCE(m.unit, '') as unit,
+            COALESCE(s.name, '') as supplier_name
+        FROM bom b
+        JOIN products p ON p.id = b.product_id
+        JOIN materials m ON m.id = b.material_id
+        LEFT JOIN suppliers s ON s.id = m.supplier_id
+        WHERE p.workplace = ?
+          AND b.material_id IS NOT NULL
+        ORDER BY m.name
+        ''',
+        (workplace,),
+    )
+    result = {}
+    for row in cursor.fetchall():
+        item = dict(row)
+        material_id = int(item.get('id') or 0)
+        if material_id <= 0:
+            continue
+        if not _is_packaging_material_row(item):
+            continue
+        result[material_id] = item
+    return result
+
+
 def _get_print_workday(timestamp_text, cutoff_hour=6):
     text = (timestamp_text or '').strip()
     if not text:
@@ -153,6 +195,10 @@ def journals():
     selected_tab = (request.args.get('tab') or 'production').strip()
     raw_status = (request.args.get('raw_status') or 'active').strip()
     material_scope = (request.args.get('material_scope') or 'yemat').strip().lower()
+    selected_production_date = (request.args.get('production_date') or '').strip()
+    selected_raw_date = (request.args.get('raw_date') or '').strip()
+    selected_material_date = (request.args.get('material_date') or '').strip()
+    selected_packaging_date = (request.args.get('packaging_date') or '').strip()
     if raw_status not in ('active', 'done'):
         raw_status = 'active'
     if material_scope not in ('yemat', 'sinan'):
@@ -175,17 +221,30 @@ def journals():
             FROM productions pr
             LEFT JOIN products p ON p.id = pr.product_id
             WHERE pr.workplace = ?
-              AND COALESCE(pr.production_date, '') BETWEEN ? AND ?
             ORDER BY pr.production_date DESC, pr.id DESC
-            LIMIT 240
+            LIMIT 1200
             ''',
-            (workplace, date_from, date_to),
+            (workplace,),
         )
         production_rows = []
         for row in cursor.fetchall():
             item = dict(row)
             if _normalize_completed_status(item.get('status')):
                 production_rows.append(item)
+        production_available_dates = []
+        seen_production_dates = set()
+        for row in production_rows:
+            production_date = (row.get('production_date') or '').strip()
+            if production_date and production_date not in seen_production_dates:
+                seen_production_dates.add(production_date)
+                production_available_dates.append(production_date)
+        if selected_production_date and selected_production_date not in seen_production_dates:
+            selected_production_date = ''
+        if selected_production_date:
+            production_rows = [
+                row for row in production_rows
+                if (row.get('production_date') or '').strip() == selected_production_date
+            ]
 
         cursor.execute(
             '''
@@ -213,6 +272,22 @@ def journals():
             '''
         )
         exported_raw_ids = {int(row['raw_material_id'] or 0) for row in cursor.fetchall() if int(row['raw_material_id'] or 0) > 0}
+        cursor.execute(
+            '''
+            SELECT
+                raw_material_id,
+                MAX(SUBSTR(COALESCE(created_at, ''), 1, 10)) as last_log_date
+            FROM raw_material_logs
+            WHERE raw_material_id IS NOT NULL
+              AND COALESCE(created_at, '') != ''
+            GROUP BY raw_material_id
+            '''
+        )
+        raw_last_log_dates = {
+            int(row['raw_material_id'] or 0): (row['last_log_date'] or '').strip()
+            for row in cursor.fetchall()
+            if int(row['raw_material_id'] or 0) > 0
+        }
         raw_active_items = [row for row in raw_all_items if float(row.get('current_stock') or 0) > 0]
         raw_done_items = [
             row for row in raw_all_items
@@ -222,14 +297,34 @@ def journals():
                 or int(row.get('id') or 0) in exported_raw_ids
             )
         ]
+        for row in raw_active_items:
+            row['journal_date'] = (row.get('receiving_date') or '').strip()
+        for row in raw_done_items:
+            row['journal_date'] = raw_last_log_dates.get(int(row.get('id') or 0), '')
+        raw_active_available_dates = sorted(
+            {row['journal_date'] for row in raw_active_items if row.get('journal_date')},
+            reverse=True,
+        )
+        raw_done_available_dates = sorted(
+            {row['journal_date'] for row in raw_done_items if row.get('journal_date')},
+            reverse=True,
+        )
+        raw_available_dates = raw_active_available_dates if raw_status == 'active' else raw_done_available_dates
+        if selected_raw_date and selected_raw_date not in raw_available_dates:
+            selected_raw_date = ''
+        if selected_raw_date:
+            if raw_status == 'active':
+                raw_active_items = [
+                    row for row in raw_active_items
+                    if (row.get('journal_date') or '') == selected_raw_date
+                ]
+            else:
+                raw_done_items = [
+                    row for row in raw_done_items
+                    if (row.get('journal_date') or '') == selected_raw_date
+                ]
 
-        production_date_set = []
-        seen_production_dates = set()
-        for row in production_rows:
-            production_date = (row.get('production_date') or '').strip()
-            if production_date and production_date not in seen_production_dates:
-                seen_production_dates.add(production_date)
-                production_date_set.append(production_date)
+        production_date_set = list(production_available_dates)
 
         stocked_base_material_ids = set()
         location_ids = _get_print_inventory_location_ids(cursor, workplace)
@@ -270,11 +365,10 @@ def journals():
             LEFT JOIN production_material_lot_usage pmlu
               ON pmlu.production_usage_id = pmu.id
             WHERE p.workplace = ?
-              AND COALESCE(p.production_date, '') BETWEEN ? AND ?
               AND pmu.material_id IS NOT NULL
             ORDER BY p.production_date DESC, pmu.material_id
             ''',
-            (workplace, date_from, date_to),
+            (workplace,),
         )
         material_map = {'yemat': {}, 'sinan': {}}
         for row in cursor.fetchall():
@@ -324,6 +418,115 @@ def journals():
                         'scope': scope,
                     }
                 )
+        material_available_dates_map = {
+            'yemat': [row['production_date'] for row in material_journal_dates_map['yemat']],
+            'sinan': [row['production_date'] for row in material_journal_dates_map['sinan']],
+        }
+        if selected_material_date and selected_material_date not in material_available_dates_map.get(material_scope, []):
+            selected_material_date = ''
+        if selected_material_date:
+            material_journal_dates_map['yemat'] = [
+                row for row in material_journal_dates_map['yemat']
+                if row.get('production_date') == selected_material_date
+            ]
+            material_journal_dates_map['sinan'] = [
+                row for row in material_journal_dates_map['sinan']
+                if row.get('production_date') == selected_material_date
+            ]
+
+        packaging_bom_material_map = _get_packaging_bom_material_map(cursor, workplace)
+        packaging_material_ids = list(packaging_bom_material_map.keys())
+        packaging_journal_rows = []
+        packaging_available_dates = []
+        if packaging_material_ids:
+            packaging_date_map = {}
+            placeholders = ','.join(['?'] * len(packaging_material_ids))
+            workplace_prefix = (workplace or '').strip()
+
+            cursor.execute(
+                f'''
+                SELECT
+                    p.production_date,
+                    p.status,
+                    pmu.material_id,
+                    COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as qty
+                FROM production_material_usage pmu
+                JOIN productions p ON p.id = pmu.production_id
+                LEFT JOIN production_material_lot_usage pmlu
+                  ON pmlu.production_usage_id = pmu.id
+                WHERE p.workplace = ?
+                  AND pmu.material_id IN ({placeholders})
+                  AND pmu.material_id IS NOT NULL
+                ORDER BY p.production_date DESC, pmu.material_id
+                ''',
+                [workplace, *packaging_material_ids],
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                if not _normalize_completed_status(row.get('status')):
+                    continue
+                action_date = (row.get('production_date') or '').strip()
+                material_id = int(row.get('material_id') or 0)
+                if not action_date or material_id <= 0:
+                    continue
+                bucket = packaging_date_map.setdefault(
+                    action_date,
+                    {'production_date': action_date, 'item_ids': set(), 'incoming_total': 0.0, 'outgoing_total': 0.0},
+                )
+                bucket['item_ids'].add(material_id)
+                bucket['outgoing_total'] += float(row.get('qty') or 0)
+
+            cursor.execute(
+                f'''
+                SELECT material_id, action, quantity, note, created_at
+                FROM material_lot_logs
+                WHERE material_id IN ({placeholders})
+                ORDER BY id
+                ''',
+                packaging_material_ids,
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                material_id = int(row.get('material_id') or 0)
+                if material_id <= 0:
+                    continue
+                action = (row.get('action') or '').strip()
+                note = (row.get('note') or '').strip()
+                action_date = _get_print_workday(row.get('created_at'))
+                qty = float(row.get('quantity') or 0)
+                if not action_date:
+                    continue
+                incoming_qty = 0.0
+                outgoing_qty = 0.0
+                if action == 'create':
+                    incoming_qty = abs(qty)
+                elif action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
+                    incoming_qty = abs(qty)
+                elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
+                    outgoing_qty = abs(qty)
+                else:
+                    continue
+                bucket = packaging_date_map.setdefault(
+                    action_date,
+                    {'production_date': action_date, 'item_ids': set(), 'incoming_total': 0.0, 'outgoing_total': 0.0},
+                )
+                bucket['item_ids'].add(material_id)
+                bucket['incoming_total'] += incoming_qty
+                bucket['outgoing_total'] += outgoing_qty
+
+            packaging_journal_rows = sorted(packaging_date_map.values(), key=lambda item: item.get('production_date') or '', reverse=True)
+            for row in packaging_journal_rows:
+                row['item_count'] = len(row.get('item_ids') or set())
+                row['incoming_total'] = round(float(row.get('incoming_total') or 0.0), 1)
+                row['outgoing_total'] = round(float(row.get('outgoing_total') or 0.0), 1)
+            packaging_available_dates = [row['production_date'] for row in packaging_journal_rows if row.get('production_date')]
+            if selected_packaging_date and selected_packaging_date not in packaging_available_dates:
+                selected_packaging_date = ''
+            if selected_packaging_date:
+                packaging_journal_rows = [
+                    row for row in packaging_journal_rows
+                    if row.get('production_date') == selected_packaging_date
+                ]
 
         return render_template(
             'journals.html',
@@ -334,11 +537,22 @@ def journals():
             date_to=date_to,
             current_workplace=workplace,
             production_rows=production_rows,
+            production_available_dates=production_available_dates,
+            selected_production_date=selected_production_date,
             raw_active_items=raw_active_items,
             raw_done_items=raw_done_items,
+            raw_active_available_dates=raw_active_available_dates,
+            raw_done_available_dates=raw_done_available_dates,
+            selected_raw_date=selected_raw_date,
             material_scope=material_scope,
             material_journal_dates_yemat=material_journal_dates_map['yemat'],
             material_journal_dates_sinan=material_journal_dates_map['sinan'],
+            material_available_dates_yemat=material_available_dates_map['yemat'],
+            material_available_dates_sinan=material_available_dates_map['sinan'],
+            selected_material_date=selected_material_date,
+            packaging_journal_rows=packaging_journal_rows,
+            packaging_available_dates=packaging_available_dates,
+            selected_packaging_date=selected_packaging_date,
         )
     finally:
         conn.close()
@@ -695,6 +909,218 @@ def material_checksheet_preview():
             rows=rows[:max(min_rows, len(rows))],
             material_scope=material_scope,
             scope_label=scope_label,
+        )
+    finally:
+        conn.close()
+
+
+@bp.route('/materials/packaging-checksheet-preview')
+@login_required
+def packaging_checksheet_preview():
+    workplace = get_workplace()
+    selected_date = (request.args.get('date') or today_local().isoformat()).strip()
+    try:
+        report_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+    except Exception:
+        report_date = today_local()
+        selected_date = report_date.isoformat()
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        packaging_material_map = _get_packaging_bom_material_map(cursor, workplace)
+        packaging_material_ids = list(packaging_material_map.keys())
+        incoming_rows = []
+        outgoing_rows = []
+
+        if packaging_material_ids:
+            placeholders = ','.join(['?'] * len(packaging_material_ids))
+            workplace_prefix = (workplace or '').strip()
+
+            cursor.execute(
+                f'''
+                SELECT
+                    mll.material_id,
+                    mll.material_lot_id,
+                    COALESCE(mll.action, '') as action,
+                    COALESCE(mll.quantity, 0) as quantity,
+                    COALESCE(mll.note, '') as note,
+                    COALESCE(mll.created_at, '') as created_at,
+                    COALESCE(ml.receiving_date, '') as receiving_date,
+                    COALESCE(ml.manufacture_date, '') as manufacture_date,
+                    COALESCE(ml.expiry_date, '') as expiry_date
+                FROM material_lot_logs mll
+                LEFT JOIN material_lots ml ON ml.id = mll.material_lot_id
+                WHERE mll.material_id IN ({placeholders})
+                ORDER BY mll.id
+                ''',
+                packaging_material_ids,
+            )
+            incoming_map = {}
+            outgoing_log_map = {}
+            for row in cursor.fetchall():
+                row = dict(row)
+                material_id = int(row.get('material_id') or 0)
+                if material_id <= 0:
+                    continue
+                action = (row.get('action') or '').strip()
+                note = (row.get('note') or '').strip()
+                action_date = _get_print_workday(row.get('created_at'))
+                qty = float(row.get('quantity') or 0)
+                if action_date != selected_date:
+                    continue
+                received_qty = 0.0
+                outgoing_qty = 0.0
+                note_text = ''
+                if action == 'create':
+                    received_qty = abs(qty)
+                    note_text = '신규 로트 입고'
+                elif action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
+                    received_qty = abs(qty)
+                    note_text = '불출 입고'
+                elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
+                    outgoing_qty = abs(qty)
+                    note_text = note or '반출 완료'
+                else:
+                    continue
+
+                base_item = packaging_material_map.get(material_id, {})
+                expiry_date = (row.get('expiry_date') or '').strip()
+                manufacture_date = (row.get('manufacture_date') or '').strip()
+                expiry_or_mfg = expiry_date or manufacture_date
+                if received_qty:
+                    key = (material_id, (row.get('receiving_date') or '').strip(), expiry_or_mfg, note_text)
+                    bucket = incoming_map.setdefault(
+                        key,
+                        {
+                            'name': base_item.get('name') or '',
+                            'supplier_name': base_item.get('supplier_name') or '',
+                            'quantity': 0.0,
+                            'receiving_date': (row.get('receiving_date') or '').strip() or selected_date,
+                            'expiry_or_mfg': expiry_or_mfg,
+                            'note': note_text,
+                            'unit': base_item.get('unit') or '',
+                        },
+                    )
+                    bucket['quantity'] += received_qty
+                if outgoing_qty:
+                    key = (material_id, note_text, (row.get('receiving_date') or '').strip(), expiry_or_mfg)
+                    bucket = outgoing_log_map.setdefault(
+                        key,
+                        {
+                            'name': base_item.get('name') or '',
+                            'target_name': '반출',
+                            'quantity': 0.0,
+                            'receiving_date': (row.get('receiving_date') or '').strip(),
+                            'expiry_or_mfg': expiry_or_mfg,
+                            'note': note_text,
+                            'unit': base_item.get('unit') or '',
+                        },
+                    )
+                    bucket['quantity'] += outgoing_qty
+
+            cursor.execute(
+                f'''
+                SELECT
+                    p2.status,
+                    pmu.material_id,
+                    COALESCE(p.name, '') as product_name,
+                    COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as qty,
+                    COALESCE(ml.receiving_date, '') as receiving_date,
+                    COALESCE(ml.manufacture_date, '') as manufacture_date,
+                    COALESCE(ml.expiry_date, '') as expiry_date
+                FROM production_material_usage pmu
+                JOIN productions p2 ON p2.id = pmu.production_id
+                LEFT JOIN products p ON p.id = p2.product_id
+                LEFT JOIN production_material_lot_usage pmlu ON pmlu.production_usage_id = pmu.id
+                LEFT JOIN material_lots ml ON ml.id = pmlu.material_lot_id
+                WHERE p2.workplace = ?
+                  AND COALESCE(p2.production_date, '') = ?
+                  AND pmu.material_id IN ({placeholders})
+                  AND pmu.material_id IS NOT NULL
+                ORDER BY pmu.material_id, p.name
+                ''',
+                [workplace, selected_date, *packaging_material_ids],
+            )
+            production_outgoing_map = {}
+            for row in cursor.fetchall():
+                row = dict(row)
+                if not _normalize_completed_status(row.get('status')):
+                    continue
+                material_id = int(row.get('material_id') or 0)
+                if material_id <= 0:
+                    continue
+                product_name = (row.get('product_name') or '').strip() or '생산 출고'
+                qty = float(row.get('qty') or 0)
+                expiry_date = (row.get('expiry_date') or '').strip()
+                manufacture_date = (row.get('manufacture_date') or '').strip()
+                expiry_or_mfg = expiry_date or manufacture_date
+                key = (material_id, (row.get('receiving_date') or '').strip(), expiry_or_mfg)
+                bucket = production_outgoing_map.setdefault(
+                    key,
+                    {
+                        'name': packaging_material_map.get(material_id, {}).get('name') or '',
+                        'target_names': [],
+                        'quantity': 0.0,
+                        'receiving_date': (row.get('receiving_date') or '').strip(),
+                        'expiry_or_mfg': expiry_or_mfg,
+                        'note': '',
+                        'unit': packaging_material_map.get(material_id, {}).get('unit') or '',
+                    },
+                )
+                bucket['quantity'] += qty
+                if product_name and product_name not in bucket['target_names']:
+                    bucket['target_names'].append(product_name)
+
+            incoming_rows = sorted(incoming_map.values(), key=lambda item: ((item.get('name') or ''), (item.get('receiving_date') or '')))
+            for row in incoming_rows:
+                row['quantity'] = _round_1(row.get('quantity') or 0)
+
+            for row in production_outgoing_map.values():
+                outgoing_rows.append(
+                    {
+                        'name': row.get('name') or '',
+                        'target_name': ', '.join(row.get('target_names') or []) or '생산 출고',
+                        'quantity': _round_1(row.get('quantity') or 0),
+                        'receiving_date': row.get('receiving_date') or '',
+                        'expiry_or_mfg': row.get('expiry_or_mfg') or '',
+                        'note': '',
+                        'unit': row.get('unit') or '',
+                    }
+                )
+            for row in outgoing_log_map.values():
+                outgoing_rows.append(
+                    {
+                        'name': row.get('name') or '',
+                        'target_name': row.get('target_name') or '반출',
+                        'quantity': _round_1(row.get('quantity') or 0),
+                        'receiving_date': row.get('receiving_date') or '',
+                        'expiry_or_mfg': row.get('expiry_or_mfg') or '',
+                        'note': row.get('note') or '',
+                        'unit': row.get('unit') or '',
+                    }
+                )
+            outgoing_rows.sort(key=lambda item: ((item.get('name') or ''), (item.get('target_name') or '')))
+
+        while len(incoming_rows) < 8:
+            incoming_rows.append({'name': '', 'supplier_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''})
+        while len(outgoing_rows) < 12:
+            outgoing_rows.append({'name': '', 'target_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''})
+
+        author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''
+        weekday_labels = ['월', '화', '수', '목', '금', '토', '일']
+        period_text = f'{report_date.year}년 {report_date.month}월 {report_date.day}일 ({weekday_labels[report_date.weekday()]}요일)'
+        workplace_title = _format_print_workplace(workplace)
+
+        return render_template(
+            'packaging_checksheet_preview.html',
+            user=session['user'],
+            report_date=selected_date,
+            period_text=period_text,
+            workplace_title=workplace_title,
+            author_name=author_name,
+            incoming_rows=incoming_rows,
+            outgoing_rows=outgoing_rows,
         )
     finally:
         conn.close()
