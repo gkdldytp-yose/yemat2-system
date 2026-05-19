@@ -1063,8 +1063,95 @@ tr[onclick]:hover{background:#f8f9fa;}
 .raw-lot-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
 .raw-lot-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
 .lot-code{display:inline-block;font-family:Consolas,Monaco,monospace;font-size:0.78rem;background:#eef3f9;border:1px solid #d6e0ec;border-radius:6px;padding:0.2rem 0.35rem;color:#0f172a;}
+.raw-lot-modal .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.raw-lot-modal .table-container table{width:100%;min-width:720px;}
 @media (max-width: 900px){
   .raw-lot-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
+}
+@media (max-width: 760px){
+  .modal{padding:0.65rem;box-sizing:border-box;}
+  .raw-lot-modal{width:min(100%,96vw);margin:0 auto;padding:1rem;border-radius:18px;max-height:92vh;}
+  .raw-lot-header-grid{grid-template-columns:1fr;gap:0.6rem;}
+  .raw-lot-header-item{padding:0.75rem 0.8rem;}
+  .raw-lot-header-item .value{font-size:0.98rem;word-break:keep-all;overflow-wrap:anywhere;}
+  .material-detail-tabs{flex-wrap:wrap;}
+  .material-detail-tab{flex:1 1 calc(50% - 0.4rem);text-align:center;padding:0.56rem 0.8rem;}
+  #rawLotsPanel .table-container,
+  #rawUsagePanel .table-container,
+  #rawReceivePanel .table-container{overflow:visible;}
+  #rawLotsPanel table,
+  #rawUsagePanel table,
+  #rawReceivePanel table{min-width:0!important;}
+  #rawLotsPanel thead,
+  #rawUsagePanel thead,
+  #rawReceivePanel thead{display:none;}
+  #rawLotsPanel table,
+  #rawLotsPanel tbody,
+  #rawUsagePanel table,
+  #rawUsagePanel tbody,
+  #rawReceivePanel table,
+  #rawReceivePanel tbody{display:block;width:100%;}
+  #rawLotTableBody tr,
+  #rawUsageLogTableBody tr,
+  #rawReceiveLogTableBody tr{
+    display:block;
+    margin-bottom:.75rem;
+    border:1px solid #e6edf5;
+    border-radius:16px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 8px 20px rgba(15,23,42,.05);
+  }
+  #rawLotTableBody td,
+  #rawUsageLogTableBody td,
+  #rawReceiveLogTableBody td{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.7rem;
+    width:100%;
+    padding:.7rem .8rem;
+    border:none;
+    border-top:1px solid #eef2f7;
+    background:#fff;
+    white-space:normal;
+    box-sizing:border-box;
+  }
+  #rawLotTableBody td:first-child,
+  #rawUsageLogTableBody td:first-child,
+  #rawReceiveLogTableBody td:first-child{border-top:none;}
+  #rawLotTableBody td::before,
+  #rawUsageLogTableBody td::before,
+  #rawReceiveLogTableBody td::before{
+    flex:0 0 78px;
+    font-size:.72rem;
+    font-weight:900;
+    color:#64748b;
+    line-height:1.4;
+    content:'';
+  }
+  #rawLotTableBody td:nth-child(1)::before{content:'로트';}
+  #rawLotTableBody td:nth-child(2)::before{content:'입고일';}
+  #rawLotTableBody td:nth-child(3)::before{content:'자호';}
+  #rawLotTableBody td:nth-child(4)::before{content:'1박스당';}
+  #rawLotTableBody td:nth-child(5)::before{content:'총재고';}
+  #rawLotTableBody td:nth-child(6)::before{content:'현재고';}
+  #rawLotTableBody td:nth-child(7)::before{content:'사용량';}
+  #rawLotTableBody td:nth-child(8)::before{content:'관리';}
+  #rawUsageLogTableBody td:nth-child(1)::before{content:'사용일';}
+  #rawUsageLogTableBody td:nth-child(2)::before{content:'상품명';}
+  #rawUsageLogTableBody td:nth-child(3)::before{content:'사용수량';}
+  #rawUsageLogTableBody td:nth-child(4)::before{content:'입고일';}
+  #rawUsageLogTableBody td:nth-child(5)::before{content:'자호';}
+  #rawUsageLogTableBody td:nth-child(6)::before{content:'비고';}
+  #rawReceiveLogTableBody td:nth-child(1)::before{content:'입고일';}
+  #rawReceiveLogTableBody td:nth-child(2)::before{content:'입고수량';}
+  #rawReceiveLogTableBody td:nth-child(3)::before{content:'자호';}
+  #rawReceiveLogTableBody td:nth-child(4)::before{content:'비고';}
+  #rawLotTableBody td:last-child .btn,
+  #rawLotTableBody td:last-child form,
+  #rawLotTableBody td:last-child form .btn{width:100%;}
+  .lot-code{font-size:0.84rem;word-break:break-all;}
 }
 </style>
 {% endblock %}
