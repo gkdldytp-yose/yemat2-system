@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>포장재 입·출고 점검표</title>
     <style>
-        @page { size: A4 portrait; margin: 4mm; }
+        @page { size: A4 portrait; margin: 2.5mm; }
         html, body {
             margin: 0;
             padding: 0;
@@ -17,7 +17,7 @@
             overflow: auto;
         }
         .sheet {
-            width: min(184mm, calc(100vw - 48px));
+            width: min(187mm, calc(100vw - 48px));
             margin: 0 auto;
             box-sizing: border-box;
             background: #fff;
@@ -27,7 +27,7 @@
         .sheet-inner {
             width: 100%;
             box-sizing: border-box;
-            padding: 6mm 6mm 5mm;
+            padding: 3.4mm 4.1mm 2.2mm;
         }
         .actions {
             display: flex;
@@ -61,11 +61,11 @@
         th, td {
             border: 1px solid #000;
             padding: 3px 4px;
-            font-size: 10px;
+            font-size: 11.3px;
             text-align: center;
             vertical-align: middle;
             word-break: break-word;
-            line-height: 1.15;
+            line-height: 1.16;
         }
         .fill {
             background: #d9def4;
@@ -75,47 +75,48 @@
             text-align: left;
         }
         .title-cell {
-            padding: 8px 10px 7px;
+            padding: 4px 6px 3px;
             text-align: center;
             vertical-align: middle;
         }
         .title {
-            font-size: 28px;
+            font-size: 36px;
             font-weight: 800;
             text-decoration: underline;
-            letter-spacing: -0.04em;
-            line-height: 1.02;
+            letter-spacing: -0.06em;
+            line-height: 1;
         }
         .subtitle {
-            margin-top: 4px;
-            font-size: 18px;
-            font-weight: 600;
-            line-height: 1.02;
+            margin-top: 2px;
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -0.045em;
         }
         .approval-sign {
-            height: 50px;
+            height: 48px;
         }
         .meta td {
             border-top: none;
             padding-top: 4px;
             padding-bottom: 4px;
-            font-size: 9px;
+            font-size: 11px;
             font-weight: 800;
         }
         .section-title {
-            margin: 7px 0 3px;
-            font-size: 11px;
+            margin: 6px 0 4px;
+            font-size: 13px;
             font-weight: 900;
         }
         .data-table th {
             background: #d9def4;
             font-weight: 800;
-            font-size: 9px;
-            height: 26px;
+            font-size: 10.8px;
+            height: 27px;
         }
         .data-table td {
             height: 22px;
-            font-size: 8.3px;
+            font-size: 9.8px;
         }
         .data-table td.name-cell {
             font-weight: 700;
@@ -127,16 +128,17 @@
             word-break: break-word;
         }
         .footer-table {
-            margin-top: 8px;
+            margin-top: 7px;
         }
         .footer-table th {
             background: #d9def4;
             font-weight: 800;
-            font-size: 9px;
+            font-size: 10.4px;
             height: 22px;
         }
         .footer-table td {
             height: 18px;
+            font-size: 9.4px;
         }
         .doc-row td {
             border-left: none;
@@ -146,12 +148,12 @@
         }
         .doc-code {
             text-align: left;
-            font-size: 8.4px;
+            font-size: 8.8px;
             font-weight: 700;
         }
         .company-name {
             text-align: right;
-            font-size: 8.4px;
+            font-size: 8.8px;
             font-weight: 700;
         }
         @media (max-width: 768px) {
@@ -169,10 +171,10 @@
                 min-width: 760px;
             }
             .title {
-                font-size: 22px;
+                font-size: 24px;
             }
             .subtitle {
-                font-size: 16px;
+                font-size: 18px;
             }
         }
         @media print {
@@ -182,20 +184,24 @@
                 overflow: visible !important;
                 background: #fff;
             }
-            @page { size: A4 portrait; margin: 2.5mm; }
+            @page { size: A4 portrait; margin: 1.8mm; }
             .sheet {
                 zoom: 1 !important;
                 width: 100%;
-                min-height: 291mm;
+                min-height: auto;
+                height: auto;
                 border: none;
                 max-width: 100%;
                 box-shadow: none;
                 overflow: visible !important;
+                break-after: avoid-page;
+                page-break-after: avoid;
             }
             .sheet-inner {
                 width: 100%;
                 min-width: 0 !important;
-                padding: 0;
+                min-height: auto;
+                padding: 0.4mm 0.9mm 0.2mm;
                 overflow: visible !important;
             }
             .actions {

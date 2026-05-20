@@ -20,6 +20,173 @@ from core import (
 bp = Blueprint('production', __name__)
 
 
+FIXED_PUBLIC_HOLIDAYS = {
+    (1, 1): '\uC2E0\uC815',
+    (3, 1): '\uC0BC\uC77C\uC808',
+    (5, 5): '\uC5B4\uB9B0\uC774\uB0A0',
+    (6, 6): '\uD604\uCDA9\uC77C',
+    (8, 15): '\uAD11\uBCF5\uC808',
+    (10, 3): '\uAC1C\uCC9C\uC808',
+    (10, 9): '\uD55C\uAE00\uB0A0',
+    (12, 25): '\uC131\uD0C4\uC808',
+}
+
+
+YEAR_SPECIFIC_PUBLIC_HOLIDAYS = {
+    2024: {
+        '2024-02-09': '\uC124\uB0A0 \uC5F0\uD734',
+        '2024-02-10': '\uC124\uB0A0',
+        '2024-02-11': '\uC124\uB0A0 \uC5F0\uD734',
+        '2024-02-12': '\uC124\uB0A0 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2024-05-15': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0',
+        '2024-09-16': '\uCD94\uC11D \uC5F0\uD734',
+        '2024-09-17': '\uCD94\uC11D',
+        '2024-09-18': '\uCD94\uC11D \uC5F0\uD734',
+    },
+    2025: {
+        '2025-01-28': '\uC124\uB0A0 \uC5F0\uD734',
+        '2025-01-29': '\uC124\uB0A0',
+        '2025-01-30': '\uC124\uB0A0 \uC5F0\uD734',
+        '2025-03-03': '\uC0BC\uC77C\uC808 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2025-05-06': '\uC5B4\uB9B0\uC774\uB0A0\u00B7\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2025-10-05': '\uCD94\uC11D \uC5F0\uD734',
+        '2025-10-06': '\uCD94\uC11D',
+        '2025-10-07': '\uCD94\uC11D \uC5F0\uD734',
+        '2025-10-08': '\uCD94\uC11D \uB300\uCCB4\uACF5\uD734\uC77C',
+    },
+    2026: {
+        '2026-02-16': '\uC124\uB0A0 \uC5F0\uD734',
+        '2026-02-17': '\uC124\uB0A0',
+        '2026-02-18': '\uC124\uB0A0 \uC5F0\uD734',
+        '2026-03-02': '\uC0BC\uC77C\uC808 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2026-05-24': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0',
+        '2026-05-25': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2026-08-17': '\uAD11\uBCF5\uC808 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2026-09-24': '\uCD94\uC11D \uC5F0\uD734',
+        '2026-09-25': '\uCD94\uC11D',
+        '2026-09-26': '\uCD94\uC11D \uC5F0\uD734',
+        '2026-10-05': '\uAC1C\uCC9C\uC808 \uB300\uCCB4\uACF5\uD734\uC77C',
+    },
+    2027: {
+        '2027-02-05': '\uC124\uB0A0 \uC5F0\uD734',
+        '2027-02-06': '\uC124\uB0A0',
+        '2027-02-07': '\uC124\uB0A0 \uC5F0\uD734',
+        '2027-02-08': '\uC124\uB0A0 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2027-05-13': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0',
+        '2027-08-16': '\uAD11\uBCF5\uC808 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2027-09-14': '\uCD94\uC11D \uC5F0\uD734',
+        '2027-09-15': '\uCD94\uC11D',
+        '2027-09-16': '\uCD94\uC11D \uC5F0\uD734',
+        '2027-10-04': '\uAC1C\uCC9C\uC808 \uB300\uCCB4\uACF5\uD734\uC77C',
+    },
+    2028: {
+        '2028-01-25': '\uC124\uB0A0 \uC5F0\uD734',
+        '2028-01-26': '\uC124\uB0A0',
+        '2028-01-27': '\uC124\uB0A0 \uC5F0\uD734',
+        '2028-05-02': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0',
+        '2028-10-02': '\uCD94\uC11D \uC5F0\uD734',
+        '2028-10-03': '\uCD94\uC11D\u00B7\uAC1C\uCC9C\uC808',
+        '2028-10-04': '\uCD94\uC11D \uC5F0\uD734',
+        '2028-10-05': '\uCD94\uC11D\u00B7\uAC1C\uCC9C\uC808 \uB300\uCCB4\uACF5\uD734\uC77C',
+    },
+    2029: {
+        '2029-02-12': '\uC124\uB0A0 \uC5F0\uD734',
+        '2029-02-13': '\uC124\uB0A0',
+        '2029-02-14': '\uC124\uB0A0 \uC5F0\uD734',
+        '2029-05-21': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0',
+        '2029-09-21': '\uCD94\uC11D \uC5F0\uD734',
+        '2029-09-22': '\uCD94\uC11D',
+        '2029-09-23': '\uCD94\uC11D \uC5F0\uD734',
+        '2029-09-24': '\uCD94\uC11D \uB300\uCCB4\uACF5\uD734\uC77C',
+    },
+    2030: {
+        '2030-02-02': '\uC124\uB0A0 \uC5F0\uD734',
+        '2030-02-03': '\uC124\uB0A0',
+        '2030-02-04': '\uC124\uB0A0 \uC5F0\uD734',
+        '2030-02-05': '\uC124\uB0A0 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2030-05-06': '\uC5B4\uB9B0\uC774\uB0A0 \uB300\uCCB4\uACF5\uD734\uC77C',
+        '2030-05-10': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0',
+        '2030-09-11': '\uCD94\uC11D \uC5F0\uD734',
+        '2030-09-12': '\uCD94\uC11D',
+        '2030-09-13': '\uCD94\uC11D \uC5F0\uD734',
+    },
+}
+
+
+def _get_auto_holiday_name(target_date):
+    reasons = []
+    if target_date.weekday() == 5:
+        reasons.append('\uD1A0\uC694\uC77C')
+    elif target_date.weekday() == 6:
+        reasons.append('\uC77C\uC694\uC77C')
+
+    fixed_name = FIXED_PUBLIC_HOLIDAYS.get((target_date.month, target_date.day))
+    if fixed_name:
+        reasons.append(fixed_name)
+
+    extra_name = YEAR_SPECIFIC_PUBLIC_HOLIDAYS.get(target_date.year, {}).get(target_date.isoformat())
+    if extra_name and extra_name not in reasons:
+        reasons.append(extra_name)
+
+    if not reasons:
+        return ''
+    return ' / '.join(reasons)
+
+
+def _get_holiday_caption(target_date, work_type=''):
+    if (work_type or '').strip() != 'holiday':
+        return ''
+    fixed_name = FIXED_PUBLIC_HOLIDAYS.get((target_date.month, target_date.day))
+    extra_name = YEAR_SPECIFIC_PUBLIC_HOLIDAYS.get(target_date.year, {}).get(target_date.isoformat())
+    selected = []
+    if fixed_name:
+        selected.append(fixed_name)
+    if extra_name and extra_name not in selected:
+        selected.append(extra_name)
+    if not selected:
+        return ''
+    caption = ' / '.join(selected[:2])
+    return caption[:24]
+
+
+
+
+def _ensure_auto_work_days_for_month(conn, cursor, year, month):
+    month_start = date(year, month, 1)
+    month_end = date(year, month, calendar.monthrange(year, month)[1])
+    existing_dates = {
+        row['date']
+        for row in cursor.execute(
+            '''
+            SELECT date
+            FROM work_days
+            WHERE date BETWEEN ? AND ?
+            ''',
+            (month_start.isoformat(), month_end.isoformat()),
+        ).fetchall()
+    }
+
+    inserted = False
+    current_day = month_start
+    while current_day <= month_end:
+        current_key = current_day.isoformat()
+        if current_key not in existing_dates:
+            holiday_name = _get_auto_holiday_name(current_day)
+            if holiday_name:
+                cursor.execute(
+                    '''
+                    INSERT INTO work_days (date, type, overtime_hours, note)
+                    VALUES (?, 'holiday', 0, ?)
+                    ''',
+                    (current_key, f'\uC790\uB3D9 \uB4F1\uB85D: {holiday_name}'),
+                )
+                inserted = True
+        current_day += timedelta(days=1)
+
+    if inserted:
+        conn.commit()
+
+
 def _get_production_material_section(row):
     category = (row.get('category') or '').strip()
     if category in ('기름', '소금') or '기름' in category or '유지' in category or '소금' in category:
@@ -202,6 +369,25 @@ def _get_inventory_location_id(cursor, name):
         (target_name, target_name, target_name, target_name, target_name),
     ).fetchone()
     return int(row['id']) if row else None
+
+
+def _get_inventory_location_ids(cursor, name):
+    target_name = (name or '').strip()
+    if not target_name:
+        return []
+    rows = cursor.execute(
+        '''
+        SELECT id
+        FROM inv_locations
+        WHERE name = ?
+           OR COALESCE(workplace_code, '') = ?
+           OR REPLACE(COALESCE(name, ''), ' ', '') = REPLACE(?, ' ', '')
+           OR REPLACE(COALESCE(workplace_code, ''), ' ', '') = REPLACE(?, ' ', '')
+        ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id
+        ''',
+        (target_name, target_name, target_name, target_name, target_name),
+    ).fetchall()
+    return [int(row['id']) for row in rows if int(row['id'] or 0) > 0]
 
 
 def _upsert_material_lot_balance(cursor, location_id, material_lot_id, qty):
@@ -719,6 +905,8 @@ def schedules():
     else:
         month_end = date(year, month + 1, 1) - timedelta(days=1)
 
+    _ensure_auto_work_days_for_month(conn, cursor, year, month)
+
     cursor.execute(
         '''
         SELECT
@@ -741,14 +929,20 @@ def schedules():
     # ?대떦 ?붿쓽 洹쇰Т???뺣낫 媛?몄삤湲?
     cursor.execute(
         '''
-        SELECT date, type, overtime_hours
+        SELECT date, type, overtime_hours, note
         FROM work_days
         WHERE date BETWEEN ? AND ?
     ''',
         (month_start.isoformat(), month_end.isoformat()),
     )
     work_days_data = {
-        row['date']: {'type': row['type'], 'overtime_hours': row['overtime_hours']} for row in cursor.fetchall()
+        row['date']: {
+            'type': row['type'],
+            'overtime_hours': row['overtime_hours'],
+            'note': row['note'],
+            'holiday_caption': _get_holiday_caption(datetime.strptime(row['date'], '%Y-%m-%d').date(), row['type']),
+        }
+        for row in cursor.fetchall()
     }
 
     conn.close()
@@ -899,7 +1093,7 @@ def schedule_requirements_data():
                 m.name as material_name,
                 COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
                 COALESCE(m.category, '') as material_category,
-                COALESCE(NULLIF(TRIM(m.unit), ''), '개') as material_unit
+                COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') as material_unit
             FROM bom b
             LEFT JOIN products p ON p.id = b.product_id
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
@@ -964,7 +1158,7 @@ def schedule_requirements_data():
                 target[key] = {
                     'code': (code or '-'),
                     'name': name or '-',
-                    'unit': (unit or '개'),
+                    'unit': (unit or 'EA'),
                     'stock': float(stock or 0),
                     'required': 0.0,
                 }
@@ -1019,11 +1213,11 @@ def schedule_requirements_data():
                 is_base = category in ('기름', '소금')
                 target_summary = summary_base if is_base else summary_sub
                 target_product = product_detail[pid]['base_map'] if is_base else product_detail[pid]['sub_map']
-                _upsert_item(target_summary, code or name, code, name, row.get('material_unit') or '개', stock, need_qty)
-                _upsert_item(target_product, code or name, code, name, row.get('material_unit') or '개', stock, need_qty)
+                _upsert_item(target_summary, code or name, code, name, row.get('material_unit') or 'EA', stock, need_qty)
+                _upsert_item(target_product, code or name, code, name, row.get('material_unit') or 'EA', stock, need_qty)
                 if not is_base:
                     sub_key = _normalize_sub_category(category)
-                    _upsert_item(summary_sub_groups[sub_key], code or name, code, name, row.get('material_unit') or '개', stock, need_qty)
+                    _upsert_item(summary_sub_groups[sub_key], code or name, code, name, row.get('material_unit') or 'EA', stock, need_qty)
 
         def _to_sorted_list(data_map):
             rows = []
@@ -1037,7 +1231,7 @@ def schedule_requirements_data():
                     {
                         'code': item.get('code') or '-',
                         'name': item.get('name') or '-',
-                        'unit': item.get('unit') or '개',
+                        'unit': item.get('unit') or 'EA',
                         'stock': round(stock, 2),
                         'required': round(required, 2),
                         'shortage': round(shortage, 2),
@@ -1652,6 +1846,8 @@ def work_days():
     else:
         month_end = date(year, month + 1, 1) - timedelta(days=1)
 
+    _ensure_auto_work_days_for_month(conn, cursor, year, month)
+
     cursor.execute(
         '''
         SELECT date, type, overtime_hours, note
@@ -1705,6 +1901,7 @@ def work_days():
                 'type': work_day['type'] if work_day else None,
                 'overtime_hours': work_day['overtime_hours'] if work_day else 0,
                 'note': work_day['note'] if work_day else '',
+                'holiday_caption': _get_holiday_caption(datetime.strptime(day_date, '%Y-%m-%d').date(), work_day['type']) if work_day else '',
             }
         )
 
@@ -2309,6 +2506,7 @@ def production_detail(production_id):
         '''
         SELECT pmu.*, 
                COALESCE(pmu.raw_material_name, m.name) as material_name,
+               COALESCE(m.code, '') as material_code,
                COALESCE(m.unit, '-') as unit,
                COALESCE(m.category, '원초') as category
         FROM production_material_usage pmu
@@ -2320,14 +2518,43 @@ def production_detail(production_id):
     )
     material_usage = [dict(row) for row in cursor.fetchall()]
     current_workplace = (production.get('workplace') or get_workplace() or session.get('workplace') or '').strip()
+    workplace_stock_map = {}
+    material_ids = [int(row.get('material_id') or 0) for row in material_usage if int(row.get('material_id') or 0) > 0]
+    location_ids = _get_inventory_location_ids(cursor, current_workplace)
+    if material_ids and location_ids:
+        placeholders = ','.join(['?'] * len(material_ids))
+        loc_placeholders = ','.join(['?'] * len(location_ids))
+        cursor.execute(
+            f'''
+            SELECT
+                ml.material_id,
+                COALESCE(SUM(b.qty), 0) as workplace_stock
+            FROM material_lots ml
+            JOIN inv_material_lot_balances b
+              ON b.material_lot_id = ml.id
+             AND COALESCE(b.qty, 0) > 0
+            WHERE ml.material_id IN ({placeholders})
+              AND COALESCE(ml.is_disposed, 0) = 0
+              AND b.location_id IN ({loc_placeholders})
+            GROUP BY ml.material_id
+            ''',
+            [*material_ids, *location_ids],
+        )
+        workplace_stock_map = {
+            int(row['material_id']): float(row['workplace_stock'] or 0)
+            for row in cursor.fetchall()
+            if int(row['material_id'] or 0) > 0
+        }
     for row in material_usage:
         row['base_sort_key'] = _get_production_material_sort_key(row)
         material_id = row.get('material_id')
         if material_id:
+            row['current_stock'] = float(workplace_stock_map.get(int(material_id), 0.0) or 0.0)
             gap = _get_material_info_gap(cursor, int(material_id), row.get('category'), current_workplace)
             row['lot_info_gap'] = gap
             row['has_lot_info_gap'] = bool(gap)
         else:
+            row['current_stock'] = 0.0
             row['lot_info_gap'] = None
             row['has_lot_info_gap'] = False
     raw_saved_map = {}
@@ -2376,6 +2603,44 @@ def production_detail(production_id):
     )
     personnel_note_suggestions = [row['note_text'] for row in cursor.fetchall() if row['note_text']]
 
+    raw_checksheet_options = []
+    seen_raw_ids = set()
+    for rm in bom_raw_items:
+        raw_id = int(rm['rm_id'] or 0)
+        if raw_id <= 0 or raw_id in seen_raw_ids:
+            continue
+        saved_entry = raw_saved_map.get(raw_id) or {}
+        used_qty = float(saved_entry.get('qty') or 0)
+        if production['status'] == '\uC644\uB8CC' and used_qty <= 0:
+            continue
+        seen_raw_ids.add(raw_id)
+        raw_checksheet_options.append(
+            {
+                'id': raw_id,
+                'name': rm['rm_name'] or '',
+                'car_number': rm['car_number'] or '',
+                'receiving_date': rm['receiving_date'] or '',
+                'url': url_for('materials.raw_material_checksheet_preview', raw_material_id=raw_id),
+            }
+        )
+
+    material_scope = 'yemat'
+    for row in material_usage:
+        code = (row.get('material_code') or '').strip().upper()
+        if '_S' in code:
+            material_scope = 'sinan'
+            break
+
+    material_checksheet_url = url_for(
+        'printouts.material_checksheet_preview',
+        date=production['production_date'],
+        scope=material_scope,
+    )
+    packaging_checksheet_url = url_for(
+        'printouts.packaging_checksheet_preview',
+        date=production['production_date'],
+    )
+
     conn.close()
 
     return render_template(
@@ -2394,6 +2659,9 @@ def production_detail(production_id):
         total_raw_yield_rate=total_raw_yield_rate,
         material_shortage_popup=material_shortage_popup,
         personnel_note_suggestions=personnel_note_suggestions,
+        raw_checksheet_options=raw_checksheet_options,
+        material_checksheet_url=material_checksheet_url,
+        packaging_checksheet_url=packaging_checksheet_url,
     )
 
 

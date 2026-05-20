@@ -586,12 +586,7 @@
             </form>
             {% if tab == 'materials' %}
             <button type="button" id="materialBulkAssignToggleBtn" class="btn btn-small" style="background:#2563eb;" onclick="toggleMaterialBulkAssignMode()">작업장 일괄 변경</button>
-            <form method="POST" action="/integrated-management/materials/reset-stock" style="margin-left:auto;" onsubmit="return confirm('부자재 재고를 모두 0으로 초기화할까요?\\n(로트 현재수량, 위치별 잔량, 수불 이력, 발주 데이터까지 함께 초기화됩니다.)');">
-                <input type="hidden" name="wp" value="{{ wp_filter }}">
-                <input type="hidden" name="q" value="{{ q }}">
-                <input type="hidden" name="product_id" value="{{ selected_product_id }}">
-                <button type="submit" class="btn btn-small" style="background:#dc2626;border-color:#dc2626;color:#fff;">재고 초기화</button>
-            </form>
+            <button type="button" class="btn btn-small" style="margin-left:auto;background:#dc2626;border-color:#dc2626;color:#fff;" onclick="openMaterialResetModal()">재고 초기화</button>
             {% endif %}
             {% if tab == 'productions' %}
             <form method="POST" action="/integrated-management/productions/delete-all" onsubmit="return confirm('현재 작업장/검색/상태 탭 기준 생산건을 모두 삭제할까요?\\n완료 건은 원초/부자재 사용분까지 함께 롤백됩니다.');">
@@ -1784,7 +1779,8 @@
                     <td>{{ item.created_at }}</td>
                     <td style="white-space:nowrap;">
                         <a class="btn btn-small" style="background:#0f766e;" href="/integrated-management/db-backups/{{ item.filename|urlencode }}/download">다운로드</a>
-                        <form method="POST" action="/integrated-management/db-backups/{{ item.filename|urlencode }}/restore" style="display:inline;" onsubmit="return confirm('선택한 백업으로 롤백할까요?\\n롤백 시 이 백업 이후 저장된 데이터는 손실됩니다.');">
+                        <form method="POST" action="/integrated-management/db-backups/{{ item.filename|urlencode }}/restore" style="display:inline-flex;gap:0.35rem;align-items:center;" onsubmit="return confirmRestoreBackup(this);">
+                            <input type="password" name="restore_password" placeholder="계정 암호" autocomplete="current-password" style="width:120px;padding:0.38rem 0.5rem;border:1px solid #cbd5e1;border-radius:8px;font-size:0.8rem;">
                             <button type="submit" class="btn btn-small" style="background:#dc2626;border-color:#dc2626;color:#fff;">롤백</button>
                         </form>
                     </td>
@@ -1974,6 +1970,36 @@
     {% endif %}
 </div>
 
+<div id="materialResetModal" class="modal-bg" style="display:none;">
+    <div class="modal-box" style="max-width:560px;">
+        <h3 style="margin-top:0;">작업장별 재고 초기화</h3>
+        <p style="margin:0 0 1rem;color:#64748b;line-height:1.6;">
+            초기화할 작업장을 선택하면 해당 작업장의 부자재 재고만 0으로 정리됩니다.
+            선택한 작업장 위치 잔량만 비워지고, 다른 작업장 재고는 유지됩니다.
+        </p>
+        <form method="POST" action="/integrated-management/materials/reset-stock" onsubmit="return confirmMaterialResetSelection(this);">
+            <input type="hidden" name="wp" value="{{ wp_filter }}">
+            <input type="hidden" name="q" value="{{ q }}">
+            <input type="hidden" name="product_id" value="{{ selected_product_id }}">
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.65rem 0.9rem;margin-bottom:1rem;">
+                {% for workplace_name in material_reset_workplaces %}
+                <label style="display:flex;align-items:center;gap:0.55rem;padding:0.8rem 0.9rem;border:1px solid #dbe4ee;border-radius:12px;background:#f8fafc;color:#0f172a;font-weight:700;">
+                    <input type="checkbox" name="reset_workplaces" value="{{ workplace_name }}" style="width:16px;height:16px;">
+                    <span>{{ workplace_name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                <div style="font-size:0.84rem;color:#64748b;">체크한 작업장만 초기화됩니다.</div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button type="button" class="btn btn-small btn-secondary" onclick="closeMaterialResetModal()">취소</button>
+                    <button type="submit" class="btn btn-small" style="background:#dc2626;border-color:#dc2626;">선택 작업장 초기화</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- 원초 사용/입고 내역 모달 -->
 <div id="rawActivityModal" class="modal-bg">
     <div class="modal-box" style="max-width:1100px;">
@@ -2132,7 +2158,7 @@
             <div class="form-group">
                 <label>단위</label>
                 <select name="unit" id="edit_mat_unit">
-                    <option>개</option><option>kg</option><option>L</option>
+                    <option>EA</option><option>kg</option><option>L</option>
                     <option>g</option><option>ml</option><option>박스</option><option>롤</option>
                 </select>
             </div>
@@ -2267,7 +2293,7 @@
         <div class="form-group">
             <label>단위</label>
             <select name="unit">
-                <option>개</option><option>kg</option><option>L</option>
+                <option>EA</option><option>kg</option><option>L</option>
                 <option>g</option><option>ml</option><option>박스</option><option>롤</option>
             </select>
         </div>
@@ -4920,5 +4946,49 @@ document.addEventListener('click', function(event){
         }
     }
 });
+
+function openMaterialResetModal() {
+    const modal = document.getElementById('materialResetModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+}
+
+function closeMaterialResetModal() {
+    const modal = document.getElementById('materialResetModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+}
+
+function confirmMaterialResetSelection(form) {
+    const checked = form ? Array.from(form.querySelectorAll('input[name="reset_workplaces"]:checked')) : [];
+    if (!checked.length) {
+        alert('재고를 초기화할 작업장을 하나 이상 선택해 주세요.');
+        return false;
+    }
+    const names = checked.map(input => input.value).join(', ');
+    return confirm(`${names} 재고를 초기화할까요?\n선택한 작업장 위치의 부자재 재고만 0으로 정리됩니다.`);
+}
+
+const materialResetModal = document.getElementById('materialResetModal');
+if (materialResetModal) {
+    materialResetModal.addEventListener('click', function(event) {
+        if (event.target === materialResetModal) {
+            closeMaterialResetModal();
+        }
+    });
+}
+
+function confirmRestoreBackup(form) {
+    const passwordInput = form ? form.querySelector('input[name="restore_password"]') : null;
+    const password = passwordInput ? passwordInput.value.trim() : '';
+    if (!password) {
+        alert('DB 롤백 전 계정 암호를 입력해 주세요.');
+        if (passwordInput) {
+            passwordInput.focus();
+        }
+        return false;
+    }
+    return confirm('선택한 백업으로 롤백할까요?\n롤백 시 이 백업 이후 저장된 데이터는 손실됩니다.');
+}
 </script>
 {% endblock %}

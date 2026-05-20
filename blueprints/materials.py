@@ -157,6 +157,8 @@ def _normalize_material_unit(unit):
         '1g': 'g',
         '1l': 'L',
         '1ml': 'ml',
+        'ea': 'EA',
+        '개': 'EA',
     }
     return aliases.get(key, raw)
 
@@ -3651,7 +3653,7 @@ def raw_material_checksheet_preview(raw_material_id):
             ) logs
             WHERE COALESCE(used_quantity, 0) > 0
             ORDER BY use_date DESC, sort_group ASC
-            LIMIT 12
+            LIMIT 14
             ''',
             (raw_material_id, raw_material_id),
         )
@@ -3683,7 +3685,7 @@ def raw_material_checksheet_preview(raw_material_id):
             )
             running_after = max(running_after + used_qty, 0)
         usage_rows = list(reversed(reconstructed_rows))
-        while len(usage_rows) < 12:
+        while len(usage_rows) < 14:
             usage_rows.append(
                 {
                     'use_date': '',
@@ -3719,7 +3721,7 @@ def raw_material_checksheet_preview(raw_material_id):
             'raw_checksheet_preview.html',
             raw_material_id=raw_material_id,
             intake=intake,
-            usage_rows=usage_rows[:12],
+            usage_rows=usage_rows[:14],
             period_text=period_text,
             workplace_title=workplace_title,
             author_name=author_name,

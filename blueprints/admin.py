@@ -16,6 +16,7 @@ from core import (
     get_workplace,
     login_required,
     admin_required,
+    verify_password,
     now_local,
     WORKPLACES,
     LOGISTICS_WORKPLACE,
@@ -2009,7 +2010,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
             m.name as material_name,
             COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
             COALESCE(m.category, '') as material_category,
-            COALESCE(NULLIF(TRIM(m.unit), ''), '개') as material_unit
+            COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') as material_unit
         FROM bom b
         LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
         LEFT JOIN materials m ON m.id = b.material_id
@@ -2113,7 +2114,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
                 'code': code or '-',
                 'name': name or '-',
                 'category': category or '',
-                'unit': unit or '개',
+                'unit': unit or 'EA',
                 'stock': float(stock or 0),
                 'required': 0.0,
                 'stock_refs': set(),
@@ -2169,7 +2170,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
             code = str(row.get('material_code') or '')
             name = row.get('material_name') or code or '부자재'
             category = (row.get('material_category') or '').strip()
-            unit = row.get('material_unit') or '개'
+            unit = row.get('material_unit') or 'EA'
             workplace = str((product_detail.get(product_id) or {}).get('workplace') or '').strip()
             stock_ref = (material_id, workplace)
             if material_id in material_ids_with_workplace_stock:
@@ -2220,7 +2221,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
                     'code': item.get('code') or '-',
                     'name': item.get('name') or '-',
                     'category': item.get('category') or '',
-                    'unit': item.get('unit') or '개',
+                    'unit': item.get('unit') or 'EA',
                     'stock': round(stock, 2),
                     'required': round(required, 2),
                     'shortage': round(shortage, 2),
@@ -2614,6 +2615,42 @@ def _sync_material_stock_with_lots(conn, material_id=None):
         )
         WHERE EXISTS (SELECT 1 FROM material_lots x WHERE x.material_id = materials.id)
         '''
+    )
+
+
+def _sync_material_lot_quantity_from_balances(cursor, lot_ids):
+    normalized_ids = []
+    seen_ids = set()
+    for lot_id in lot_ids or []:
+        try:
+            parsed_id = int(lot_id)
+        except Exception:
+            continue
+        if parsed_id <= 0 or parsed_id in seen_ids:
+            continue
+        seen_ids.add(parsed_id)
+        normalized_ids.append(parsed_id)
+    if not normalized_ids:
+        return
+
+    placeholders = ','.join('?' for _ in normalized_ids)
+    cursor.execute(
+        f'''
+        UPDATE material_lots
+        SET current_quantity = COALESCE((
+                SELECT SUM(COALESCE(b.qty, 0))
+                FROM inv_material_lot_balances b
+                WHERE b.material_lot_id = material_lots.id
+            ), 0),
+            quantity = COALESCE((
+                SELECT SUM(COALESCE(b.qty, 0))
+                FROM inv_material_lot_balances b
+                WHERE b.material_lot_id = material_lots.id
+            ), 0)
+        WHERE id IN ({placeholders})
+          AND COALESCE(is_disposed, 0) = 0
+        ''',
+        normalized_ids,
     )
 
 
@@ -3370,6 +3407,7 @@ def integrated_management():
         _sync_material_stock_with_lots(conn)
 
     workplaces = WORKPLACES
+    material_reset_workplaces = list(WORKPLACES) + [LOGISTICS_WORKPLACE, SHARED_WORKPLACE]
     filter_products = []
     calculator_products = []
     production_counts = {'active': 0, 'done': 0, 'temp': 0}
@@ -3765,7 +3803,8 @@ def integrated_management():
                            inventory_product_id=inventory_product_id,
                            inventory_q=inventory_q,
                            inventory_wp=inventory_wp,
-                           workplaces=workplaces,
+                          workplaces=workplaces,
+                          material_reset_workplaces=material_reset_workplaces,
                            suppliers=suppliers,
                            wp_filter=wp_filter,
                            q=q,
@@ -4641,6 +4680,24 @@ def integrated_restore_db_backup(filename):
     if not target.exists():
         return "Backup file not found.", 404
 
+    restore_password = (request.form.get('restore_password') or '').strip()
+    current_username = ((session.get('user') or {}).get('username') or '').strip()
+    if not restore_password:
+        return "<script>alert('DB 롤백 전 계정 암호를 입력해 주세요.'); history.back();</script>"
+    if not current_username:
+        return "<script>alert('로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.'); location.href='/login';</script>"
+
+    auth_conn = get_db()
+    try:
+        auth_cursor = auth_conn.cursor()
+        auth_cursor.execute('SELECT password_hash FROM users WHERE username = ?', (current_username,))
+        user_row = auth_cursor.fetchone()
+    finally:
+        auth_conn.close()
+
+    if not user_row or not verify_password(user_row['password_hash'], restore_password):
+        return "<script>alert('계정 암호가 일치하지 않아 롤백이 취소되었습니다.'); history.back();</script>"
+
     try:
         restore_point_name, _ = _create_db_backup(BACKUP_KEEP_DEFAULT, backup_kind='restore_point')
         _restore_db_backup(target)
@@ -5186,6 +5243,22 @@ def integrated_bulk_assign_product_workplace():
 @bp.route('/integrated-management/materials/reset-stock', methods=['POST'])
 @admin_required
 def integrated_reset_material_stock():
+    wp_filter = request.form.get('wp', 'all')
+    q = (request.form.get('q') or '').strip()
+    product_id = (request.form.get('product_id') or '').strip()
+    allowed_workplaces = list(WORKPLACES) + [LOGISTICS_WORKPLACE, SHARED_WORKPLACE]
+    selected_workplaces = []
+    seen_workplaces = set()
+    for workplace in request.form.getlist('reset_workplaces'):
+        cleaned = (workplace or '').strip()
+        if not cleaned or cleaned not in allowed_workplaces or cleaned in seen_workplaces:
+            continue
+        seen_workplaces.add(cleaned)
+        selected_workplaces.append(cleaned)
+
+    if not selected_workplaces:
+        return "<script>alert('재고를 초기화할 작업장을 하나 이상 선택해 주세요.'); history.back();</script>"
+
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -5193,48 +5266,64 @@ def integrated_reset_material_stock():
             cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (name,))
             return cursor.fetchone() is not None
 
-        cursor.execute(
-            '''
-            UPDATE material_lots
-            SET current_quantity = 0,
-                quantity = 0
-            WHERE COALESCE(is_disposed, 0) = 0
-            '''
-        )
-        lot_count = cursor.rowcount if cursor.rowcount is not None else 0
+        location_ids = []
+        seen_location_ids = set()
+        for workplace in selected_workplaces:
+            for location_id in _get_inventory_location_ids_for_workplace(cursor, workplace):
+                if location_id in seen_location_ids:
+                    continue
+                seen_location_ids.add(location_id)
+                location_ids.append(location_id)
 
-        cursor.execute('UPDATE materials SET current_stock = 0')
-        material_count = cursor.rowcount if cursor.rowcount is not None else 0
+        if not location_ids:
+            return "<script>alert('선택한 작업장과 연결된 재고 위치를 찾지 못했습니다.'); history.back();</script>"
+
+        placeholders = ','.join('?' for _ in location_ids)
+        affected_rows = cursor.execute(
+            f'''
+            SELECT DISTINCT
+                ml.id AS lot_id,
+                ml.material_id AS material_id
+            FROM inv_material_lot_balances b
+            JOIN material_lots ml ON ml.id = b.material_lot_id
+            WHERE b.location_id IN ({placeholders})
+            ''',
+            location_ids,
+        ).fetchall()
+
+        affected_lot_ids = []
+        affected_material_ids = []
+        seen_lot_ids = set()
+        seen_material_ids = set()
+        for row in affected_rows:
+            lot_id = int(row['lot_id'] or 0)
+            material_id = int(row['material_id'] or 0)
+            if lot_id > 0 and lot_id not in seen_lot_ids:
+                seen_lot_ids.add(lot_id)
+                affected_lot_ids.append(lot_id)
+            if material_id > 0 and material_id not in seen_material_ids:
+                seen_material_ids.add(material_id)
+                affected_material_ids.append(material_id)
 
         logistics_stock_deleted = 0
         balance_deleted = 0
-        txn_deleted = 0
-        lot_log_deleted = 0
-        if _table_exists('logistics_stocks'):
+        defect_stock_deleted = 0
+        if _table_exists('inv_material_lot_balances'):
+            cursor.execute(
+                f'DELETE FROM inv_material_lot_balances WHERE location_id IN ({placeholders})',
+                location_ids,
+            )
+            balance_deleted = cursor.rowcount if cursor.rowcount is not None else 0
+        if LOGISTICS_WORKPLACE in selected_workplaces and _table_exists('logistics_stocks'):
             cursor.execute('DELETE FROM logistics_stocks')
             logistics_stock_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-        if _table_exists('inv_material_lot_balances'):
-            cursor.execute('DELETE FROM inv_material_lot_balances')
-            balance_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-        if _table_exists('inv_material_txns'):
-            cursor.execute('DELETE FROM inv_material_txns')
-            txn_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-        if _table_exists('material_lot_logs'):
-            cursor.execute('DELETE FROM material_lot_logs')
-            lot_log_deleted = cursor.rowcount if cursor.rowcount is not None else 0
+        if LOGISTICS_WORKPLACE in selected_workplaces and _table_exists('logistics_defect_stocks'):
+            cursor.execute('DELETE FROM logistics_defect_stocks')
+            defect_stock_deleted = cursor.rowcount if cursor.rowcount is not None else 0
 
-        purchase_request_deleted = 0
-        purchase_order_deleted = 0
-        purchase_order_item_deleted = 0
-        if _table_exists('purchase_requests'):
-            cursor.execute('DELETE FROM purchase_requests')
-            purchase_request_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-        if _table_exists('purchase_order_items'):
-            cursor.execute('DELETE FROM purchase_order_items')
-            purchase_order_item_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-        if _table_exists('purchase_orders'):
-            cursor.execute('DELETE FROM purchase_orders')
-            purchase_order_deleted = cursor.rowcount if cursor.rowcount is not None else 0
+        _sync_material_lot_quantity_from_balances(cursor, affected_lot_ids)
+        for material_id in affected_material_ids:
+            _sync_material_stock_with_lots(conn, material_id)
 
         audit_log(
             conn,
@@ -5242,16 +5331,14 @@ def integrated_reset_material_stock():
             'material_stock',
             0,
             {
-                'action': 'integrated_reset_stock',
-                'materials_updated': material_count,
-                'lots_updated': lot_count,
+                'action': 'integrated_reset_stock_by_workplace',
+                'workplaces': selected_workplaces,
+                'location_ids': location_ids,
+                'materials_updated': len(affected_material_ids),
+                'lots_updated': len(affected_lot_ids),
                 'logistics_stocks_deleted': logistics_stock_deleted,
+                'logistics_defect_stocks_deleted': defect_stock_deleted,
                 'lot_balances_deleted': balance_deleted,
-                'material_txns_deleted': txn_deleted,
-                'material_lot_logs_deleted': lot_log_deleted,
-                'purchase_requests_deleted': purchase_request_deleted,
-                'purchase_orders_deleted': purchase_order_deleted,
-                'purchase_order_items_deleted': purchase_order_item_deleted,
             },
         )
         conn.commit()
@@ -5261,9 +5348,7 @@ def integrated_reset_material_stock():
     finally:
         conn.close()
 
-    wp = request.form.get('wp', 'all')
-    q = request.form.get('q', '').strip()
-    return redirect(url_for('admin.integrated_management', tab='materials', wp=wp, q=q))
+    return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q, product_id=product_id or None))
 
 
 @bp.route('/integrated-management/productions/delete-all', methods=['POST'])
