@@ -533,8 +533,8 @@ def _normalize_material_unit(value: Any) -> str:
         'l': 'L',
         '1ml': 'ml',
         'ml': 'ml',
-        'ea': 'ea',
-        '개': '개',
+        'ea': 'EA',
+        '개': 'EA',
         '롤': '롤',
         '박스': '박스',
     }

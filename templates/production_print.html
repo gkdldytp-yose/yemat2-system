@@ -14,6 +14,27 @@
     }
     body { padding: 2.5mm; }
     .sheet { width: 100%; max-width: 198mm; margin: 0 auto; }
+    .preview-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .preview-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 30px;
+      padding: 0 12px;
+      border: 1px solid #94a3b8;
+      border-radius: 999px;
+      background: #fff;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
     .production-no-top {
       font-size: 10px;
       font-weight: 700;
@@ -226,6 +247,7 @@
       background: #efefef;
     }
     @media print {
+      .preview-actions { display: none !important; }
       .gray-fill,
       .thin-head th,
       .sum-table th,
@@ -260,6 +282,9 @@
 </head>
 <body>
   <div class="sheet">
+    <div class="preview-actions">
+      <button type="button" class="preview-btn" onclick="window.print()">A4 출력</button>
+    </div>
     <div class="production-no-top">생산번호: PROD-{{ production.id }}</div>
 
     <div class="title-wrap">

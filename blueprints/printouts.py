@@ -1102,9 +1102,9 @@ def packaging_checksheet_preview():
                 )
             outgoing_rows.sort(key=lambda item: ((item.get('name') or ''), (item.get('target_name') or '')))
 
-        while len(incoming_rows) < 8:
+        while len(incoming_rows) < 9:
             incoming_rows.append({'name': '', 'supplier_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''})
-        while len(outgoing_rows) < 12:
+        while len(outgoing_rows) < 15:
             outgoing_rows.append({'name': '', 'target_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''})
 
         author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''

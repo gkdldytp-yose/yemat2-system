@@ -73,6 +73,9 @@
 .ainfo{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
 .ainfo .ainput{flex:0 0 110px;}
 .actual-boxes-input[readonly]{background:#f8fafc;color:#1e293b;font-weight:700;}
+.unit-stock{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
+.unit-stock-badge{display:inline-flex;align-items:center;padding:.18rem .48rem;border-radius:999px;background:#f8fafc;border:1px solid #dbe4f0;color:#475569;font-size:.72rem;font-weight:800;line-height:1.2;}
+.unit-stock-badge.low{background:#fff1f2;border-color:#fecdd3;color:#dc2626;}
 .expiry-split-panel{display:flex;flex-direction:column;gap:.7rem;}
 .expiry-split-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;}
 .expiry-split-add{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .8rem;border:1px solid #667eea;border-radius:999px;background:#eef2ff;color:#3b4fd1;font-size:.8rem;font-weight:800;cursor:pointer;}
@@ -87,6 +90,22 @@
 .expiry-split-remove{display:inline-flex;align-items:center;justify-content:center;align-self:end;width:56px;height:32px;padding:0;border:1px solid #d7deea;border-radius:8px;background:#f8fafc;color:#64748b;font-size:.7rem;font-weight:700;cursor:pointer;line-height:1;white-space:nowrap;box-shadow:none;transition:all .15s ease;}
 .expiry-split-remove:hover{background:#eef2f7;border-color:#a8b4c7;color:#334155;}
 .expiry-split-summary{font-size:.76rem;color:#64748b;}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;}
+.section-head h3{margin:0 !important;}
+.section-journal-btn{display:inline-flex;align-items:center;justify-content:center;padding:.42rem .85rem;border:1px solid #c7d2fe;border-radius:999px;background:#eef2ff;color:#334155;font-size:.8rem;font-weight:800;text-decoration:none;cursor:pointer;line-height:1.2;}
+.section-journal-btn:hover{background:#e0e7ff;border-color:#a5b4fc;color:#1e3a8a;}
+.section-journal-btn:disabled{opacity:.45;cursor:not-allowed;}
+.journal-modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.48);display:none;align-items:center;justify-content:center;z-index:1200;padding:1rem;}
+.journal-modal-bg.open{display:flex;}
+.journal-modal{width:min(520px,96vw);background:#fff;border-radius:18px;border:1px solid #e2e8f0;box-shadow:0 24px 52px rgba(15,23,42,.18);overflow:hidden;}
+.journal-modal-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:1rem 1.1rem;border-bottom:1px solid #e5e7eb;}
+.journal-modal-title{font-size:1rem;font-weight:900;color:#0f172a;}
+.journal-modal-close{width:34px;height:34px;border:none;border-radius:999px;background:#f1f5f9;color:#475569;font-size:1rem;font-weight:900;cursor:pointer;}
+.journal-modal-body{padding:1rem 1.1rem 1.1rem;display:flex;flex-direction:column;gap:.65rem;}
+.journal-modal-desc{font-size:.84rem;color:#64748b;line-height:1.45;}
+.journal-option-btn{display:flex;align-items:center;justify-content:space-between;gap:.8rem;width:100%;padding:.8rem .95rem;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#0f172a;font-size:.88rem;font-weight:800;cursor:pointer;text-align:left;}
+.journal-option-btn:hover{border-color:#93c5fd;background:#f8fbff;}
+.journal-option-meta{display:block;font-size:.76rem;font-weight:600;color:#64748b;margin-top:.14rem;}
 
 @media (max-width: 768px) {
     html,body{max-width:100%;overflow-x:hidden;}
@@ -123,6 +142,7 @@
     .lot-gap-panel{grid-template-columns:1fr;}
     .lot-gap-fields{grid-template-columns:1fr;}
     .expiry-split-row{grid-template-columns:1fr;}
+    .section-head{align-items:flex-start;}
 }
 </style>
 {% endblock %}
@@ -292,11 +312,16 @@
 
 {% if bom_raw_items %}
 <div class="sec" style="margin-top:0.75rem;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:2px solid #667eea;padding-bottom:0.5rem;">
-        <h3 style="border:none;padding:0;margin:0;">🌿 원초 선택 및 사용량</h3>
-        {% if can_edit %}
-        <button type="button" onclick="autoSelect()" style="background:#e8f5e9;border:1px solid #27ae60;color:#27ae60;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.85rem;">⚡ 자동 선택</button>
-        {% endif %}
+    <div class="section-head" style="border-bottom:2px solid #667eea;padding-bottom:0.5rem;">
+        <h3 style="border:none;padding:0;">🌿 원초 선택 및 사용량</h3>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            {% if production.status == '완료' %}
+            <button type="button" class="section-journal-btn" onclick="openRawChecksheetChooser()" {% if not raw_checksheet_options %}disabled{% endif %}>원재료 점검표</button>
+            {% endif %}
+            {% if can_edit %}
+            <button type="button" onclick="autoSelect()" style="background:#e8f5e9;border:1px solid #27ae60;color:#27ae60;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.85rem;">⚡ 자동 선택</button>
+            {% endif %}
+        </div>
     </div>
 
     <div style="background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem;display:flex;gap:2rem;flex-wrap:wrap;">
@@ -394,14 +419,24 @@
 {% set base_items = ns.base | sort(attribute='base_sort_key') %}
 {% if base_items|length %}
 <div class="sec">
-    <h3>🧰 부자재 사용량</h3>
+    <div class="section-head">
+        <h3>🧰 부자재 사용량</h3>
+        {% if production.status == '완료' %}
+        <button type="button" class="section-journal-btn" onclick="openJournalPreview('{{ material_checksheet_url }}', 'material_checksheet_preview_{{ production.id }}')">부재료 점검표</button>
+        {% endif %}
+    </div>
     <table class="mat-tbl">
         <thead><tr><th>부자재명</th><th>단위</th><th>예상량</th><th>실제 사용량</th><th>로스량</th><th>수율</th></tr></thead>
         <tbody id="matBody">
         {% for u in base_items %}
         <tr data-uid="{{ u.id }}" data-pbox="{{ ((u.expected_quantity|default(0)) / calc_base_boxes)|round(6) if calc_base_boxes else 0 }}">
             <td><strong>{{ u.material_name }}</strong></td>
-            <td>{{ u.unit }}</td>
+            <td>
+                <div class="unit-stock">
+                    <span>{{ u.unit }}</span>
+                    <span class="unit-stock-badge {% if (u.current_stock or 0) < (u.expected_quantity or 0) %}low{% endif %}">재고 {{ '%.1f'|format(u.current_stock or 0) }}</span>
+                </div>
+            </td>
             <td id="exp_{{ u.id }}">{{ (u.expected_quantity|default(0))|round(1) }}</td>
             <td>
                 {% if not can_edit %}
@@ -476,14 +511,24 @@
 {% set ordered_pack = (ns.pack_inner | sort(attribute='material_name')) + (ns.pack_outer | sort(attribute='material_name')) + (ns.pack_box | sort(attribute='material_name')) + (ns.pack_silica | sort(attribute='material_name')) + (ns.pack_tray | sort(attribute='material_name')) + (ns.pack_other | sort(attribute='material_name')) %}
 {% if ordered_pack|length %}
 <div class="sec">
-    <h3>📦 포장재 사용량</h3>
+    <div class="section-head">
+        <h3>📦 포장재 사용량</h3>
+        {% if production.status == '완료' %}
+        <button type="button" class="section-journal-btn" onclick="openJournalPreview('{{ packaging_checksheet_url }}', 'packaging_checksheet_preview_{{ production.id }}')">포장재 점검표</button>
+        {% endif %}
+    </div>
     <table class="mat-tbl">
         <thead><tr><th>포장재명</th><th>단위</th><th>예상량</th><th>실제 사용량</th><th>로스량</th><th>수율</th></tr></thead>
         <tbody id="packBody">
         {% for u in ordered_pack %}
         <tr data-uid="{{ u.id }}" data-pbox="{{ ((u.expected_quantity|default(0)) / calc_base_boxes)|round(6) if calc_base_boxes else 0 }}">
             <td><strong>{{ u.material_name }}</strong></td>
-            <td>{{ u.unit }}</td>
+            <td>
+                <div class="unit-stock">
+                    <span>{{ u.unit }}</span>
+                    <span class="unit-stock-badge {% if (u.current_stock or 0) < (u.expected_quantity or 0) %}low{% endif %}">재고 {{ '%.1f'|format(u.current_stock or 0) }}</span>
+                </div>
+            </td>
             <td id="exp_{{ u.id }}">{{ (u.expected_quantity|default(0))|round(1) }}</td>
             <td>
                 {% if not can_edit %}
@@ -572,6 +617,30 @@
 {% elif production.status != '완료' %}
 <div class="sec"><div style="background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;font-size:0.9rem;color:#666;text-align:center;">읽기 전용입니다.</div></div>
 {% endif %}
+
+<div id="rawChecksheetChooser" class="journal-modal-bg" onclick="closeRawChecksheetChooser(event)">
+    <div class="journal-modal" onclick="event.stopPropagation()">
+        <div class="journal-modal-head">
+            <div class="journal-modal-title">원재료 점검표 선택</div>
+            <button type="button" class="journal-modal-close" onclick="closeRawChecksheetChooser()">×</button>
+        </div>
+        <div class="journal-modal-body">
+            <div class="journal-modal-desc">이 생산건에 사용된 원재료 일지 미리보기를 선택해서 바로 열 수 있습니다.</div>
+            {% for raw in raw_checksheet_options %}
+            <button type="button" class="journal-option-btn" onclick="openJournalPreview('{{ raw.url }}', 'raw_checksheet_preview_{{ raw.id }}')">
+                <span>
+                    {{ raw.name }}
+                    <span class="journal-option-meta">{% if raw.car_number %}자호 {{ raw.car_number }}{% endif %}{% if raw.receiving_date %}{% if raw.car_number %} · {% endif %}입고일 {{ raw.receiving_date }}{% endif %}</span>
+                </span>
+                <span>미리보기</span>
+            </button>
+            {% endfor %}
+            {% if not raw_checksheet_options %}
+            <div class="journal-modal-desc">이 생산건에서 사용된 원재료 이력이 없어 연결할 점검표가 없습니다.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
 
 </form>
 
@@ -1035,6 +1104,37 @@ function closeMaterialShortageModal(){
     const modal = document.getElementById('materialShortageModal');
     if(modal){
         modal.style.display = 'none';
+    }
+}
+
+function openJournalPreview(url, windowName){
+    if(!url) return;
+    window.open(url, windowName || 'journal_preview', 'width=1200,height=920,scrollbars=yes,resizable=yes');
+}
+
+function openRawChecksheetChooser(){
+    const options = {{ raw_checksheet_options|tojson }};
+    if(!options || options.length === 0){
+        alert('연결할 원재료 점검표가 없습니다.');
+        return;
+    }
+    if(options.length === 1){
+        openJournalPreview(options[0].url, `raw_checksheet_preview_${options[0].id}`);
+        return;
+    }
+    const modal = document.getElementById('rawChecksheetChooser');
+    if(modal){
+        modal.classList.add('open');
+    }
+}
+
+function closeRawChecksheetChooser(event){
+    if(event && event.target && event.target !== event.currentTarget){
+        return;
+    }
+    const modal = document.getElementById('rawChecksheetChooser');
+    if(modal){
+        modal.classList.remove('open');
     }
 }
 </script>

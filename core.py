@@ -489,6 +489,10 @@ def _ensure_materials_schema(conn):
             conn.execute("ALTER TABLE materials ADD COLUMN upper_unit TEXT")
         if 'upper_unit_qty' not in cols:
             conn.execute("ALTER TABLE materials ADD COLUMN upper_unit_qty REAL")
+        conn.execute("UPDATE materials SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
+        conn.execute("UPDATE logistics_stocks SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
+        conn.execute("UPDATE logistics_defect_stocks SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
+        conn.execute("UPDATE logistics_issue_requests SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
     except Exception:
         pass
     _materials_schema_checked = True
