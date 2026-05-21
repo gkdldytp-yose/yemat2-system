@@ -251,10 +251,11 @@
         {% block extra_css %}{% endblock %}
     </style>
 </head>
-<body class="{% if request.path.startswith('/integrated-management') %}page-integrated{% else %}page-standard{% endif %}">
+<body class="{% if request.path.startswith('/integrated-management') %}page-integrated{% else %}page-standard{% endif %}" data-username="{{ user.username if user else '' }}" data-is-admin="{% if user and user.is_admin %}1{% else %}0{% endif %}">
 {% if user %}
         {%- set _r = user.role if user.role else ('admin' if user.is_admin else 'readonly') -%}
         {%- set _sa = user.is_admin -%}
+        {%- set _can_open_integrated = _sa or ((user.username or '')|lower == 'test') -%}
 
 <nav>
     <div class="nav-container">
@@ -273,8 +274,10 @@
             <li><a href="/journals" onclick="closeMenu()">일지관리</a></li>
             {% if _sa %}
             {% endif %}
-            {% if _sa %}
+            {% if _can_open_integrated %}
             <li><a href="/integrated-management" onclick="closeMenu()" style="color:#f39c12;font-weight:600;">🔧 통합 관리</a></li>
+            {% endif %}
+            {% if _sa %}
             <li><a href="/users" class="admin-btn" onclick="closeMenu()">👥 사용자</a></li>
             {% endif %}
         </ul>
@@ -459,6 +462,17 @@ document.addEventListener('keydown', function(e) {
 
 document.addEventListener('click', function() {
     setTimeout(refreshModalFocus, 0);
+});
+
+document.addEventListener('keydown', function(e) {
+    const body = document.body;
+    if (!body) return;
+    const username = (body.dataset.username || '').trim().toLowerCase();
+    const isAdmin = body.dataset.isAdmin === '1';
+    if (!(isAdmin && username === 'admin')) return;
+    if (!(e.ctrlKey && e.altKey && e.shiftKey && (e.key === 'L' || e.key === 'l'))) return;
+    e.preventDefault();
+    window.location.href = '/integrated-management?tab=audit_logs&hidden_audit=1';
 });
 
 const modalObserver = new MutationObserver(() => refreshModalFocus());

@@ -36,6 +36,11 @@ MANUAL_BACKUP_PREFIX = 'yemat_manual_'
 LEGACY_BACKUP_PREFIX = 'yemat_'
 AUTO_BACKUP_PREFIX = 'yemat_auto_'
 RESTORE_POINT_PREFIX = 'yemat_restore_point_'
+INTEGRATED_READONLY_USERNAMES = {'test'}
+INTEGRATED_READONLY_SAFE_POST_ENDPOINTS = {
+    'admin.integrated_requirements_calculator_data',
+    'admin.integrated_requirements_calculator_export',
+}
 
 WORKPLACE_SORT_ORDER = {
     '1동 조미': 1,
@@ -62,6 +67,35 @@ def _can_manage_material_lots():
     role = user.get('role', 'readonly')
     workplace = (session.get('workplace') or '').strip()
     return bool(user.get('is_admin')) or role == 'logistics' or workplace == LOGISTICS_WORKPLACE
+
+
+def _is_integrated_readonly_user():
+    user = session.get('user') or {}
+    username = (user.get('username') or '').strip().lower()
+    return bool(username) and not bool(user.get('is_admin')) and username in INTEGRATED_READONLY_USERNAMES
+
+
+def _can_access_integrated_management():
+    user = session.get('user') or {}
+    return bool(user.get('is_admin')) or _is_integrated_readonly_user()
+
+
+@bp.before_request
+def _guard_integrated_management_permissions():
+    path = (request.path or '').strip()
+    if not path.startswith('/integrated-management'):
+        return None
+    if 'user' not in session:
+        return None
+    if not _can_access_integrated_management():
+        return redirect(url_for('main.index'))
+    if (
+        _is_integrated_readonly_user()
+        and request.method == 'POST'
+        and request.endpoint not in INTEGRATED_READONLY_SAFE_POST_ENDPOINTS
+    ):
+        return "통합관리는 읽기 전용 계정입니다.", 403
+    return None
 
 
 def _material_workplace_sort_key(value):
@@ -147,6 +181,68 @@ def _subcontract_row_sort_key(row):
 def _is_completed_status(status_value):
     text = str(status_value or '').strip()
     return text == '완료' or '완료' in text
+
+
+def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', entity='', action='', date_from='', date_to='', limit=500):
+    entity_labels = {
+        'product': '상품',
+        'products': '상품',
+        'raw_material': '원초',
+        'raw_material_lot': '원초 로트',
+        'material': '부자재',
+        'material_lot': '부자재 로트',
+        'production': '생산',
+        'production_schedule': '생산 스케줄',
+        'work_day': '작업일',
+        'purchase_request': '발주 요청',
+        'logistics_issue_request': '물류 요청',
+        'logistics_issue_request_item': '물류 요청 항목',
+        'inv_issue_request': '불출 요청',
+        'inv_issue_request_item': '불출 요청 항목',
+        'import_batches': '엑셀 가져오기',
+        'user': '사용자',
+        'db_backup': 'DB 백업',
+        'meeting_eval': '경영평가',
+    }
+    query = '''
+        SELECT *
+        FROM audit_logs
+        WHERE 1=1
+    '''
+    params = []
+    if wp_filter != 'all':
+        query += ' AND workplace = ?'
+        params.append(wp_filter)
+    if username:
+        query += ' AND COALESCE(username, "") = ?'
+        params.append(username)
+    if entity:
+        query += ' AND COALESCE(entity, "") = ?'
+        params.append(entity)
+    if action:
+        query += ' AND COALESCE(action, "") = ?'
+        params.append(action)
+    if date_from:
+        query += ' AND date(created_at) >= date(?)'
+        params.append(date_from)
+    if date_to:
+        query += ' AND date(created_at) <= date(?)'
+        params.append(date_to)
+    if q:
+        query += ' AND (action LIKE ? OR entity LIKE ? OR name LIKE ? OR username LIKE ? OR COALESCE(data, "") LIKE ?)'
+        like_q = f'%{q}%'
+        params.extend([like_q, like_q, like_q, like_q, like_q])
+    query += ' ORDER BY created_at DESC, id DESC'
+    if limit:
+        query += f' LIMIT {int(limit)}'
+    cursor.execute(query, params)
+    rows = []
+    for row in cursor.fetchall():
+        item = dict(row)
+        entity_key = (item.get('entity') or '').strip()
+        item['entity_label'] = entity_labels.get(entity_key, entity_key or '-')
+        rows.append(item)
+    return rows
 
 
 def _build_meeting_eval_payload(cursor):
@@ -3346,13 +3442,15 @@ def _query_integrated_stats(cursor, wp_filter, period, anchor_raw):
 @login_required
 def integrated_management():
     """Auto-generated docstring."""
-    if not session['user']['is_admin']:
+    if not _can_access_integrated_management():
         return "??????????????源낆┰?????????곸죩", 403
 
     tab = request.args.get('tab', 'products')  # products, raw_materials, materials, productions, subcontract_production, stats, requirements_calculator, meeting_eval, inventory_audit, db_backups
+    hidden_audit = (request.args.get('hidden_audit') or '').strip() == '1'
     if tab == 'stats':
         return redirect('/production-statistics?persist=1')
-    if tab == 'audit_logs':
+    is_hidden_audit_allowed = bool(session['user'].get('is_admin')) and ((session['user'].get('username') or '').strip().lower() == 'admin') and hidden_audit
+    if tab == 'audit_logs' and not is_hidden_audit_allowed:
         tab = 'products'
     wp_filter = request.args.get('wp', 'all')
     q = request.args.get('q', '').strip()
@@ -3379,6 +3477,11 @@ def integrated_management():
     inventory_product_id = (request.args.get('inventory_product_id') or '').strip()
     inventory_q = (request.args.get('inventory_q') or '').strip()
     inventory_wp = (request.args.get('inventory_wp') or 'all').strip() or 'all'
+    audit_username = (request.args.get('audit_username') or '').strip()
+    audit_entity = (request.args.get('audit_entity') or '').strip()
+    audit_action = (request.args.get('audit_action') or '').strip()
+    audit_date_from = (request.args.get('audit_date_from') or '').strip()
+    audit_date_to = (request.args.get('audit_date_to') or '').strip()
     meeting_view = (request.args.get('meeting_view') or 'all').strip() or 'all'
     meeting_week_anchor = (request.args.get('meeting_week_anchor') or '').strip()
     meeting_month_anchor = (request.args.get('meeting_month_anchor') or '').strip()
@@ -3403,6 +3506,9 @@ def integrated_management():
     stats = None
     meeting_eval = None
     subcontract_payload = None
+    audit_user_options = []
+    audit_entity_options = []
+    audit_action_options = []
     if tab in ('materials', 'purchase_requests', 'subcontract_production'):
         _sync_material_stock_with_lots(conn)
 
@@ -3762,22 +3868,44 @@ def integrated_management():
         )
 
     elif tab == 'audit_logs':
-        query = '''
-            SELECT *
+        data = _query_integrated_audit_logs(
+            cursor,
+            wp_filter=wp_filter,
+            q=q,
+            username=audit_username,
+            entity=audit_entity,
+            action=audit_action,
+            date_from=audit_date_from,
+            date_to=audit_date_to,
+            limit=500,
+        )
+        cursor.execute(
+            '''
+            SELECT DISTINCT COALESCE(username, '') AS username
             FROM audit_logs
-            WHERE 1=1
-        '''
-        params = []
-        if wp_filter != 'all':
-            query += ' AND workplace = ?'
-            params.append(wp_filter)
-        if q:
-            query += ' AND (action LIKE ? OR entity LIKE ? OR name LIKE ? OR username LIKE ?)'
-            like_q = f'%{q}%'
-            params.extend([like_q, like_q, like_q, like_q])
-        query += ' ORDER BY created_at DESC, id DESC LIMIT 500'
-        cursor.execute(query, params)
-        data = cursor.fetchall()
+            WHERE COALESCE(username, '') != ''
+            ORDER BY username
+            '''
+        )
+        audit_user_options = [row['username'] for row in cursor.fetchall() if row['username']]
+        cursor.execute(
+            '''
+            SELECT DISTINCT COALESCE(entity, '') AS entity
+            FROM audit_logs
+            WHERE COALESCE(entity, '') != ''
+            ORDER BY entity
+            '''
+        )
+        audit_entity_options = [row['entity'] for row in cursor.fetchall() if row['entity']]
+        cursor.execute(
+            '''
+            SELECT DISTINCT COALESCE(action, '') AS action
+            FROM audit_logs
+            WHERE COALESCE(action, '') != ''
+            ORDER BY action
+            '''
+        )
+        audit_action_options = [row['action'] for row in cursor.fetchall() if row['action']]
     elif tab == 'db_backups':
         _cleanup_expired_auto_backups(backup_settings.get('auto_retention_days'))
         data = _list_db_backups()
@@ -3793,6 +3921,16 @@ def integrated_management():
 
     return render_template('integrated_management.html',
                           user=session['user'],
+                          integrated_readonly=_is_integrated_readonly_user(),
+                          hidden_audit=hidden_audit if is_hidden_audit_allowed else False,
+                          audit_username=audit_username,
+                          audit_entity=audit_entity,
+                          audit_action=audit_action,
+                          audit_date_from=audit_date_from,
+                          audit_date_to=audit_date_to,
+                          audit_user_options=audit_user_options,
+                          audit_entity_options=audit_entity_options,
+                          audit_action_options=audit_action_options,
                           tab=tab,
                           data=data,
                           current_workplace=session.get('workplace') or 'all',
@@ -5842,7 +5980,7 @@ def integrated_update_product():
 
 
 @bp.route('/integrated-management/requirements-calculator-data', methods=['POST'])
-@admin_required
+@login_required
 def integrated_requirements_calculator_data():
     payload = request.get_json(silent=True) or {}
     items = payload.get('items') or []
@@ -5858,7 +5996,7 @@ def integrated_requirements_calculator_data():
 
 
 @bp.route('/integrated-management/requirements-calculator-export', methods=['POST'])
-@admin_required
+@login_required
 def integrated_requirements_calculator_export():
     payload = request.get_json(silent=True) or {}
     items = payload.get('items') or []
@@ -5893,6 +6031,66 @@ def integrated_requirements_calculator_export():
     workbook = _build_simple_xlsx('원부자재계산기', headers, rows)
     now_token = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f'requirements_calculator_{mode}_{now_token}.xlsx'
+    return send_file(
+        workbook,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@bp.route('/integrated-management/audit-logs/export')
+@login_required
+def integrated_audit_logs_export():
+    user = session.get('user') or {}
+    hidden_audit = (request.args.get('hidden_audit') or '').strip() == '1'
+    is_hidden_audit_allowed = bool(user.get('is_admin')) and ((user.get('username') or '').strip().lower() == 'admin') and hidden_audit
+    if not is_hidden_audit_allowed:
+        return redirect(url_for('admin.integrated_management'))
+
+    wp_filter = (request.args.get('wp') or 'all').strip() or 'all'
+    q = (request.args.get('q') or '').strip()
+    audit_username = (request.args.get('audit_username') or '').strip()
+    audit_entity = (request.args.get('audit_entity') or '').strip()
+    audit_action = (request.args.get('audit_action') or '').strip()
+    audit_date_from = (request.args.get('audit_date_from') or '').strip()
+    audit_date_to = (request.args.get('audit_date_to') or '').strip()
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        data = _query_integrated_audit_logs(
+            cursor,
+            wp_filter=wp_filter,
+            q=q,
+            username=audit_username,
+            entity=audit_entity,
+            action=audit_action,
+            date_from=audit_date_from,
+            date_to=audit_date_to,
+            limit=0,
+        )
+    finally:
+        conn.close()
+
+    headers = ['액션', '기능', '대상ID', '작업자ID', '작업자명', '작업장', 'IP', '일시', '상세데이터']
+    rows = [
+        [
+            item['action'] or '',
+            item.get('entity_label') or item.get('entity') or '',
+            item['entity_id'] or '',
+            item['username'] or '',
+            item['name'] or '',
+            item['workplace'] or '',
+            item['ip'] or '',
+            item['created_at'] or '',
+            item['data'] or '',
+        ]
+        for item in data
+    ]
+    workbook = _build_simple_xlsx('사용자행위로그', headers, rows)
+    now_token = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'audit_logs_{now_token}.xlsx'
     return send_file(
         workbook,
         as_attachment=True,
