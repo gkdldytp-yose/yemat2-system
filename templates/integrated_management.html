@@ -179,6 +179,22 @@
 }
 .material-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
 .material-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
+.integrated-readonly-banner{margin-bottom:0.9rem;padding:0.85rem 1rem;border:1px solid #dbeafe;border-radius:14px;background:linear-gradient(180deg,#f8fbff 0%,#eff6ff 100%);color:#1d4ed8;font-size:0.88rem;font-weight:800;}
+.integrated-readonly form[method="POST"],
+.integrated-readonly button[onclick*="openAddModal"],
+.integrated-readonly button[onclick*="openEditModal"],
+.integrated-readonly button[onclick*="toggleLotEdit"],
+.integrated-readonly button[onclick*="toggleRawLotEdit"],
+.integrated-readonly button[onclick*="openMaterialResetModal"],
+.integrated-readonly button[onclick*="applyInventoryAudit"],
+.integrated-readonly button[onclick*="toggleMaterialBulkAssignMode"],
+.integrated-readonly button[onclick*="toggleProductBulkAssignMode"],
+.integrated-readonly button[onclick*="openRawActivityModal"],
+.integrated-readonly .lot-inline-form,
+.integrated-readonly .lot-actions,
+.integrated-readonly .material-detail-tabs .material-detail-tab:last-child,
+.integrated-readonly .modal-bg{display:none !important;}
+.integrated-readonly .reqcalc-stock-input{pointer-events:none;background:#f8fafc;color:#64748b;}
 .material-detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.75rem;}
 .material-detail-tab{padding:0.46rem 0.95rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-weight:800;cursor:pointer;}
 .material-detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,0.2);}
@@ -517,7 +533,10 @@
 </div>
 {% endif %}
 
-<div class="card">
+<div class="card{% if integrated_readonly %} integrated-readonly{% endif %}">
+    {% if integrated_readonly %}
+    <div class="integrated-readonly-banner">`test` 계정은 통합관리 읽기 전용 계정입니다. 조회와 계산, 출력만 가능하며 추가/수정/삭제는 제한됩니다.</div>
+    {% endif %}
     <div class="card-header">
         <div class="header-row">
         <div class="title-wrap">
@@ -528,6 +547,7 @@
                 {% elif tab == 'productions' %}전체 생산 관리
                 {% elif tab == 'requirements_calculator' %}원부자재 계산기
                 {% elif tab == 'subcontract_production' %}임가공 생산관리
+                {% elif tab == 'audit_logs' %}사용자 행위 로그
                 {% elif tab == 'meeting_eval' %}주간회의 / 경영평가 자료
                 {% elif tab == 'inventory_audit' %}전체 재고 조사 현황
                 {% elif tab == 'db_backups' %}전체 DB 백업 관리
@@ -564,6 +584,24 @@
             <form method="GET" action="/integrated-management" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                 <input type="hidden" name="tab" value="{{ tab }}">
                 <input type="hidden" name="wp" value="{{ wp_filter }}">
+                {% if tab == 'audit_logs' and hidden_audit %}
+                <input type="hidden" name="hidden_audit" value="1">
+                {% if audit_username %}
+                <input type="hidden" name="audit_username" value="{{ audit_username }}">
+                {% endif %}
+                {% if audit_entity %}
+                <input type="hidden" name="audit_entity" value="{{ audit_entity }}">
+                {% endif %}
+                {% if audit_action %}
+                <input type="hidden" name="audit_action" value="{{ audit_action }}">
+                {% endif %}
+                {% if audit_date_from %}
+                <input type="hidden" name="audit_date_from" value="{{ audit_date_from }}">
+                {% endif %}
+                {% if audit_date_to %}
+                <input type="hidden" name="audit_date_to" value="{{ audit_date_to }}">
+                {% endif %}
+                {% endif %}
                 {% if tab == 'materials' and selected_product_id %}
                 <input type="hidden" name="product_id" value="{{ selected_product_id }}">
                 {% endif %}
@@ -584,6 +622,53 @@
                 <button type="submit" class="btn btn-small">검색</button>
                 {% endif %}
             </form>
+            {% if tab == 'audit_logs' and hidden_audit %}
+            <form method="GET" action="/integrated-management" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;">
+                <input type="hidden" name="tab" value="audit_logs">
+                <input type="hidden" name="hidden_audit" value="1">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:150px;">
+                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">사용자</label>
+                    <select name="audit_username" class="search-input" style="min-width:150px;">
+                        <option value="">전체 사용자</option>
+                        {% for value in audit_user_options %}
+                        <option value="{{ value }}" {% if audit_username == value %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:150px;">
+                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">기능</label>
+                    <select name="audit_entity" class="search-input" style="min-width:150px;">
+                        <option value="">전체 기능</option>
+                        {% for value in audit_entity_options %}
+                        <option value="{{ value }}" {% if audit_entity == value %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:130px;">
+                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">액션</label>
+                    <select name="audit_action" class="search-input" style="min-width:130px;">
+                        <option value="">전체 액션</option>
+                        {% for value in audit_action_options %}
+                        <option value="{{ value }}" {% if audit_action == value %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:146px;">
+                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">시작일</label>
+                    <input type="date" name="audit_date_from" value="{{ audit_date_from }}" class="search-input" style="min-width:146px;">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:146px;">
+                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">종료일</label>
+                    <input type="date" name="audit_date_to" value="{{ audit_date_to }}" class="search-input" style="min-width:146px;">
+                </div>
+                <div style="display:flex;gap:0.45rem;align-items:flex-end;flex-wrap:wrap;">
+                    <button type="submit" class="btn btn-small">필터 적용</button>
+                    <a href="/integrated-management?tab=audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}" class="btn btn-small btn-secondary">초기화</a>
+                    <a href="/integrated-management/audit-logs/export?tab=audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if audit_username %}&audit_username={{ audit_username|urlencode }}{% endif %}{% if audit_entity %}&audit_entity={{ audit_entity|urlencode }}{% endif %}{% if audit_action %}&audit_action={{ audit_action|urlencode }}{% endif %}{% if audit_date_from %}&audit_date_from={{ audit_date_from|urlencode }}{% endif %}{% if audit_date_to %}&audit_date_to={{ audit_date_to|urlencode }}{% endif %}" class="btn btn-small" style="background:#0f766e;">엑셀 다운로드</a>
+                </div>
+            </form>
+            {% endif %}
             {% if tab == 'materials' %}
             <button type="button" id="materialBulkAssignToggleBtn" class="btn btn-small" style="background:#2563eb;" onclick="toggleMaterialBulkAssignMode()">작업장 일괄 변경</button>
             <button type="button" class="btn btn-small" style="margin-left:auto;background:#dc2626;border-color:#dc2626;color:#fff;" onclick="openMaterialResetModal()">재고 초기화</button>
@@ -606,7 +691,7 @@
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">지금 백업</button>
             </form>
             {% endif %}
-            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions', 'subcontract_production'] %}
+            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions', 'subcontract_production', 'audit_logs'] %}
             <button class="btn btn-small" onclick="openAddModal()">+ 추가</button>
             {% endif %}
             </div>
@@ -1767,7 +1852,7 @@
                             {{ item.workplace or '-' }}
                         </span>
                     </td>
-                    <td>{{ item.entity or '-' }}</td>
+                    <td>{{ item.entity_label or item.entity or '-' }}</td>
                     <td>{{ item.entity_id or '-' }}</td>
                     <td>{{ item.name or item.username or '-' }}</td>
                     <td>{{ item.ip or '-' }}</td>
