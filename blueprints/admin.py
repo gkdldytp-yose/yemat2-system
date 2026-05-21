@@ -4,6 +4,7 @@ from pathlib import Path
 import sqlite3
 import csv
 import io
+import json
 import re
 import zipfile
 from urllib.parse import quote
@@ -204,6 +205,7 @@ def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', ent
         'db_backup': 'DB 백업',
         'meeting_eval': '경영평가',
     }
+    entity_labels['auth_session'] = '로그인 세션'
     query = '''
         SELECT *
         FROM audit_logs
@@ -241,6 +243,61 @@ def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', ent
         item = dict(row)
         entity_key = (item.get('entity') or '').strip()
         item['entity_label'] = entity_labels.get(entity_key, entity_key or '-')
+        rows.append(item)
+    return rows
+
+
+def _query_integrated_login_audit_logs(cursor, wp_filter='all', q='', username='', event_type='', date_from='', date_to='', limit=500):
+    query = '''
+        SELECT *
+        FROM audit_logs
+        WHERE COALESCE(entity, '') = 'auth_session'
+          AND COALESCE(action, '') IN ('login', 'logout')
+    '''
+    params = []
+    if wp_filter != 'all':
+        query += ' AND workplace = ?'
+        params.append(wp_filter)
+    if username:
+        query += ' AND COALESCE(username, "") = ?'
+        params.append(username)
+    if event_type in {'login', 'logout'}:
+        query += ' AND COALESCE(action, "") = ?'
+        params.append(event_type)
+    if date_from:
+        query += ' AND date(created_at) >= date(?)'
+        params.append(date_from)
+    if date_to:
+        query += ' AND date(created_at) <= date(?)'
+        params.append(date_to)
+    if q:
+        query += ' AND (COALESCE(username, "") LIKE ? OR COALESCE(name, "") LIKE ? OR COALESCE(ip, "") LIKE ? OR COALESCE(data, "") LIKE ?)'
+        like_q = f'%{q}%'
+        params.extend([like_q, like_q, like_q, like_q])
+    query += ' ORDER BY created_at DESC, id DESC'
+    if limit:
+        query += f' LIMIT {int(limit)}'
+    cursor.execute(query, params)
+
+    rows = []
+    for row in cursor.fetchall():
+        item = dict(row)
+        raw_data = item.get('data')
+        try:
+            payload = json.loads(raw_data) if raw_data else {}
+        except Exception:
+            payload = {}
+        available_workplaces = payload.get('available_workplaces') or []
+        if isinstance(available_workplaces, str):
+            available_workplaces = [value.strip() for value in available_workplaces.split(',') if value.strip()]
+        item['action_label'] = '로그인' if item.get('action') == 'login' else '로그아웃'
+        item['role_label'] = payload.get('role') or '-'
+        item['user_agent'] = payload.get('user_agent') or '-'
+        item['path_label'] = payload.get('path') or '-'
+        item['referer_label'] = payload.get('referer') or '-'
+        item['host_label'] = payload.get('host') or '-'
+        item['current_workplace_label'] = payload.get('current_workplace') or item.get('workplace') or '-'
+        item['available_workplaces_label'] = ', '.join(available_workplaces) if available_workplaces else '-'
         rows.append(item)
     return rows
 
@@ -3447,10 +3504,12 @@ def integrated_management():
 
     tab = request.args.get('tab', 'products')  # products, raw_materials, materials, productions, subcontract_production, stats, requirements_calculator, meeting_eval, inventory_audit, db_backups
     hidden_audit = (request.args.get('hidden_audit') or '').strip() == '1'
+    tab = (request.args.get('tab') or 'audit_logs').strip() or 'audit_logs'
+    tab = (request.args.get('tab') or 'audit_logs').strip() or 'audit_logs'
     if tab == 'stats':
         return redirect('/production-statistics?persist=1')
     is_hidden_audit_allowed = bool(session['user'].get('is_admin')) and ((session['user'].get('username') or '').strip().lower() == 'admin') and hidden_audit
-    if tab == 'audit_logs' and not is_hidden_audit_allowed:
+    if tab in ('audit_logs', 'login_audit_logs') and not is_hidden_audit_allowed:
         tab = 'products'
     wp_filter = request.args.get('wp', 'all')
     q = request.args.get('q', '').strip()
@@ -3482,6 +3541,9 @@ def integrated_management():
     audit_action = (request.args.get('audit_action') or '').strip()
     audit_date_from = (request.args.get('audit_date_from') or '').strip()
     audit_date_to = (request.args.get('audit_date_to') or '').strip()
+    login_event_type = (request.args.get('login_event_type') or '').strip()
+    login_event_type = (request.args.get('login_event_type') or '').strip()
+    login_event_type = (request.args.get('login_event_type') or '').strip()
     meeting_view = (request.args.get('meeting_view') or 'all').strip() or 'all'
     meeting_week_anchor = (request.args.get('meeting_week_anchor') or '').strip()
     meeting_month_anchor = (request.args.get('meeting_month_anchor') or '').strip()
@@ -3906,6 +3968,27 @@ def integrated_management():
             '''
         )
         audit_action_options = [row['action'] for row in cursor.fetchall() if row['action']]
+    elif tab == 'login_audit_logs':
+        data = _query_integrated_login_audit_logs(
+            cursor,
+            wp_filter=wp_filter,
+            q=q,
+            username=audit_username,
+            event_type=login_event_type,
+            date_from=audit_date_from,
+            date_to=audit_date_to,
+            limit=500,
+        )
+        cursor.execute(
+            '''
+            SELECT DISTINCT COALESCE(username, '') AS username
+            FROM audit_logs
+            WHERE COALESCE(entity, '') = 'auth_session'
+              AND COALESCE(username, '') != ''
+            ORDER BY username
+            '''
+        )
+        audit_user_options = [row['username'] for row in cursor.fetchall() if row['username']]
     elif tab == 'db_backups':
         _cleanup_expired_auto_backups(backup_settings.get('auto_retention_days'))
         data = _list_db_backups()
@@ -3925,10 +4008,11 @@ def integrated_management():
                           hidden_audit=hidden_audit if is_hidden_audit_allowed else False,
                           audit_username=audit_username,
                           audit_entity=audit_entity,
-                          audit_action=audit_action,
-                          audit_date_from=audit_date_from,
-                          audit_date_to=audit_date_to,
-                          audit_user_options=audit_user_options,
+                           audit_action=audit_action,
+                           audit_date_from=audit_date_from,
+                           audit_date_to=audit_date_to,
+                           login_event_type=login_event_type,
+                           audit_user_options=audit_user_options,
                           audit_entity_options=audit_entity_options,
                           audit_action_options=audit_action_options,
                           tab=tab,
@@ -6044,6 +6128,7 @@ def integrated_requirements_calculator_export():
 def integrated_audit_logs_export():
     user = session.get('user') or {}
     hidden_audit = (request.args.get('hidden_audit') or '').strip() == '1'
+    tab = (request.args.get('tab') or 'audit_logs').strip() or 'audit_logs'
     is_hidden_audit_allowed = bool(user.get('is_admin')) and ((user.get('username') or '').strip().lower() == 'admin') and hidden_audit
     if not is_hidden_audit_allowed:
         return redirect(url_for('admin.integrated_management'))
@@ -6055,42 +6140,78 @@ def integrated_audit_logs_export():
     audit_action = (request.args.get('audit_action') or '').strip()
     audit_date_from = (request.args.get('audit_date_from') or '').strip()
     audit_date_to = (request.args.get('audit_date_to') or '').strip()
+    login_event_type = (request.args.get('login_event_type') or '').strip()
 
     conn = get_db()
     cursor = conn.cursor()
     try:
-        data = _query_integrated_audit_logs(
-            cursor,
-            wp_filter=wp_filter,
-            q=q,
-            username=audit_username,
-            entity=audit_entity,
-            action=audit_action,
-            date_from=audit_date_from,
-            date_to=audit_date_to,
-            limit=0,
-        )
+        if tab == 'login_audit_logs':
+            data = _query_integrated_login_audit_logs(
+                cursor,
+                wp_filter=wp_filter,
+                q=q,
+                username=audit_username,
+                event_type=login_event_type,
+                date_from=audit_date_from,
+                date_to=audit_date_to,
+                limit=0,
+            )
+        else:
+            data = _query_integrated_audit_logs(
+                cursor,
+                wp_filter=wp_filter,
+                q=q,
+                username=audit_username,
+                entity=audit_entity,
+                action=audit_action,
+                date_from=audit_date_from,
+                date_to=audit_date_to,
+                limit=0,
+            )
     finally:
         conn.close()
 
-    headers = ['액션', '기능', '대상ID', '작업자ID', '작업자명', '작업장', 'IP', '일시', '상세데이터']
-    rows = [
-        [
-            item['action'] or '',
-            item.get('entity_label') or item.get('entity') or '',
-            item['entity_id'] or '',
-            item['username'] or '',
-            item['name'] or '',
-            item['workplace'] or '',
-            item['ip'] or '',
-            item['created_at'] or '',
-            item['data'] or '',
+    if tab == 'login_audit_logs':
+        headers = ['??', '???ID', '??', '??', '?? ???', '?? ?? ???', 'IP', '????', '???', '?? ??', '???', '??']
+        rows = [
+            [
+                item.get('action_label') or '',
+                item.get('username') or '',
+                item.get('name') or '',
+                item.get('role_label') or '',
+                item.get('current_workplace_label') or '',
+                item.get('available_workplaces_label') or '',
+                item.get('ip') or '',
+                item.get('user_agent') or '',
+                item.get('host_label') or '',
+                item.get('path_label') or '',
+                item.get('referer_label') or '',
+                item.get('created_at') or '',
+            ]
+            for item in data
         ]
-        for item in data
-    ]
-    workbook = _build_simple_xlsx('사용자행위로그', headers, rows)
+        workbook = _build_simple_xlsx('?????', headers, rows)
+        filename_prefix = 'login_audit_logs'
+    else:
+        headers = ['??', '??', '??ID', '???ID', '????', '???', 'IP', '??', '?????']
+        rows = [
+            [
+                item.get('action') or '',
+                item.get('entity_label') or item.get('entity') or '',
+                item.get('entity_id') or '',
+                item.get('username') or '',
+                item.get('name') or '',
+                item.get('workplace') or '',
+                item.get('ip') or '',
+                item.get('created_at') or '',
+                item.get('data') or '',
+            ]
+            for item in data
+        ]
+        workbook = _build_simple_xlsx('???????', headers, rows)
+        filename_prefix = 'audit_logs'
     now_token = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'audit_logs_{now_token}.xlsx'
+    filename = f'{filename_prefix}_{now_token}.xlsx'
     return send_file(
         workbook,
         as_attachment=True,

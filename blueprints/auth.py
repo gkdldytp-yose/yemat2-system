@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from core import (
     WORKPLACES,
     add_user_notification,
+    audit_log,
     get_db,
     get_usernames_for_notification,
     hash_password,
@@ -11,6 +12,24 @@ from core import (
 )
 
 bp = Blueprint('auth', __name__)
+
+
+def _build_auth_session_payload(user_info, event_name):
+    workplaces = user_info.get('workplaces') or []
+    if isinstance(workplaces, str):
+        workplaces = [value.strip() for value in workplaces.split(',') if value.strip()]
+    return {
+        'event': event_name,
+        'path': request.path,
+        'method': request.method,
+        'host': request.host,
+        'referer': request.referrer,
+        'user_agent': request.headers.get('User-Agent'),
+        'role': user_info.get('role'),
+        'is_admin': bool(user_info.get('is_admin')),
+        'current_workplace': session.get('workplace'),
+        'available_workplaces': workplaces,
+    }
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -61,10 +80,19 @@ def login():
             'role': role,
             'workplaces': workplaces,
         }
+        if len(workplaces) == 1:
+            session['workplace'] = workplaces[0]
+
+        login_payload = _build_auth_session_payload(session['user'], 'login')
+        audit_conn = get_db()
+        try:
+            audit_log(audit_conn, 'login', 'auth_session', user['id'], login_payload)
+            audit_conn.commit()
+        finally:
+            audit_conn.close()
 
         if len(workplaces) > 1:
             return redirect(url_for('main.select_workplace'))
-        session['workplace'] = workplaces[0]
         return redirect(url_for('main.index'))
 
     return render_template('login.html')
@@ -72,6 +100,20 @@ def login():
 
 @bp.route('/logout')
 def logout():
+    user = session.get('user') or {}
+    if user:
+        audit_conn = get_db()
+        try:
+            audit_log(
+                audit_conn,
+                'logout',
+                'auth_session',
+                user.get('id'),
+                _build_auth_session_payload(user, 'logout'),
+            )
+            audit_conn.commit()
+        finally:
+            audit_conn.close()
     session.pop('user', None)
     session.pop('workplace', None)
     return redirect(url_for('auth.login'))

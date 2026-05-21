@@ -137,6 +137,65 @@
 .subcontract-table .current-col{background:linear-gradient(180deg,#ecfeff 0%,#f0fdfa 100%);color:#0f766e;font-weight:800;}
 .subcontract-unit-text{display:inline-block;margin-left:0.18rem;font-size:0.82em;font-weight:700;opacity:0.82;}
 .subcontract-empty{padding:2.2rem 1rem;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;}
+.audit-shell{display:flex;flex-direction:column;gap:0.9rem;}
+.audit-hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr);gap:0.9rem;align-items:stretch;}
+.audit-hero-main{padding:1rem 1.1rem;border:1px solid #dbe7f4;border-radius:18px;background:linear-gradient(135deg,#ffffff 0%,#f7fbff 100%);box-shadow:0 12px 28px rgba(15,23,42,0.05);}
+.audit-hero-main h3{margin:0 0 0.35rem;font-size:1.05rem;color:#0f172a;}
+.audit-hero-main p{margin:0;color:#64748b;font-size:0.88rem;line-height:1.55;}
+.audit-hero-main .audit-inline-chips{display:flex;gap:0.45rem;flex-wrap:wrap;margin-top:0.8rem;}
+.audit-chip{display:inline-flex;align-items:center;gap:0.35rem;padding:0.38rem 0.72rem;border-radius:999px;background:#eff6ff;border:1px solid #dbeafe;color:#1d4ed8;font-size:0.78rem;font-weight:800;}
+.audit-chip.dark{background:#0f172a;border-color:#0f172a;color:#fff;}
+.audit-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.7rem;}
+.audit-stat-card{padding:0.95rem 1rem;border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 10px 22px rgba(15,23,42,0.05);}
+.audit-stat-card .label{font-size:0.76rem;font-weight:800;color:#64748b;margin-bottom:0.28rem;}
+.audit-stat-card .value{font-size:1.1rem;font-weight:900;color:#0f172a;line-height:1.25;}
+.audit-stat-card .sub{margin-top:0.2rem;font-size:0.76rem;color:#64748b;}
+.audit-filter-card{padding:1rem 1.05rem;border:1px solid #dbe7f4;border-radius:18px;background:linear-gradient(180deg,#fcfdff 0%,#f7fbff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);}
+.audit-filter-head{display:flex;justify-content:space-between;align-items:flex-start;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.85rem;}
+.audit-filter-head h4{margin:0;font-size:0.98rem;color:#0f172a;}
+.audit-filter-head p{margin:0.22rem 0 0;font-size:0.82rem;color:#64748b;}
+.audit-filter-form{display:flex;flex-direction:column;gap:0.9rem;}
+.audit-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.8rem;}
+.audit-filter-field{display:flex;flex-direction:column;gap:0.32rem;min-width:0;}
+.audit-filter-field label{font-size:0.79rem;font-weight:800;color:#475569;}
+.audit-filter-field .search-input{width:100%;min-width:0;box-sizing:border-box;}
+.audit-filter-actions{display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;}
+.audit-table-card{border:1px solid #dbe7f4;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);box-shadow:0 14px 30px rgba(15,23,42,0.05);overflow:hidden;}
+.audit-table-head{display:flex;justify-content:space-between;align-items:flex-start;gap:0.8rem;flex-wrap:wrap;padding:0.95rem 1.05rem 0.85rem;border-bottom:1px solid #e5edf5;}
+.audit-table-head h4{margin:0;font-size:0.98rem;color:#0f172a;}
+.audit-table-head p{margin:0.22rem 0 0;font-size:0.82rem;color:#64748b;}
+.audit-table-card .table-container{margin:0;}
+.audit-table-card table{margin:0;}
+.audit-table-card thead th{background:#f8fafc;color:#475569;font-size:0.79rem;border-bottom:1px solid #e5edf5;white-space:nowrap;}
+.audit-table-card tbody td{vertical-align:middle;border-bottom:1px solid #eef2f7;}
+.audit-table-card tbody tr:nth-child(even){background:#fbfdff;}
+.audit-table-card tbody tr:hover{background:#f5f9ff;}
+.audit-action-pill,.audit-entity-pill,.audit-login-pill{display:inline-flex;align-items:center;justify-content:center;padding:0.28rem 0.62rem;border-radius:999px;font-size:0.74rem;font-weight:800;border:1px solid transparent;white-space:nowrap;}
+.audit-action-pill{background:#e2e8f0;color:#334155;border-color:#cbd5e1;}
+.audit-action-pill.create,.audit-action-pill.apply,.audit-action-pill.approve,.audit-action-pill.login{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.audit-action-pill.update,.audit-action-pill.validate{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+.audit-action-pill.delete,.audit-action-pill.reject,.audit-action-pill.logout{background:#fee2e2;color:#b91c1c;border-color:#fecaca;}
+.audit-action-pill.cancel,.audit-action-pill.rollback{background:#ffedd5;color:#c2410c;border-color:#fed7aa;}
+.audit-entity-pill{background:#eff6ff;color:#1d4ed8;border-color:#dbeafe;}
+.audit-login-pill.login{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.audit-login-pill.logout{background:#fee2e2;color:#b91c1c;border-color:#fecaca;}
+.audit-user-cell{display:flex;flex-direction:column;gap:0.1rem;min-width:120px;}
+.audit-user-cell .main{font-weight:800;color:#0f172a;}
+.audit-user-cell .sub{font-size:0.76rem;color:#64748b;}
+.audit-mono{font-family:Consolas,Monaco,monospace;font-size:0.78rem;word-break:break-word;}
+.audit-mono.audit-emphasis{font-size:0.92rem;font-weight:800;color:#0f172a;letter-spacing:-0.1px;}
+.audit-meta-text{font-size:0.82rem;color:#334155;line-height:1.45;word-break:break-word;}
+.audit-date{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;}
+@media (max-width: 1100px){
+  .audit-hero{grid-template-columns:1fr;}
+  .audit-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width: 700px){
+  .audit-stats{grid-template-columns:1fr;}
+  .audit-filter-actions{justify-content:stretch;}
+  .audit-filter-actions .btn,
+  .audit-filter-actions a{flex:1 1 140px;text-align:center;}
+}
 @media (max-width: 1100px){
   .subcontract-toolbar-top{grid-template-columns:1fr;}
   .subcontract-toolbar-actions{justify-content:flex-start;}
@@ -548,6 +607,7 @@
                 {% elif tab == 'requirements_calculator' %}원부자재 계산기
                 {% elif tab == 'subcontract_production' %}임가공 생산관리
                 {% elif tab == 'audit_logs' %}사용자 행위 로그
+                {% elif tab == 'login_audit_logs' %}로그인 기록
                 {% elif tab == 'meeting_eval' %}주간회의 / 경영평가 자료
                 {% elif tab == 'inventory_audit' %}전체 재고 조사 현황
                 {% elif tab == 'db_backups' %}전체 DB 백업 관리
@@ -577,23 +637,35 @@
                         onclick="location.href='/integrated-management?tab=productions&wp={{ wp_filter|urlencode }}&prod_tab=temp{% if q %}&q={{ q|urlencode }}{% endif %}'">임시저장 <span class="tab-count">{{ production_counts.temp or 0 }}</span></button>
             </div>
         </div>
+        {% elif tab in ['audit_logs', 'login_audit_logs'] and hidden_audit %}
+        <div class="tabs-center">
+            <div class="card-tabs">
+                <button class="card-tab-btn {% if tab == 'audit_logs' %}active{% endif %}"
+                        onclick="location.href='/integrated-management?tab=audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if audit_username %}&audit_username={{ audit_username|urlencode }}{% endif %}{% if audit_entity %}&audit_entity={{ audit_entity|urlencode }}{% endif %}{% if audit_action %}&audit_action={{ audit_action|urlencode }}{% endif %}{% if audit_date_from %}&audit_date_from={{ audit_date_from|urlencode }}{% endif %}{% if audit_date_to %}&audit_date_to={{ audit_date_to|urlencode }}{% endif %}'">사용자 행위 로그</button>
+                <button class="card-tab-btn {% if tab == 'login_audit_logs' %}active{% endif %}"
+                        onclick="location.href='/integrated-management?tab=login_audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if audit_username %}&audit_username={{ audit_username|urlencode }}{% endif %}{% if login_event_type %}&login_event_type={{ login_event_type|urlencode }}{% endif %}{% if audit_date_from %}&audit_date_from={{ audit_date_from|urlencode }}{% endif %}{% if audit_date_to %}&audit_date_to={{ audit_date_to|urlencode }}{% endif %}'">로그인 기록</button>
+            </div>
+        </div>
         {% endif %}
         </div>
         <div class="header-row" style="justify-content:flex-end;">
-            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-right:auto;">
-            <form method="GET" action="/integrated-management" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-right:auto;width:100%;">
+            <form method="GET" action="/integrated-management" {% if tab in ['audit_logs', 'login_audit_logs'] and hidden_audit %}class="audit-filter-form" style="width:100%;"{% else %}style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;"{% endif %}>
                 <input type="hidden" name="tab" value="{{ tab }}">
                 <input type="hidden" name="wp" value="{{ wp_filter }}">
-                {% if tab == 'audit_logs' and hidden_audit %}
+                {% if tab in ['audit_logs', 'login_audit_logs'] and hidden_audit %}
                 <input type="hidden" name="hidden_audit" value="1">
                 {% if audit_username %}
                 <input type="hidden" name="audit_username" value="{{ audit_username }}">
                 {% endif %}
-                {% if audit_entity %}
+                {% if tab == 'audit_logs' and audit_entity %}
                 <input type="hidden" name="audit_entity" value="{{ audit_entity }}">
                 {% endif %}
-                {% if audit_action %}
+                {% if tab == 'audit_logs' and audit_action %}
                 <input type="hidden" name="audit_action" value="{{ audit_action }}">
+                {% endif %}
+                {% if tab == 'login_audit_logs' and login_event_type %}
+                <input type="hidden" name="login_event_type" value="{{ login_event_type }}">
                 {% endif %}
                 {% if audit_date_from %}
                 <input type="hidden" name="audit_date_from" value="{{ audit_date_from }}">
@@ -618,54 +690,127 @@
                 <input type="hidden" name="keep_count" value="{{ backup_keep_count or 10 }}">
                 {% endif %}
                 {% if tab not in ['inventory_audit', 'requirements_calculator', 'meeting_eval', 'subcontract_production'] %}
+                {% if tab in ['audit_logs', 'login_audit_logs'] and hidden_audit %}
+                <div class="audit-filter-card" style="width:100%;">
+                    <div class="audit-filter-head">
+                        <div>
+                            <h4>공통 검색</h4>
+                            <p>사용자, 이름, IP, 상세 데이터 등 전체 로그를 빠르게 검색합니다.</p>
+                        </div>
+                    </div>
+                    <div class="audit-filter-grid" style="grid-template-columns:minmax(260px,1fr) auto;">
+                        <div class="audit-filter-field">
+                            <label>키워드</label>
+                            <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="사용자, IP, 데이터 내용 검색">
+                        </div>
+                        <div class="audit-filter-actions" style="align-items:end;">
+                            <button type="submit" class="btn btn-small">검색</button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
                 <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="키워드 검색">
                 <button type="submit" class="btn btn-small">검색</button>
                 {% endif %}
+                {% endif %}
             </form>
             {% if tab == 'audit_logs' and hidden_audit %}
-            <form method="GET" action="/integrated-management" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;">
+            <form method="GET" action="/integrated-management" class="audit-filter-card audit-filter-form" style="width:100%;">
                 <input type="hidden" name="tab" value="audit_logs">
                 <input type="hidden" name="hidden_audit" value="1">
                 <input type="hidden" name="wp" value="{{ wp_filter }}">
-                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:150px;">
-                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">사용자</label>
-                    <select name="audit_username" class="search-input" style="min-width:150px;">
+                <div class="audit-filter-head">
+                    <div>
+                        <h4>행위 로그 필터</h4>
+                        <p>기능 단위 행위를 사용자, 액션, 기간 기준으로 빠르게 좁혀볼 수 있습니다.</p>
+                    </div>
+                </div>
+                <div class="audit-filter-grid">
+                <div class="audit-filter-field">
+                    <label>사용자</label>
+                    <select name="audit_username" class="search-input">
                         <option value="">전체 사용자</option>
                         {% for value in audit_user_options %}
                         <option value="{{ value }}" {% if audit_username == value %}selected{% endif %}>{{ value }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:150px;">
-                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">기능</label>
-                    <select name="audit_entity" class="search-input" style="min-width:150px;">
+                <div class="audit-filter-field">
+                    <label>기능</label>
+                    <select name="audit_entity" class="search-input">
                         <option value="">전체 기능</option>
                         {% for value in audit_entity_options %}
                         <option value="{{ value }}" {% if audit_entity == value %}selected{% endif %}>{{ value }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:130px;">
-                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">액션</label>
-                    <select name="audit_action" class="search-input" style="min-width:130px;">
+                <div class="audit-filter-field">
+                    <label>액션</label>
+                    <select name="audit_action" class="search-input">
                         <option value="">전체 액션</option>
                         {% for value in audit_action_options %}
                         <option value="{{ value }}" {% if audit_action == value %}selected{% endif %}>{{ value }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:146px;">
-                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">시작일</label>
-                    <input type="date" name="audit_date_from" value="{{ audit_date_from }}" class="search-input" style="min-width:146px;">
+                <div class="audit-filter-field">
+                    <label>시작일</label>
+                    <input type="date" name="audit_date_from" value="{{ audit_date_from }}" class="search-input">
                 </div>
-                <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:146px;">
-                    <label style="font-size:0.8rem;color:#475569;font-weight:700;">종료일</label>
-                    <input type="date" name="audit_date_to" value="{{ audit_date_to }}" class="search-input" style="min-width:146px;">
+                <div class="audit-filter-field">
+                    <label>종료일</label>
+                    <input type="date" name="audit_date_to" value="{{ audit_date_to }}" class="search-input">
                 </div>
-                <div style="display:flex;gap:0.45rem;align-items:flex-end;flex-wrap:wrap;">
+                </div>
+                <div class="audit-filter-actions">
                     <button type="submit" class="btn btn-small">필터 적용</button>
                     <a href="/integrated-management?tab=audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}" class="btn btn-small btn-secondary">초기화</a>
                     <a href="/integrated-management/audit-logs/export?tab=audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if audit_username %}&audit_username={{ audit_username|urlencode }}{% endif %}{% if audit_entity %}&audit_entity={{ audit_entity|urlencode }}{% endif %}{% if audit_action %}&audit_action={{ audit_action|urlencode }}{% endif %}{% if audit_date_from %}&audit_date_from={{ audit_date_from|urlencode }}{% endif %}{% if audit_date_to %}&audit_date_to={{ audit_date_to|urlencode }}{% endif %}" class="btn btn-small" style="background:#0f766e;">엑셀 다운로드</a>
+                </div>
+            </form>
+            {% endif %}
+            {% if tab == 'login_audit_logs' and hidden_audit %}
+            <form method="GET" action="/integrated-management" class="audit-filter-card audit-filter-form" style="width:100%;">
+                <input type="hidden" name="tab" value="login_audit_logs">
+                <input type="hidden" name="hidden_audit" value="1">
+                <input type="hidden" name="wp" value="{{ wp_filter }}">
+                <div class="audit-filter-head">
+                    <div>
+                        <h4>로그인 기록 필터</h4>
+                        <p>접속 이력을 사용자, 로그인/로그아웃, 기간 기준으로 확인하고 추적할 수 있습니다.</p>
+                    </div>
+                </div>
+                <div class="audit-filter-grid">
+                <div class="audit-filter-field">
+                    <label>사용자</label>
+                    <select name="audit_username" class="search-input">
+                        <option value="">전체 사용자</option>
+                        {% for value in audit_user_options %}
+                        <option value="{{ value }}" {% if audit_username == value %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="audit-filter-field">
+                    <label>구분</label>
+                    <select name="login_event_type" class="search-input">
+                        <option value="">전체</option>
+                        <option value="login" {% if login_event_type == 'login' %}selected{% endif %}>로그인</option>
+                        <option value="logout" {% if login_event_type == 'logout' %}selected{% endif %}>로그아웃</option>
+                    </select>
+                </div>
+                <div class="audit-filter-field">
+                    <label>시작일</label>
+                    <input type="date" name="audit_date_from" value="{{ audit_date_from }}" class="search-input">
+                </div>
+                <div class="audit-filter-field">
+                    <label>종료일</label>
+                    <input type="date" name="audit_date_to" value="{{ audit_date_to }}" class="search-input">
+                </div>
+                </div>
+                <div class="audit-filter-actions">
+                    <button type="submit" class="btn btn-small">필터 적용</button>
+                    <a href="/integrated-management?tab=login_audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}" class="btn btn-small btn-secondary">초기화</a>
+                    <a href="/integrated-management/audit-logs/export?tab=login_audit_logs&hidden_audit=1&wp={{ wp_filter|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if audit_username %}&audit_username={{ audit_username|urlencode }}{% endif %}{% if login_event_type %}&login_event_type={{ login_event_type|urlencode }}{% endif %}{% if audit_date_from %}&audit_date_from={{ audit_date_from|urlencode }}{% endif %}{% if audit_date_to %}&audit_date_to={{ audit_date_to|urlencode }}{% endif %}" class="btn btn-small" style="background:#0f766e;">엑셀 다운로드</a>
                 </div>
             </form>
             {% endif %}
@@ -691,18 +836,72 @@
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">지금 백업</button>
             </form>
             {% endif %}
-            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions', 'subcontract_production', 'audit_logs'] %}
+            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions', 'subcontract_production', 'audit_logs', 'login_audit_logs'] %}
             <button class="btn btn-small" onclick="openAddModal()">+ 추가</button>
             {% endif %}
             </div>
             {% if tab == 'raw_materials' %}
             <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="openRawActivityModal()">금일 원초 사용/입고</button>
             {% endif %}
-            {% if tab == 'inventory_audit' %}
-            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="exportInventoryAudit()">엑셀 다운로드</button>
-            <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="applyInventoryAudit()">실재고 반영</button>
-            {% endif %}
+        {% if tab == 'inventory_audit' %}
+        <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="exportInventoryAudit()">엑셀 다운로드</button>
+        <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="applyInventoryAudit()">실재고 반영</button>
+        {% endif %}
         </div>
+        {% if tab in ['audit_logs', 'login_audit_logs'] and hidden_audit %}
+        <div class="audit-shell">
+            <div class="audit-hero">
+                <div class="audit-hero-main">
+                    <h3>{% if tab == 'audit_logs' %}숨김 사용자 행위 로그{% else %}숨김 로그인 기록{% endif %}</h3>
+                    <p>
+                        {% if tab == 'audit_logs' %}
+                        관리자 전용 행위 추적 화면입니다. 누가 어떤 기능에서 어떤 작업을 했는지, 작업장과 IP 기준으로 빠르게 확인할 수 있습니다.
+                        {% else %}
+                        관리자 전용 접속 이력 화면입니다. 로그인과 로그아웃, 사용자, 브라우저, IP, 요청 경로를 기준으로 접속 흐름을 추적할 수 있습니다.
+                        {% endif %}
+                    </p>
+                    <div class="audit-inline-chips">
+                        <span class="audit-chip dark">Admin Hidden</span>
+                        <span class="audit-chip">현재 작업장 {{ wp_filter == 'all' and '전체' or wp_filter }}</span>
+                        <span class="audit-chip">{% if audit_date_from or audit_date_to %}기간 필터 사용중{% else %}전체 기간 조회{% endif %}</span>
+                    </div>
+                </div>
+                <div class="audit-stats">
+                    <div class="audit-stat-card">
+                        <div class="label">현재 조회 건수</div>
+                        <div class="value">{{ data|length }}</div>
+                        <div class="sub">필터 적용 결과</div>
+                    </div>
+                    <div class="audit-stat-card">
+                        <div class="label">사용자 필터</div>
+                        <div class="value">{{ audit_username or '전체' }}</div>
+                        <div class="sub">선택한 사용자 기준</div>
+                    </div>
+                    <div class="audit-stat-card">
+                        <div class="label">{% if tab == 'audit_logs' %}기능/액션{% else %}로그 구분{% endif %}</div>
+                        <div class="value">
+                            {% if tab == 'audit_logs' %}
+                            {{ audit_entity or '전체 기능' }}
+                            {% if audit_action %}<span style="font-size:0.8rem;color:#64748b;"> / {{ audit_action }}</span>{% endif %}
+                            {% else %}
+                            {{ login_event_type == 'login' and '로그인' or (login_event_type == 'logout' and '로그아웃' or '전체') }}
+                            {% endif %}
+                        </div>
+                        <div class="sub">현재 선택된 범위</div>
+                    </div>
+                    <div class="audit-stat-card">
+                        <div class="label">기간</div>
+                        <div class="value" style="font-size:0.98rem;">
+                            {{ audit_date_from or '시작 제한 없음' }}
+                            <span style="color:#94a3b8;">~</span>
+                            {{ audit_date_to or '종료 제한 없음' }}
+                        </div>
+                        <div class="sub">날짜 기준 검색</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         {% if tab == 'db_backups' %}
         <div class="header-row" style="margin-top:0.75rem;padding:0.95rem 1rem;border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);">
             <form method="POST" action="/integrated-management/db-backups/settings" style="display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap;width:100%;">
@@ -1765,8 +1964,20 @@
     </div>
     </div>
     {% elif data %}
+    {% if tab in ['audit_logs', 'login_audit_logs'] %}
+    <div class="audit-table-card">
+        <div class="audit-table-head">
+            <div>
+                <h4>{% if tab == 'audit_logs' %}행위 로그 상세 목록{% else %}접속 이력 상세 목록{% endif %}</h4>
+                <p>{% if tab == 'audit_logs' %}행위 발생 순서대로 최근 기록부터 확인할 수 있습니다.{% else %}로그인과 로그아웃 이력을 시간 역순으로 확인할 수 있습니다.{% endif %}</p>
+            </div>
+        </div>
+    <div class="table-container">
+        <table class="audit-log-table">
+    {% else %}
     <div class="table-container">
         <table>
+    {% endif %}
             <thead>
                 <tr>
                     {% if tab == 'audit_logs' %}
@@ -1776,6 +1987,19 @@
                     <th>대상ID</th>
                     <th>작업자</th>
                     <th>IP</th>
+                    <th>일시</th>
+                    {% elif tab == 'login_audit_logs' %}
+                    <th>구분</th>
+                    <th>사용자ID</th>
+                    <th>이름</th>
+                    <th>권한</th>
+                    <th>현재 작업장</th>
+                    <th>접속 가능 작업장</th>
+                    <th>IP</th>
+                    <th>브라우저</th>
+                    <th>호스트</th>
+                    <th>요청 경로</th>
+                    <th>리퍼러</th>
                     <th>일시</th>
                     {% elif tab == 'db_backups' %}
                     <th>구분</th>
@@ -1840,7 +2064,7 @@
                 {% for item in data %}
                 <tr>
                     {% if tab == 'audit_logs' %}
-                    <td class="code-col">{{ item.action or '-' }}</td>
+                    <td class="code-col"><span class="audit-action-pill {{ item.action or '' }}">{{ item.action or '-' }}</span></td>
                     <td class="wp-col">
                         <span class="workplace-badge 
                             {% if item.workplace == '1동 조미' %}wp-1jomi
@@ -1852,11 +2076,34 @@
                             {{ item.workplace or '-' }}
                         </span>
                     </td>
-                    <td>{{ item.entity_label or item.entity or '-' }}</td>
-                    <td>{{ item.entity_id or '-' }}</td>
-                    <td>{{ item.name or item.username or '-' }}</td>
-                    <td>{{ item.ip or '-' }}</td>
-                    <td>{{ item.created_at }}</td>
+                    <td><span class="audit-entity-pill">{{ item.entity_label or item.entity or '-' }}</span></td>
+                    <td class="audit-mono audit-emphasis">{{ item.entity_id or '-' }}</td>
+                    <td>
+                        <div class="audit-user-cell">
+                            <span class="main">{{ item.name or item.username or '-' }}</span>
+                            <span class="sub">{{ item.username or '-' }}</span>
+                        </div>
+                    </td>
+                    <td class="audit-mono audit-emphasis">{{ item.ip or '-' }}</td>
+                    <td class="audit-date">{{ item.created_at }}</td>
+                    {% elif tab == 'login_audit_logs' %}
+                    <td><span class="audit-login-pill {{ item.action or '' }}">{{ item.action_label or '-' }}</span></td>
+                    <td class="audit-mono">{{ item.username or '-' }}</td>
+                    <td>
+                        <div class="audit-user-cell">
+                            <span class="main">{{ item.name or '-' }}</span>
+                            <span class="sub">{{ item.role_label or '-' }}</span>
+                        </div>
+                    </td>
+                    <td><span class="audit-entity-pill">{{ item.role_label or '-' }}</span></td>
+                    <td><span class="workplace-badge {% if item.current_workplace_label == '1동 조미' %}wp-1jomi{% elif item.current_workplace_label == '1동 자반' %}wp-1jaban{% elif item.current_workplace_label == '2동 신관 1층' %}wp-2-1f{% elif item.current_workplace_label == '2동 신관 2층' %}wp-2-2f{% elif item.current_workplace_label == '공통' %}wp-shared{% elif item.current_workplace_label == '물류' %}wp-logistics{% else %}wp-etc{% endif %}">{{ item.current_workplace_label or '-' }}</span></td>
+                    <td class="audit-meta-text">{{ item.available_workplaces_label or '-' }}</td>
+                    <td class="audit-mono audit-emphasis">{{ item.ip or '-' }}</td>
+                    <td class="audit-meta-text" style="max-width:240px;">{{ item.user_agent or '-' }}</td>
+                    <td class="audit-meta-text">{{ item.host_label or '-' }}</td>
+                    <td class="audit-mono">{{ item.path_label or '-' }}</td>
+                    <td class="audit-meta-text" style="max-width:220px;">{{ item.referer_label or '-' }}</td>
+                    <td class="audit-date">{{ item.created_at or '-' }}</td>
                     {% elif tab == 'db_backups' %}
                     <td>{{ item.backup_kind_label }}</td>
                     <td><code>{{ item.filename }}</code></td>
@@ -2050,6 +2297,9 @@
             </tbody>
         </table>
     </div>
+    {% if tab in ['audit_logs', 'login_audit_logs'] %}
+    </div>
+    {% endif %}
     {% else %}
     <p style="text-align:center;color:#999;padding:3rem;">데이터가 없습니다</p>
     {% endif %}
