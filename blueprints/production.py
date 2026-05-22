@@ -1099,24 +1099,33 @@ def schedule_requirements_data():
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
             LEFT JOIN materials m ON m.id = b.material_id
             WHERE b.product_id IN ({placeholders})
+              AND (
+                    b.raw_material_id IS NULL
+                    OR NOT (
+                        COALESCE(rm.total_stock, 0) > 0
+                        AND COALESCE(rm.current_stock, 0) <= 0
+                        AND COALESCE(rm.used_quantity, 0) >= COALESCE(rm.total_stock, 0)
+                    )
+                  )
             ''',
             product_ids,
         )
         bom_rows = [dict(r) for r in cursor.fetchall()]
 
-        cursor.execute(
-            '''
-            SELECT
-                COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) as code,
-                MIN(name) as name,
-                COALESCE(SUM(COALESCE(current_stock, 0)), 0) as stock
-            FROM raw_materials
-            WHERE workplace = ?
-            GROUP BY COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id))
-            ''',
-            (workplace,),
-        )
-        raw_stock_map = {str(r['code']): float(r['stock'] or 0) for r in cursor.fetchall()}
+        raw_material_ids = sorted({int(row.get('raw_material_id') or 0) for row in bom_rows if int(row.get('raw_material_id') or 0) > 0})
+        raw_stock_map = {}
+        if raw_material_ids:
+            raw_placeholders = ','.join(['?'] * len(raw_material_ids))
+            cursor.execute(
+                f'''
+                SELECT id, COALESCE(current_stock, 0) as stock
+                FROM raw_materials
+                WHERE workplace = ?
+                  AND id IN ({raw_placeholders})
+                ''',
+                [workplace, *raw_material_ids],
+            )
+            raw_stock_map = {int(r['id']): float(r['stock'] or 0) for r in cursor.fetchall()}
 
         material_ids = sorted({int(row.get('material_id') or 0) for row in bom_rows if int(row.get('material_id') or 0) > 0})
         material_stock_map = {}
@@ -1181,10 +1190,11 @@ def schedule_requirements_data():
                 }
 
             if row.get('raw_material_id'):
+                raw_material_id = int(row.get('raw_material_id') or 0)
                 code = str(row.get('raw_code') or '')
-                if not code:
+                if raw_material_id <= 0 or not code:
                     continue
-                dedupe_key = (pid, code)
+                dedupe_key = (pid, raw_material_id)
                 if dedupe_key in seen_product_raw_keys:
                     continue
                 seen_product_raw_keys.add(dedupe_key)
@@ -1195,9 +1205,10 @@ def schedule_requirements_data():
                 if need_qty <= 0:
                     continue
                 name = row.get('raw_name') or code or '원초'
-                stock = raw_stock_map.get(code, 0.0)
-                _upsert_item(summary_raw, code or name, code, name, '속', stock, need_qty)
-                _upsert_item(product_detail[pid]['raw_map'], code or name, code, name, '속', stock, need_qty)
+                stock = raw_stock_map.get(raw_material_id, 0.0)
+                raw_key = f'raw:{raw_material_id}'
+                _upsert_item(summary_raw, raw_key, code, name, '속', stock, need_qty)
+                _upsert_item(product_detail[pid]['raw_map'], raw_key, code, name, '속', stock, need_qty)
             elif row.get('material_id'):
                 qty_per_box = float(row.get('quantity_per_box') or 0)
                 if qty_per_box <= 0:
@@ -2299,8 +2310,10 @@ def production_detail(production_id):
         '''
         SELECT pr.*, p.name as product_name, p.box_quantity, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
                p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3, p.expiry_months
+               , COALESCE(ps.line, '') as line
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
         WHERE pr.id = ?
     ''',
         (production_id,),
@@ -2663,6 +2676,144 @@ def production_detail(production_id):
         material_checksheet_url=material_checksheet_url,
         packaging_checksheet_url=packaging_checksheet_url,
     )
+
+
+@bp.route('/production/<int:production_id>/edit', methods=['GET', 'POST'])
+@role_required('production')
+def edit_production_plan(production_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        SELECT pr.*, p.name as product_name, COALESCE(ps.line, '') as line
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        WHERE pr.id = ?
+        ''',
+        (production_id,),
+    )
+    production = cursor.fetchone()
+
+    if not production:
+        conn.close()
+        return redirect(url_for('production.production_list'))
+
+    production = dict(production)
+    production['status'] = _normalize_production_status(production.get('status'))
+
+    if production['status'] == '완료':
+        conn.close()
+        return redirect(url_for('production.production_detail', production_id=production_id))
+
+    if request.method == 'POST':
+        production_date = (request.form.get('production_date') or '').strip()
+        planned_boxes_raw = (request.form.get('planned_boxes') or '').strip()
+        note = (request.form.get('note') or '').strip()
+        production_lines = [item.strip() for item in request.form.getlist('production_lines') if item.strip()]
+        production_lines_str = ','.join(dict.fromkeys(production_lines))
+
+        if not production_date or not planned_boxes_raw:
+            conn.close()
+            return "<script>alert('생산일과 계획 생산 박스 수를 입력해주세요.');history.back();</script>", 400
+
+        if not production_lines:
+            conn.close()
+            return "<script>alert('생산 라인을 하나 이상 선택해주세요.');history.back();</script>", 400
+
+        try:
+            planned_boxes = float(planned_boxes_raw)
+        except ValueError:
+            conn.close()
+            return "<script>alert('계획 생산 박스 수를 숫자로 입력해주세요.');history.back();</script>", 400
+
+        if planned_boxes <= 0:
+            conn.close()
+            return "<script>alert('계획 생산 박스 수는 0보다 커야 합니다.');history.back();</script>", 400
+
+        before_production = dict(production)
+
+        cursor.execute(
+            '''
+            UPDATE productions
+            SET production_date = ?,
+                planned_boxes = ?,
+                note = ?
+            WHERE id = ?
+            ''',
+            (production_date, planned_boxes, note, production_id),
+        )
+
+        schedule_before = None
+        if production.get('schedule_id'):
+            cursor.execute('SELECT * FROM production_schedules WHERE id = ?', (production['schedule_id'],))
+            schedule_row = cursor.fetchone()
+            if schedule_row:
+                schedule_before = dict(schedule_row)
+                cursor.execute(
+                    '''
+                    UPDATE production_schedules
+                    SET scheduled_date = ?,
+                        planned_boxes = ?,
+                        note = ?,
+                        line = ?
+                    WHERE id = ?
+                    ''',
+                    (production_date, planned_boxes, note, production_lines_str, production['schedule_id']),
+                )
+
+        audit_log(
+            conn,
+            'update',
+            'production',
+            production_id,
+            {
+                'action': 'update_plan',
+                'before': {
+                    'production_date': before_production.get('production_date'),
+                    'planned_boxes': before_production.get('planned_boxes'),
+                    'note': before_production.get('note'),
+                    'line': before_production.get('line'),
+                },
+                'after': {
+                    'production_date': production_date,
+                    'planned_boxes': planned_boxes,
+                    'note': note,
+                    'line': production_lines_str,
+                },
+            },
+        )
+
+        if production.get('schedule_id') and schedule_before:
+            audit_log(
+                conn,
+                'update',
+                'production_schedule',
+                production['schedule_id'],
+                {
+                    'action': 'sync_from_production_plan_edit',
+                    'before': {
+                        'scheduled_date': schedule_before.get('scheduled_date'),
+                        'planned_boxes': schedule_before.get('planned_boxes'),
+                        'note': schedule_before.get('note'),
+                    },
+                    'after': {
+                        'scheduled_date': production_date,
+                        'planned_boxes': planned_boxes,
+                        'note': note,
+                        'line': production_lines_str,
+                    },
+                    'production_id': production_id,
+                },
+            )
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for('production.production_detail', production_id=production_id))
+
+    conn.close()
+    return render_template('production_edit.html', user=session['user'], production=production)
 
 
 @bp.route('/production/<int:production_id>/update-usage', methods=['POST'])

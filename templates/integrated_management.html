@@ -2085,7 +2085,7 @@
                         </div>
                     </td>
                     <td class="audit-mono audit-emphasis">{{ item.ip or '-' }}</td>
-                    <td class="audit-date">{{ item.created_at }}</td>
+                    <td class="audit-date">{{ item.display_created_at or item.created_at }}</td>
                     {% elif tab == 'login_audit_logs' %}
                     <td><span class="audit-login-pill {{ item.action or '' }}">{{ item.action_label or '-' }}</span></td>
                     <td class="audit-mono">{{ item.username or '-' }}</td>
@@ -2103,7 +2103,7 @@
                     <td class="audit-meta-text">{{ item.host_label or '-' }}</td>
                     <td class="audit-mono">{{ item.path_label or '-' }}</td>
                     <td class="audit-meta-text" style="max-width:220px;">{{ item.referer_label or '-' }}</td>
-                    <td class="audit-date">{{ item.created_at or '-' }}</td>
+                    <td class="audit-date">{{ item.display_created_at or item.created_at or '-' }}</td>
                     {% elif tab == 'db_backups' %}
                     <td>{{ item.backup_kind_label }}</td>
                     <td><code>{{ item.filename }}</code></td>
