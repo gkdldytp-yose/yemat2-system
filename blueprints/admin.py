@@ -184,6 +184,22 @@ def _is_completed_status(status_value):
     return text == '완료' or '완료' in text
 
 
+def _format_audit_created_at_local(value):
+    raw = (value or '').strip()
+    if not raw:
+        return ''
+    normalized = raw.replace('T', ' ').replace('Z', '').strip()
+    for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
+        try:
+            parsed = datetime.strptime(normalized, fmt)
+            if parsed.year >= 2025 and parsed.hour < 9:
+                parsed = parsed + timedelta(hours=9)
+            return parsed.strftime('%Y-%m-%d %H:%M:%S')
+        except Exception:
+            continue
+    return raw
+
+
 def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', entity='', action='', date_from='', date_to='', limit=500):
     entity_labels = {
         'product': '상품',
@@ -243,6 +259,7 @@ def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', ent
         item = dict(row)
         entity_key = (item.get('entity') or '').strip()
         item['entity_label'] = entity_labels.get(entity_key, entity_key or '-')
+        item['display_created_at'] = _format_audit_created_at_local(item.get('created_at'))
         rows.append(item)
     return rows
 
@@ -298,6 +315,7 @@ def _query_integrated_login_audit_logs(cursor, wp_filter='all', q='', username='
         item['host_label'] = payload.get('host') or '-'
         item['current_workplace_label'] = payload.get('current_workplace') or item.get('workplace') or '-'
         item['available_workplaces_label'] = ', '.join(available_workplaces) if available_workplaces else '-'
+        item['display_created_at'] = payload.get('event_at_local') or _format_audit_created_at_local(item.get('created_at'))
         rows.append(item)
     return rows
 
@@ -3544,6 +3562,12 @@ def integrated_management():
     login_event_type = (request.args.get('login_event_type') or '').strip()
     login_event_type = (request.args.get('login_event_type') or '').strip()
     login_event_type = (request.args.get('login_event_type') or '').strip()
+    if hidden_audit and tab in ('audit_logs', 'login_audit_logs'):
+        today_str = now_local().strftime('%Y-%m-%d')
+        if not audit_date_from:
+            audit_date_from = today_str
+        if not audit_date_to:
+            audit_date_to = today_str
     meeting_view = (request.args.get('meeting_view') or 'all').strip() or 'all'
     meeting_week_anchor = (request.args.get('meeting_week_anchor') or '').strip()
     meeting_month_anchor = (request.args.get('meeting_month_anchor') or '').strip()
@@ -6186,7 +6210,7 @@ def integrated_audit_logs_export():
                 item.get('host_label') or '',
                 item.get('path_label') or '',
                 item.get('referer_label') or '',
-                item.get('created_at') or '',
+                item.get('display_created_at') or item.get('created_at') or '',
             ]
             for item in data
         ]
@@ -6203,7 +6227,7 @@ def integrated_audit_logs_export():
                 item.get('name') or '',
                 item.get('workplace') or '',
                 item.get('ip') or '',
-                item.get('created_at') or '',
+                item.get('display_created_at') or item.get('created_at') or '',
                 item.get('data') or '',
             ]
             for item in data

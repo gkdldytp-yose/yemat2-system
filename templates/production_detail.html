@@ -106,6 +106,23 @@
 .journal-option-btn{display:flex;align-items:center;justify-content:space-between;gap:.8rem;width:100%;padding:.8rem .95rem;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#0f172a;font-size:.88rem;font-weight:800;cursor:pointer;text-align:left;}
 .journal-option-btn:hover{border-color:#93c5fd;background:#f8fbff;}
 .journal-option-meta{display:block;font-size:.76rem;font-weight:600;color:#64748b;margin-top:.14rem;}
+.plan-edit-modal{position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:1300;display:none;align-items:center;justify-content:center;padding:1rem;}
+.plan-edit-modal.open{display:flex;}
+.plan-edit-sheet{width:min(620px,96vw);background:#fff;border-radius:18px;border:1px solid #dbe4f0;box-shadow:0 28px 64px rgba(15,23,42,.24);overflow:hidden;}
+.plan-edit-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:1rem 1.2rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%);}
+.plan-edit-title{font-size:1.05rem;font-weight:900;color:#0f172a;}
+.plan-edit-close{width:36px;height:36px;border:none;border-radius:999px;background:#eef2f7;color:#475569;font-size:1rem;font-weight:900;cursor:pointer;}
+.plan-edit-body{padding:1.1rem 1.2rem 1.2rem;display:flex;flex-direction:column;gap:1rem;}
+.plan-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
+.plan-edit-field label{display:block;font-size:.78rem;font-weight:800;color:#475569;margin-bottom:.35rem;}
+.plan-edit-field input,.plan-edit-field textarea{width:100%;box-sizing:border-box;padding:.68rem .78rem;border:1px solid #cbd5e1;border-radius:12px;font-size:.92rem;font-family:inherit;background:#fff;}
+.plan-edit-field input:focus,.plan-edit-field textarea:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.14);}
+.plan-edit-field textarea{min-height:96px;resize:vertical;}
+.plan-edit-field.full{grid-column:1 / -1;}
+.plan-line-wrap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem;}
+.plan-line-chip{display:flex;align-items:center;gap:.45rem;padding:.58rem .65rem;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc;font-size:.84rem;font-weight:700;color:#334155;}
+.plan-line-chip input{width:16px;height:16px;accent-color:#2563eb;}
+.plan-edit-actions{display:flex;justify-content:flex-end;gap:.55rem;padding-top:.25rem;}
 
 @media (max-width: 768px) {
     html,body{max-width:100%;overflow-x:hidden;}
@@ -143,6 +160,8 @@
     .lot-gap-fields{grid-template-columns:1fr;}
     .expiry-split-row{grid-template-columns:1fr;}
     .section-head{align-items:flex-start;}
+    .plan-edit-grid{grid-template-columns:1fr;}
+    .plan-line-wrap{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 </style>
 {% endblock %}
@@ -159,6 +178,9 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
     <h1>🏭 생산 상세</h1>
     <div style="display:flex;gap:0.5rem;align-items:center;">
+        {% if production.status != '완료' and can_prod %}
+        <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="openPlanEditModal()">생산계획 수정</button>
+        {% endif %}
         {% if production.status == '완료' and can_prod and not edit_completed %}
         <a href="/production/{{ production.id }}?edit=1" class="btn btn-small" style="background:#f59e0b;">✏️ 완료건 수정</a>
         {% elif edit_completed %}
@@ -175,6 +197,53 @@
 <div style="background:#e8f5e9;border:2px solid #27ae60;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;text-align:center;font-weight:600;color:#27ae60;">✅ 생산 완료</div>
 {% endif %}
 
+{% set selected_plan_lines = production.line.split(',') if production.line else [] %}
+{% if production.status != '완료' and can_prod %}
+<div id="planEditModal" class="plan-edit-modal" onclick="if(event.target===this){closePlanEditModal();}">
+    <div class="plan-edit-sheet">
+        <div class="plan-edit-head">
+            <div class="plan-edit-title">생산계획 수정</div>
+            <button type="button" class="plan-edit-close" onclick="closePlanEditModal()">×</button>
+        </div>
+        <form method="POST" action="/production/{{ production.id }}/edit" class="plan-edit-body">
+            <div class="plan-edit-grid">
+                <div class="plan-edit-field full">
+                    <label>상품</label>
+                    <input type="text" value="{{ production.product_name }}" readonly style="background:#f8fafc;color:#475569;">
+                </div>
+                <div class="plan-edit-field">
+                    <label>생산일</label>
+                    <input type="date" name="production_date" required value="{{ production.production_date }}">
+                </div>
+                <div class="plan-edit-field">
+                    <label>계획 생산 박스 수</label>
+                    <input type="number" name="planned_boxes" min="1" step="0.1" required value="{{ production.planned_boxes }}">
+                </div>
+                <div class="plan-edit-field full">
+                    <label>생산 라인</label>
+                    <div class="plan-line-wrap">
+                        {% for line in range(1, 13) %}
+                        <label class="plan-line-chip">
+                            <input type="checkbox" name="production_lines" value="{{ line }}" {% if (line|string) in selected_plan_lines %}checked{% endif %}>
+                            <span>라인 {{ line }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="plan-edit-field full">
+                    <label>비고</label>
+                    <textarea name="note" rows="3">{{ production.note or '' }}</textarea>
+                </div>
+            </div>
+            <div class="plan-edit-actions">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closePlanEditModal()">취소</button>
+                <button type="submit" class="btn btn-small">적용</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <form method="POST" action="/production/{{ production.id }}/update-usage">
 <input type="hidden" name="return_edit" value="{{ '1' if edit_completed else '' }}">
 
@@ -184,6 +253,7 @@
         <div class="info-item" style="grid-column:1 / -1;"><div class="lbl">제품명</div><div class="val">{{ production.product_name }}</div></div>
         <div class="info-item"><div class="lbl">생산번호</div><div class="val">PROD-{{ production.id }}</div></div>
         <div class="info-item"><div class="lbl">생산일</div><div class="val">{{ production.production_date }}</div></div>
+        <div class="info-item"><div class="lbl">생산 라인</div><div class="val">{{ ('라인 ' ~ production.line.replace(',', ', 라인 ')) if production.line else '-' }}</div></div>
         <div class="info-item"><div class="lbl">상태</div><div class="val">
             {% if production.status == '완료' %}<span class="badge badge-success">완료</span>
             {% elif production.status == '진행중' %}<span class="badge badge-warning">진행중</span>
@@ -1107,6 +1177,20 @@ function closeMaterialShortageModal(){
     }
 }
 
+function openPlanEditModal(){
+    const modal = document.getElementById('planEditModal');
+    if(modal){
+        modal.classList.add('open');
+    }
+}
+
+function closePlanEditModal(){
+    const modal = document.getElementById('planEditModal');
+    if(modal){
+        modal.classList.remove('open');
+    }
+}
+
 function openJournalPreview(url, windowName){
     if(!url) return;
     window.open(url, windowName || 'journal_preview', 'width=1200,height=920,scrollbars=yes,resizable=yes');
@@ -1137,5 +1221,13 @@ function closeRawChecksheetChooser(event){
         modal.classList.remove('open');
     }
 }
+
+document.addEventListener('keydown', function(event){
+    if(event.key === 'Escape'){
+        closePlanEditModal();
+        closeRawChecksheetChooser();
+        closeMaterialShortageModal();
+    }
+});
 </script>
 {% endblock %}
