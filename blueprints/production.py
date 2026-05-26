@@ -2448,7 +2448,64 @@ def production_detail(production_id):
             )
 
 
-    bom_raw_items = cursor.fetchall()
+    bom_raw_items = [dict(row) for row in cursor.fetchall()]
+
+    if production['status'] != '\uC644\uB8CC' or edit_completed:
+        existing_raw_ids = {int(row['rm_id'] or 0) for row in bom_raw_items if row.get('rm_id')}
+        cursor.execute(
+            '''
+            SELECT
+                pmu.raw_material_id as rm_id,
+                ? as quantity_per_box,
+                COALESCE(rm.name, pmu.raw_material_name, '(원초)') as rm_name,
+                rm.car_number,
+                rm.receiving_date,
+                (
+                    COALESCE(rm.current_stock, 0)
+                    + CASE WHEN ? = 1 THEN SUM(COALESCE(pmu.actual_quantity, 0)) ELSE 0 END
+                ) as current_stock,
+                rm.id as raw_material_id
+            FROM production_material_usage pmu
+            LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
+            WHERE pmu.production_id = ?
+              AND pmu.raw_material_id IS NOT NULL
+            GROUP BY pmu.raw_material_id, rm.id, rm.name, rm.car_number, rm.receiving_date, rm.current_stock, pmu.raw_material_name
+            ORDER BY
+                CASE WHEN rm.receiving_date IS NULL OR TRIM(rm.receiving_date) = '' THEN 1 ELSE 0 END ASC,
+                rm.receiving_date ASC,
+                rm.id ASC
+            ''',
+            (production['active_sok_per_box'], 1 if edit_completed else 0, production_id),
+        )
+        for row in cursor.fetchall():
+            raw_id = int(row['rm_id'] or 0)
+            if raw_id > 0 and raw_id not in existing_raw_ids:
+                bom_raw_items.append(dict(row))
+                existing_raw_ids.add(raw_id)
+
+    cursor.execute(
+        '''
+        SELECT
+            id,
+            name,
+            COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) as code,
+            lot,
+            COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '-') as car_number,
+            receiving_date,
+            COALESCE(current_stock, 0) as current_stock,
+            COALESCE(sheets_per_sok, 0) as sheets_per_sok
+        FROM raw_materials
+        WHERE workplace = ?
+          AND COALESCE(current_stock, 0) > 0
+        ORDER BY
+            name ASC,
+            CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
+            receiving_date ASC,
+            id ASC
+        ''',
+        (production['workplace'],),
+    )
+    raw_change_options = [dict(row) for row in cursor.fetchall()]
 
     # 遺?먯옱 ?ъ슜 ?댁뿭 ?뺤씤
     cursor.execute('SELECT COUNT(*) as count FROM production_material_usage WHERE production_id = ?', (production_id,))
@@ -2673,6 +2730,8 @@ def production_detail(production_id):
         material_shortage_popup=material_shortage_popup,
         personnel_note_suggestions=personnel_note_suggestions,
         raw_checksheet_options=raw_checksheet_options,
+        raw_change_options=raw_change_options,
+        raw_change_options_json=json.dumps(raw_change_options, ensure_ascii=False),
         material_checksheet_url=material_checksheet_url,
         packaging_checksheet_url=packaging_checksheet_url,
     )
@@ -3631,18 +3690,6 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
                     (rm_id, qty, production_id, actor_user_id),
                 )
 
-                cursor.execute('SELECT COUNT(*) as cnt FROM bom WHERE product_id = ? AND raw_material_id = ?', (product_id, rm_id))
-                if cursor.fetchone()['cnt'] == 0:
-                    cursor.execute('SELECT sok_per_box FROM products WHERE id = ?', (product_id,))
-                    p_info = cursor.fetchone()
-                    s_box = p_info['sok_per_box'] if p_info else 0
-                    cursor.execute(
-                        '''
-                        INSERT INTO bom (product_id, raw_material_id, sok_per_box, quantity_per_box)
-                        VALUES (?, ?, ?, ?)
-                        ''',
-                        (product_id, rm_id, s_box, s_box),
-                    )
             elif mat_id:
                 legacy_material_rollbacks.append((mat_id, qty))
 

@@ -20,3 +20,7 @@ backups/
 *.db-shm
 *.db-wal
 uploads/
+
+# Runtime logs
+logs/
+*.log
