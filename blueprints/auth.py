@@ -7,6 +7,7 @@ from core import (
     get_db,
     get_usernames_for_notification,
     hash_password,
+    now_local,
     password_needs_rehash,
     verify_password,
 )
@@ -20,6 +21,7 @@ def _build_auth_session_payload(user_info, event_name):
         workplaces = [value.strip() for value in workplaces.split(',') if value.strip()]
     return {
         'event': event_name,
+        'event_at_local': now_local().strftime('%Y-%m-%d %H:%M:%S'),
         'path': request.path,
         'method': request.method,
         'host': request.host,
@@ -34,6 +36,8 @@ def _build_auth_session_payload(user_info, event_name):
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    notice = (request.args.get('notice') or '').strip()
+
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
@@ -95,6 +99,8 @@ def login():
             return redirect(url_for('main.select_workplace'))
         return redirect(url_for('main.index'))
 
+    if notice == 'pending_signup':
+        return render_template('login.html', error='가입 요청이 접수되었습니다. 최고 관리자 승인 후 로그인 가능합니다.')
     return render_template('login.html')
 
 
@@ -187,8 +193,9 @@ def register():
                 f'{department or "-"} / 작업장 {workplace_text}',
                 '/users',
             )
+
         conn.commit()
         conn.close()
-        return render_template('login.html', error='가입 요청이 접수되었습니다. 최고 관리자 승인 후 로그인 가능합니다.')
+        return redirect(url_for('auth.login', notice='pending_signup'))
 
     return render_template('register.html', workplaces=WORKPLACES)

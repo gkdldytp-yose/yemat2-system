@@ -2,16 +2,49 @@
 {% block title %}상품 관리{% endblock %}
 {% block extra_css %}
 <style>
-.cat-filters{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.cat-btn{padding:0.4rem 0.8rem;border-radius:20px;border:2px solid #e1e8ed;background:white;font-size:0.75rem;font-weight:600;color:#666;text-decoration:none;white-space:nowrap;}
-.cat-btn.active{background:#667eea;border-color:#667eea;color:white;}
+.product-filter-panel{margin-bottom:1rem;padding:1rem 1.05rem 1.05rem;border:1px solid #dbe5f3;border-radius:22px;background:
+    radial-gradient(circle at top left, rgba(96,165,250,.14), transparent 28%),
+    linear-gradient(180deg,#fbfdff 0%,#f3f7ff 100%);
+box-shadow:0 16px 34px rgba(15,23,42,.07);}
+.product-filter-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.9rem;flex-wrap:wrap;}
+.product-filter-title{display:flex;flex-direction:column;gap:0.22rem;}
+.product-filter-title strong{font-size:0.98rem;color:#0f172a;}
+.product-filter-title span{font-size:0.8rem;color:#64748b;line-height:1.5;}
+.product-filter-summary{display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;}
+.product-filter-summary .summary-chip{display:inline-flex;align-items:center;gap:0.38rem;padding:0.46rem 0.76rem;border-radius:999px;background:rgba(255,255,255,.9);border:1px solid #d9e2f0;color:#1e293b;font-size:0.76rem;font-weight:800;box-shadow:0 10px 20px rgba(15,23,42,.04);backdrop-filter:blur(8px);}
+.product-filter-summary .summary-chip b{color:#1d4ed8;font-size:0.82rem;}
+.cat-filters{display:flex;gap:0.6rem;flex-wrap:wrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0.15rem 0 0.2rem;}
+.cat-btn{position:relative;display:inline-flex;align-items:center;gap:0.5rem;padding:0.68rem 0.92rem;border-radius:999px;border:1px solid #d7e1f0;background:rgba(255,255,255,.92);font-size:0.79rem;font-weight:800;color:#334155;text-decoration:none;white-space:nowrap;box-shadow:0 8px 18px rgba(15,23,42,.05);transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease;}
+.cat-btn::before{content:"";width:0.48rem;height:0.48rem;border-radius:999px;background:#94a3b8;box-shadow:0 0 0 4px rgba(148,163,184,.12);}
+.cat-btn:hover{transform:translateY(-1px);border-color:#b9c8e0;box-shadow:0 14px 24px rgba(15,23,42,.08);}
+.cat-btn-label{letter-spacing:-0.01em;}
+.cat-btn-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.58rem;padding:0 0.44rem;border-radius:999px;background:#eef2ff;color:#3654d5;font-size:0.72rem;font-weight:900;line-height:1;}
+.cat-btn.active{background:linear-gradient(135deg,#2957d3 0%,#1e3a8a 100%);border-color:transparent;color:#fff;box-shadow:0 14px 26px rgba(37,99,235,.24);}
+.cat-btn.active::before{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.18);}
+.cat-btn.active .cat-btn-count{background:rgba(255,255,255,.18);color:#fff;}
+.cat-btn[data-cat="전체"]::before{background:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,.12);}
+.cat-btn[data-cat="식탁"]::before{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.12);}
+.cat-btn[data-cat="김밥"]::before{background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.14);}
+.cat-btn[data-cat="자반"]::before{background:#ea580c;box-shadow:0 0 0 4px rgba(234,88,12,.14);}
+.cat-btn[data-cat="유기"]::before{background:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.cat-btn[data-cat="도시락"]::before{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.12);}
+.cat-btn[data-cat="전장"]::before{background:#7c3aed;box-shadow:0 0 0 4px rgba(124,58,237,.12);}
+.cat-btn[data-cat="생김"]::before{background:#0f766e;box-shadow:0 0 0 4px rgba(15,118,110,.12);}
+.cat-btn[data-cat="세트"]::before{background:#db2777;box-shadow:0 0 0 4px rgba(219,39,119,.12);}
+.cat-btn[data-cat="무트레이"]::before{background:#64748b;box-shadow:0 0 0 4px rgba(100,116,139,.14);}
 .cat-badge{display:inline-block;padding:0.2rem 0.5rem;border-radius:10px;font-size:0.7rem;font-weight:600;}
 @media (max-width: 768px) {
-    .cat-btn{padding:0.3rem 0.6rem;font-size:0.7rem;}
+    .product-filter-panel{padding:0.85rem 0.9rem 0.95rem;}
+    .product-filter-title strong{font-size:0.92rem;}
+    .product-filter-title span{font-size:0.76rem;}
+    .cat-btn{padding:0.56rem 0.8rem;font-size:0.76rem;}
+    .cat-btn-count{min-width:1.45rem;height:1.45rem;font-size:0.69rem;}
 }
 @media (max-width: 600px) {
     .cat-filters{flex-wrap:nowrap;overflow-x:auto;gap:0.35rem;}
     .cat-btn{flex:0 0 auto;}
+    .product-filter-head{flex-direction:column;align-items:stretch;gap:0.75rem;}
+    .product-filter-summary{justify-content:flex-start;}
     .prod-toolbar{flex-direction:column;align-items:stretch;gap:0.5rem;}
     .prod-toolbar form{width:100%;}
     .prod-toolbar .search-input{min-width:0;width:100%;}
@@ -24,7 +57,8 @@
 {%- set can_prod  = _r in ['admin','production'] -%}
 
 <h1>📦 상품 관리</h1>
-{% set CATS = ['식탁','김밥','유기','도시락','전장','생김','세트','무트레이'] %}
+{% set CATS = ['식탁','김밥','자반','유기','도시락','전장','생김','세트','무트레이'] %}
+{% set active_category_label = selected_category if selected_category else '전체 상품' %}
 
 {% if can_prod %}
 <div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:1rem;">
@@ -69,11 +103,30 @@
             {% endif %}
         </div>
     </div>
-    <div class="cat-filters">
-        <a href="/products" class="cat-btn {% if not selected_category %}active{% endif %}">전체</a>
-        {% for c in CATS %}
-        <a href="/products?category={{ c }}" class="cat-btn {% if selected_category == c %}active{% endif %}">{{ c }}</a>
+    <div class="product-filter-panel">
+        <div class="product-filter-head">
+            <div class="product-filter-title">
+                <strong>카테고리 빠른 선택</strong>
+                <span>원하는 상품군만 빠르게 모아보고, 현재 검색 조건에 맞는 개수도 함께 확인할 수 있습니다.</span>
+            </div>
+            <div class="product-filter-summary">
+                <span class="summary-chip">선택 <b>{{ active_category_label }}</b></span>
+                <span class="summary-chip">표시 <b>{{ products|length }}</b>건</span>
+                <span class="summary-chip">전체 <b>{{ total_count or 0 }}</b>건</span>
+            </div>
+        </div>
+        <div class="cat-filters">
+        <a href="/products{% if search_keyword %}?search={{ search_keyword|urlencode }}{% endif %}" class="cat-btn {% if not selected_category %}active{% endif %}" data-cat="전체">
+            <span class="cat-btn-label">전체</span>
+            <span class="cat-btn-count">{{ total_count or 0 }}</span>
+        </a>
+        {% for c in CATS if c in available_categories %}
+        <a href="/products?category={{ c }}{% if search_keyword %}&search={{ search_keyword|urlencode }}{% endif %}" class="cat-btn {% if selected_category == c %}active{% endif %}" data-cat="{{ c }}">
+            <span class="cat-btn-label">{{ c }}</span>
+            <span class="cat-btn-count">{{ category_counts.get(c, 0) }}</span>
+        </a>
         {% endfor %}
+        </div>
     </div>
     {% if products %}
     <div class="table-container">
@@ -91,6 +144,7 @@
                 <span class="cat-badge" style="background:
                     {% if p.category=='식탁' %}#e8f5e9;color:#27ae60
                     {% elif p.category=='김밥' %}#fff3e0;color:#e67e22
+                    {% elif p.category=='자반' %}#ffedd5;color:#c2410c
                     {% elif p.category=='유기' %}#e3f2fd;color:#1976d2
                     {% elif p.category=='전장' %}#f3e5f5;color:#7b1fa2
                     {% elif p.category=='생김' %}#e0f2f1;color:#00796b

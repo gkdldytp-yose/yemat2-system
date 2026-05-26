@@ -1,7 +1,9 @@
 import hashlib
+import logging
 import os
+from time import perf_counter
 
-from flask import Flask, session
+from flask import Flask, g, request, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core import LOGISTICS_WORKPLACE, SHARED_WORKPLACE, get_db, get_workplace
@@ -56,6 +58,44 @@ def create_app():
     app.config['SESSION_COOKIE_SECURE'] = _env_flag('YEMAT_SESSION_COOKIE_SECURE', default=False)
     app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['SESSION_COOKIE_SECURE'] else 'http'
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+    @app.before_request
+    def _track_request_started_at():
+        g._request_started_at = perf_counter()
+
+    @app.after_request
+    def _write_access_log(response):
+        try:
+            if request.path.startswith('/static') or request.path == '/favicon.ico':
+                return response
+            logger = logging.getLogger('yemat.access')
+            if not logger.handlers:
+                return response
+            started_at = getattr(g, '_request_started_at', None)
+            elapsed_ms = int((perf_counter() - started_at) * 1000) if started_at else 0
+            user = session.get('user') or {}
+            username = (user.get('username') or '-').strip() or '-'
+            workplace = (session.get('workplace') or '-').strip() or '-'
+            ip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '-').split(',')[0].strip() or '-'
+            endpoint = (request.endpoint or '-').strip() or '-'
+            query = request.query_string.decode('utf-8', errors='ignore').strip()
+            path = request.path if not query else f'{request.path}?{query}'
+            referer = (request.referrer or '-').strip() or '-'
+            logger.info(
+                '%s | %s | %s | %s | %s | %s | %s | %sms | %s',
+                ip,
+                username,
+                workplace,
+                request.method,
+                response.status_code,
+                endpoint,
+                path,
+                elapsed_ms,
+                referer,
+            )
+        except Exception:
+            pass
+        return response
 
     register_blueprints(app)
 

@@ -95,12 +95,43 @@ def products():
     query += ' GROUP BY p.id ORDER BY p.category, p.name'
     cursor.execute(query, params)
     products = cursor.fetchall()
+    base_count_query = '''
+        SELECT COALESCE(p.category, '') AS category, COUNT(*) AS cnt
+        FROM products p
+        WHERE p.workplace = ?
+        GROUP BY COALESCE(p.category, "")
+    '''
+    cursor.execute(base_count_query, [workplace])
+    base_category_counts = {
+        (row['category'] or '').strip(): int(row['cnt'] or 0)
+        for row in cursor.fetchall()
+    }
+    count_query = '''
+        SELECT COALESCE(p.category, '') AS category, COUNT(*) AS cnt
+        FROM products p
+        WHERE p.workplace = ?
+    '''
+    count_params = [workplace]
+    if search_keyword:
+        count_query += ' AND (p.name LIKE ? OR p.code LIKE ?)'
+        like_q = f'%{search_keyword}%'
+        count_params.extend([like_q, like_q])
+    count_query += ' GROUP BY COALESCE(p.category, "")'
+    cursor.execute(count_query, count_params)
+    category_counts = {
+        (row['category'] or '').strip(): int(row['cnt'] or 0)
+        for row in cursor.fetchall()
+    }
+    total_count = sum(category_counts.values())
     conn.close()
     return render_template('products.html',
                            user=session['user'],
                            products=products,
                            selected_category=category,
-                           search_keyword=search_keyword)
+                           search_keyword=search_keyword,
+                           category_counts=category_counts,
+                           total_count=total_count,
+                           available_categories=[cat for cat, cnt in base_category_counts.items() if cnt > 0])
 
 
 @bp.route('/products/add', methods=['POST'])

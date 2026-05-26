@@ -3615,6 +3615,7 @@ def raw_material_checksheet_preview(raw_material_id):
                     substr(p.production_date, 1, 10) as use_date,
                     COALESCE(SUM(COALESCE(pmu.actual_quantity, 0)), 0) as used_quantity,
                     GROUP_CONCAT(DISTINCT pr.name) as product_names,
+                    GROUP_CONCAT(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), char(31)) as usage_notes,
                     COALESCE(rcn.note, '') as checksheet_note,
                     1 as sort_group,
                     'production' as log_kind
@@ -3636,6 +3637,7 @@ def raw_material_checksheet_preview(raw_material_id):
                     substr(rml.created_at, 1, 10) as use_date,
                     ABS(COALESCE(SUM(COALESCE(rml.quantity, 0)), 0)) as used_quantity,
                     '' as product_names,
+                    '' as usage_notes,
                     COALESCE(NULLIF(TRIM(rml.note), ''), '') as checksheet_note,
                     2 as sort_group,
                     'export' as log_kind
@@ -3667,11 +3669,26 @@ def raw_material_checksheet_preview(raw_material_id):
             used_qty = float(log.get('used_quantity') or 0)
             log_kind = str(log.get('log_kind') or 'production').strip()
             default_note = ', '.join([x.strip() for x in (log.get('product_names') or '').split(',') if x.strip()])
-            note = (log.get('checksheet_note') or '').strip() or default_note
+            usage_note_lines = []
+            for raw_note in [x.strip() for x in (log.get('usage_notes') or '').split(chr(31)) if x.strip()]:
+                for line in raw_note.splitlines():
+                    clean_line = line.strip()
+                    if clean_line.startswith('원초 변경:'):
+                        usage_note_lines.append(clean_line)
+            note_parts = []
+            checksheet_note = (log.get('checksheet_note') or '').strip()
+            if checksheet_note:
+                note_parts.append(checksheet_note)
+            elif default_note:
+                note_parts.append(default_note)
+            for line in usage_note_lines:
+                if line not in note_parts:
+                    note_parts.append(line)
+            note = ' / '.join(note_parts)
             display_used_qty = used_qty
             if log_kind == 'export':
                 display_used_qty = 0.0
-                move_text = f'이동 원초량 {used_qty:,.0f}속'
+                move_text = f'원초 반출 {used_qty:,.0f}속'
                 note = f'{move_text} / {note}' if note else move_text
             reconstructed_rows.append(
                 {

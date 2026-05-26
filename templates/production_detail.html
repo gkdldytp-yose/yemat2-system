@@ -106,6 +106,60 @@
 .journal-option-btn{display:flex;align-items:center;justify-content:space-between;gap:.8rem;width:100%;padding:.8rem .95rem;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#0f172a;font-size:.88rem;font-weight:800;cursor:pointer;text-align:left;}
 .journal-option-btn:hover{border-color:#93c5fd;background:#f8fbff;}
 .journal-option-meta{display:block;font-size:.76rem;font-weight:600;color:#64748b;margin-top:.14rem;}
+.raw-change-btn{display:inline-flex;align-items:center;justify-content:center;gap:.34rem;padding:.5rem 1rem;border:1px solid #f97316;border-radius:999px;background:linear-gradient(135deg,#fff7ed 0%,#ffffff 100%);color:#9a3412;font-size:.82rem;font-weight:900;cursor:pointer;line-height:1.2;box-shadow:0 8px 18px rgba(249,115,22,.12);transition:all .16s ease;}
+.raw-change-btn::before{content:"↔";display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ffedd5;color:#c2410c;font-size:.82rem;font-weight:900;}
+.raw-change-btn:hover{transform:translateY(-1px);background:#fff7ed;border-color:#ea580c;color:#7c2d12;box-shadow:0 12px 22px rgba(249,115,22,.18);}
+.raw-change-btn:disabled{opacity:.45;cursor:not-allowed;background:#f8fafc;color:#64748b;border-color:#cbd5e1;}
+.raw-change-modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:1250;padding:1rem;}
+.raw-change-modal-bg.open{display:flex;}
+.raw-change-modal{width:min(860px,96vw);max-height:90vh;display:flex;flex-direction:column;background:#fff;border:1px solid #dbe4f0;border-radius:18px;box-shadow:0 26px 60px rgba(15,23,42,.22);overflow:hidden;}
+.raw-change-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(180deg,#f8fbff 0%,#fff 100%);}
+.raw-change-title{font-size:1.05rem;font-weight:900;color:#0f172a;}
+.raw-change-sub{margin-top:.22rem;font-size:.8rem;color:#64748b;line-height:1.45;}
+.raw-change-close{width:36px;height:36px;border:none;border-radius:999px;background:#eef2f7;color:#475569;font-size:1rem;font-weight:900;cursor:pointer;}
+.raw-change-body{padding:1rem 1.15rem;overflow:auto;}
+.raw-change-targets{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:.85rem;padding:.7rem;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;}
+.raw-change-target-label{width:100%;font-size:.74rem;font-weight:900;color:#64748b;}
+.raw-change-target{display:inline-flex;align-items:center;gap:.38rem;max-width:100%;padding:.42rem .7rem;border:1px solid #dbe4f0;border-radius:999px;background:#fff;color:#334155;font-size:.8rem;font-weight:800;cursor:pointer;line-height:1.25;}
+.raw-change-target.active{background:#0f172a;border-color:#0f172a;color:#fff;box-shadow:0 8px 16px rgba(15,23,42,.14);}
+.raw-change-target small{font-size:.72rem;font-weight:700;opacity:.8;}
+.raw-change-guide{display:flex;align-items:center;gap:.45rem;margin-bottom:.85rem;padding:.65rem .8rem;border-radius:12px;background:#fff7ed;color:#9a3412;font-size:.8rem;font-weight:800;line-height:1.45;}
+.raw-change-tabs{display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.85rem;}
+.raw-change-tab{border:1px solid #dbe4f0;border-radius:999px;background:#fff;color:#334155;padding:.42rem .75rem;font-size:.8rem;font-weight:800;cursor:pointer;}
+.raw-change-tab.active{background:#1e293b;border-color:#1e293b;color:#fff;}
+.raw-change-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.7rem;}
+.raw-change-option{display:flex;flex-direction:column;gap:.48rem;padding:.85rem;border:1px solid #dbe4f0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;transition:all .16s ease;}
+.raw-change-option:hover{border-color:#93c5fd;background:#f8fbff;}
+.raw-change-option.active{border-color:#22c55e;background:#f0fdf4;box-shadow:0 0 0 3px rgba(34,197,94,.12);}
+.raw-change-option-name{font-size:.92rem;font-weight:900;color:#0f172a;line-height:1.35;}
+.raw-change-option-meta{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;font-size:.76rem;color:#64748b;}
+.raw-change-option-meta strong{display:block;color:#334155;font-size:.82rem;}
+.raw-change-stock{display:inline-flex;align-self:flex-start;align-items:center;padding:.22rem .55rem;border-radius:999px;background:#e8f5e9;color:#16a34a;font-size:.76rem;font-weight:900;}
+.raw-change-pick{display:inline-flex;align-items:center;justify-content:center;margin-top:.1rem;padding:.4rem .65rem;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:900;}
+.raw-change-option.active .raw-change-pick{background:#16a34a;color:#fff;}
+.raw-change-empty{padding:1.2rem;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;color:#64748b;font-size:.88rem;text-align:center;}
+.raw-change-actions{display:flex;justify-content:flex-end;gap:.55rem;padding:1rem 1.15rem;border-top:1px solid #e5e7eb;background:#f8fafc;}
+.raw-change-cancel,.raw-change-apply{display:inline-flex;align-items:center;justify-content:center;padding:.62rem 1rem;border-radius:10px;font-size:.86rem;font-weight:900;cursor:pointer;}
+.raw-change-cancel{border:1px solid #cbd5e1;background:#fff;color:#475569;}
+.raw-change-apply{border:none;background:#2563eb;color:#fff;}
+.raw-change-apply:disabled{opacity:.45;cursor:not-allowed;}
+.plan-edit-modal{position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:1300;display:none;align-items:center;justify-content:center;padding:1rem;}
+.plan-edit-modal.open{display:flex;}
+.plan-edit-sheet{width:min(620px,96vw);background:#fff;border-radius:18px;border:1px solid #dbe4f0;box-shadow:0 28px 64px rgba(15,23,42,.24);overflow:hidden;}
+.plan-edit-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:1rem 1.2rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%);}
+.plan-edit-title{font-size:1.05rem;font-weight:900;color:#0f172a;}
+.plan-edit-close{width:36px;height:36px;border:none;border-radius:999px;background:#eef2f7;color:#475569;font-size:1rem;font-weight:900;cursor:pointer;}
+.plan-edit-body{padding:1.1rem 1.2rem 1.2rem;display:flex;flex-direction:column;gap:1rem;}
+.plan-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
+.plan-edit-field label{display:block;font-size:.78rem;font-weight:800;color:#475569;margin-bottom:.35rem;}
+.plan-edit-field input,.plan-edit-field textarea{width:100%;box-sizing:border-box;padding:.68rem .78rem;border:1px solid #cbd5e1;border-radius:12px;font-size:.92rem;font-family:inherit;background:#fff;}
+.plan-edit-field input:focus,.plan-edit-field textarea:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.14);}
+.plan-edit-field textarea{min-height:96px;resize:vertical;}
+.plan-edit-field.full{grid-column:1 / -1;}
+.plan-line-wrap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem;}
+.plan-line-chip{display:flex;align-items:center;gap:.45rem;padding:.58rem .65rem;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc;font-size:.84rem;font-weight:700;color:#334155;}
+.plan-line-chip input{width:16px;height:16px;accent-color:#2563eb;}
+.plan-edit-actions{display:flex;justify-content:flex-end;gap:.55rem;padding-top:.25rem;}
 
 @media (max-width: 768px) {
     html,body{max-width:100%;overflow-x:hidden;}
@@ -143,6 +197,19 @@
     .lot-gap-fields{grid-template-columns:1fr;}
     .expiry-split-row{grid-template-columns:1fr;}
     .section-head{align-items:flex-start;}
+    .raw-change-btn{width:100%;min-height:42px;}
+    .raw-change-modal-bg{align-items:flex-end;padding:.6rem;}
+    .raw-change-modal{width:100%;max-height:88vh;border-radius:18px 18px 12px 12px;}
+    .raw-change-head{padding:.9rem 1rem;}
+    .raw-change-body{padding:.9rem 1rem;}
+    .raw-change-targets{padding:.65rem;}
+    .raw-change-target{width:100%;justify-content:space-between;border-radius:12px;}
+    .raw-change-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.25rem;}
+    .raw-change-tab{flex:0 0 auto;}
+    .raw-change-list{grid-template-columns:1fr;}
+    .raw-change-actions{display:grid;grid-template-columns:1fr 1fr;padding:.85rem 1rem;}
+    .plan-edit-grid{grid-template-columns:1fr;}
+    .plan-line-wrap{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 </style>
 {% endblock %}
@@ -159,6 +226,9 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
     <h1>🏭 생산 상세</h1>
     <div style="display:flex;gap:0.5rem;align-items:center;">
+        {% if production.status != '완료' and can_prod %}
+        <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="openPlanEditModal()">생산계획 수정</button>
+        {% endif %}
         {% if production.status == '완료' and can_prod and not edit_completed %}
         <a href="/production/{{ production.id }}?edit=1" class="btn btn-small" style="background:#f59e0b;">✏️ 완료건 수정</a>
         {% elif edit_completed %}
@@ -175,6 +245,53 @@
 <div style="background:#e8f5e9;border:2px solid #27ae60;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;text-align:center;font-weight:600;color:#27ae60;">✅ 생산 완료</div>
 {% endif %}
 
+{% set selected_plan_lines = production.line.split(',') if production.line else [] %}
+{% if production.status != '완료' and can_prod %}
+<div id="planEditModal" class="plan-edit-modal" onclick="if(event.target===this){closePlanEditModal();}">
+    <div class="plan-edit-sheet">
+        <div class="plan-edit-head">
+            <div class="plan-edit-title">생산계획 수정</div>
+            <button type="button" class="plan-edit-close" onclick="closePlanEditModal()">×</button>
+        </div>
+        <form method="POST" action="/production/{{ production.id }}/edit" class="plan-edit-body">
+            <div class="plan-edit-grid">
+                <div class="plan-edit-field full">
+                    <label>상품</label>
+                    <input type="text" value="{{ production.product_name }}" readonly style="background:#f8fafc;color:#475569;">
+                </div>
+                <div class="plan-edit-field">
+                    <label>생산일</label>
+                    <input type="date" name="production_date" required value="{{ production.production_date }}">
+                </div>
+                <div class="plan-edit-field">
+                    <label>계획 생산 박스 수</label>
+                    <input type="number" name="planned_boxes" min="1" step="0.1" required value="{{ production.planned_boxes }}">
+                </div>
+                <div class="plan-edit-field full">
+                    <label>생산 라인</label>
+                    <div class="plan-line-wrap">
+                        {% for line in range(1, 13) %}
+                        <label class="plan-line-chip">
+                            <input type="checkbox" name="production_lines" value="{{ line }}" {% if (line|string) in selected_plan_lines %}checked{% endif %}>
+                            <span>라인 {{ line }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="plan-edit-field full">
+                    <label>비고</label>
+                    <textarea name="note" rows="3">{{ production.note or '' }}</textarea>
+                </div>
+            </div>
+            <div class="plan-edit-actions">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closePlanEditModal()">취소</button>
+                <button type="submit" class="btn btn-small">적용</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <form method="POST" action="/production/{{ production.id }}/update-usage">
 <input type="hidden" name="return_edit" value="{{ '1' if edit_completed else '' }}">
 
@@ -184,6 +301,7 @@
         <div class="info-item" style="grid-column:1 / -1;"><div class="lbl">제품명</div><div class="val">{{ production.product_name }}</div></div>
         <div class="info-item"><div class="lbl">생산번호</div><div class="val">PROD-{{ production.id }}</div></div>
         <div class="info-item"><div class="lbl">생산일</div><div class="val">{{ production.production_date }}</div></div>
+        <div class="info-item"><div class="lbl">생산 라인</div><div class="val">{{ ('라인 ' ~ production.line.replace(',', ', 라인 ')) if production.line else '-' }}</div></div>
         <div class="info-item"><div class="lbl">상태</div><div class="val">
             {% if production.status == '완료' %}<span class="badge badge-success">완료</span>
             {% elif production.status == '진행중' %}<span class="badge badge-warning">진행중</span>
@@ -320,6 +438,7 @@
             {% endif %}
             {% if can_edit %}
             <button type="button" onclick="autoSelect()" style="background:#e8f5e9;border:1px solid #27ae60;color:#27ae60;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.85rem;">⚡ 자동 선택</button>
+            <button type="button" class="raw-change-btn" onclick="openRawChangeModal(event)" {% if not raw_change_options %}disabled{% endif %}>원초 변경</button>
             {% endif %}
         </div>
     </div>
@@ -346,18 +465,18 @@
          data-pbox="{{ rm.quantity_per_box }}"
          {% if can_edit %}onclick="toggleCard({{ rm.rm_id }})"{% endif %}>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong>🌿 {{ rm.rm_name }}</strong>
-            <span style="font-size:0.85rem;padding:0.2rem 0.6rem;border-radius:20px;background:{% if rm.current_stock > 20 %}#e8f5e9;color:#27ae60{% elif rm.current_stock > 5 %}#fff3e0;color:#e67e22{% else %}#fce4ec;color:#e74c3c{% endif %};">재고 {{ rm.current_stock|int }}속</span>
+            <strong class="js-raw-name">🌿 {{ rm.rm_name }}</strong>
+            <span class="js-raw-stock-badge" style="font-size:0.85rem;padding:0.2rem 0.6rem;border-radius:20px;background:{% if rm.current_stock > 20 %}#e8f5e9;color:#27ae60{% elif rm.current_stock > 5 %}#fff3e0;color:#e67e22{% else %}#fce4ec;color:#e74c3c{% endif %};">재고 {{ rm.current_stock|int }}속</span>
         </div>
         <div class="raw-meta">
-            <div><div class="ml">자호</div><div class="mv">{{ rm.car_number or '-' }}</div></div>
-            <div><div class="ml">입고일</div><div class="mv">{{ rm.receiving_date or '-' }}</div></div>
-            <div><div class="ml">현재 재고</div><div class="mv {% if rm.current_stock < 5 %}warn{% else %}ok{% endif %}">{{ rm.current_stock|int }}속</div></div>
+            <div><div class="ml">자호</div><div class="mv js-raw-car">{{ rm.car_number or '-' }}</div></div>
+            <div><div class="ml">입고일</div><div class="mv js-raw-date">{{ rm.receiving_date or '-' }}</div></div>
+            <div><div class="ml">현재 재고</div><div class="mv js-raw-stock {% if rm.current_stock < 5 %}warn{% else %}ok{% endif %}">{{ rm.current_stock|int }}속</div></div>
             {% if not can_edit %}
             <div><div class="ml">사용량</div><div class="mv">{{ rm.actual_quantity|round(1) if (rm.actual_quantity is defined and rm.actual_quantity is not none) else '-' }}속</div></div>
             <div><div class="ml">수율</div><div class="mv">{{ (rm.yield_rate|round(1) ~ '%') if (rm.yield_rate is defined and rm.yield_rate is not none) else '-' }}</div></div>
             {% else %}
-            <div><div class="ml">최대 생산</div><div class="mv" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
+            <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
             {% endif %}
         </div>
         {% if can_edit %}
@@ -368,7 +487,7 @@
                        id="ri_{{ rm.rm_id }}" step="1" min="0" max="{{ rm.current_stock|int }}"
                        value="{{ saved_raw_qty if saved_raw_qty is not none else '' }}" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;"
                        oninput="checkRawOver({{ rm.rm_id }}, {{ rm.current_stock|int }}); updateTotal()">
-                <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}">
+                <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}" class="js-raw-id-input">
                 <span id="rw_{{ rm.rm_id }}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
                 <button type="button" id="raw_note_btn_{{ rm.rm_id }}" class="raw-note-toggle {% if saved_raw_note %}active{% endif %}" onclick="toggleRawNote({{ rm.rm_id }}); event.stopPropagation();">비고 입력</button>
             </div>
@@ -385,6 +504,30 @@
         {% endif %}
     </div>
     {% endfor %}
+</div>
+{% endif %}
+
+{% if can_edit %}
+<div id="rawChangeModal" class="raw-change-modal-bg" onclick="closeRawChangeModal(event)">
+    <div class="raw-change-modal" onclick="event.stopPropagation()">
+        <div class="raw-change-head">
+            <div>
+                <div class="raw-change-title">원초 변경</div>
+                <div class="raw-change-sub" id="rawChangeTargetText">현재 선택된 원초를 작업장 보유 원초로 임시 변경합니다.</div>
+            </div>
+            <button type="button" class="raw-change-close" onclick="closeRawChangeModal()">×</button>
+        </div>
+        <div class="raw-change-body">
+            <div id="rawChangeTargets" class="raw-change-targets"></div>
+            <div class="raw-change-guide">변경 대상 원초를 먼저 확인한 뒤, 아래 목록에서 임시로 사용할 원초를 선택하세요.</div>
+            <div class="raw-change-tabs" id="rawChangeTabs"></div>
+            <div class="raw-change-list" id="rawChangeList"></div>
+        </div>
+        <div class="raw-change-actions">
+            <button type="button" class="raw-change-cancel" onclick="closeRawChangeModal()">취소</button>
+            <button type="button" class="raw-change-apply" id="rawChangeApplyBtn" onclick="applyRawChange()" disabled>변경</button>
+        </div>
+    </div>
 </div>
 {% endif %}
 
@@ -687,7 +830,11 @@ const DEFAULT_BOXES = {{ production.actual_boxes or production.planned_boxes }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
 const INITIAL_TOTAL_RAW_SELECTED = {{ total_raw_selected_qty or 0 }};
 const INITIAL_TOTAL_RAW_NEED = {{ total_raw_need_qty or 0 }};
+const RAW_CHANGE_OPTIONS = {{ raw_change_options_json|default('[]')|safe }};
 let expiryVisibleCount = {{ expiry_visible_count or 1 }};
+let rawChangeTargetId = null;
+let selectedRawChangeId = null;
+let rawChangeActiveTab = 'all';
 
 window.onload = () => {
     syncExpiryRows();
@@ -924,6 +1071,243 @@ function toggleRawNote(id){
     }
 }
 
+function getRawChangeTargetCard(){
+    return document.querySelector('.raw-card.active') || document.querySelector('.raw-card');
+}
+
+function formatRawNumber(value){
+    const num = Number(value || 0);
+    if(!Number.isFinite(num)) return '0';
+    return Number.isInteger(num) ? String(num) : num.toLocaleString('ko-KR', {maximumFractionDigits: 1});
+}
+
+function getRawOptionKind(option){
+    return (option?.name || '기타').trim() || '기타';
+}
+
+function escapeHtml(value){
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[ch]));
+}
+
+function renderRawChangeTabs(){
+    const wrap = document.getElementById('rawChangeTabs');
+    if(!wrap) return;
+    const kinds = Array.from(new Set(RAW_CHANGE_OPTIONS.map(getRawOptionKind))).sort((a, b) => a.localeCompare(b, 'ko'));
+    const tabs = [{key: 'all', label: '전체'}, ...kinds.map(kind => ({key: kind, label: kind}))];
+    wrap.innerHTML = '';
+    tabs.forEach(tab => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `raw-change-tab${rawChangeActiveTab === tab.key ? ' active' : ''}`;
+        btn.textContent = tab.label;
+        btn.onclick = () => {
+            rawChangeActiveTab = tab.key;
+            selectedRawChangeId = null;
+            renderRawChangeTabs();
+            renderRawChangeList();
+        };
+        wrap.appendChild(btn);
+    });
+}
+
+function getRawCardSummary(card){
+    if(!card) return {id: '', name: '원초', car: '-', date: '-'};
+    return {
+        id: card.dataset.id || '',
+        name: card.querySelector('.js-raw-name')?.textContent?.replace('🌿', '').trim() || '원초',
+        car: card.querySelector('.js-raw-car')?.textContent?.trim() || '-',
+        date: card.querySelector('.js-raw-date')?.textContent?.trim() || '-'
+    };
+}
+
+function syncRawChangeTargetText(){
+    const card = rawChangeTargetId ? document.getElementById(`rc_${rawChangeTargetId}`) : getRawChangeTargetCard();
+    const target = getRawCardSummary(card);
+    const targetText = document.getElementById('rawChangeTargetText');
+    if(targetText){
+        targetText.textContent = `변경 대상: ${target.name} · 자호 ${target.car} · 입고일 ${target.date}`;
+    }
+}
+
+function renderRawChangeTargets(){
+    const wrap = document.getElementById('rawChangeTargets');
+    if(!wrap) return;
+    const cards = Array.from(document.querySelectorAll('.raw-card'));
+    if(!cards.length){
+        wrap.innerHTML = '<div class="raw-change-target-label">변경 대상 원초가 없습니다.</div>';
+        return;
+    }
+    wrap.innerHTML = '<div class="raw-change-target-label">변경 대상 선택</div>';
+    cards.forEach(card => {
+        const summary = getRawCardSummary(card);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `raw-change-target${String(rawChangeTargetId) === String(summary.id) ? ' active' : ''}`;
+        btn.innerHTML = `<span>${escapeHtml(summary.name)}</span><small>${escapeHtml(summary.car)} · ${escapeHtml(summary.date)}</small>`;
+        btn.onclick = () => {
+            rawChangeTargetId = summary.id;
+            selectedRawChangeId = null;
+            renderRawChangeTargets();
+            syncRawChangeTargetText();
+            renderRawChangeList();
+        };
+        wrap.appendChild(btn);
+    });
+}
+
+function renderRawChangeList(){
+    const list = document.getElementById('rawChangeList');
+    const applyBtn = document.getElementById('rawChangeApplyBtn');
+    if(!list || !applyBtn) return;
+    const filtered = RAW_CHANGE_OPTIONS.filter(option => rawChangeActiveTab === 'all' || getRawOptionKind(option) === rawChangeActiveTab);
+    applyBtn.disabled = !selectedRawChangeId;
+    if(!filtered.length){
+        list.innerHTML = '<div class="raw-change-empty">해당 종류의 보유 원초가 없습니다.</div>';
+        return;
+    }
+    list.innerHTML = '';
+    filtered.forEach(option => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `raw-change-option${Number(selectedRawChangeId) === Number(option.id) ? ' active' : ''}`;
+        btn.innerHTML = `
+            <span class="raw-change-option-name">${escapeHtml(option.name || '원초')}</span>
+            <span class="raw-change-stock">재고 ${escapeHtml(formatRawNumber(option.current_stock))}속</span>
+            <span class="raw-change-option-meta">
+                <span>자호<strong>${escapeHtml(option.car_number || '-')}</strong></span>
+                <span>입고일<strong>${escapeHtml(option.receiving_date || '-')}</strong></span>
+                <span>코드<strong>${escapeHtml(option.code || '-')}</strong></span>
+                <span>로트<strong>${escapeHtml(option.lot || '-')}</strong></span>
+            </span>
+            <span class="raw-change-pick">${Number(selectedRawChangeId) === Number(option.id) ? '선택됨' : '이 원초 선택'}</span>
+        `;
+        btn.onclick = () => {
+            selectedRawChangeId = Number(option.id);
+            renderRawChangeList();
+        };
+        list.appendChild(btn);
+    });
+}
+
+function openRawChangeModal(event){
+    if(event) event.stopPropagation();
+    if(IS_DONE) return;
+    if(!RAW_CHANGE_OPTIONS.length){
+        alert('현재 작업장에서 선택 가능한 원초 재고가 없습니다.');
+        return;
+    }
+    const targetCard = getRawChangeTargetCard();
+    if(!targetCard){
+        alert('변경할 원초 항목이 없습니다.');
+        return;
+    }
+    rawChangeTargetId = targetCard.dataset.id;
+    selectedRawChangeId = null;
+    rawChangeActiveTab = 'all';
+    syncRawChangeTargetText();
+    renderRawChangeTargets();
+    renderRawChangeTabs();
+    renderRawChangeList();
+    document.getElementById('rawChangeModal')?.classList.add('open');
+}
+
+function closeRawChangeModal(event){
+    if(event && event.target !== event.currentTarget) return;
+    document.getElementById('rawChangeModal')?.classList.remove('open');
+}
+
+function setRawStockTone(elements, stock){
+    const badge = elements.badge;
+    const stockText = elements.stockText;
+    if(badge){
+        if(stock > 20){
+            badge.style.background = '#e8f5e9';
+            badge.style.color = '#27ae60';
+        }else if(stock > 5){
+            badge.style.background = '#fff3e0';
+            badge.style.color = '#e67e22';
+        }else{
+            badge.style.background = '#fce4ec';
+            badge.style.color = '#e74c3c';
+        }
+    }
+    if(stockText){
+        stockText.classList.toggle('warn', stock < 5);
+        stockText.classList.toggle('ok', stock >= 5);
+    }
+}
+
+function appendRawChangeNote(targetId, oldName, option){
+    const textarea = document.getElementById(`raw_note_${targetId}`);
+    const wrap = document.getElementById(`raw_note_wrap_${targetId}`);
+    const btn = document.getElementById(`raw_note_btn_${targetId}`);
+    if(!textarea) return;
+    const newName = option.name || '원초';
+    const meta = [`자호 ${option.car_number || '-'}`, `입고일 ${option.receiving_date || '-'}`].join(', ');
+    const autoNote = `원초 변경: ${oldName} -> ${newName} (${meta})`;
+    const manualLines = (textarea.value || '')
+        .split('\n')
+        .filter(line => !line.trim().startsWith('원초 변경:'))
+        .join('\n')
+        .trim();
+    textarea.value = manualLines ? `${autoNote}\n${manualLines}` : autoNote;
+    if(wrap) wrap.classList.add('open');
+    if(btn) btn.classList.add('active');
+    autoGrowTextarea(textarea);
+}
+
+function applyRawChange(){
+    if(!rawChangeTargetId || !selectedRawChangeId) return;
+    const option = RAW_CHANGE_OPTIONS.find(item => Number(item.id) === Number(selectedRawChangeId));
+    const card = document.getElementById(`rc_${rawChangeTargetId}`);
+    if(!option || !card) return;
+    const inputWrap = document.getElementById(`iw_${rawChangeTargetId}`);
+    const input = document.getElementById(`ri_${rawChangeTargetId}`);
+    const warning = document.getElementById(`rw_${rawChangeTargetId}`);
+    const hidden = card.querySelector('.js-raw-id-input');
+    const oldName = card.querySelector('.js-raw-name')?.textContent?.replace('🌿', '').trim() || '원초';
+    const stock = Number(option.current_stock || 0);
+
+    card.dataset.changedRawId = option.id;
+    card.dataset.stock = String(stock);
+    if(hidden) hidden.value = option.id;
+    if(input){
+        input.max = String(Math.floor(stock));
+        input.setAttribute('oninput', `checkRawOver(${rawChangeTargetId}, ${Math.floor(stock)}); updateTotal()`);
+    }
+    if(warning) warning.style.display = 'none';
+
+    const nameEl = card.querySelector('.js-raw-name');
+    const badge = card.querySelector('.js-raw-stock-badge');
+    const car = card.querySelector('.js-raw-car');
+    const received = card.querySelector('.js-raw-date');
+    const stockText = card.querySelector('.js-raw-stock');
+    const maxText = card.querySelector('.js-raw-max');
+    if(nameEl) nameEl.textContent = `🌿 ${option.name || '원초'}`;
+    if(badge) badge.textContent = `재고 ${formatRawNumber(stock)}속`;
+    if(car) car.textContent = option.car_number || '-';
+    if(received) received.textContent = option.receiving_date || '-';
+    if(stockText) stockText.textContent = ` ${formatRawNumber(stock)}속`.trim();
+    if(maxText){
+        const perBox = getCurrentPerBox();
+        maxText.textContent = perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-';
+    }
+    setRawStockTone({badge, stockText}, stock);
+
+    card.classList.add('active');
+    if(inputWrap) inputWrap.style.display = 'flex';
+    appendRawChangeNote(rawChangeTargetId, oldName, option);
+    checkRawOver(rawChangeTargetId, Math.floor(stock));
+    updateTotal();
+    closeRawChangeModal();
+}
+
 function autoGrowTextarea(textarea){
     if(!textarea) return;
     const computed = window.getComputedStyle(textarea);
@@ -1107,6 +1491,20 @@ function closeMaterialShortageModal(){
     }
 }
 
+function openPlanEditModal(){
+    const modal = document.getElementById('planEditModal');
+    if(modal){
+        modal.classList.add('open');
+    }
+}
+
+function closePlanEditModal(){
+    const modal = document.getElementById('planEditModal');
+    if(modal){
+        modal.classList.remove('open');
+    }
+}
+
 function openJournalPreview(url, windowName){
     if(!url) return;
     window.open(url, windowName || 'journal_preview', 'width=1200,height=920,scrollbars=yes,resizable=yes');
@@ -1137,5 +1535,14 @@ function closeRawChecksheetChooser(event){
         modal.classList.remove('open');
     }
 }
+
+document.addEventListener('keydown', function(event){
+    if(event.key === 'Escape'){
+        closePlanEditModal();
+        closeRawChecksheetChooser();
+        closeRawChangeModal();
+        closeMaterialShortageModal();
+    }
+});
 </script>
 {% endblock %}
