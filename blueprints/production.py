@@ -2281,6 +2281,146 @@ def add_production():
     return redirect(url_for('production.production_detail', production_id=production_id))
 
 
+@bp.route('/production/<int:production_id>/edit', methods=['GET', 'POST'])
+@role_required('production')
+def edit_production_plan(production_id):
+    """생산 예정/진행중 건의 일정과 계획 수량을 수정한다."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        SELECT pr.*, p.name as product_name
+        FROM productions pr
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE pr.id = ?
+        ''',
+        (production_id,),
+    )
+    production = cursor.fetchone()
+    if not production:
+        conn.close()
+        return redirect(url_for('production.production_list'))
+
+    production = dict(production)
+    normalized_status = _normalize_production_status(production.get('status'))
+    if normalized_status == _normalize_production_status('\uC644\uB8CC'):
+        conn.close()
+        return "<script>alert('완료된 생산건은 생산 스케줄을 변경할 수 없습니다.'); location.href='/production/%d';</script>" % production_id
+
+    if request.method == 'GET':
+        conn.close()
+        return render_template('production_edit.html', user=session['user'], production=production)
+
+    production_date = (request.form.get('production_date') or '').strip()
+    planned_boxes_raw = (request.form.get('planned_boxes') or '').strip()
+    note = (request.form.get('note') or '').strip()
+
+    try:
+        datetime.strptime(production_date, '%Y-%m-%d')
+    except Exception:
+        conn.close()
+        return "<script>alert('생산일 형식이 올바르지 않습니다.'); window.history.back();</script>"
+
+    try:
+        planned_boxes = float(planned_boxes_raw)
+    except Exception:
+        conn.close()
+        return "<script>alert('계획 박스 수를 숫자로 입력해주세요.'); window.history.back();</script>"
+
+    if planned_boxes <= 0:
+        conn.close()
+        return "<script>alert('계획 박스 수는 0보다 커야 합니다.'); window.history.back();</script>"
+
+    before_data = {
+        'production_date': production.get('production_date'),
+        'planned_boxes': production.get('planned_boxes'),
+        'note': production.get('note'),
+        'schedule_id': production.get('schedule_id'),
+    }
+
+    cursor.execute(
+        '''
+        UPDATE productions
+        SET production_date = ?, planned_boxes = ?, note = ?
+        WHERE id = ?
+        ''',
+        (production_date, planned_boxes, note, production_id),
+    )
+
+    schedule_id = production.get('schedule_id')
+    if schedule_id:
+        cursor.execute(
+            '''
+            UPDATE production_schedules
+            SET scheduled_date = ?, planned_boxes = ?, note = ?
+            WHERE id = ?
+            ''',
+            (production_date, planned_boxes, note, schedule_id),
+        )
+    else:
+        cursor.execute(
+            '''
+            UPDATE production_schedules
+            SET scheduled_date = ?, planned_boxes = ?, note = ?
+            WHERE production_id = ?
+            ''',
+            (production_date, planned_boxes, note, production_id),
+        )
+
+    cursor.execute(
+        '''
+        SELECT b.material_id, b.quantity_per_box
+        FROM bom b
+        WHERE b.product_id = ?
+          AND b.material_id IS NOT NULL
+        ''',
+        (production['product_id'],),
+    )
+    bom_mats = cursor.fetchall()
+    for bom in bom_mats:
+        expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned_boxes * 100) / 100
+        cursor.execute(
+            '''
+            UPDATE production_material_usage
+            SET expected_quantity = ?
+            WHERE production_id = ?
+              AND material_id = ?
+            ''',
+            (expected_qty, production_id, bom['material_id']),
+        )
+        if cursor.rowcount:
+            continue
+        cursor.execute(
+            '''
+            INSERT INTO production_material_usage
+            (production_id, material_id, raw_material_name, expected_quantity)
+            VALUES (?, ?, NULL, ?)
+            ''',
+            (production_id, bom['material_id'], expected_qty),
+        )
+
+    audit_log(
+        conn,
+        'update',
+        'production',
+        production_id,
+        {
+            'before': before_data,
+            'after': {
+                'production_date': production_date,
+                'planned_boxes': planned_boxes,
+                'note': note,
+                'schedule_id': schedule_id,
+            },
+        },
+    )
+
+    conn.commit()
+    conn.close()
+    return redirect(url_for('production.production_detail', production_id=production_id))
+
+
 @bp.route('/production/<int:production_id>')
 @login_required
 def production_detail(production_id):
@@ -2372,14 +2512,6 @@ def production_detail(production_id):
                     WHERE production_id = ?
                       AND raw_material_id IS NOT NULL
                     GROUP BY raw_material_id
-                ),
-                bom_codes AS (
-                    SELECT DISTINCT
-                        COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
-                    FROM bom b
-                    JOIN raw_materials rm ON b.raw_material_id = rm.id
-                    WHERE b.product_id = ?
-                      AND b.raw_material_id IS NOT NULL
                 )
                 SELECT
                     src.id as raw_material_id,
@@ -2390,29 +2522,22 @@ def production_detail(production_id):
                     (COALESCE(src.current_stock, 0) + COALESCE(ou.rolled_back_qty, 0)) as current_stock,
                     src.id as rm_id
                 FROM raw_materials src
-                JOIN bom_codes bc
-                  ON bc.raw_code = COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id))
+                JOIN bom b ON b.raw_material_id = src.id
                 LEFT JOIN old_usage ou ON ou.raw_material_id = src.id
-                WHERE src.workplace = ?
+                WHERE b.product_id = ?
+                  AND b.raw_material_id IS NOT NULL
+                  AND src.workplace = ?
                   AND (COALESCE(src.current_stock, 0) > 0 OR COALESCE(ou.rolled_back_qty, 0) > 0)
                 ORDER BY
                     CASE WHEN src.receiving_date IS NULL OR TRIM(src.receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production_id, production['product_id'], production['active_sok_per_box'], production['workplace']),
+                (production_id, production['active_sok_per_box'], production['product_id'], production['workplace']),
             )
         else:
             cursor.execute(
                 '''
-                WITH bom_codes AS (
-                    SELECT DISTINCT
-                        COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
-                    FROM bom b
-                    JOIN raw_materials rm ON b.raw_material_id = rm.id
-                    WHERE b.product_id = ?
-                      AND b.raw_material_id IS NOT NULL
-                )
                 SELECT
                     src.id as raw_material_id,
                     ? as quantity_per_box,
@@ -2422,55 +2547,123 @@ def production_detail(production_id):
                     src.current_stock,
                     src.id as rm_id
                 FROM raw_materials src
-                JOIN bom_codes bc
-                  ON bc.raw_code = COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id))
-                WHERE src.workplace = ?
+                JOIN bom b ON b.raw_material_id = src.id
+                WHERE b.product_id = ?
+                  AND b.raw_material_id IS NOT NULL
+                  AND src.workplace = ?
                   AND COALESCE(src.current_stock, 0) > 0
                 ORDER BY
                     CASE WHEN src.receiving_date IS NULL OR TRIM(src.receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production['product_id'], production['active_sok_per_box'], production['workplace']),
+                (production['active_sok_per_box'], production['product_id'], production['workplace']),
             )
 
 
-    bom_raw_items = cursor.fetchall()
+    bom_raw_items = [dict(row) for row in cursor.fetchall()]
+    for item in bom_raw_items:
+        item['is_temp_raw'] = 0
+
+    if production['status'] != '\uC644\uB8CC' or edit_completed:
+        existing_raw_ids = {int(row['rm_id'] or 0) for row in bom_raw_items if row.get('rm_id')}
+        cursor.execute(
+            '''
+            SELECT
+                pmu.raw_material_id as rm_id,
+                ? as quantity_per_box,
+                COALESCE(rm.name, pmu.raw_material_name, '(원초)') as rm_name,
+                rm.car_number,
+                rm.receiving_date,
+                (
+                    COALESCE(rm.current_stock, 0)
+                    + CASE WHEN ? = 1 THEN SUM(COALESCE(pmu.actual_quantity, 0)) ELSE 0 END
+                ) as current_stock,
+                rm.id as raw_material_id,
+                GROUP_CONCAT(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), char(31)) as usage_note
+            FROM production_material_usage pmu
+            LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
+            WHERE pmu.production_id = ?
+              AND pmu.raw_material_id IS NOT NULL
+            GROUP BY pmu.raw_material_id, rm.id, rm.name, rm.car_number, rm.receiving_date, rm.current_stock, pmu.raw_material_name
+            ORDER BY
+                CASE WHEN rm.receiving_date IS NULL OR TRIM(rm.receiving_date) = '' THEN 1 ELSE 0 END ASC,
+                rm.receiving_date ASC,
+                rm.id ASC
+            ''',
+            (production['active_sok_per_box'], 1 if edit_completed else 0, production_id),
+        )
+        for row in cursor.fetchall():
+            raw_id = int(row['rm_id'] or 0)
+            usage_note = (row['usage_note'] if 'usage_note' in row.keys() else '') or ''
+            if raw_id > 0 and raw_id not in existing_raw_ids and '원초 변경:' in usage_note:
+                temp_row = dict(row)
+                temp_row['is_temp_raw'] = 1
+                bom_raw_items.append(temp_row)
+                existing_raw_ids.add(raw_id)
+
+    cursor.execute(
+        '''
+        SELECT
+            id,
+            name,
+            COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) as code,
+            lot,
+            COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '-') as car_number,
+            receiving_date,
+            COALESCE(current_stock, 0) as current_stock,
+            COALESCE(sheets_per_sok, 0) as sheets_per_sok
+        FROM raw_materials
+        WHERE workplace = ?
+          AND COALESCE(current_stock, 0) > 0
+        ORDER BY
+            name ASC,
+            CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
+            receiving_date ASC,
+            id ASC
+        ''',
+        (production['workplace'],),
+    )
+    raw_change_options = [dict(row) for row in cursor.fetchall()]
 
     # 遺?먯옱 ?ъ슜 ?댁뿭 ?뺤씤
     cursor.execute('SELECT COUNT(*) as count FROM production_material_usage WHERE production_id = ?', (production_id,))
     usage_count = cursor.fetchone()['count']
 
-    if usage_count > 0 and production['status'] != '완료':
+    if usage_count > 0 and production['status'] != '\uC644\uB8CC':
+        planned = float(production['planned_boxes'] or 0)
         cursor.execute(
             '''
             SELECT b.material_id, b.quantity_per_box
             FROM bom b
             WHERE b.product_id = ?
               AND b.material_id IS NOT NULL
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM production_material_usage pmu
-                  WHERE pmu.production_id = ?
-                    AND pmu.material_id = b.material_id
-              )
             ''',
-            (production['product_id'], production_id),
+            (production['product_id'],),
         )
-        missing_bom_mats = cursor.fetchall()
-        if missing_bom_mats:
-            planned = float(production['planned_boxes'] or 0)
-            for bom in missing_bom_mats:
-                expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned * 100) / 100
-                cursor.execute(
-                    '''
-                    INSERT INTO production_material_usage
-                    (production_id, material_id, raw_material_name, expected_quantity)
-                    VALUES (?, ?, NULL, ?)
-                    ''',
-                    (production_id, bom['material_id'], expected_qty),
-                )
-            conn.commit()
+        bom_mats = cursor.fetchall()
+        for bom in bom_mats:
+            expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned * 100) / 100
+            cursor.execute(
+                '''
+                UPDATE production_material_usage
+                SET expected_quantity = ?
+                WHERE production_id = ?
+                  AND material_id = ?
+                ''',
+                (expected_qty, production_id, bom['material_id']),
+            )
+            if cursor.rowcount:
+                continue
+            cursor.execute(
+                '''
+                INSERT INTO production_material_usage
+                (production_id, material_id, raw_material_name, expected_quantity)
+                VALUES (?, ?, NULL, ?)
+                ''',
+                (production_id, bom['material_id'], expected_qty),
+            )
+        conn.commit()
 
     # 遺?먯옱 ?ъ슜?됱씠 ?놁쑝硫?BOM 湲곕컲?쇰줈 ?먮룞 ?앹꽦 (遺?먯옱留? ?먯큹???ъ슜?먭? ?좏깮)
     if usage_count == 0 and production:
@@ -2660,6 +2853,8 @@ def production_detail(production_id):
         material_shortage_popup=material_shortage_popup,
         personnel_note_suggestions=personnel_note_suggestions,
         raw_checksheet_options=raw_checksheet_options,
+        raw_change_options=raw_change_options,
+        raw_change_options_json=json.dumps(raw_change_options, ensure_ascii=False),
         material_checksheet_url=material_checksheet_url,
         packaging_checksheet_url=packaging_checksheet_url,
     )
@@ -3480,18 +3675,6 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
                     (rm_id, qty, production_id, actor_user_id),
                 )
 
-                cursor.execute('SELECT COUNT(*) as cnt FROM bom WHERE product_id = ? AND raw_material_id = ?', (product_id, rm_id))
-                if cursor.fetchone()['cnt'] == 0:
-                    cursor.execute('SELECT sok_per_box FROM products WHERE id = ?', (product_id,))
-                    p_info = cursor.fetchone()
-                    s_box = p_info['sok_per_box'] if p_info else 0
-                    cursor.execute(
-                        '''
-                        INSERT INTO bom (product_id, raw_material_id, sok_per_box, quantity_per_box)
-                        VALUES (?, ?, ?, ?)
-                        ''',
-                        (product_id, rm_id, s_box, s_box),
-                    )
             elif mat_id:
                 legacy_material_rollbacks.append((mat_id, qty))
 

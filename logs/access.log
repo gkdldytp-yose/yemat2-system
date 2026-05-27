@@ -1,0 +1,57 @@
+﻿2026-05-27 08:02:05,744 [ACCESS] 127.0.0.1 | - | - | GET | 302 | main.index | / | 0ms | -
+2026-05-27 08:02:05,758 [ACCESS] 127.0.0.1 | - | - | GET | 200 | auth.login | /login | 0ms | -
+2026-05-27 08:02:12,923 [ACCESS] 127.0.0.1 | admin | - | POST | 302 | auth.login | /login | 791ms | http://127.0.0.1:8080/login
+2026-05-27 08:02:12,942 [ACCESS] 127.0.0.1 | admin | - | GET | 200 | main.select_workplace | /select-workplace | 14ms | http://127.0.0.1:8080/login
+2026-05-27 08:02:13,884 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 302 | main.set_workplace | /select-workplace/2동 신관 2층 | 0ms | http://127.0.0.1:8080/select-workplace
+2026-05-27 08:02:13,921 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 33ms | http://127.0.0.1:8080/select-workplace
+2026-05-27 08:02:15,322 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | materials.raw_materials | /raw-materials | 30ms | http://127.0.0.1:8080/
+2026-05-27 08:02:18,376 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 28ms | http://127.0.0.1:8080/raw-materials
+2026-05-27 08:02:19,573 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 32ms | http://127.0.0.1:8080/
+2026-05-27 08:02:21,119 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=audit_logs&hidden_audit=1 | 34ms | http://127.0.0.1:8080/schedules
+2026-05-27 08:02:27,358 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27 | 28ms | http://127.0.0.1:8080/integrated-management?tab=audit_logs&hidden_audit=1
+2026-05-27 08:02:36,250 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_username=&login_event_type=&audit_date_from=2026-05-26&audit_date_to=2026-05-27 | 27ms | http://127.0.0.1:8080/integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27
+2026-05-27 08:02:40,881 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-26&audit_date_to=2026-05-27 | 38ms | http://127.0.0.1:8080/integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_username=&login_event_type=&audit_date_from=2026-05-26&audit_date_to=2026-05-27
+2026-05-27 08:02:44,708 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-26&audit_date_to=2026-05-27 | 32ms | http://127.0.0.1:8080/integrated-management?tab=audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-26&audit_date_to=2026-05-27
+2026-05-27 08:02:50,954 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_username=&login_event_type=&audit_date_from=2026-05-25&audit_date_to=2026-05-27 | 29ms | http://127.0.0.1:8080/integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-26&audit_date_to=2026-05-27
+2026-05-27 08:02:54,418 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 29ms | http://127.0.0.1:8080/integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_username=&login_event_type=&audit_date_from=2026-05-25&audit_date_to=2026-05-27
+2026-05-27 08:02:56,167 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 27ms | http://127.0.0.1:8080/
+2026-05-27 08:03:07,305 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | users.user_management | /users | 28ms | http://127.0.0.1:8080/schedules
+2026-05-27 08:03:09,724 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 31ms | http://127.0.0.1:8080/users
+2026-05-27 08:03:14,984 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 35ms | http://127.0.0.1:8080/
+2026-05-27 08:12:50,269 [ACCESS] 127.0.0.1 | - | - | GET | 404 | - | /sitemap.xml | 0ms | -
+2026-05-27 08:22:45,566 [ACCESS] 127.0.0.1 | - | - | GET | 200 | auth.register | /register | 20ms | -
+2026-05-27 08:35:32,017 [ACCESS] 127.0.0.1 | - | - | GET | 302 | main.index | / | 0ms | -
+2026-05-27 08:35:32,927 [ACCESS] 127.0.0.1 | - | - | GET | 200 | auth.login | /login | 0ms | -
+2026-05-27 08:58:38,323 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedule_requirements_data | /schedules/requirements-data | 16ms | http://127.0.0.1:8080/schedules
+2026-05-27 08:59:35,427 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 31ms | http://127.0.0.1:8080/schedules?view=requirements
+2026-05-27 08:59:37,570 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.production_detail | /production/449 | 54ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:00:26,694 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 34ms | http://127.0.0.1:8080/production/449
+2026-05-27 09:02:16,837 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 33ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:02:17,405 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedule_requirements_data | /schedules/requirements-data | 16ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:14:37,401 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | materials.materials | /materials | 69ms | http://127.0.0.1:8080/schedules?view=requirements
+2026-05-27 09:14:49,053 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | POST | 302 | materials.bulk_add_issue_request | /issue-requests/bulk-add | 32ms | http://127.0.0.1:8080/materials
+2026-05-27 09:14:49,132 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | materials.materials | /materials?req_tab=issue | 75ms | http://127.0.0.1:8080/materials
+2026-05-27 09:14:56,794 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | POST | 302 | materials.complete_issue_request | /issue-requests/572/complete | 39ms | http://127.0.0.1:8080/materials?req_tab=issue
+2026-05-27 09:14:56,862 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | materials.materials | /materials?req_tab=issue&issue_status=completed | 63ms | http://127.0.0.1:8080/materials?req_tab=issue
+2026-05-27 09:15:05,950 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 33ms | http://127.0.0.1:8080/materials?req_tab=issue&issue_status=completed
+2026-05-27 09:15:06,542 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedule_requirements_data | /schedules/requirements-data | 17ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:15:48,471 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 43ms | http://127.0.0.1:8080/schedules?view=requirements
+2026-05-27 09:15:49,008 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 37ms | http://127.0.0.1:8080/
+2026-05-27 09:17:04,474 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 40ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:17:06,541 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.production_detail | /production/431 | 34ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:17:10,526 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.production_detail | /production/433 | 35ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:18:50,581 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedule_requirements_data | /schedules/requirements-data | 16ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:21:46,219 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=audit_logs&hidden_audit=1 | 37ms | http://127.0.0.1:8080/schedules?view=requirements
+2026-05-27 09:21:47,307 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27 | 33ms | http://127.0.0.1:8080/integrated-management?tab=audit_logs&hidden_audit=1
+2026-05-27 09:21:50,363 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 38ms | http://127.0.0.1:8080/integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27
+2026-05-27 09:21:51,113 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 40ms | http://127.0.0.1:8080/
+2026-05-27 09:39:08,209 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=audit_logs&hidden_audit=1 | 45ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:39:09,514 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27 | 32ms | http://127.0.0.1:8080/integrated-management?tab=audit_logs&hidden_audit=1
+2026-05-27 09:39:12,579 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | admin.integrated_management | /integrated-management?tab=audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27 | 41ms | http://127.0.0.1:8080/integrated-management?tab=login_audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27
+2026-05-27 09:39:16,664 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 31ms | http://127.0.0.1:8080/integrated-management?tab=audit_logs&hidden_audit=1&wp=all&audit_date_from=2026-05-27&audit_date_to=2026-05-27
+2026-05-27 09:39:35,610 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 27ms | http://127.0.0.1:8080/
+2026-05-27 09:40:03,836 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules?year=2026&month=6&view=calendar | 29ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:40:19,495 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 28ms | http://127.0.0.1:8080/schedules?year=2026&month=6&view=calendar
+2026-05-27 09:40:21,157 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedules | /schedules | 35ms | http://127.0.0.1:8080/
+2026-05-27 09:42:02,389 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | production.schedule_requirements_data | /schedules/requirements-data | 15ms | http://127.0.0.1:8080/schedules
+2026-05-27 09:42:15,190 [ACCESS] 127.0.0.1 | admin | 2동 신관 2층 | GET | 200 | main.index | / | 35ms | http://127.0.0.1:8080/schedules?view=requirements
