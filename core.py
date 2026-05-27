@@ -891,10 +891,20 @@ def audit_log(conn, action, entity, entity_id=None, data=None):
         payload = json.dumps(data, ensure_ascii=False) if data is not None else None
         conn.execute(
             '''
-            INSERT INTO audit_logs (action, entity, entity_id, data, username, name, workplace, ip)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO audit_logs (action, entity, entity_id, data, username, name, workplace, ip, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''',
-            (action, entity, entity_id, payload, username, name, workplace, ip),
+            (
+                action,
+                entity,
+                entity_id,
+                payload,
+                username,
+                name,
+                workplace,
+                ip,
+                now_local().strftime('%Y-%m-%d %H:%M:%S'),
+            ),
         )
     except Exception:
         # 로깅 실패는 업무 흐름을 막지 않음
