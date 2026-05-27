@@ -546,7 +546,7 @@
         <td class="left item-name-cell">{{ p.material_name or '' }}</td>
         <td>{{ fmt1(p.lot_used_quantity if p.lot_used_quantity is not none else (p.actual_quantity if p.actual_quantity is not none else p.expected_quantity)) }}</td>
         <td>{% if p.display_loss_quantity is defined and p.display_loss_quantity is not none %}{{ "%.1f"|format(p.display_loss_quantity) }}{% elif p.loss_quantity is not none %}{{ "%.1f"|format(p.loss_quantity) }}{% endif %}</td>
-        <td>{{ p.lot_receiving_date or '' }}</td>
+        <td>{{ p.print_display_date or '' }}</td>
         {% if loop.first %}
         <td rowspan="{{ packaging_row_count }}"></td>
         {% endif %}

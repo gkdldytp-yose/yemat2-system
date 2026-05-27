@@ -2386,13 +2386,20 @@ def production_detail(production_id):
                       AND raw_material_id IS NOT NULL
                     GROUP BY raw_material_id
                 ),
-                bom_codes AS (
-                    SELECT DISTINCT
-                        COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
+                selected_bom_raw AS (
+                    SELECT b.raw_material_id
                     FROM bom b
-                    JOIN raw_materials rm ON b.raw_material_id = rm.id
                     WHERE b.product_id = ?
                       AND b.raw_material_id IS NOT NULL
+                    ORDER BY b.id DESC
+                    LIMIT 1
+                ),
+                bom_raw_refs AS (
+                    SELECT
+                        rm.name as raw_name,
+                        COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
+                    FROM selected_bom_raw sbr
+                    JOIN raw_materials rm ON rm.id = sbr.raw_material_id
                 )
                 SELECT
                     src.id as raw_material_id,
@@ -2403,28 +2410,40 @@ def production_detail(production_id):
                     (COALESCE(src.current_stock, 0) + COALESCE(ou.rolled_back_qty, 0)) as current_stock,
                     src.id as rm_id
                 FROM raw_materials src
-                JOIN bom_codes bc
-                  ON bc.raw_code = COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id))
+                JOIN bom_raw_refs br
+                  ON (
+                        (COALESCE(NULLIF(TRIM(br.raw_name), ''), '') <> '' AND COALESCE(NULLIF(TRIM(src.name), ''), '') = COALESCE(NULLIF(TRIM(br.raw_name), ''), ''))
+                        OR (
+                            COALESCE(NULLIF(TRIM(br.raw_name), ''), '') = ''
+                            AND COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id)) = br.raw_code
+                        )
+                     )
                 LEFT JOIN old_usage ou ON ou.raw_material_id = src.id
-                WHERE src.workplace = ?
-                  AND (COALESCE(src.current_stock, 0) > 0 OR COALESCE(ou.rolled_back_qty, 0) > 0)
+                WHERE COALESCE(src.current_stock, 0) > 0 OR COALESCE(ou.rolled_back_qty, 0) > 0
                 ORDER BY
                     CASE WHEN src.receiving_date IS NULL OR TRIM(src.receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production_id, production['product_id'], production['active_sok_per_box'], production['workplace']),
+                (production_id, production['product_id'], production['active_sok_per_box']),
             )
         else:
             cursor.execute(
                 '''
-                WITH bom_codes AS (
-                    SELECT DISTINCT
-                        COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
+                WITH selected_bom_raw AS (
+                    SELECT b.raw_material_id
                     FROM bom b
-                    JOIN raw_materials rm ON b.raw_material_id = rm.id
                     WHERE b.product_id = ?
                       AND b.raw_material_id IS NOT NULL
+                    ORDER BY b.id DESC
+                    LIMIT 1
+                ),
+                bom_raw_refs AS (
+                    SELECT
+                        rm.name as raw_name,
+                        COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
+                    FROM selected_bom_raw sbr
+                    JOIN raw_materials rm ON rm.id = sbr.raw_material_id
                 )
                 SELECT
                     src.id as raw_material_id,
@@ -2435,20 +2454,27 @@ def production_detail(production_id):
                     src.current_stock,
                     src.id as rm_id
                 FROM raw_materials src
-                JOIN bom_codes bc
-                  ON bc.raw_code = COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id))
-                WHERE src.workplace = ?
-                  AND COALESCE(src.current_stock, 0) > 0
+                JOIN bom_raw_refs br
+                  ON (
+                        (COALESCE(NULLIF(TRIM(br.raw_name), ''), '') <> '' AND COALESCE(NULLIF(TRIM(src.name), ''), '') = COALESCE(NULLIF(TRIM(br.raw_name), ''), ''))
+                        OR (
+                            COALESCE(NULLIF(TRIM(br.raw_name), ''), '') = ''
+                            AND COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id)) = br.raw_code
+                        )
+                     )
+                WHERE COALESCE(src.current_stock, 0) > 0
                 ORDER BY
                     CASE WHEN src.receiving_date IS NULL OR TRIM(src.receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production['product_id'], production['active_sok_per_box'], production['workplace']),
+                (production['product_id'], production['active_sok_per_box']),
             )
 
 
     bom_raw_items = [dict(row) for row in cursor.fetchall()]
+    for item in bom_raw_items:
+        item['is_temp_raw'] = 0
 
     if production['status'] != '\uC644\uB8CC' or edit_completed:
         existing_raw_ids = {int(row['rm_id'] or 0) for row in bom_raw_items if row.get('rm_id')}
@@ -2464,7 +2490,8 @@ def production_detail(production_id):
                     COALESCE(rm.current_stock, 0)
                     + CASE WHEN ? = 1 THEN SUM(COALESCE(pmu.actual_quantity, 0)) ELSE 0 END
                 ) as current_stock,
-                rm.id as raw_material_id
+                rm.id as raw_material_id,
+                GROUP_CONCAT(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), char(31)) as usage_note
             FROM production_material_usage pmu
             LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
             WHERE pmu.production_id = ?
@@ -2479,8 +2506,11 @@ def production_detail(production_id):
         )
         for row in cursor.fetchall():
             raw_id = int(row['rm_id'] or 0)
-            if raw_id > 0 and raw_id not in existing_raw_ids:
-                bom_raw_items.append(dict(row))
+            usage_note = (row['usage_note'] if 'usage_note' in row.keys() else '') or ''
+            if raw_id > 0 and raw_id not in existing_raw_ids and '원초 변경:' in usage_note:
+                temp_row = dict(row)
+                temp_row['is_temp_raw'] = 1
+                bom_raw_items.append(temp_row)
                 existing_raw_ids.add(raw_id)
 
     cursor.execute(
@@ -2821,6 +2851,38 @@ def edit_production_plan(production_id):
                     ''',
                     (production_date, planned_boxes, note, production_lines_str, production['schedule_id']),
                 )
+
+        cursor.execute(
+            '''
+            SELECT b.material_id, b.quantity_per_box
+            FROM bom b
+            WHERE b.product_id = ?
+              AND b.material_id IS NOT NULL
+            ''',
+            (production['product_id'],),
+        )
+        for bom in cursor.fetchall():
+            material_id = bom['material_id']
+            expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned_boxes * 100) / 100
+            cursor.execute(
+                '''
+                UPDATE production_material_usage
+                SET expected_quantity = ?
+                WHERE production_id = ?
+                  AND material_id = ?
+                ''',
+                (expected_qty, production_id, material_id),
+            )
+            if cursor.rowcount:
+                continue
+            cursor.execute(
+                '''
+                INSERT INTO production_material_usage
+                (production_id, material_id, raw_material_name, expected_quantity)
+                VALUES (?, ?, NULL, ?)
+                ''',
+                (production_id, material_id, expected_qty),
+            )
 
         audit_log(
             conn,

@@ -92,6 +92,8 @@
 .expiry-split-summary{font-size:.76rem;color:#64748b;}
 .section-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;}
 .section-head h3{margin:0 !important;}
+.raw-section-title-row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;min-width:0;}
+.raw-section-tools{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-left:auto;}
 .section-journal-btn{display:inline-flex;align-items:center;justify-content:center;padding:.42rem .85rem;border:1px solid #c7d2fe;border-radius:999px;background:#eef2ff;color:#334155;font-size:.8rem;font-weight:800;text-decoration:none;cursor:pointer;line-height:1.2;}
 .section-journal-btn:hover{background:#e0e7ff;border-color:#a5b4fc;color:#1e3a8a;}
 .section-journal-btn:disabled{opacity:.45;cursor:not-allowed;}
@@ -197,7 +199,7 @@
     .lot-gap-fields{grid-template-columns:1fr;}
     .expiry-split-row{grid-template-columns:1fr;}
     .section-head{align-items:flex-start;}
-    .raw-change-btn{width:100%;min-height:42px;}
+    .raw-change-btn{min-height:42px;}
     .raw-change-modal-bg{align-items:flex-end;padding:.6rem;}
     .raw-change-modal{width:100%;max-height:88vh;border-radius:18px 18px 12px 12px;}
     .raw-change-head{padding:.9rem 1rem;}
@@ -208,6 +210,8 @@
     .raw-change-tab{flex:0 0 auto;}
     .raw-change-list{grid-template-columns:1fr;}
     .raw-change-actions{display:grid;grid-template-columns:1fr 1fr;padding:.85rem 1rem;}
+    .raw-section-title-row{width:100%;}
+    .raw-section-tools{width:100%;margin-left:0;justify-content:flex-end;}
     .plan-edit-grid{grid-template-columns:1fr;}
     .plan-line-wrap{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
@@ -431,14 +435,18 @@
 {% if bom_raw_items %}
 <div class="sec" style="margin-top:0.75rem;">
     <div class="section-head" style="border-bottom:2px solid #667eea;padding-bottom:0.5rem;">
-        <h3 style="border:none;padding:0;">🌿 원초 선택 및 사용량</h3>
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <div class="raw-section-title-row">
+            <h3 style="border:none;padding:0;">🌿 원초 선택 및 사용량</h3>
+            {% if can_edit %}
+            <button type="button" class="raw-change-btn" onclick="openRawChangeModal(event)" {% if not raw_change_options %}disabled{% endif %}>원초 변경</button>
+            {% endif %}
+        </div>
+        <div class="raw-section-tools">
             {% if production.status == '완료' %}
             <button type="button" class="section-journal-btn" onclick="openRawChecksheetChooser()" {% if not raw_checksheet_options %}disabled{% endif %}>원재료 점검표</button>
             {% endif %}
             {% if can_edit %}
             <button type="button" onclick="autoSelect()" style="background:#e8f5e9;border:1px solid #27ae60;color:#27ae60;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.85rem;">⚡ 자동 선택</button>
-            <button type="button" class="raw-change-btn" onclick="openRawChangeModal(event)" {% if not raw_change_options %}disabled{% endif %}>원초 변경</button>
             {% endif %}
         </div>
     </div>
