@@ -22,6 +22,33 @@ def _round_1(value):
     return round(float(value), 1)
 
 
+def _is_tray_packaging_row(row):
+    category = (row.get('category') or '').strip()
+    material_name = (row.get('material_name') or '').strip()
+    material_code = (row.get('material_code') or '').strip().upper()
+    return (
+        category == '트레이'
+        or '트레이' in material_name
+        or material_code.startswith('T01')
+        or material_code.startswith('T02')
+        or material_code.startswith('T03')
+        or material_code.startswith('T04')
+    )
+
+
+def _format_packaging_print_date(row):
+    expiry_date = (row.get('lot_expiry_date') or '').strip()
+    manufacture_date = (row.get('lot_manufacture_date') or '').strip()
+    receiving_date = (row.get('lot_receiving_date') or '').strip()
+    if _is_tray_packaging_row(row) and expiry_date:
+        short_expiry = expiry_date[2:] if len(expiry_date) >= 10 else expiry_date
+        return f'(\uc18c) {short_expiry}'
+    if _is_tray_packaging_row(row) and manufacture_date:
+        short_manufacture = manufacture_date[2:] if len(manufacture_date) >= 10 else manufacture_date
+        return f'(\uc81c) {short_manufacture}'
+    return receiving_date
+
+
 def _format_print_workplace(workplace):
     text = (workplace or '').strip()
     mapping = {
@@ -1256,6 +1283,7 @@ def production_print(production_id):
             allocated_loss = float(total_loss or 0)
         item['allocated_loss_quantity'] = allocated_loss
         item['display_loss_quantity'] = _round_1(allocated_loss)
+        item['print_display_date'] = _format_packaging_print_date(item)
         if _exclude_from_production_print(item):
             continue
         item['base_sort_key'] = _get_production_material_sort_key(item)

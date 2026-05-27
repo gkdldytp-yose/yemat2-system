@@ -209,14 +209,6 @@ def product_bom(product_id):
         LEFT JOIN materials m ON b.material_id = m.id
         LEFT JOIN raw_materials rm ON b.raw_material_id = rm.id
         WHERE b.product_id = ?
-          AND (
-                b.raw_material_id IS NULL
-                OR NOT (
-                    COALESCE(rm.total_stock, 0) > 0
-                    AND COALESCE(rm.current_stock, 0) <= 0
-                    AND COALESCE(rm.used_quantity, 0) >= COALESCE(rm.total_stock, 0)
-                )
-              )
         ORDER BY
             {bom_sort},
             COALESCE(m.category, ''),
@@ -224,6 +216,27 @@ def product_bom(product_id):
             b.id
     '''.format(bom_sort=BOM_CATEGORY_SORT_CASE), (product_id,))
     bom_items = cursor.fetchall()
+    grouped_bom_items = []
+    raw_item_indexes = {}
+
+    for item in bom_items:
+        if not item['raw_material_id']:
+            grouped_bom_items.append(item)
+            continue
+
+        raw_code = (item['raw_code'] or '').strip()
+        if not raw_code:
+            raw_code = f"RM{item['raw_material_id']:05d}"
+
+        existing_index = raw_item_indexes.get(raw_code)
+        if existing_index is None:
+            raw_item_indexes[raw_code] = len(grouped_bom_items)
+            grouped_bom_items.append(item)
+            continue
+
+        existing_item = grouped_bom_items[existing_index]
+        if (item['id'] or 0) > (existing_item['id'] or 0):
+            grouped_bom_items[existing_index] = item
 
     # 전체 부자재 목록 (작업장 + 공통)
     cursor.execute('''
@@ -269,7 +282,7 @@ def product_bom(product_id):
     return render_template('product_bom.html',
                          user=session['user'],
                          product=product,
-                         bom_items=bom_items,
+                         bom_items=grouped_bom_items,
                          materials=materials,
                          raw_materials=raw_materials)
 
