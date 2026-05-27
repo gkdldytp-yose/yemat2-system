@@ -3542,13 +3542,11 @@ def integrated_management():
     audit_date_from = (request.args.get('audit_date_from') or '').strip()
     audit_date_to = (request.args.get('audit_date_to') or '').strip()
     login_event_type = (request.args.get('login_event_type') or '').strip()
-    login_event_type = (request.args.get('login_event_type') or '').strip()
-    login_event_type = (request.args.get('login_event_type') or '').strip()
-    if tab in ('audit_logs', 'login_audit_logs') and is_hidden_audit_allowed:
-        has_date_filter_args = 'audit_date_from' in request.args or 'audit_date_to' in request.args
-        if not has_date_filter_args:
-            today_str = now_local().date().isoformat()
+    if hidden_audit and tab in ('audit_logs', 'login_audit_logs'):
+        today_str = now_local().strftime('%Y-%m-%d')
+        if not audit_date_from:
             audit_date_from = today_str
+        if not audit_date_to:
             audit_date_to = today_str
     meeting_view = (request.args.get('meeting_view') or 'all').strip() or 'all'
     meeting_week_anchor = (request.args.get('meeting_week_anchor') or '').strip()
