@@ -3702,7 +3702,8 @@ def raw_material_checksheet_preview(raw_material_id):
             )
             running_after = max(running_after + used_qty, 0)
         usage_rows = list(reversed(reconstructed_rows))
-        while len(usage_rows) < 14:
+        target_usage_rows = 13
+        while len(usage_rows) < target_usage_rows:
             usage_rows.append(
                 {
                     'use_date': '',
@@ -3738,7 +3739,7 @@ def raw_material_checksheet_preview(raw_material_id):
             'raw_checksheet_preview.html',
             raw_material_id=raw_material_id,
             intake=intake,
-            usage_rows=usage_rows[:14],
+            usage_rows=usage_rows[:target_usage_rows],
             period_text=period_text,
             workplace_title=workplace_title,
             author_name=author_name,

@@ -1,8 +1,24 @@
 param(
-    [string]$Path = ".\logs\access.log",
+    [string]$Path = "",
     [int]$Tail = 80,
     [switch]$NoWait
 )
+
+if (-not $Path) {
+    $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $candidateLogFiles = @(
+        (Join-Path $projectRoot 'logs\access.log'),
+        (Join-Path (Split-Path -Parent $projectRoot) 'logs\access.log')
+    )
+    $existingLogFiles = @($candidateLogFiles | Where-Object { Test-Path -LiteralPath $_ })
+    if ($existingLogFiles.Count -gt 0) {
+        $Path = ($existingLogFiles |
+            Sort-Object -Property @{ Expression = { (Get-Item -LiteralPath $_).Length }; Descending = $true }, @{ Expression = { (Get-Item -LiteralPath $_).LastWriteTimeUtc }; Descending = $true } |
+            Select-Object -First 1)
+    } else {
+        $Path = $candidateLogFiles[0]
+    }
+}
 
 function Write-Part {
     param(

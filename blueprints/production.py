@@ -1088,8 +1088,11 @@ def schedule_requirements_data():
                 b.material_id,
                 COALESCE(p.sok_per_box, b.quantity_per_box, 0) as raw_qty_per_box,
                 COALESCE(b.quantity_per_box, 0) as quantity_per_box,
-                rm.name as raw_name,
-                COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code,
+                CASE WHEN b.raw_material_id IS NOT NULL THEN rm.name END as raw_name,
+                CASE
+                    WHEN b.raw_material_id IS NOT NULL
+                    THEN COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id))
+                END as raw_code,
                 m.name as material_name,
                 COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
                 COALESCE(m.category, '') as material_category,
@@ -1099,33 +1102,37 @@ def schedule_requirements_data():
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
             LEFT JOIN materials m ON m.id = b.material_id
             WHERE b.product_id IN ({placeholders})
-              AND (
-                    b.raw_material_id IS NULL
-                    OR NOT (
-                        COALESCE(rm.total_stock, 0) > 0
-                        AND COALESCE(rm.current_stock, 0) <= 0
-                        AND COALESCE(rm.used_quantity, 0) >= COALESCE(rm.total_stock, 0)
-                    )
-                  )
             ''',
             product_ids,
         )
         bom_rows = [dict(r) for r in cursor.fetchall()]
 
-        raw_material_ids = sorted({int(row.get('raw_material_id') or 0) for row in bom_rows if int(row.get('raw_material_id') or 0) > 0})
+        raw_codes = sorted(
+            {
+                str(row.get('raw_code') or '').strip()
+                for row in bom_rows
+                if str(row.get('raw_code') or '').strip()
+            }
+        )
         raw_stock_map = {}
-        if raw_material_ids:
-            raw_placeholders = ','.join(['?'] * len(raw_material_ids))
+        if raw_codes:
+            raw_placeholders = ','.join(['?'] * len(raw_codes))
             cursor.execute(
                 f'''
-                SELECT id, COALESCE(current_stock, 0) as stock
+                SELECT
+                    COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) as code,
+                    COALESCE(SUM(COALESCE(current_stock, 0)), 0) as stock
                 FROM raw_materials
                 WHERE workplace = ?
-                  AND id IN ({raw_placeholders})
+                  AND COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) IN ({raw_placeholders})
+                GROUP BY COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id))
                 ''',
-                [workplace, *raw_material_ids],
+                [workplace, *raw_codes],
             )
-            raw_stock_map = {int(r['id']): float(r['stock'] or 0) for r in cursor.fetchall()}
+            raw_stock_map = {
+                str(r['code'] or '').strip(): float(r['stock'] or 0)
+                for r in cursor.fetchall()
+            }
 
         material_ids = sorted({int(row.get('material_id') or 0) for row in bom_rows if int(row.get('material_id') or 0) > 0})
         material_stock_map = {}
@@ -1190,11 +1197,10 @@ def schedule_requirements_data():
                 }
 
             if row.get('raw_material_id'):
-                raw_material_id = int(row.get('raw_material_id') or 0)
-                code = str(row.get('raw_code') or '')
-                if raw_material_id <= 0 or not code:
+                code = str(row.get('raw_code') or '').strip()
+                if not code:
                     continue
-                dedupe_key = (pid, raw_material_id)
+                dedupe_key = (pid, code)
                 if dedupe_key in seen_product_raw_keys:
                     continue
                 seen_product_raw_keys.add(dedupe_key)
@@ -1205,8 +1211,8 @@ def schedule_requirements_data():
                 if need_qty <= 0:
                     continue
                 name = row.get('raw_name') or code or '원초'
-                stock = raw_stock_map.get(raw_material_id, 0.0)
-                raw_key = f'raw:{raw_material_id}'
+                stock = raw_stock_map.get(code, 0.0)
+                raw_key = f'raw:{code}'
                 _upsert_item(summary_raw, raw_key, code, name, '속', stock, need_qty)
                 _upsert_item(product_detail[pid]['raw_map'], raw_key, code, name, '속', stock, need_qty)
             elif row.get('material_id'):

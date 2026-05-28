@@ -19,6 +19,10 @@
 .journals-subtabs{display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.85rem;}
 .journals-subtab-btn{padding:.42rem .9rem;border:1px solid #d1d5db;border-radius:999px;background:#fff;color:#475569;font-size:.82rem;font-weight:700;cursor:pointer;}
 .journals-subtab-btn.active{background:#111827;color:#fff;border-color:#111827;}
+.journals-filter-form{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap;margin:0 0 1rem;}
+.journals-filter-select{padding:.6rem .8rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;min-width:120px;}
+.journals-filter-input{min-width:260px;flex:1 1 320px;padding:.6rem .8rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;}
+.journals-filter-actions{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;}
 .journals-hero > .tab-btn{display:none;}
 .journals-calendar{margin-bottom:1rem;padding:1rem 1.05rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);}
 .journals-calendar-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;}
@@ -42,6 +46,9 @@
   .journals-table{font-size:.8rem;}
   .journals-table th,.journals-table td{padding:.55rem .45rem;}
   .journals-inline-form{width:100%;}
+  .journals-filter-form{width:100%;}
+  .journals-filter-select{min-width:0;flex:1 1 140px;}
+  .journals-filter-input{min-width:0;flex:1 1 100%;}
   .journals-material-scope-btn{flex:1 1 160px;justify-content:center;}
   .journals-calendar{padding:.9rem;}
   .journals-calendar-nav{width:100%;justify-content:flex-start;}
@@ -131,6 +138,31 @@
             <button type="button" class="journals-subtab-btn {% if raw_status == 'active' %}active{% endif %}" id="rawSubtabActive" onclick="switchRawStatus('active')">사용중</button>
             <button type="button" class="journals-subtab-btn {% if raw_status == 'done' %}active{% endif %}" id="rawSubtabDone" onclick="switchRawStatus('done')">사용완료</button>
         </div>
+        <form method="GET" action="/journals" class="journals-filter-form" id="rawFilterForm">
+            <input type="hidden" name="tab" value="raw">
+            <input type="hidden" name="raw_status" id="rawFilterStatus" value="{{ raw_status }}">
+            {% if selected_raw_date %}
+            <input type="hidden" name="raw_date" value="{{ selected_raw_date }}">
+            {% endif %}
+            <select name="raw_filter" class="journals-filter-select" aria-label="원재료 필터 기준">
+                <option value="all" {% if (raw_filter or 'all') == 'all' %}selected{% endif %}>전체</option>
+                <option value="code" {% if raw_filter == 'code' %}selected{% endif %}>코드</option>
+                <option value="car_number" {% if raw_filter == 'car_number' %}selected{% endif %}>자호</option>
+                <option value="done_date" {% if raw_filter == 'done_date' %}selected{% endif %}>종료</option>
+                <option value="receiving_date" {% if raw_filter == 'receiving_date' %}selected{% endif %}>입고일</option>
+            </select>
+            <input
+                type="search"
+                name="raw_q"
+                value="{{ raw_query or '' }}"
+                class="journals-filter-input"
+                placeholder="선택한 필터 값 입력"
+            >
+            <div class="journals-filter-actions">
+                <button type="submit" class="btn btn-small">필터 검색</button>
+                <a href="/journals?tab=raw&raw_status={{ raw_status }}{% if selected_raw_date %}&raw_date={{ selected_raw_date|urlencode }}{% endif %}" class="btn btn-small btn-secondary">초기화</a>
+            </div>
+        </form>
 
         <div class="journals-calendar">
             <div class="journals-calendar-head">
@@ -142,7 +174,7 @@
                     <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('raw', -1)">◀</button>
                     <strong id="rawCalendarLabel" style="min-width:110px;text-align:center;"></strong>
                     <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('raw', 1)">▶</button>
-                    <a href="/journals?tab=raw&raw_status={{ raw_status }}" class="btn btn-small btn-secondary">전체</a>
+                    <a href="/journals?tab=raw&raw_status={{ raw_status }}{% if raw_filter %}&raw_filter={{ raw_filter|urlencode }}{% endif %}{% if raw_query %}&raw_q={{ raw_query|urlencode }}{% endif %}" class="btn btn-small btn-secondary">전체</a>
                 </div>
             </div>
             <div id="rawCalendarGrid" class="journals-calendar-grid"></div>
@@ -373,7 +405,7 @@ const journalCalendarConfigs = {
         gridId: 'rawCalendarGrid',
         labelId: 'rawCalendarLabel',
         param: 'raw_date',
-        extra: { tab: 'raw', raw_status: {{ raw_status|tojson }} },
+        extra: { tab: 'raw', raw_status: {{ raw_status|tojson }}, raw_filter: {{ raw_filter|tojson }}, raw_q: {{ raw_query|tojson }} },
     },
     material: {
         dates: {{ (material_available_dates_sinan if material_scope == 'sinan' else material_available_dates_yemat)|tojson }},
@@ -420,6 +452,8 @@ function switchRawStatus(status){
     url.searchParams.set('raw_status', status);
     url.searchParams.set('tab', 'raw');
     url.searchParams.delete('raw_date');
+    const rawFilterStatus = document.getElementById('rawFilterStatus');
+    if(rawFilterStatus) rawFilterStatus.value = status;
     window.location.href = url.toString();
 }
 
