@@ -4,19 +4,29 @@
     <meta charset="UTF-8">
     <title>부재료 입·출고 점검표</title>
     <style>
-        @page { size: A4 landscape; margin: 4mm 5mm 4mm 5mm; }
+        @page { size: A4 landscape; margin: 0; }
+        * {
+            box-sizing: border-box;
+        }
         html, body {
             margin: 0;
             padding: 0;
-            background: #fff;
+            background: #eef2f7;
             color: #000;
             font-family: "Malgun Gothic", "Apple SD Gothic Neo", Gulim, sans-serif;
         }
-        body { padding: 2px; }
+        body {
+            padding: 24px;
+            overflow: auto;
+        }
         .sheet {
-            width: 100%;
-            max-width: 286mm;
+            width: 297mm;
+            min-height: 210mm;
             margin: 0 auto;
+            padding: 6mm 6mm 5mm;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
         }
         .actions {
             display: flex;
@@ -159,8 +169,22 @@
             font-weight: 700;
         }
         @media print {
-            body { padding: 0; }
-            .sheet { zoom: 1 !important; }
+            html, body {
+                padding: 0;
+                margin: 0;
+                overflow: visible !important;
+                background: #fff;
+            }
+            .sheet {
+                zoom: 1 !important;
+                width: 297mm;
+                min-height: 210mm;
+                height: 210mm;
+                margin: 0;
+                padding: 6mm 6mm 5mm;
+                border: none;
+                box-shadow: none;
+            }
             .actions { display: none !important; }
             .fill,
             .approval-vertical,

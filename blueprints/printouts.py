@@ -60,6 +60,22 @@ def _format_print_workplace(workplace):
     return mapping.get(text, text)
 
 
+def _format_packaging_export_note(note, workplace_prefix=''):
+    note_text = (note or '').strip()
+    prefix = (workplace_prefix or '').strip()
+    if prefix and note_text.startswith(prefix):
+        note_text = note_text[len(prefix):].strip()
+
+    for separator in (':', '-', '/', '|'):
+        if note_text.startswith(separator):
+            note_text = note_text[len(separator):].strip()
+
+    if note_text.endswith('반출 완료'):
+        note_text = note_text[:-5].strip()
+
+    return f'{note_text} 반출 완료'.strip() if note_text else '반출 완료'
+
+
 def _build_production_expiry_rows(production_row, default_expiry_date=''):
     rows = []
     raw_dates = [
@@ -157,6 +173,26 @@ def _material_checksheet_scope(code_value):
     return 'sinan' if '_S' in code else 'yemat'
 
 
+def _is_salt_material_category(category):
+    text = (category or '').strip()
+    return text == '소금' or '소금' in text
+
+
+def _pad_print_rows(rows, target_count, blank_factory):
+    padded = list(rows or [])
+    while len(padded) < target_count:
+        padded.append(blank_factory())
+    return padded[:target_count]
+
+
+def _blank_packaging_incoming_row():
+    return {'name': '', 'supplier_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''}
+
+
+def _blank_packaging_outgoing_row():
+    return {'name': '', 'target_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''}
+
+
 def _is_packaging_material_row(row):
     section = _get_production_material_section(
         {
@@ -221,6 +257,8 @@ def journals():
     workplace = get_workplace()
     selected_tab = (request.args.get('tab') or 'production').strip()
     raw_status = (request.args.get('raw_status') or 'active').strip()
+    raw_query = (request.args.get('raw_q') or '').strip()
+    raw_filter = (request.args.get('raw_filter') or 'all').strip()
     material_scope = (request.args.get('material_scope') or 'yemat').strip().lower()
     selected_production_date = (request.args.get('production_date') or '').strip()
     selected_raw_date = (request.args.get('raw_date') or '').strip()
@@ -228,6 +266,8 @@ def journals():
     selected_packaging_date = (request.args.get('packaging_date') or '').strip()
     if raw_status not in ('active', 'done'):
         raw_status = 'active'
+    if raw_filter not in ('all', 'code', 'car_number', 'done_date', 'receiving_date'):
+        raw_filter = 'all'
     if material_scope not in ('yemat', 'sinan'):
         material_scope = 'yemat'
     date_from, date_to = _resolve_journal_date_range()
@@ -280,6 +320,7 @@ def journals():
                 COALESCE(code, '') as code,
                 COALESCE(name, '') as name,
                 COALESCE(receiving_date, '') as receiving_date,
+                COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') as car_number,
                 COALESCE(current_stock, 0) as current_stock,
                 COALESCE(used_quantity, 0) as used_quantity
             FROM raw_materials
@@ -350,6 +391,26 @@ def journals():
                     row for row in raw_done_items
                     if (row.get('journal_date') or '') == selected_raw_date
                 ]
+        if raw_query:
+            raw_query_lower = raw_query.lower()
+
+            def _matches_raw_query(row):
+                field_map = {
+                    'code': ('code',),
+                    'car_number': ('car_number',),
+                    'done_date': ('journal_date',),
+                    'receiving_date': ('receiving_date',),
+                    'all': ('code', 'name', 'car_number', 'receiving_date', 'journal_date'),
+                }
+                return any(
+                    raw_query_lower in str(row.get(field) or '').lower()
+                    for field in field_map.get(raw_filter, field_map['all'])
+                )
+
+            if raw_status == 'active':
+                raw_active_items = [row for row in raw_active_items if _matches_raw_query(row)]
+            else:
+                raw_done_items = [row for row in raw_done_items if _matches_raw_query(row)]
 
         production_date_set = list(production_available_dates)
 
@@ -571,6 +632,8 @@ def journals():
             raw_active_available_dates=raw_active_available_dates,
             raw_done_available_dates=raw_done_available_dates,
             selected_raw_date=selected_raw_date,
+            raw_query=raw_query,
+            raw_filter=raw_filter,
             material_scope=material_scope,
             material_journal_dates_yemat=material_journal_dates_map['yemat'],
             material_journal_dates_sinan=material_journal_dates_map['sinan'],
@@ -825,8 +888,9 @@ def material_checksheet_preview():
                     delta = -abs(qty)
                     incoming_qty = -abs(qty)
                 elif action == 'rollback':
+                    # Production rollback restores stock, but it is not an actual receipt.
+                    # Keep the stock delta for historical balance reconstruction only.
                     delta = abs(qty)
-                    incoming_qty = abs(qty)
                 elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     delta = -abs(qty)
                     outgoing_qty = abs(qty)
@@ -903,6 +967,7 @@ def material_checksheet_preview():
             rows.append({
                 'code': item.get('code') or '',
                 'name': item.get('name') or '',
+                'category': item.get('category') or '',
                 'unit': item.get('unit') or '',
                 'supplier_name': item.get('supplier_name') or '',
                 'receiving_date': (lot_info.get('receiving_date') or '').strip(),
@@ -914,9 +979,40 @@ def material_checksheet_preview():
                 'note': '',
             })
 
+        oil_rows = [row for row in rows if not _is_salt_material_category(row.get('category'))]
+        salt_rows = [row for row in rows if _is_salt_material_category(row.get('category'))]
+        salt_rows.sort(
+            key=lambda row: (
+                1 if not (row.get('receiving_date') or '').strip() else 0,
+                (row.get('receiving_date') or '').strip(),
+                row.get('name') or '',
+            )
+        )
+
         min_rows = max(12, len(rows))
+        middle_blank_count = max(0, min_rows - len(oil_rows) - len(salt_rows))
+        rows = oil_rows + (
+            [
+                {
+                    'code': '',
+                    'name': '',
+                    'category': '',
+                    'unit': '',
+                    'supplier_name': '',
+                    'receiving_date': '',
+                    'expiry_or_mfg': '',
+                    'opening_stock': '',
+                    'received_today': '',
+                    'outgoing_today': '',
+                    'closing_stock': '',
+                    'note': '',
+                }
+                for _ in range(middle_blank_count)
+            ]
+        ) + salt_rows
+
         while len(rows) < min_rows:
-            rows.append({'code': '', 'name': '', 'unit': '', 'supplier_name': '', 'receiving_date': '', 'expiry_or_mfg': '', 'opening_stock': '', 'received_today': '', 'outgoing_today': '', 'closing_stock': '', 'note': ''})
+            rows.append({'code': '', 'name': '', 'category': '', 'unit': '', 'supplier_name': '', 'receiving_date': '', 'expiry_or_mfg': '', 'opening_stock': '', 'received_today': '', 'outgoing_today': '', 'closing_stock': '', 'note': ''})
 
         author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''
         weekday_labels = ['\uc6d4', '\ud654', '\uc218', '\ubaa9', '\uae08', '\ud1a0', '\uc77c']
@@ -1007,7 +1103,7 @@ def packaging_checksheet_preview():
                     note_text = '불출 입고'
                 elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     outgoing_qty = abs(qty)
-                    note_text = note or '반출 완료'
+                    note_text = _format_packaging_export_note(note, workplace_prefix)
                 else:
                     continue
 
@@ -1129,10 +1225,19 @@ def packaging_checksheet_preview():
                 )
             outgoing_rows.sort(key=lambda item: ((item.get('name') or ''), (item.get('target_name') or '')))
 
-        while len(incoming_rows) < 9:
-            incoming_rows.append({'name': '', 'supplier_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''})
-        while len(outgoing_rows) < 15:
-            outgoing_rows.append({'name': '', 'target_name': '', 'quantity': '', 'receiving_date': '', 'expiry_or_mfg': '', 'note': '', 'unit': ''})
+        incoming_limit_single_page = 9
+        outgoing_limit_single_page = 12
+        use_single_page_layout = (
+            len(incoming_rows) <= incoming_limit_single_page
+            and len(outgoing_rows) <= outgoing_limit_single_page
+        )
+
+        if use_single_page_layout:
+            incoming_rows = _pad_print_rows(incoming_rows, 10, _blank_packaging_incoming_row)
+            outgoing_rows = _pad_print_rows(outgoing_rows, 14, _blank_packaging_outgoing_row)
+        else:
+            incoming_rows = _pad_print_rows(incoming_rows, 19, _blank_packaging_incoming_row)
+            outgoing_rows = _pad_print_rows(outgoing_rows, 19, _blank_packaging_outgoing_row)
 
         author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''
         weekday_labels = ['월', '화', '수', '목', '금', '토', '일']
@@ -1148,6 +1253,7 @@ def packaging_checksheet_preview():
             author_name=author_name,
             incoming_rows=incoming_rows,
             outgoing_rows=outgoing_rows,
+            use_single_page_layout=use_single_page_layout,
         )
     finally:
         conn.close()
