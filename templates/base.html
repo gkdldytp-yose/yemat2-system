@@ -137,20 +137,38 @@
             .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
         }
         .nav-notify{position:relative;}
-        .nav-notify-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:none;border-radius:12px;background:#eef2ff;color:#334155;cursor:pointer;font-size:1.05rem;}
+        .nav-notify-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border:none;border-radius:16px;background:linear-gradient(135deg,#ffffff 0%,#eef4ff 100%);color:#1e3a8a;cursor:pointer;font-size:1.18rem;box-shadow:0 12px 26px rgba(37,99,235,.18);border:1px solid rgba(191,219,254,.95);}
+        .nav-notify-btn.has-unread{animation:notifyPulse 1.8s ease-in-out infinite;}
         .nav-notify-btn:hover{background:#e0e7ff;}
-        .nav-notify-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:0.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
-        .nav-notify-menu{display:none;position:absolute;right:0;top:48px;width:360px;max-width:calc(100vw - 2rem);background:#fff;border:1px solid #dbe5f0;border-radius:18px;box-shadow:0 18px 48px rgba(15,23,42,0.18);overflow:hidden;z-index:1200;}
+        .nav-notify-badge{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(220,38,38,.36);}
+        .nav-notify-menu{display:none;position:absolute;right:0;top:56px;width:420px;max-width:calc(100vw - 1rem);background:#fff;border:1px solid #dbe5f0;border-radius:22px;box-shadow:0 22px 56px rgba(15,23,42,0.22);overflow:hidden;z-index:1200;}
         .nav-notify-menu.open{display:block;}
-        .nav-notify-head{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(135deg,#f8fafc,#eef2ff);}
-        .nav-notify-list{max-height:420px;overflow:auto;}
-        .nav-notify-empty{padding:1.4rem 1rem;color:#64748b;text-align:center;}
-        .nav-notify-item{padding:0.9rem 1rem;border-bottom:1px solid #f1f5f9;background:#fff;}
-        .nav-notify-item.unread{background:#f8fbff;}
-        .nav-notify-title{font-size:0.9rem;font-weight:800;color:#0f172a;margin-bottom:0.2rem;}
-        .nav-notify-body{font-size:0.82rem;color:#475569;line-height:1.5;}
-        .nav-notify-meta{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-top:0.55rem;}
+        .nav-notify-head{display:flex;align-items:flex-start;justify-content:space-between;padding:1rem 1rem .9rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(135deg,#f8fafc,#eef2ff);}
+        .nav-notify-head strong{display:block;font-size:1rem;color:#0f172a;}
+        .nav-notify-sub{margin-top:.18rem;font-size:.76rem;color:#64748b;}
+        .nav-notify-stats{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.55rem;}
+        .nav-notify-chip{display:inline-flex;align-items:center;gap:.28rem;padding:.28rem .58rem;border-radius:999px;background:#fff;border:1px solid #dbe5f0;color:#334155;font-size:.72rem;font-weight:800;}
+        .nav-notify-list{max-height:460px;overflow:auto;background:#f8fafc;}
+        .nav-notify-empty{padding:1.6rem 1rem;color:#64748b;text-align:center;}
+        .nav-notify-item{padding:0.95rem 1rem;border-bottom:1px solid #eef2f7;background:#fff;}
+        .nav-notify-item.unread{background:linear-gradient(135deg,#f8fbff 0%,#ffffff 100%);}
+        .nav-notify-item.unread::before{content:"";display:block;width:100%;height:4px;margin:-0.95rem -1rem .85rem;border-radius:0;background:linear-gradient(90deg,#2563eb,#60a5fa);}
+        .nav-notify-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.65rem;}
+        .nav-notify-label{display:flex;align-items:flex-start;gap:.65rem;min-width:0;}
+        .nav-notify-icon{width:34px;height:34px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:1rem;background:#eef2ff;flex-shrink:0;}
+        .nav-notify-icon.info{background:#e0f2fe;}
+        .nav-notify-icon.warning{background:#fef3c7;}
+        .nav-notify-icon.danger{background:#fee2e2;}
+        .nav-notify-title{font-size:0.92rem;font-weight:900;color:#0f172a;margin-bottom:0.16rem;line-height:1.35;}
+        .nav-notify-body{font-size:0.82rem;color:#475569;line-height:1.52;word-break:break-word;}
+        .nav-notify-meta{display:flex;align-items:center;justify-content:space-between;gap:0.65rem;margin-top:0.7rem;}
         .nav-notify-time{font-size:0.75rem;color:#94a3b8;}
+        .nav-notify-actions{display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:flex-end;}
+        .nav-notify-delete{padding:.45rem .55rem !important;min-width:unset;}
+        @keyframes notifyPulse{
+            0%,100%{transform:translateY(0);box-shadow:0 12px 26px rgba(37,99,235,.18);}
+            50%{transform:translateY(-1px) scale(1.02);box-shadow:0 18px 32px rgba(37,99,235,.28);}
+        }
          
         h1{font-size:1.5rem;margin-bottom:1rem;}
         @media (max-width: 768px) {
@@ -238,8 +256,8 @@
             }
             body:not(.page-integrated) .nav-notify-menu {
                 right: -0.35rem;
-                width: min(360px, calc(100vw - 1rem));
-                max-width: min(360px, calc(100vw - 1rem));
+                width: min(420px, calc(100vw - 1rem));
+                max-width: min(420px, calc(100vw - 1rem));
             }
             body:not(.page-integrated) input,
             body:not(.page-integrated) select,
@@ -299,7 +317,7 @@
                 {% else %}👁️{% endif %}
             </span>
             <div class="nav-notify" id="navNotifyWrap">
-                <button type="button" class="nav-notify-btn" onclick="toggleNotifyMenu(event)">
+                <button type="button" class="nav-notify-btn {% if nav_unread_notifications %}has-unread{% endif %}" onclick="toggleNotifyMenu(event)">
                     🔔
                     {% if nav_unread_notifications %}
                     <span class="nav-notify-badge">{{ nav_unread_notifications }}</span>
@@ -307,7 +325,14 @@
                 </button>
                 <div class="nav-notify-menu" id="navNotifyMenu">
                     <div class="nav-notify-head">
-                        <strong>알림</strong>
+                        <div>
+                            <strong>업무 알림</strong>
+                            <div class="nav-notify-sub">지금 바로 확인이 필요한 항목 위주로 보여줍니다.</div>
+                            <div class="nav-notify-stats">
+                                <span class="nav-notify-chip">미읽음 {{ nav_unread_notifications }}</span>
+                                <span class="nav-notify-chip">표시 {{ nav_notifications|length }}</span>
+                            </div>
+                        </div>
                         {% if nav_unread_notifications %}
                         <form method="POST" action="/notifications/read-all">
                             <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
@@ -325,13 +350,20 @@
                         {% if nav_notifications %}
                             {% for nt in nav_notifications %}
                             <div class="nav-notify-item {% if not nt.is_read %}unread{% endif %}">
-                                <div class="nav-notify-title">{{ nt.title }}</div>
-                                <div class="nav-notify-body">{{ nt.body or '세부 내용이 없습니다.' }}</div>
+                                <div class="nav-notify-top">
+                                    <div class="nav-notify-label">
+                                        <span class="nav-notify-icon {{ nt.level or 'info' }}">{{ nt.icon or '🔔' }}</span>
+                                        <div>
+                                            <div class="nav-notify-title">{{ nt.title }}</div>
+                                            <div class="nav-notify-body">{{ nt.body or '세부 내용이 없습니다.' }}</div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="nav-notify-meta">
                                     <span class="nav-notify-time">{{ nt.created_at[:16] if nt.created_at else '-' }}</span>
-                                    <div style="display:flex;gap:0.35rem;">
+                                    <div class="nav-notify-actions">
                                         {% if nt.link %}
-                                        <a href="{{ nt.link }}" class="btn btn-small" style="background:#2563eb;">열기</a>
+                                        <a href="{{ nt.link }}" class="btn btn-small" style="background:#2563eb;">{{ nt.cta_label or '열기' }}</a>
                                         {% endif %}
                                         {% if nt.dynamic_key and not nt.is_read %}
                                         <form method="POST" action="/notifications/dynamic-read">
@@ -340,10 +372,22 @@
                                             <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                                             <button type="submit" class="btn btn-small btn-secondary">읽음</button>
                                         </form>
+                                        <form method="POST" action="/notifications/dynamic-dismiss">
+                                            <input type="hidden" name="notification_key" value="{{ nt.dynamic_key }}">
+                                            <input type="hidden" name="signature" value="{{ nt.dynamic_signature }}">
+                                            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                            <button type="submit" class="btn btn-small btn-secondary nav-notify-delete" title="숨기기">✕</button>
+                                        </form>
                                         {% elif nt.id and not nt.is_read %}
                                         <form method="POST" action="/notifications/{{ nt.id }}/read">
                                             <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                                             <button type="submit" class="btn btn-small btn-secondary">읽음</button>
+                                        </form>
+                                        {% endif %}
+                                        {% if nt.id %}
+                                        <form method="POST" action="/notifications/{{ nt.id }}/delete">
+                                            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                            <button type="submit" class="btn btn-small btn-secondary nav-notify-delete" title="삭제">✕</button>
                                         </form>
                                         {% endif %}
                                     </div>

@@ -1,10 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session
+from flask import Blueprint, render_template, request, redirect, url_for, session, send_file
 import sqlite3
 from fractions import Fraction
+from pathlib import Path
+from uuid import uuid4
 
 from core import get_db, login_required, role_required, get_workplace, SHARED_WORKPLACE
 
 bp = Blueprint('products', __name__)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SPEC_SHEET_DIR = PROJECT_ROOT / 'uploads' / 'product_specs'
+SPEC_SHEET_DIR.mkdir(parents=True, exist_ok=True)
 
 BOM_CATEGORY_SORT_CASE = """
     CASE
@@ -65,6 +70,11 @@ def _parse_raw_option_values(form):
     while len(values) < 3:
         values.append({'sok': None, 'sheets': None})
     return values
+
+
+def _build_spec_sheet_name(product_id, original_name):
+    suffix = Path(original_name or '').suffix.lower() or '.pdf'
+    return f'product_{product_id}_{uuid4().hex}{suffix}'
 
 
 @bp.route('/products')
@@ -134,6 +144,124 @@ def products():
                            available_categories=[cat for cat, cnt in base_category_counts.items() if cnt > 0])
 
 
+@bp.route('/products/<int:product_id>/spec-sheet', methods=['POST'])
+@role_required('production')
+def upload_product_spec_sheet(product_id):
+    workplace = get_workplace()
+    upload = request.files.get('spec_sheet')
+    if not upload or not upload.filename:
+        return "<meta charset='utf-8'><script>alert('등록할 PDF 파일을 선택해주세요.'); history.back();</script>"
+    if not upload.filename.lower().endswith('.pdf'):
+        return "<meta charset='utf-8'><script>alert('PDF 파일만 등록할 수 있습니다.'); history.back();</script>"
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, spec_sheet_stored_name FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
+    product_row = cursor.fetchone()
+    if not product_row:
+        conn.close()
+        return redirect(url_for('products.products'))
+
+    previous_stored_name = (product_row['spec_sheet_stored_name'] or '').strip()
+    stored_name = _build_spec_sheet_name(product_id, upload.filename)
+    file_path = SPEC_SHEET_DIR / stored_name
+    upload.save(file_path)
+
+    try:
+        cursor.execute(
+            '''
+            UPDATE products
+            SET spec_sheet_file_name = ?,
+                spec_sheet_stored_name = ?,
+                spec_sheet_uploaded_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            ''',
+            (upload.filename, stored_name, product_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        conn.close()
+        try:
+            if file_path.exists():
+                file_path.unlink()
+        except Exception:
+            pass
+        raise
+    conn.close()
+
+    if previous_stored_name and previous_stored_name != stored_name:
+        try:
+            previous_file = SPEC_SHEET_DIR / Path(previous_stored_name).name
+            if previous_file.exists():
+                previous_file.unlink()
+        except Exception:
+            pass
+
+    next_url = (request.form.get('next') or '').strip()
+    if next_url:
+        next_url += '&updated=1' if '?' in next_url else '?updated=1'
+        return redirect(next_url)
+    return redirect(url_for('products.products'))
+
+
+@bp.route('/products/<int:product_id>/spec-sheet/view')
+@login_required
+def view_product_spec_sheet(product_id):
+    workplace = get_workplace()
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        SELECT spec_sheet_file_name, spec_sheet_stored_name
+        FROM products
+        WHERE id = ? AND workplace = ?
+        ''',
+        (product_id, workplace),
+    )
+    product_row = cursor.fetchone()
+    conn.close()
+    if not product_row or not (product_row['spec_sheet_stored_name'] or '').strip():
+        return "<meta charset='utf-8'><script>alert('등록된 사양서가 없습니다.'); window.close();</script>"
+
+    target = SPEC_SHEET_DIR / Path(product_row['spec_sheet_stored_name']).name
+    if not target.exists():
+        return "<meta charset='utf-8'><script>alert('사양서 파일을 찾을 수 없습니다.'); window.close();</script>"
+
+    response = send_file(target, mimetype='application/pdf', as_attachment=False)
+    response.headers['Content-Disposition'] = 'inline'
+    return response
+
+
+@bp.route('/products/<int:product_id>/spec-sheet/manage')
+@login_required
+def manage_product_spec_sheet(product_id):
+    workplace = get_workplace()
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        SELECT id, name, code, spec_sheet_file_name, spec_sheet_stored_name, spec_sheet_uploaded_at
+        FROM products
+        WHERE id = ? AND workplace = ?
+        ''',
+        (product_id, workplace),
+    )
+    product = cursor.fetchone()
+    conn.close()
+    if not product:
+        return redirect(url_for('products.products'))
+
+    user = session.get('user') or {}
+    role = user.get('role') or ('admin' if user.get('is_admin') else 'readonly')
+    can_edit = role in ['admin', 'production']
+    return render_template(
+        'product_spec_sheet_popup.html',
+        product=product,
+        can_edit=can_edit,
+    )
+
+
 @bp.route('/products/add', methods=['POST'])
 @role_required('production')
 def add_product():
@@ -162,6 +290,11 @@ def add_product():
 @bp.route('/products/<int:product_id>/delete', methods=['POST'])
 @role_required('production')
 def delete_product(product_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT spec_sheet_stored_name FROM products WHERE id = ?', (product_id,))
+    product_row = cursor.fetchone()
+    stored_name = (product_row['spec_sheet_stored_name'] or '') if product_row else ''
     """상품 삭제"""
     conn = get_db()
     cursor = conn.cursor()
@@ -178,6 +311,14 @@ def delete_product(product_id):
         conn.close()
         return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
     conn.close()
+
+    if stored_name:
+        try:
+            target = SPEC_SHEET_DIR / Path(stored_name).name
+            if target.exists():
+                target.unlink()
+        except Exception:
+            pass
 
     return redirect(url_for('products.products'))
 

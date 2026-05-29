@@ -625,6 +625,12 @@ def _ensure_products_schema(conn):
             conn.execute("ALTER TABLE products ADD COLUMN sheets_per_pack_2 INTEGER")
         if 'sheets_per_pack_3' not in cols:
             conn.execute("ALTER TABLE products ADD COLUMN sheets_per_pack_3 INTEGER")
+        if 'spec_sheet_file_name' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN spec_sheet_file_name TEXT")
+        if 'spec_sheet_stored_name' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN spec_sheet_stored_name TEXT")
+        if 'spec_sheet_uploaded_at' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN spec_sheet_uploaded_at TIMESTAMP")
         conn.execute("UPDATE products SET expiry_months = 12 WHERE expiry_months IS NULL")
         bom_cols = [row['name'] for row in conn.execute("PRAGMA table_info(bom)").fetchall()]
         if bom_cols and 'quantity_per_box_expr' not in bom_cols:

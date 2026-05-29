@@ -295,10 +295,9 @@ def create_app():
     def _build_dynamic_notifications(cursor, user):
         notifications = []
         is_admin = bool(user.get('is_admin'))
-        workplace = get_workplace()
         username = (user.get('username') or '').strip()
 
-        def push_dynamic_notification(key, title, body, link):
+        def push_dynamic_notification(key, title, body, link, level='info', icon='🔔', cta_label='열기'):
             signature_source = f'{title}|{body}|{link or ""}'
             signature = hashlib.sha256(signature_source.encode('utf-8')).hexdigest()
             notifications.append(
@@ -309,31 +308,13 @@ def create_app():
                     'title': title,
                     'body': body,
                     'link': link,
+                    'level': level,
+                    'icon': icon,
+                    'cta_label': cta_label,
                     'is_read': 1,
                     'created_at': '',
                 }
             )
-
-        if workplace and workplace != LOGISTICS_WORKPLACE:
-            low_stock_rows = _get_material_shortages(cursor, workplace)
-            if low_stock_rows:
-                names = ', '.join(row['name'] for row in low_stock_rows[:3])
-                push_dynamic_notification(
-                    'material_shortage',
-                    f'{workplace} ?? ?? ??? {len(low_stock_rows)}?',
-                    names,
-                    '/materials?shortage_ids=' + ','.join(str(int(item['id'])) for item in low_stock_rows if int(item.get('id') or 0) > 0),
-                )
-
-            raw_shortage_rows = _get_raw_shortages(cursor, workplace)
-            if raw_shortage_rows:
-                names = ', '.join(row['name'] for row in raw_shortage_rows[:3])
-                push_dynamic_notification(
-                    'raw_shortage',
-                    f'{workplace} ?? ?? {len(raw_shortage_rows)}?',
-                    names,
-                    '/raw-materials',
-                )
 
         if username:
             cursor.execute(
@@ -351,9 +332,12 @@ def create_app():
             if pending_issue_count > 0:
                 push_dynamic_notification(
                     'issue_receipt_pending',
-                    f'?? ?? ?? ?? ?? {pending_issue_count}?',
-                    '?? ?? ??? ???? ?? ?? ???? ?? ?? ??? ????.',
+                    f'불출 입고 확인 대기 {pending_issue_count}건',
+                    '완료 처리된 불출 건을 확인하고 입고 완료 여부를 정리해주세요.',
                     '/materials?req_tab=issue&issue_status=pending',
+                    level='warning',
+                    icon='📥',
+                    cta_label='확인',
                 )
 
         if is_admin:
@@ -362,9 +346,12 @@ def create_app():
             if pending_users > 0:
                 push_dynamic_notification(
                     'pending_users',
-                    f'???? ?? ?? {pending_users}?',
-                    '?? ??? ??? ??? ?? ?? ??? ????.',
+                    f'신규 회원가입 승인 대기 {pending_users}건',
+                    '사용자 관리에서 승인 여부와 권한을 확인해주세요.',
                     '/users',
+                    level='danger',
+                    icon='👤',
+                    cta_label='승인',
                 )
 
         return notifications
@@ -393,6 +380,40 @@ def create_app():
                 dynamic_read_map = {row['notification_key']: row['signature'] for row in cursor.fetchall()}
             cursor.execute(
                 '''
+                SELECT username, name
+                FROM users
+                WHERE status = 'pending'
+                '''
+            )
+            pending_signup_titles = set()
+            for row in cursor.fetchall():
+                pending_username = str(row['username'] or '').strip()
+                pending_name = str(row['name'] or '').strip()
+                if pending_username:
+                    pending_signup_titles.add(f'신규 회원가입 요청: {pending_username}')
+                if pending_name:
+                    pending_signup_titles.add(f'신규 회원가입 요청: {pending_name}')
+            cursor.execute(
+                '''
+                DELETE FROM user_notifications
+                WHERE username = ?
+                  AND link = '/users'
+                  AND title LIKE '신규 회원가입 요청:%'
+                ''',
+                (username,),
+            )
+            conn.commit()
+            for title in pending_signup_titles:
+                cursor.execute(
+                    '''
+                    INSERT INTO user_notifications (username, title, body, link, is_read, created_at, read_at)
+                    SELECT username, title, body, link, is_read, created_at, read_at
+                    FROM user_notifications
+                    WHERE 1 = 0
+                    ''',
+                )
+            cursor.execute(
+                '''
                 SELECT id, title, body, link, is_read, created_at
                 FROM user_notifications
                 WHERE username = ?
@@ -414,6 +435,31 @@ def create_app():
         finally:
             conn.close()
 
+        def enrich_notification(item):
+            item = dict(item)
+            item.setdefault('level', 'info')
+            item.setdefault('icon', '🔔')
+            item.setdefault('cta_label', '열기')
+            title = str(item.get('title') or '')
+            link = str(item.get('link') or '')
+            if '/users' in link or '회원가입' in title:
+                item['level'] = 'danger'
+                item['icon'] = '👤'
+                item['cta_label'] = '승인'
+            elif '/materials?req_tab=issue' in link or '불출' in title:
+                item['level'] = 'warning'
+                item['icon'] = '📦'
+                item['cta_label'] = '확인'
+            elif '/purchase-orders' in link or '발주' in title or '입고 예정일' in title:
+                item['level'] = 'info'
+                item['icon'] = '🚚'
+                item['cta_label'] = '보기'
+            elif '/materials?req_tab=export' in link or '반출' in title:
+                item['level'] = 'info'
+                item['icon'] = '🔄'
+                item['cta_label'] = '보기'
+            return item
+
         unread_count = int(unread_row['unread_count'] or 0) if unread_row else 0
         dynamic_unread_count = 0
         for nt in dynamic_notifications:
@@ -426,7 +472,15 @@ def create_app():
             nt['is_read'] = 1 if is_dynamic_read else 0
             if not is_dynamic_read:
                 dynamic_unread_count += 1
-        notifications = (dynamic_notifications + list(stored_notifications))[:6]
+        combined = [enrich_notification(nt) for nt in dynamic_notifications] + [enrich_notification(nt) for nt in stored_notifications]
+        notifications = sorted(
+            combined,
+            key=lambda item: (
+                1 if item.get('is_read') else 0,
+                '' if item.get('dynamic_key') else '-',
+                -(int(item.get('id') or 0)),
+            ),
+        )[:8]
         return {
             'nav_notifications': notifications,
             'nav_unread_notifications': unread_count + dynamic_unread_count,
