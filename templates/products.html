@@ -33,6 +33,24 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
 .cat-btn[data-cat="세트"]::before{background:#db2777;box-shadow:0 0 0 4px rgba(219,39,119,.12);}
 .cat-btn[data-cat="무트레이"]::before{background:#64748b;box-shadow:0 0 0 4px rgba(100,116,139,.14);}
 .cat-badge{display:inline-block;padding:0.2rem 0.5rem;border-radius:10px;font-size:0.7rem;font-weight:600;}
+.product-action-group{display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;}
+.spec-modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:1200;padding:1rem;}
+.spec-modal-bg.open{display:flex;}
+.spec-modal{width:min(980px,96vw);max-height:92vh;background:#fff;border-radius:20px;border:1px solid #dbe4f0;box-shadow:0 24px 54px rgba(15,23,42,.2);display:flex;flex-direction:column;overflow:hidden;}
+.spec-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:1rem 1.1rem;border-bottom:1px solid #e5e7eb;}
+.spec-modal-title{font-size:1.02rem;font-weight:900;color:#0f172a;}
+.spec-modal-desc{margin-top:.2rem;font-size:.82rem;color:#64748b;line-height:1.45;}
+.spec-modal-close{width:36px;height:36px;border:none;border-radius:999px;background:#f1f5f9;color:#475569;font-size:1rem;font-weight:900;cursor:pointer;}
+.spec-modal-body{padding:1rem 1.1rem 1.1rem;display:flex;flex-direction:column;gap:.9rem;min-height:0;}
+.spec-upload-form{display:flex;align-items:flex-end;gap:.75rem;flex-wrap:wrap;padding:.9rem 1rem;border:1px solid #dbe4f0;border-radius:16px;background:#f8fbff;}
+.spec-upload-form .form-group{margin:0;min-width:240px;flex:1 1 320px;}
+.spec-upload-form label{display:block;font-size:.8rem;color:#475569;font-weight:800;margin-bottom:.38rem;}
+.spec-upload-form input[type="file"]{width:100%;padding:.68rem .75rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;}
+.spec-upload-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
+.spec-frame-wrap{flex:1 1 auto;min-height:480px;border:1px solid #dbe4f0;border-radius:16px;overflow:hidden;background:#f8fafc;}
+.spec-frame{width:100%;height:100%;min-height:480px;border:none;background:#fff;}
+.spec-meta{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center;}
+.spec-meta-chip{display:inline-flex;align-items:center;padding:.3rem .62rem;border-radius:999px;background:#eef2ff;color:#3654d5;font-size:.75rem;font-weight:800;}
 @media (max-width: 768px) {
     .product-filter-panel{padding:0.85rem 0.9rem 0.95rem;}
     .product-filter-title strong{font-size:0.92rem;}
@@ -132,7 +150,7 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
     <div class="table-container">
     <table>
         <thead>
-            <tr><th>상품</th><th>분류</th><th>낱봉</th><th>매수</th><th>절단</th><th>1박스당 원초</th><th>소비기한</th><th>BOM</th>
+            <tr><th>상품</th><th>분류</th><th>낱봉</th><th>매수</th><th>절단</th><th>1박스당 원초</th><th>소비기한</th><th>관리</th>
             {% if can_prod %}<th>관리</th>{% endif %}</tr>
         </thead>
         <tbody>
@@ -163,7 +181,16 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
                 {% endif %}
             </td>
             <td>{{ p.expiry_months or 12 }}개월</td>
-            <td><a href="/products/{{ p.id }}/bom" class="btn btn-small">BOM</a></td>
+            <td>
+                <div class="product-action-group">
+                    <a href="/products/{{ p.id }}/bom" class="btn btn-small">BOM</a>
+                    {% if p.spec_sheet_stored_name %}
+                    <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small btn-secondary">사양서 보기</a>
+                    {% elif can_prod %}
+                    <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small" style="background:#0f766e;">사양서 등록</a>
+                    {% endif %}
+                </div>
+            </td>
             {% if can_prod %}
             <td>
                 <form method="POST" action="/products/{{ p.id }}/delete" style="display:inline;"
@@ -183,5 +210,6 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
     </p>
     {% endif %}
 </div>
+
 {% endblock %}
 

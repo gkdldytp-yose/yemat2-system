@@ -1,205 +1,563 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}사용자 관리{% endblock %}
 {% block extra_css %}
 <style>
-.role-select{padding:0.4rem 0.6rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;}
-.role-admin{border-color:#e74c3c;color:#e74c3c;background:#fff5f5;}
-.role-production{border-color:#27ae60;color:#27ae60;background:#f0fff4;}
-.role-rawmat{border-color:#e67e22;color:#e67e22;background:#fffbf0;}
-.role-readonly{border-color:#95a5a6;color:#666;background:#f8f9fa;}
-.perm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;}
-.perm-card{border-radius:12px;padding:1.25rem;border:2px solid;}
-.perm-card h4{margin-bottom:0.75rem;font-size:0.9rem;}
-.perm-card ul{list-style:none;font-size:0.82rem;line-height:1.8;}
-.perm-card ul li::before{content:"✓ ";}
-.user-row{display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:1rem;align-items:center;padding:1rem;border-bottom:1px solid #f0f0f0;}
-.user-row:hover{background:#f8f9fa;}
-.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:white;}
-.pending-row{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;padding:1rem;border-bottom:1px solid #f0f0f0;}
-.pending-row:hover{background:#f8f9fa;}
-.pending-actions{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
-.wp-checks{display:flex;flex-wrap:wrap;gap:0.4rem;}
-.wp-chip{border:1px solid #e5e7eb;border-radius:999px;padding:0.2rem 0.6rem;font-size:0.75rem;background:#fff;display:flex;align-items:center;gap:0.25rem;}
+.user-admin-page{display:flex;flex-direction:column;gap:1.25rem;}
+.user-page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;}
+.user-page-copy h1{margin:0 0 .35rem;}
+.user-page-copy p{margin:0;color:#64748b;font-size:.92rem;}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;}
+.summary-card{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border:1px solid #dbe7f3;border-radius:18px;padding:1rem 1.1rem;box-shadow:0 10px 24px rgba(15,23,42,.05);}
+.summary-label{font-size:.8rem;color:#64748b;margin-bottom:.35rem;}
+.summary-value{font-size:1.55rem;font-weight:900;color:#0f172a;line-height:1;}
+.summary-meta{margin-top:.35rem;font-size:.8rem;color:#64748b;}
+.panel-card{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:1.2rem 1.25rem;box-shadow:0 14px 34px rgba(15,23,42,.06);}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
+.panel-head h2{margin:0;font-size:1.12rem;}
+.panel-head p{margin:.25rem 0 0;color:#64748b;font-size:.86rem;}
+.head-badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 .75rem;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.85rem;font-weight:900;}
+.toolbar{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;}
+.view-tabs{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem;border:1px solid #dbe4f0;border-radius:999px;background:#f8fafc;}
+.view-tab{border:none;border-radius:999px;padding:.58rem .9rem;background:transparent;color:#64748b;font-size:.82rem;font-weight:900;cursor:pointer;}
+.view-tab.active{background:#2563eb;color:#fff;box-shadow:0 8px 18px rgba(37,99,235,.18);}
+.toolbar-search{flex:1 1 280px;min-width:220px;padding:.72rem .95rem;border:1px solid #cbd5e1;border-radius:14px;font-size:.92rem;}
+.toolbar-filter{padding:.72rem .9rem;border:1px solid #cbd5e1;border-radius:14px;background:#fff;font-size:.9rem;}
+.account-view{display:none;}
+.account-view.active{display:block;}
+.user-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:1rem;}
+.user-card{border:1px solid #dbe4f0;border-radius:18px;padding:1rem;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);display:flex;flex-direction:column;gap:.9rem;}
+.user-card.pending{border-color:#fde68a;background:linear-gradient(180deg,#fffdf3 0%,#fffaf0 100%);}
+.user-card.self{border-style:dashed;}
+.user-top{display:flex;justify-content:space-between;gap:.85rem;align-items:flex-start;}
+.user-id{display:flex;gap:.8rem;align-items:center;min-width:0;}
+.avatar{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;color:#fff;box-shadow:0 8px 18px rgba(15,23,42,.12);flex:0 0 auto;}
+.user-name{font-size:1rem;font-weight:900;color:#0f172a;line-height:1.25;}
+.user-sub{font-size:.82rem;color:#64748b;margin-top:.18rem;word-break:break-word;}
+.inline-badges{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.45rem;}
+.mini-badge{display:inline-flex;align-items:center;padding:.22rem .58rem;border-radius:999px;font-size:.74rem;font-weight:800;border:1px solid #dbe4f0;background:#f8fafc;color:#475569;}
+.mini-badge.me{background:#ecfdf5;border-color:#bbf7d0;color:#15803d;}
+.role-pill{display:inline-flex;align-items:center;justify-content:center;padding:.42rem .8rem;border-radius:999px;font-size:.8rem;font-weight:900;border:1px solid transparent;white-space:nowrap;}
+.role-admin{background:#fff1f2;border-color:#fecdd3;color:#be123c;}
+.role-production{background:#ecfdf5;border-color:#bbf7d0;color:#15803d;}
+.role-rawmat{background:#fff7ed;border-color:#fed7aa;color:#c2410c;}
+.role-readonly{background:#f8fafc;border-color:#dbe4f0;color:#475569;}
+.user-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;}
+.meta-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:.75rem .85rem;}
+.meta-label{font-size:.73rem;color:#64748b;margin-bottom:.22rem;}
+.meta-value{font-size:.88rem;color:#0f172a;font-weight:700;word-break:break-word;}
+.access-form{display:flex;flex-direction:column;gap:.9rem;padding-top:.2rem;}
+.field-label{font-size:.8rem;color:#475569;font-weight:800;margin-bottom:.42rem;}
+.role-select{width:100%;padding:.78rem .9rem;border:1px solid #cbd5e1;border-radius:14px;font-size:.9rem;font-weight:800;background:#fff;}
+.workplace-box{border:1px solid #dbe4f0;border-radius:16px;padding:.85rem;background:#f8fafc;}
+.workplace-toolbar{display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.65rem;}
+.workplace-helper{font-size:.76rem;color:#64748b;}
+.quick-actions{display:flex;gap:.45rem;flex-wrap:wrap;}
+.quick-btn{border:none;border-radius:999px;background:#e2e8f0;color:#334155;padding:.36rem .72rem;font-size:.74rem;font-weight:800;cursor:pointer;}
+.quick-btn:hover{background:#cbd5e1;}
+.workplace-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.55rem;}
+.wp-chip{display:flex;align-items:center;gap:.5rem;border:1px solid #dbe4f0;border-radius:999px;padding:.55rem .7rem;background:#fff;cursor:pointer;font-size:.82rem;font-weight:700;color:#334155;}
+.wp-chip input{margin:0;}
+.requested-chips,.assigned-chips,.list-inline-chips{display:flex;gap:.45rem;flex-wrap:wrap;}
+.req-chip,.assigned-chip{display:inline-flex;align-items:center;padding:.28rem .62rem;border-radius:999px;font-size:.75rem;font-weight:800;}
+.req-chip{background:#fef3c7;color:#92400e;}
+.assigned-chip{background:#eff6ff;color:#1d4ed8;}
+.card-actions{display:flex;justify-content:space-between;align-items:center;gap:.65rem;flex-wrap:wrap;}
+.action-note{font-size:.78rem;color:#94a3b8;}
+.action-buttons{display:flex;gap:.5rem;flex-wrap:wrap;}
+.soft-btn{border:none;border-radius:12px;padding:.72rem .95rem;font-size:.84rem;font-weight:900;cursor:pointer;}
+.soft-btn.primary{background:#2563eb;color:#fff;}
+.soft-btn.primary:hover{background:#1d4ed8;}
+.soft-btn.danger{background:#ef4444;color:#fff;}
+.soft-btn.danger:hover{background:#dc2626;}
+.empty-copy{padding:1rem;border:1px dashed #dbe4f0;border-radius:16px;background:#fbfdff;color:#64748b;text-align:center;font-size:.88rem;}
+.permission-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem;}
+.permission-card{border-radius:16px;padding:1rem;border:1px solid #e2e8f0;background:#f8fafc;}
+.permission-card h4{margin:0 0 .55rem;font-size:.92rem;}
+.permission-card ul{margin:0;padding-left:1rem;color:#475569;font-size:.82rem;line-height:1.7;}
+.user-list-wrap{border:1px solid #dbe4f0;border-radius:18px;overflow:hidden;background:#fff;}
+.user-list-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.user-list-table th{background:#f8fafc;color:#475569;padding:.82rem .85rem;text-align:left;font-size:.78rem;font-weight:900;border-bottom:1px solid #e2e8f0;}
+.user-list-table td{padding:.9rem .85rem;border-bottom:1px solid #eef2f7;vertical-align:top;color:#0f172a;}
+.user-list-table tr:last-child td{border-bottom:none;}
+.list-user-main{display:flex;flex-direction:column;gap:.22rem;min-width:0;}
+.list-user-sub{font-size:.78rem;color:#64748b;word-break:break-word;}
+.list-access-form{display:flex;flex-direction:column;gap:.65rem;min-width:280px;}
+.list-access-top{display:grid;grid-template-columns:minmax(150px,190px) 1fr;gap:.55rem;align-items:start;}
+.list-workplaces{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.45rem;}
+.list-workplaces .wp-chip{padding:.45rem .62rem;font-size:.78rem;}
+.list-actions{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.list-self{font-size:.82rem;color:#94a3b8;}
+@media (max-width: 768px){
+    .user-grid{grid-template-columns:1fr;}
+    .user-meta{grid-template-columns:1fr;}
+    .card-actions{align-items:stretch;}
+    .action-buttons{width:100%;}
+    .action-buttons .soft-btn{flex:1 1 auto;}
+    .list-access-top{grid-template-columns:1fr;}
+    .user-list-wrap{overflow:auto;}
+    .user-list-table{min-width:980px;}
+}
 </style>
 {% endblock %}
 
 {% block content %}
-{%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
-{%- set can_prod  = _r in ['admin','production'] -%}
-{%- set can_raw   = _r in ['admin','rawmat'] -%}
-{%- set is_admin  = _r == 'admin' -%}
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
-    <h1>👥 사용자 관리</h1>
-    <a href="/" class="btn btn-secondary btn-small">← 대시보드</a>
-</div>
+{% set approved_count = users_list|length %}
+{% set pending_count = pending_users|length %}
+{% set admin_count = users_list|selectattr('role_value', 'equalto', 'admin')|list|length %}
+{% set assigned_count = users_list|selectattr('workplace_list')|list|selectattr('workplace_list', 'ne', [])|list|length %}
 
-{% if pending_users and pending_users|length > 0 %}
-<div class="card" style="margin-bottom:2rem;">
-    <h2>🕒 가입 승인 대기 ({{ pending_users|length }}명)</h2>
-    {% for u in pending_users %}
-    <div class="pending-row">
-        <div>
-            <strong>{{ u.name or u.username }}</strong>
-            <div style="font-size:0.82rem;color:#999;">@{{ u.username }}</div>
-            <div style="font-size:0.8rem;color:#666;margin-top:0.25rem;">
-                {{ u.department or '-' }} · {{ u.phone or '-' }} · {{ u.email or '-' }}
+<div class="user-admin-page">
+    <div class="user-page-head">
+        <div class="user-page-copy">
+            <h1>👥 사용자 관리</h1>
+            <p>가입 승인, 권한 변경, 작업장 부여를 한 화면에서 빠르게 처리할 수 있게 정리했습니다.</p>
+        </div>
+        <a href="/" class="btn btn-secondary btn-small">← 대시보드</a>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-label">승인된 계정</div>
+            <div class="summary-value">{{ approved_count }}</div>
+            <div class="summary-meta">현재 사용 가능한 전체 계정</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">승인 대기</div>
+            <div class="summary-value">{{ pending_count }}</div>
+            <div class="summary-meta">빠르게 확인이 필요한 가입 요청</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">관리자</div>
+            <div class="summary-value">{{ admin_count }}</div>
+            <div class="summary-meta">전체 관리 권한 계정</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">작업장 부여 완료</div>
+            <div class="summary-value">{{ assigned_count }}</div>
+            <div class="summary-meta">1개 이상 작업장이 설정된 계정</div>
+        </div>
+    </div>
+
+    {% if pending_users %}
+    <div class="panel-card">
+        <div class="panel-head">
+            <div>
+                <h2>🕒 가입 승인 대기</h2>
+                <p>승인하면서 권한과 작업장을 바로 같이 설정할 수 있습니다.</p>
             </div>
-            <div style="font-size:0.75rem;color:#999;margin-top:0.2rem;">요청일: {{ u.created_at[:10] if u.created_at else '-' }}</div>
+            <div class="head-badge">{{ pending_count }}명</div>
         </div>
-        <div class="pending-actions">
-            <form method="POST" action="/users/{{ u.id }}/approve" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                <select name="role" class="role-select">
-                    <option value="readonly">👁️ 읽기전용</option>
-                    <option value="production">🏭 생산관리</option>
-                    <option value="rawmat">🌿 원초관리</option>
-                    <option value="admin">👑 관리자</option>
-                </select>
-                <div class="wp-checks">
-                    {% for wp in workplaces %}
-                    <label class="wp-chip">
-                        <input type="checkbox" name="workplaces" value="{{ wp }}">
-                        {{ wp }}
-                    </label>
-                    {% endfor %}
+        <div class="user-grid">
+            {% for u in pending_users %}
+            <div class="user-card pending">
+                <div class="user-top">
+                    <div class="user-id">
+                        <div class="avatar" style="background:linear-gradient(135deg,#f59e0b 0%,#f97316 100%);">{{ (u.name or u.username)[0]|upper }}</div>
+                        <div>
+                            <div class="user-name">{{ u.name or u.username }}</div>
+                            <div class="user-sub">@{{ u.username }}</div>
+                            <div class="inline-badges">
+                                <span class="mini-badge">요청일 {{ u.created_at[:10] if u.created_at else '-' }}</span>
+                                {% if u.department %}<span class="mini-badge">{{ u.department }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <span class="role-pill role-readonly">승인 대기</span>
                 </div>
-                <button type="submit" class="btn btn-small">승인</button>
-            </form>
-            <form method="POST" action="/users/{{ u.id }}/reject" onsubmit="return confirm('가입 요청을 반려하시겠습니까?')">
-                <button type="submit" class="btn btn-small btn-danger">반려</button>
-            </form>
+
+                <div class="user-meta">
+                    <div class="meta-item">
+                        <div class="meta-label">연락처</div>
+                        <div class="meta-value">{{ u.phone or '-' }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">이메일</div>
+                        <div class="meta-value">{{ u.email or '-' }}</div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="field-label">가입 시 요청 작업장</div>
+                    <div class="requested-chips">
+                        {% if u.requested_workplaces %}
+                            {% for wp in u.requested_workplaces %}
+                            <span class="req-chip">{{ wp }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="req-chip">요청 작업장 없음</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <form method="POST" action="/users/{{ u.id }}/approve" class="access-form">
+                    <div>
+                        <div class="field-label">승인 권한</div>
+                        <select name="role" class="role-select role-select-input">
+                            <option value="readonly">👁️ 읽기전용</option>
+                            <option value="production">🏭 생산관리</option>
+                            <option value="rawmat">🌿 원초관리</option>
+                            <option value="admin">👑 관리자</option>
+                        </select>
+                    </div>
+                    <div class="workplace-box">
+                        <div class="workplace-toolbar">
+                            <div>
+                                <div class="field-label" style="margin:0;">작업장 부여</div>
+                                <div class="workplace-helper">최소 1개 이상 선택해야 승인됩니다.</div>
+                            </div>
+                            <div class="quick-actions">
+                                <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'requested')">요청 작업장</button>
+                                <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'all')">전체</button>
+                                <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'clear')">해제</button>
+                            </div>
+                        </div>
+                        <div class="workplace-grid">
+                            {% for wp in workplaces %}
+                            <label class="wp-chip">
+                                <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.requested_workplaces %}checked{% endif %}>
+                                <span>{{ wp }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <div class="action-note">승인하면 바로 로그인 가능한 계정으로 전환됩니다.</div>
+                        <div class="action-buttons">
+                            <button type="submit" class="soft-btn primary">승인 완료</button>
+                        </div>
+                    </div>
+                </form>
+
+                <form method="POST" action="/users/{{ u.id }}/reject" onsubmit="return confirm('가입 요청을 반려하시겠습니까?')">
+                    <div class="action-buttons">
+                        <button type="submit" class="soft-btn danger">반려</button>
+                    </div>
+                </form>
+            </div>
+            {% endfor %}
         </div>
     </div>
-    {% endfor %}
-</div>
-{% endif %}
+    {% endif %}
 
-<!-- 권한 안내 카드 -->
-<div class="card" style="margin-bottom:2rem;">
-    <h2>🔑 권한 종류 안내</h2>
-    <div class="perm-grid">
-        <div class="perm-card" style="border-color:#e74c3c;background:#fff5f5;">
-            <h4 style="color:#e74c3c;">👑 관리자</h4>
-            <ul style="color:#555;">
-                <li>모든 기능 사용</li>
-                <li>사용자 관리</li>
-                <li>데이터 삭제</li>
-                <li>권한 부여/변경</li>
-            </ul>
+    <div class="panel-card">
+        <div class="panel-head">
+            <div>
+                <h2>🔑 권한 안내</h2>
+                <p>권한과 작업장은 아래 계정 카드에서 한 번에 저장할 수 있습니다.</p>
+            </div>
         </div>
-        <div class="perm-card" style="border-color:#27ae60;background:#f0fff4;">
-            <h4 style="color:#27ae60;">🏭 생산관리</h4>
-            <ul style="color:#555;">
-                <li>읽기 전용 포함</li>
-                <li>생산 스케줄</li>
-                <li>생산 관리</li>
-                <li>상품 관리</li>
-            </ul>
-        </div>
-        <div class="perm-card" style="border-color:#e67e22;background:#fffbf0;">
-            <h4 style="color:#e67e22;">🌿 원초관리</h4>
-            <ul style="color:#555;">
-                <li>읽기 전용 포함</li>
-                <li>원초 입고/반출</li>
-                <li>원초 재고 조정</li>
-                <li>원초 로그</li>
-            </ul>
-        </div>
-        <div class="perm-card" style="border-color:#95a5a6;background:#f8f9fa;">
-            <h4 style="color:#666;">👁️ 읽기전용</h4>
-            <ul style="color:#555;">
-                <li>모든 페이지 열람</li>
-                <li>등록/수정 불가</li>
-                <li>삭제 불가</li>
-                <li>기능 버튼 비활성</li>
-            </ul>
+        <div class="permission-grid">
+            <div class="permission-card" style="background:#fff1f2;border-color:#fecdd3;">
+                <h4 style="color:#be123c;">👑 관리자</h4>
+                <ul>
+                    <li>모든 기능 사용</li>
+                    <li>사용자/권한 관리</li>
+                    <li>중요 데이터 삭제 및 복구</li>
+                </ul>
+            </div>
+            <div class="permission-card" style="background:#ecfdf5;border-color:#bbf7d0;">
+                <h4 style="color:#15803d;">🏭 생산관리</h4>
+                <ul>
+                    <li>생산 계획과 실적 관리</li>
+                    <li>상품/BOM 관련 작업</li>
+                    <li>읽기전용 권한 포함</li>
+                </ul>
+            </div>
+            <div class="permission-card" style="background:#fff7ed;border-color:#fed7aa;">
+                <h4 style="color:#c2410c;">🌿 원초관리</h4>
+                <ul>
+                    <li>원초 입고/반출 관리</li>
+                    <li>원초 재고 및 이력 관리</li>
+                    <li>읽기전용 권한 포함</li>
+                </ul>
+            </div>
+            <div class="permission-card">
+                <h4 style="color:#475569;">👁️ 읽기전용</h4>
+                <ul>
+                    <li>모든 페이지 조회 가능</li>
+                    <li>수정/삭제/승인 불가</li>
+                    <li>버튼은 제한적으로만 활성화</li>
+                </ul>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 사용자 목록 -->
-<div class="card">
-    <h2>계정 목록 ({{ users_list|length }}명)</h2>
-
-    {% for u in users_list %}
-    {% set urole = u.role if u.role else ('admin' if u.is_admin else 'readonly') %}
-    <div class="user-row">
-        <!-- 아바타 -->
-        <div class="avatar" style="background:
-            {% if urole == 'admin' %}#e74c3c
-            {% elif urole == 'production' %}#27ae60
-            {% elif urole == 'rawmat' %}#e67e22
-            {% else %}#95a5a6{% endif %}">
-            {{ (u.name or u.username)[0]|upper }}
-        </div>
-
-        <!-- 이름/계정 -->
-        <div>
-            <strong>{{ u.name or u.username }}</strong>
-            {% if u.id == session_user_id %}<span style="font-size:0.75rem;background:#e8f5e9;color:#27ae60;padding:0.1rem 0.4rem;border-radius:8px;margin-left:0.5rem;">본인</span>{% endif %}
-            <div style="font-size:0.82rem;color:#999;">@{{ u.username }}</div>
-        </div>
-
-        <!-- 현재 권한 -->
-        <div>
-            <span class="role-select role-{{ urole }}" style="display:inline-block;padding:0.3rem 0.8rem;">
-                {% if urole == 'admin' %}👑 관리자
-                {% elif urole == 'production' %}🏭 생산관리
-                {% elif urole == 'rawmat' %}🌿 원초관리
-                {% else %}👁️ 읽기전용{% endif %}
-            </span>
-        </div>
-
-        <!-- 가입일 -->
-        <div style="font-size:0.85rem;color:#999;">
-            {{ u.created_at[:10] if u.created_at else '-' }}
-        </div>
-
-        <!-- 권한 변경 -->
-        {% if u.id != session_user_id %}
-        <div style="display:flex;gap:0.5rem;align-items:center;">
-            <form method="POST" action="/users/{{ u.id }}/update-role" style="display:flex;gap:0.5rem;align-items:center;">
-                <select name="role" class="role-select" id="rolesel_{{ u.id }}"
-                        onchange="this.className='role-select role-'+this.value">
-                    <option value="readonly" {% if urole == 'readonly' %}selected{% endif %}>👁️ 읽기전용</option>
-                    <option value="production" {% if urole == 'production' %}selected{% endif %}>🏭 생산관리</option>
-                    <option value="rawmat" {% if urole == 'rawmat' %}selected{% endif %}>🌿 원초관리</option>
-                    <option value="admin" {% if urole == 'admin' %}selected{% endif %}>👑 관리자</option>
+    <div class="panel-card">
+        <div class="panel-head">
+            <div>
+                <h2>계정 목록</h2>
+                <p>기본은 카드형으로 보고, 필요하면 리스트형으로 빠르게 전환할 수 있습니다.</p>
+            </div>
+            <div class="toolbar">
+                <div class="view-tabs">
+                    <button type="button" class="view-tab active" data-view-tab="card" onclick="setUserView('card')">카드형</button>
+                    <button type="button" class="view-tab" data-view-tab="list" onclick="setUserView('list')">리스트형</button>
+                </div>
+                <input type="search" id="userSearchInput" class="toolbar-search" placeholder="이름, 아이디, 부서, 작업장 검색">
+                <select id="roleFilterSelect" class="toolbar-filter">
+                    <option value="all">전체 권한</option>
+                    <option value="admin">관리자</option>
+                    <option value="production">생산관리</option>
+                    <option value="rawmat">원초관리</option>
+                    <option value="readonly">읽기전용</option>
                 </select>
-                <button type="submit" class="btn btn-small">변경</button>
-            </form>
-            <form method="POST" action="/users/{{ u.id }}/update-workplaces" style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
-                {% set uwps = (u.workplaces or '').split(',') %}
-                {% for wp in workplaces %}
-                <label class="wp-chip">
-                    <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in uwps %}checked{% endif %}>
-                    {{ wp }}
-                </label>
-                {% endfor %}
-                <button type="submit" class="btn btn-small">작업장 수정</button>
-            </form>
-            <form method="POST" action="/users/{{ u.id }}/delete"
-                  onsubmit="return confirm('{{ u.username }} 계정을 삭제하시겠습니까?')">
-                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
-            </form>
+            </div>
         </div>
-        {% else %}
-        <div style="color:#aaa;font-size:0.85rem;">본인 계정은 변경 불가</div>
+
+        <div class="account-view active" id="accountViewCard">
+            <div class="user-grid" id="approvedUserGrid">
+                {% for u in users_list %}
+                {% set urole = u.role_value %}
+                <div class="user-card {% if u.id == session_user_id %}self{% endif %}" data-user-card data-role="{{ urole }}" data-search="{{ ((u.name or '') ~ ' ' ~ (u.username or '') ~ ' ' ~ (u.department or '') ~ ' ' ~ (u.email or '') ~ ' ' ~ (u.workplaces or ''))|lower }}">
+                    <div class="user-top">
+                        <div class="user-id">
+                            <div class="avatar" style="background:
+                                {% if urole == 'admin' %}linear-gradient(135deg,#ef4444 0%,#be123c 100%)
+                                {% elif urole == 'production' %}linear-gradient(135deg,#22c55e 0%,#15803d 100%)
+                                {% elif urole == 'rawmat' %}linear-gradient(135deg,#fb923c 0%,#c2410c 100%)
+                                {% else %}linear-gradient(135deg,#94a3b8 0%,#475569 100%){% endif %};">
+                                {{ (u.name or u.username)[0]|upper }}
+                            </div>
+                            <div>
+                                <div class="user-name">{{ u.name or u.username }}</div>
+                                <div class="user-sub">@{{ u.username }}</div>
+                                <div class="inline-badges">
+                                    {% if u.id == session_user_id %}<span class="mini-badge me">본인</span>{% endif %}
+                                    {% if u.department %}<span class="mini-badge">{{ u.department }}</span>{% endif %}
+                                    <span class="mini-badge">가입일 {{ u.created_at[:10] if u.created_at else '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="role-pill role-{{ urole }}">
+                            {% if urole == 'admin' %}👑 관리자
+                            {% elif urole == 'production' %}🏭 생산관리
+                            {% elif urole == 'rawmat' %}🌿 원초관리
+                            {% else %}👁️ 읽기전용{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="user-meta">
+                        <div class="meta-item">
+                            <div class="meta-label">이메일</div>
+                            <div class="meta-value">{{ u.email or '-' }}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">연락처</div>
+                            <div class="meta-value">{{ u.phone or '-' }}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="field-label">현재 작업장</div>
+                        <div class="assigned-chips">
+                            {% if u.workplace_list %}
+                                {% for wp in u.workplace_list %}
+                                <span class="assigned-chip">{{ wp }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="assigned-chip">미설정</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if u.id != session_user_id %}
+                    <form method="POST" action="/users/{{ u.id }}/update-access" class="access-form">
+                        <div>
+                            <div class="field-label">권한</div>
+                            <select name="role" class="role-select role-select-input">
+                                <option value="readonly" {% if urole == 'readonly' %}selected{% endif %}>👁️ 읽기전용</option>
+                                <option value="production" {% if urole == 'production' %}selected{% endif %}>🏭 생산관리</option>
+                                <option value="rawmat" {% if urole == 'rawmat' %}selected{% endif %}>🌿 원초관리</option>
+                                <option value="admin" {% if urole == 'admin' %}selected{% endif %}>👑 관리자</option>
+                            </select>
+                        </div>
+
+                        <div class="workplace-box">
+                            <div class="workplace-toolbar">
+                                <div>
+                                    <div class="field-label" style="margin:0;">작업장 부여</div>
+                                    <div class="workplace-helper">여러 작업장을 동시에 부여할 수 있습니다.</div>
+                                </div>
+                                <div class="quick-actions">
+                                    <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'all')">전체</button>
+                                    <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'clear')">해제</button>
+                                </div>
+                            </div>
+                            <div class="workplace-grid">
+                                {% for wp in workplaces %}
+                                <label class="wp-chip">
+                                    <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.workplace_list %}checked{% endif %}>
+                                    <span>{{ wp }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <div class="action-note">권한과 작업장을 같이 저장합니다.</div>
+                            <div class="action-buttons">
+                                <button type="submit" class="soft-btn primary">권한/작업장 저장</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <form method="POST" action="/users/{{ u.id }}/delete" onsubmit="return confirm('{{ u.username }} 계정을 삭제하시겠습니까?')">
+                        <div class="action-buttons">
+                            <button type="submit" class="soft-btn danger">계정 삭제</button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="empty-copy">본인 계정은 변경할 수 없습니다.</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="account-view" id="accountViewList">
+            <div class="user-list-wrap">
+                <table class="user-list-table">
+                    <thead>
+                        <tr>
+                            <th style="width:22%;">계정</th>
+                            <th style="width:14%;">현재 권한</th>
+                            <th style="width:14%;">현재 작업장</th>
+                            <th style="width:14%;">연락처</th>
+                            <th style="width:36%;">권한/작업장 수정</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approvedUserListBody">
+                        {% for u in users_list %}
+                        {% set urole = u.role_value %}
+                        <tr data-user-card data-role="{{ urole }}" data-search="{{ ((u.name or '') ~ ' ' ~ (u.username or '') ~ ' ' ~ (u.department or '') ~ ' ' ~ (u.email or '') ~ ' ' ~ (u.workplaces or ''))|lower }}">
+                            <td>
+                                <div class="list-user-main">
+                                    <strong>{{ u.name or u.username }}</strong>
+                                    <div class="list-user-sub">@{{ u.username }}</div>
+                                    <div class="list-inline-chips">
+                                        {% if u.department %}<span class="mini-badge">{{ u.department }}</span>{% endif %}
+                                        <span class="mini-badge">가입일 {{ u.created_at[:10] if u.created_at else '-' }}</span>
+                                        {% if u.id == session_user_id %}<span class="mini-badge me">본인</span>{% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="role-pill role-{{ urole }}">
+                                    {% if urole == 'admin' %}👑 관리자
+                                    {% elif urole == 'production' %}🏭 생산관리
+                                    {% elif urole == 'rawmat' %}🌿 원초관리
+                                    {% else %}👁️ 읽기전용{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="list-inline-chips">
+                                    {% if u.workplace_list %}
+                                        {% for wp in u.workplace_list %}
+                                        <span class="assigned-chip">{{ wp }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="assigned-chip">미설정</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="list-user-main">
+                                    <div>{{ u.phone or '-' }}</div>
+                                    <div class="list-user-sub">{{ u.email or '-' }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if u.id != session_user_id %}
+                                <form method="POST" action="/users/{{ u.id }}/update-access" class="list-access-form">
+                                    <div class="list-access-top">
+                                        <select name="role" class="role-select role-select-input">
+                                            <option value="readonly" {% if urole == 'readonly' %}selected{% endif %}>👁️ 읽기전용</option>
+                                            <option value="production" {% if urole == 'production' %}selected{% endif %}>🏭 생산관리</option>
+                                            <option value="rawmat" {% if urole == 'rawmat' %}selected{% endif %}>🌿 원초관리</option>
+                                            <option value="admin" {% if urole == 'admin' %}selected{% endif %}>👑 관리자</option>
+                                        </select>
+                                        <div class="quick-actions" style="justify-content:flex-end;">
+                                            <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'all')">전체</button>
+                                            <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'clear')">해제</button>
+                                        </div>
+                                    </div>
+                                    <div class="list-workplaces">
+                                        {% for wp in workplaces %}
+                                        <label class="wp-chip">
+                                            <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.workplace_list %}checked{% endif %}>
+                                            <span>{{ wp }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="list-actions">
+                                        <button type="submit" class="soft-btn primary">저장</button>
+                                        <button type="submit" formaction="/users/{{ u.id }}/delete" formmethod="POST" class="soft-btn danger" onclick="return confirm('{{ u.username }} 계정을 삭제하시겠습니까?')">삭제</button>
+                                    </div>
+                                </form>
+                                {% else %}
+                                <div class="list-self">본인 계정은 변경할 수 없습니다.</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if not users_list %}
+        <div class="empty-copy">등록된 사용자가 없습니다.</div>
         {% endif %}
     </div>
-    {% endfor %}
 </div>
 
 <script>
-// select 색상 초기화
-document.querySelectorAll('.role-select select, select.role-select').forEach(sel => {
-    sel.addEventListener('change', function(){
-        this.className = 'role-select role-' + this.value;
+function applyRoleSelectTheme(select){
+    if(!select) return;
+    select.classList.remove('role-admin', 'role-production', 'role-rawmat', 'role-readonly');
+    select.classList.add(`role-${select.value || 'readonly'}`);
+}
+
+function setWorkplaceSelection(form, mode){
+    if(!form) return;
+    const inputs = Array.from(form.querySelectorAll('input[name="workplaces"]'));
+    if(!inputs.length) return;
+    if(mode === 'all'){
+        inputs.forEach(input => input.checked = true);
+        return;
+    }
+    if(mode === 'clear'){
+        inputs.forEach(input => input.checked = false);
+        return;
+    }
+    if(mode === 'requested'){
+        const requested = Array.from(form.closest('.user-card')?.querySelectorAll('.req-chip') || []).map(chip => chip.textContent.trim());
+        inputs.forEach(input => input.checked = requested.includes(input.value));
+    }
+}
+
+function setUserView(view){
+    document.querySelectorAll('[data-view-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.viewTab === view));
+    document.querySelectorAll('.account-view').forEach(panel => panel.classList.toggle('active', panel.id === `accountView${view.charAt(0).toUpperCase()}${view.slice(1)}`));
+}
+
+function filterUserCards(){
+    const keyword = (document.getElementById('userSearchInput')?.value || '').trim().toLowerCase();
+    const role = document.getElementById('roleFilterSelect')?.value || 'all';
+    document.querySelectorAll('[data-user-card]').forEach(card => {
+        const matchesRole = role === 'all' || card.dataset.role === role;
+        const haystack = card.dataset.search || '';
+        const matchesKeyword = !keyword || haystack.includes(keyword);
+        card.style.display = (matchesRole && matchesKeyword) ? '' : 'none';
     });
-    // 초기값 색상 적용
-    if(this !== sel) sel.className = 'role-select role-' + sel.value;
+}
+
+document.querySelectorAll('.role-select-input').forEach(select => {
+    applyRoleSelectTheme(select);
+    select.addEventListener('change', () => applyRoleSelectTheme(select));
 });
-document.querySelectorAll('select[name="role"]').forEach(sel => {
-    sel.className = 'role-select role-' + sel.value;
-});
+
+document.getElementById('userSearchInput')?.addEventListener('input', filterUserCards);
+document.getElementById('roleFilterSelect')?.addEventListener('change', filterUserCards);
 </script>
 {% endblock %}

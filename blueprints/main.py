@@ -373,9 +373,50 @@ def mark_notification_read(notification_id):
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 
+@bp.route('/notifications/<int:notification_id>/delete', methods=['POST'])
+@login_required
+def delete_notification(notification_id):
+    username = (session.get('user') or {}).get('username')
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        DELETE FROM user_notifications
+        WHERE id = ? AND username = ?
+        ''',
+        (notification_id, username),
+    )
+    conn.commit()
+    conn.close()
+    return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+
 @bp.route('/notifications/dynamic-read', methods=['POST'])
 @login_required
 def mark_dynamic_notification_read():
+    username = (session.get('user') or {}).get('username')
+    notification_key = (request.form.get('notification_key') or '').strip()
+    signature = (request.form.get('signature') or '').strip()
+    if username and notification_key and signature:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(username, notification_key)
+            DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
+            ''',
+            (username, notification_key, signature),
+        )
+        conn.commit()
+        conn.close()
+    return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+
+@bp.route('/notifications/dynamic-dismiss', methods=['POST'])
+@login_required
+def dismiss_dynamic_notification():
     username = (session.get('user') or {}).get('username')
     notification_key = (request.form.get('notification_key') or '').strip()
     signature = (request.form.get('signature') or '').strip()
