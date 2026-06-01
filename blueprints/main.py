@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 import json
 from datetime import datetime, date, timedelta
 
@@ -38,6 +38,29 @@ def _low_stock_material_group_rank(name_value):
     return len(LOW_STOCK_MATERIAL_GROUP_ORDER)
 
 
+def _parse_dashboard_todo_due_date(raw_value):
+    value = (raw_value or '').strip()
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+def _todo_sort_key(row):
+    due_date = str(row['due_date'] or '').strip()
+    has_due = 0 if due_date else 1
+    return (has_due, due_date or '9999-12-31', -(int(row['id'] or 0)))
+
+
+def _normalize_todo_importance(raw_value):
+    value = (raw_value or '').strip().lower()
+    if value in ('high', 'medium', 'low'):
+        return value
+    return ''
+
+
 @bp.route('/dashboard/prefill-shortage-issues', methods=['POST'])
 @login_required
 def prefill_shortage_issues():
@@ -68,6 +91,155 @@ def prefill_shortage_issues():
 
     session['dashboard_issue_prefill'] = items
     return redirect(url_for('materials.materials', req_tab='issue', issue_status='pending'))
+
+
+@bp.route('/dashboard/todos', methods=['POST'])
+@login_required
+def create_dashboard_todo():
+    workplace = get_workplace()
+    username = (session.get('user') or {}).get('username')
+    title = (request.form.get('title') or '').strip()
+    detail = (request.form.get('detail') or '').strip()
+    importance = _normalize_todo_importance(request.form.get('importance'))
+    due_date_raw = (request.form.get('due_date') or '').strip()
+    due_date = _parse_dashboard_todo_due_date(due_date_raw)
+
+    if not title:
+        flash('업무 제목을 입력해주세요.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if due_date_raw and due_date is None:
+        flash('데드라인 날짜 형식이 올바르지 않습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        INSERT INTO dashboard_todos (workplace, title, detail, importance, due_date, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+        (workplace, title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, username),
+    )
+    conn.commit()
+    conn.close()
+    flash('업무 To-Do를 등록했습니다.', 'success')
+    return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+
+@bp.route('/dashboard/todos/<int:todo_id>/toggle', methods=['POST'])
+@login_required
+def toggle_dashboard_todo(todo_id):
+    workplace = get_workplace()
+    username = (session.get('user') or {}).get('username')
+    is_done = 1 if (request.form.get('is_done') or '').strip() in ('1', 'true', 'on', 'yes') else 0
+
+    conn = get_db()
+    cursor = conn.cursor()
+    todo_row = cursor.execute(
+        '''
+        SELECT id, workplace, is_done
+        FROM dashboard_todos
+        WHERE id = ? AND workplace = ?
+        ''',
+        (todo_id, workplace),
+    ).fetchone()
+    if not todo_row:
+        conn.close()
+        flash('업무 항목을 찾을 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+    cursor.execute(
+        '''
+        UPDATE dashboard_todos
+        SET is_done = ?,
+            done_by = CASE WHEN ? = 1 THEN ? ELSE NULL END,
+            done_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END
+        WHERE id = ? AND workplace = ?
+        ''',
+        (is_done, is_done, username, is_done, todo_id, workplace),
+    )
+    conn.commit()
+    conn.close()
+    flash('업무 완료 상태를 반영했습니다.' if is_done else '업무를 미완료로 되돌렸습니다.', 'success')
+    return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+@bp.route('/dashboard/todos/<int:todo_id>/edit', methods=['POST'])
+@login_required
+def update_dashboard_todo(todo_id):
+    workplace = get_workplace()
+    title = (request.form.get('title') or '').strip()
+    detail = (request.form.get('detail') or '').strip()
+    importance = _normalize_todo_importance(request.form.get('importance'))
+    due_date_raw = (request.form.get('due_date') or '').strip()
+    due_date = _parse_dashboard_todo_due_date(due_date_raw)
+
+    if not title:
+        flash('업무 제목을 입력해주세요.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if due_date_raw and due_date is None:
+        flash('데드라인 날짜 형식이 올바르지 않습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    existing = cursor.execute(
+        '''
+        SELECT id
+        FROM dashboard_todos
+        WHERE id = ? AND workplace = ?
+        ''',
+        (todo_id, workplace),
+    ).fetchone()
+    if not existing:
+        conn.close()
+        flash('수정할 업무 항목을 찾을 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+    cursor.execute(
+        '''
+        UPDATE dashboard_todos
+        SET title = ?,
+            detail = ?,
+            importance = ?,
+            due_date = ?
+        WHERE id = ? AND workplace = ?
+        ''',
+        (title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, todo_id, workplace),
+    )
+    conn.commit()
+    conn.close()
+    flash('업무 To-Do를 수정했습니다.', 'success')
+    return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+
+@bp.route('/dashboard/todos/<int:todo_id>/delete', methods=['POST'])
+@login_required
+def delete_dashboard_todo(todo_id):
+    workplace = get_workplace()
+    conn = get_db()
+    cursor = conn.cursor()
+    existing = cursor.execute(
+        '''
+        SELECT id
+        FROM dashboard_todos
+        WHERE id = ? AND workplace = ?
+        ''',
+        (todo_id, workplace),
+    ).fetchone()
+    if not existing:
+        conn.close()
+        flash('삭제할 업무 항목을 찾을 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    cursor.execute(
+        '''
+        DELETE FROM dashboard_todos
+        WHERE id = ? AND workplace = ?
+        ''',
+        (todo_id, workplace),
+    )
+    conn.commit()
+    conn.close()
+    flash('업무 To-Do를 삭제했습니다.', 'success')
+    return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 @bp.route('/')
 @login_required
@@ -313,6 +485,49 @@ def index():
     ''', (workplace,))
     pending_issues = cursor.fetchall()
 
+    cursor.execute(
+        '''
+        SELECT
+            id,
+            workplace,
+            title,
+            detail,
+            due_date,
+            is_done,
+            created_by,
+            created_at,
+            done_by,
+            done_at
+        FROM dashboard_todos
+        WHERE workplace = ?
+        ''',
+        (workplace,),
+    )
+    todo_rows = cursor.fetchall()
+    dashboard_todos = []
+    completed_dashboard_todos = []
+    due_soon_dashboard_todos = []
+    overdue_dashboard_todos = []
+    for row in todo_rows:
+        item = dict(row)
+        due_date = _parse_dashboard_todo_due_date(item.get('due_date'))
+        item['due_date_obj'] = due_date
+        item['is_due_soon'] = bool(due_date and today <= due_date <= (today + timedelta(days=3)))
+        item['is_overdue'] = bool(due_date and due_date < today and not int(item.get('is_done') or 0))
+        if int(item.get('is_done') or 0):
+            completed_dashboard_todos.append(item)
+        else:
+            dashboard_todos.append(item)
+            if item['is_due_soon']:
+                due_soon_dashboard_todos.append(item)
+            if item['is_overdue']:
+                overdue_dashboard_todos.append(item)
+
+    dashboard_todos.sort(key=_todo_sort_key)
+    completed_dashboard_todos.sort(key=lambda item: (str(item.get('done_at') or ''), str(item.get('created_at') or '')), reverse=True)
+    due_soon_dashboard_todos.sort(key=_todo_sort_key)
+    overdue_dashboard_todos.sort(key=_todo_sort_key)
+
     conn.close()
 
     return render_template('dashboard.html',
@@ -321,11 +536,15 @@ def index():
                          low_stock_materials=low_stock_materials,
                          low_stock_material_ids_json=json.dumps([int(item['id']) for item in low_stock_materials], ensure_ascii=False),
                          low_stock_material_ids_csv=','.join(str(int(item['id'])) for item in low_stock_materials),
-                         raw_shortages=raw_shortages,
-                         schedules=schedules,
-                         production_stats=production_stats,
-                         pending_issues=pending_issues,
-                         today=today)
+                          raw_shortages=raw_shortages,
+                          schedules=schedules,
+                          production_stats=production_stats,
+                          pending_issues=pending_issues,
+                          dashboard_todos=dashboard_todos,
+                          completed_dashboard_todos=completed_dashboard_todos,
+                          due_soon_dashboard_todos=due_soon_dashboard_todos,
+                          overdue_dashboard_todos=overdue_dashboard_todos,
+                          today=today)
 
 
 @bp.route('/select-workplace')

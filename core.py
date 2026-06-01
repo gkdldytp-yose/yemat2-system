@@ -27,6 +27,7 @@ _logistics_schema_checked = False
 _log_retention_checked = False
 _import_schema_checked = False
 _backup_schema_checked = False
+_dashboard_todo_schema_checked = False
 
 # 데이터베이스 연결
 
@@ -100,6 +101,7 @@ def get_db():
     _ensure_logistics_schema(conn)
     _ensure_import_schema(conn)
     _ensure_backup_schema(conn)
+    _ensure_dashboard_todo_schema(conn)
     _cleanup_old_logs(conn)
     return conn
 
@@ -269,6 +271,57 @@ def _ensure_backup_schema(conn):
     except Exception:
         pass
     _backup_schema_checked = True
+
+
+def _ensure_dashboard_todo_schema(conn):
+    """Dashboard to-do table and indexes."""
+    global _dashboard_todo_schema_checked
+    if _dashboard_todo_schema_checked:
+        return
+    try:
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS dashboard_todos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workplace TEXT NOT NULL,
+                title TEXT NOT NULL,
+                detail TEXT,
+                importance TEXT,
+                due_date TEXT,
+                is_done INTEGER NOT NULL DEFAULT 0,
+                created_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                done_by TEXT,
+                done_at TIMESTAMP
+            )
+            '''
+        )
+        todo_cols = [row['name'] for row in conn.execute("PRAGMA table_info(dashboard_todos)").fetchall()]
+        if 'detail' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN detail TEXT")
+        if 'importance' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN importance TEXT")
+        if 'due_date' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN due_date TEXT")
+        if 'is_done' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN is_done INTEGER NOT NULL DEFAULT 0")
+        if 'created_by' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN created_by TEXT")
+        if 'created_at' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if 'done_by' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN done_by TEXT")
+        if 'done_at' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN done_at TIMESTAMP")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_workplace_status_due ON dashboard_todos(workplace, is_done, due_date, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_workplace_done_at ON dashboard_todos(workplace, done_at DESC, created_at DESC)"
+        )
+    except Exception:
+        pass
+    _dashboard_todo_schema_checked = True
 
 
 def _ensure_logistics_schema(conn):

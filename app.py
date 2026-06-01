@@ -1,12 +1,13 @@
 import hashlib
 import logging
 import os
+from datetime import date, timedelta
 from time import perf_counter
 
 from flask import Flask, g, request, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from core import LOGISTICS_WORKPLACE, SHARED_WORKPLACE, get_db, get_workplace
+from core import LOGISTICS_WORKPLACE, SHARED_WORKPLACE, get_db, get_workplace, today_local
 
 DEFAULT_SECRET_KEY = 'yemat-secret-key-2025'
 DEFAULT_HOST = '0.0.0.0'
@@ -292,6 +293,94 @@ def create_app():
                 shortages.append(item)
         return shortages
 
+    def _parse_todo_due_date(raw_value):
+        value = str(raw_value or '').strip()
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    def _todo_sort_key(item):
+        due_date = str(item.get('due_date') or '').strip()
+        has_due = 0 if due_date else 1
+        return (has_due, due_date or '9999-12-31', -(int(item.get('id') or 0)))
+
+    def _normalize_todo_importance(raw_value):
+        value = str(raw_value or '').strip().lower()
+        if value in {'high', 'medium', 'low'}:
+            return value
+        return ''
+
+    def _load_nav_todos(cursor, workplace):
+        today = today_local()
+        completed_date_from = (request.args.get('todo_completed_from') or today.isoformat()).strip() or today.isoformat()
+        completed_date_to = (request.args.get('todo_completed_to') or today.isoformat()).strip() or today.isoformat()
+        completed_keyword = (request.args.get('todo_completed_keyword') or '').strip()
+        completed_importance = _normalize_todo_importance(request.args.get('todo_completed_importance'))
+        completed_done_by = (request.args.get('todo_completed_done_by') or '').strip()
+        cursor.execute(
+            """
+            SELECT id, workplace, title, detail, importance, due_date, is_done, created_by, created_at, done_by, done_at
+            FROM dashboard_todos
+            WHERE workplace = ?
+            ORDER BY COALESCE(is_done, 0) ASC, COALESCE(due_date, '') ASC, id DESC
+            """,
+            (workplace,),
+        )
+        active_todos = []
+        completed_todos = []
+        due_soon_todos = []
+        overdue_todos = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            item['importance'] = _normalize_todo_importance(item.get('importance'))
+            due_date = _parse_todo_due_date(item.get('due_date'))
+            item['is_due_soon'] = bool(due_date and today <= due_date <= (today + timedelta(days=3)))
+            item['is_overdue'] = bool(due_date and due_date < today and not int(item.get('is_done') or 0))
+            if int(item.get('is_done') or 0):
+                done_date = str(item.get('done_at') or '')[:10]
+                matches = True
+                if completed_date_from and done_date and done_date < completed_date_from:
+                    matches = False
+                if completed_date_to and done_date and done_date > completed_date_to:
+                    matches = False
+                if completed_keyword:
+                    haystack = f"{item.get('title') or ''} {item.get('detail') or ''}".lower()
+                    if completed_keyword.lower() not in haystack:
+                        matches = False
+                if completed_importance and item['importance'] != completed_importance:
+                    matches = False
+                if completed_done_by and completed_done_by.lower() not in str(item.get('done_by') or '').lower():
+                    matches = False
+                if matches:
+                    completed_todos.append(item)
+            else:
+                active_todos.append(item)
+                if item['is_due_soon']:
+                    due_soon_todos.append(item)
+                if item['is_overdue']:
+                    overdue_todos.append(item)
+        active_todos.sort(key=_todo_sort_key)
+        completed_todos.sort(key=lambda item: (str(item.get('done_at') or ''), str(item.get('created_at') or '')), reverse=True)
+        due_soon_todos.sort(key=_todo_sort_key)
+        overdue_todos.sort(key=_todo_sort_key)
+        return {
+            'nav_dashboard_todos': active_todos,
+            'nav_completed_dashboard_todos': completed_todos,
+            'nav_due_soon_dashboard_todos': due_soon_todos,
+            'nav_overdue_dashboard_todos': overdue_todos,
+            'nav_today': today,
+            'nav_todo_filters': {
+                'completed_from': completed_date_from,
+                'completed_to': completed_date_to,
+                'completed_keyword': completed_keyword,
+                'completed_importance': completed_importance,
+                'completed_done_by': completed_done_by,
+            },
+        }
+
     def _build_dynamic_notifications(cursor, user):
         notifications = []
         is_admin = bool(user.get('is_admin'))
@@ -340,6 +429,41 @@ def create_app():
                     cta_label='확인',
                 )
 
+        workplace = get_workplace()
+        if workplace:
+            today = today_local()
+            deadline_limit = today + timedelta(days=3)
+            cursor.execute(
+                """
+                SELECT id, title, detail, due_date
+                FROM dashboard_todos
+                WHERE workplace = ?
+                  AND COALESCE(is_done, 0) = 0
+                  AND due_date IS NOT NULL
+                  AND TRIM(due_date) <> ''
+                  AND due_date BETWEEN ? AND ?
+                ORDER BY due_date ASC, id DESC
+                LIMIT 3
+                """,
+                (workplace, today.isoformat(), deadline_limit.isoformat()),
+            )
+            for todo_row in cursor.fetchall():
+                due_date = str(todo_row['due_date'] or '').strip()
+                title = str(todo_row['title'] or '업무').strip() or '업무'
+                detail = str(todo_row['detail'] or '').strip()
+                body = f'{workplace} · 마감 {due_date}'
+                if detail:
+                    body = f'{body} · {detail[:60]}'
+                push_dynamic_notification(
+                    f'dashboard_todo_due_{int(todo_row["id"])}',
+                    f'To-Do 마감 임박: {title}',
+                    body,
+                    '/#todo-messenger',
+                    level='warning',
+                    icon='⏰',
+                    cta_label='확인',
+                )
+
         if is_admin:
             cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE status = 'pending'")
             pending_users = int((cursor.fetchone() or {'cnt': 0})['cnt'] or 0)
@@ -361,12 +485,43 @@ def create_app():
         user = session.get('user') or {}
         username = (user.get('username') or '').strip()
         if not username:
-            return {'nav_notifications': [], 'nav_unread_notifications': 0, 'nav_stored_unread_notifications': 0}
+            return {
+                'nav_notifications': [],
+                'nav_unread_notifications': 0,
+                'nav_stored_unread_notifications': 0,
+                'nav_dashboard_todos': [],
+                'nav_completed_dashboard_todos': [],
+                'nav_due_soon_dashboard_todos': [],
+                'nav_overdue_dashboard_todos': [],
+                'nav_today': today_local(),
+                'nav_todo_filters': {
+                    'completed_from': today_local().isoformat(),
+                    'completed_to': today_local().isoformat(),
+                    'completed_keyword': '',
+                    'completed_importance': '',
+                    'completed_done_by': '',
+                },
+            }
 
         conn = get_db()
         cursor = conn.cursor()
+        workplace = get_workplace()
         try:
             dynamic_notifications = _build_dynamic_notifications(cursor, user)
+            todo_context = _load_nav_todos(cursor, workplace) if workplace else {
+                'nav_dashboard_todos': [],
+                'nav_completed_dashboard_todos': [],
+                'nav_due_soon_dashboard_todos': [],
+                'nav_overdue_dashboard_todos': [],
+                'nav_today': today_local(),
+                'nav_todo_filters': {
+                    'completed_from': today_local().isoformat(),
+                    'completed_to': today_local().isoformat(),
+                    'completed_keyword': '',
+                    'completed_importance': '',
+                    'completed_done_by': '',
+                },
+            }
             dynamic_read_map = {}
             if dynamic_notifications:
                 cursor.execute(
@@ -485,6 +640,7 @@ def create_app():
             'nav_notifications': notifications,
             'nav_unread_notifications': unread_count + dynamic_unread_count,
             'nav_stored_unread_notifications': unread_count,
+            **todo_context,
         }
 
     return app
