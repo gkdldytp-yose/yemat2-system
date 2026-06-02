@@ -718,6 +718,16 @@ def profile():
         cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
         updated_user = cursor.fetchone()
 
+        workplaces = []
+        workplace1_value = (updated_user['workplace1'] or '').strip() if updated_user['workplace1'] else ''
+        workplace2_value = (updated_user['workplace2'] or '').strip() if updated_user['workplace2'] else ''
+        if workplace1_value:
+            workplaces.append(workplace1_value)
+        if workplace2_value and workplace2_value not in workplaces:
+            workplaces.append(workplace2_value)
+        if not workplaces:
+            workplaces = ['1동 조미']
+
         session['user'] = {
             'id': updated_user['id'],
             'username': updated_user['username'],
@@ -727,9 +737,14 @@ def profile():
             'department': updated_user['department'],
             'workplace1': updated_user['workplace1'],
             'workplace2': updated_user['workplace2'],
+            'workplaces': workplaces,
             'role': updated_user['role'] or ('admin' if updated_user['is_admin'] else 'readonly'),
             'is_admin': updated_user['is_admin']
         }
+
+        current_workplace = session.get('workplace')
+        if current_workplace not in workplaces:
+            session['workplace'] = workplaces[0]
 
         conn.commit()
         conn.close()

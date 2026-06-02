@@ -7,6 +7,22 @@ from uuid import uuid4
 from core import get_db, login_required, role_required, get_workplace, SHARED_WORKPLACE
 
 bp = Blueprint('products', __name__)
+
+
+def _clean_next_url(raw_value, fallback=''):
+    value = str(raw_value or '').strip()
+    return value or fallback
+
+
+def _current_products_list_url():
+    return _clean_next_url(request.full_path, url_for('products.products')).rstrip('?')
+
+
+def _product_bom_url(product_id, return_to=''):
+    target = _clean_next_url(return_to)
+    if target:
+        return url_for('products.product_bom', product_id=product_id, return_to=target)
+    return url_for('products.product_bom', product_id=product_id)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SPEC_SHEET_DIR = PROJECT_ROOT / 'uploads' / 'product_specs'
 SPEC_SHEET_DIR.mkdir(parents=True, exist_ok=True)
@@ -141,7 +157,8 @@ def products():
                            search_keyword=search_keyword,
                            category_counts=category_counts,
                            total_count=total_count,
-                           available_categories=[cat for cat, cnt in base_category_counts.items() if cnt > 0])
+                           available_categories=[cat for cat, cnt in base_category_counts.items() if cnt > 0],
+                           current_list_url=_current_products_list_url())
 
 
 @bp.route('/products/<int:product_id>/spec-sheet', methods=['POST'])
@@ -419,13 +436,15 @@ def product_bom(product_id):
     raw_materials = cursor.fetchall()
 
     conn.close()
+    return_to = _clean_next_url(request.args.get('return_to'), url_for('products.products'))
 
     return render_template('product_bom.html',
-                         user=session['user'],
-                         product=product,
-                         bom_items=grouped_bom_items,
-                         materials=materials,
-                         raw_materials=raw_materials)
+                          user=session['user'],
+                          product=product,
+                          bom_items=grouped_bom_items,
+                          materials=materials,
+                          raw_materials=raw_materials,
+                          return_to=return_to)
 
 
 @bp.route('/products/<int:product_id>/update-info', methods=['POST'])
@@ -470,7 +489,7 @@ def update_product_info(product_id):
     conn.commit()
     conn.close()
 
-    return redirect(url_for('products.product_bom', product_id=product_id))
+    return redirect(_product_bom_url(product_id, request.form.get('return_to')))
 
 
 @bp.route('/products/<int:product_id>/bom/add-individual', methods=['POST'])
@@ -543,7 +562,7 @@ def add_bom_individual(product_id):
         return f"DB 오류: {e}", 500
     finally:
         conn.close()
-    return redirect(url_for('products.product_bom', product_id=product_id))
+    return redirect(_product_bom_url(product_id, request.form.get('return_to')))
 
 
 @bp.route('/products/<int:product_id>/bom/add-multi', methods=['POST'])
@@ -576,7 +595,7 @@ def add_bom_multi(product_id):
     conn.commit()
     conn.close()
 
-    return redirect(url_for('products.product_bom', product_id=product_id))
+    return redirect(_product_bom_url(product_id, request.form.get('return_to')))
 
 
 @bp.route('/products/<int:product_id>/bom/add', methods=['POST'])
@@ -612,7 +631,7 @@ def add_bom_item(product_id):
     conn.commit()
     conn.close()
 
-    return redirect(url_for('products.product_bom', product_id=product_id))
+    return redirect(_product_bom_url(product_id, request.form.get('return_to')))
 
 
 @bp.route('/bom/<int:bom_id>/delete', methods=['POST'])
@@ -632,7 +651,7 @@ def delete_bom_item(bom_id):
     conn.close()
 
     if product_id:
-        return redirect(url_for('products.product_bom', product_id=product_id))
+        return redirect(_product_bom_url(product_id, request.form.get('return_to')))
     return redirect(url_for('products.products'))
 
 
@@ -668,7 +687,7 @@ def update_bom_item(bom_id):
             )
             conn.commit()
             conn.close()
-            return redirect(url_for('products.product_bom', product_id=product_id))
+            return redirect(_product_bom_url(product_id, request.form.get('return_to')))
 
         # 원초 BOM 코드(대표 lot) 변경
         if bom['raw_material_id']:
@@ -728,10 +747,10 @@ def update_bom_item(bom_id):
 
             conn.commit()
             conn.close()
-            return redirect(url_for('products.product_bom', product_id=product_id))
+            return redirect(_product_bom_url(product_id, request.form.get('return_to')))
 
         conn.close()
-        return redirect(url_for('products.product_bom', product_id=product_id))
+        return redirect(_product_bom_url(product_id, request.form.get('return_to')))
     except ValueError as e:
         conn.rollback()
         conn.close()

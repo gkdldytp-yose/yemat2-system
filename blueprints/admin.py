@@ -2176,6 +2176,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
             b.raw_material_id,
             b.material_id,
             COALESCE(b.quantity_per_box, 0) as quantity_per_box,
+            COALESCE(p.sok_per_box, b.quantity_per_box, 0) as raw_quantity_per_box,
             rm.name as raw_name,
             COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code,
             m.name as material_name,
@@ -2183,6 +2184,7 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
             COALESCE(m.category, '') as material_category,
             COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') as material_unit
         FROM bom b
+        JOIN products p ON p.id = b.product_id
         LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
         LEFT JOIN materials m ON m.id = b.material_id
         WHERE b.product_id IN ({placeholders})
@@ -2299,7 +2301,12 @@ def _build_integrated_requirement_payload(cursor, product_inputs):
         if product_id <= 0 or product_id not in product_box_map:
             continue
 
-        qty_per_box = float(row.get('quantity_per_box') or 0)
+        qty_per_box = float(
+            row.get('raw_quantity_per_box')
+            if row.get('raw_material_id')
+            else row.get('quantity_per_box')
+            or 0
+        )
         if qty_per_box <= 0:
             continue
 

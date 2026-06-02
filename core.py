@@ -1013,7 +1013,26 @@ def login_required(f):
         if 'user' not in session:
             return redirect(url_for('auth.login'))
         user = session.get('user') or {}
+        if not isinstance(user, dict):
+            session.pop('user', None)
+            session.pop('workplace', None)
+            flash('로그인 정보가 만료되어 다시 로그인해 주세요.', 'warning')
+            return redirect(url_for('auth.login'))
         user_workplaces = user.get('workplaces') or []
+        if not user_workplaces:
+            legacy_workplaces = []
+            workplace1 = (user.get('workplace1') or '').strip() if isinstance(user, dict) else ''
+            workplace2 = (user.get('workplace2') or '').strip() if isinstance(user, dict) else ''
+            if workplace1:
+                legacy_workplaces.append(workplace1)
+            if workplace2 and workplace2 not in legacy_workplaces:
+                legacy_workplaces.append(workplace2)
+            if legacy_workplaces:
+                user_workplaces = legacy_workplaces
+                if isinstance(user, dict):
+                    user = dict(user)
+                    user['workplaces'] = legacy_workplaces
+                    session['user'] = user
         role = (user.get('role') or '').strip()
         if (
             len(user_workplaces) > 1
