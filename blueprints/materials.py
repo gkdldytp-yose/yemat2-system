@@ -3069,10 +3069,18 @@ def raw_materials():
     cursor.execute(raw_query, raw_params)
     raw_materials = [dict(row) for row in cursor.fetchall()]
 
-    raw_ids = [int(row.get('id') or 0) for row in raw_materials if int(row.get('id') or 0) > 0]
-    raw_done_meta = {}
-    if raw_ids:
-        raw_placeholders = ','.join(['?'] * len(raw_ids))
+    def attach_done_meta(rows):
+        row_ids = [int(row.get('id') or 0) for row in rows if int(row.get('id') or 0) > 0]
+        if not row_ids:
+            for row in rows:
+                row['done_kind'] = 'production'
+                row['done_date'] = ''
+                row['done_note'] = ''
+                row['_done_kind_match'] = (selected_done_kind == 'all')
+            return rows
+
+        row_placeholders = ','.join(['?'] * len(row_ids))
+        raw_done_meta = {}
         cursor.execute(
             f'''
             WITH production_done AS (
@@ -3085,7 +3093,7 @@ def raw_materials():
                   ON p.id = pmu.production_id
                  AND COALESCE(p.status, '') = '완료'
                 LEFT JOIN products pr ON pr.id = p.product_id
-                WHERE pmu.raw_material_id IN ({raw_placeholders})
+                WHERE pmu.raw_material_id IN ({row_placeholders})
                   AND COALESCE(pmu.actual_quantity, 0) > 0
                 GROUP BY pmu.raw_material_id
             ),
@@ -3096,7 +3104,7 @@ def raw_materials():
                     ABS(SUM(COALESCE(rml.quantity, 0))) as moved_quantity,
                     MIN(COALESCE(NULLIF(TRIM(rml.note), ''), '')) as export_note
                 FROM raw_material_logs rml
-                WHERE rml.raw_material_id IN ({raw_placeholders})
+                WHERE rml.raw_material_id IN ({row_placeholders})
                   AND COALESCE(rml.type, '') = 'export'
                   AND COALESCE(rml.quantity, 0) < 0
                 GROUP BY rml.raw_material_id, substr(COALESCE(rml.created_at, ''), 1, 10), COALESCE(NULLIF(TRIM(rml.note), ''), '')
@@ -3127,12 +3135,12 @@ def raw_materials():
             FROM raw_materials rm
             LEFT JOIN production_done pd ON pd.raw_material_id = rm.id
             LEFT JOIN export_done_latest ed ON ed.raw_material_id = rm.id
-            WHERE rm.id IN ({raw_placeholders})
+            WHERE rm.id IN ({row_placeholders})
             ''',
-            [*raw_ids, *raw_ids, *raw_ids],
+            [*row_ids, *row_ids, *row_ids],
         )
-        for row in cursor.fetchall():
-            item = dict(row)
+        for meta_row in cursor.fetchall():
+            item = dict(meta_row)
             raw_id = int(item.get('raw_material_id') or 0)
             if raw_id <= 0:
                 continue
@@ -3152,18 +3160,35 @@ def raw_materials():
                 'done_note': done_note,
             }
 
-    for row in raw_materials:
-        meta = raw_done_meta.get(int(row.get('id') or 0), {})
-        row['done_kind'] = meta.get('done_kind', 'production')
-        row['done_date'] = meta.get('done_date', '')
-        row['done_note'] = meta.get('done_note', '')
+        for row in rows:
+            meta = raw_done_meta.get(int(row.get('id') or 0), {})
+            row['done_kind'] = meta.get('done_kind', 'production')
+            row['done_date'] = meta.get('done_date', '')
+            row['done_note'] = meta.get('done_note', '')
+            row['_done_kind_match'] = True if selected_done_kind == 'all' else row.get('done_kind') == selected_done_kind
+        return rows
 
-    if selected_done_kind != 'all':
-        for row in raw_materials:
-            row['_done_kind_match'] = (row.get('done_kind') == selected_done_kind)
-    else:
-        for row in raw_materials:
-            row['_done_kind_match'] = True
+    raw_materials = attach_done_meta(raw_materials)
+
+    done_query = '''
+        SELECT * FROM raw_materials
+        WHERE 1=1
+    '''
+    done_params = []
+    if not is_logistics:
+        done_query += ' AND workplace = ?'
+        done_params.append(workplace)
+    done_query += '''
+        AND COALESCE(current_stock, 0) <= 0
+        ORDER BY
+            name COLLATE NOCASE ASC,
+            CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
+            receiving_date ASC,
+            id ASC
+    '''
+    cursor.execute(done_query, done_params)
+    done_rows_raw = [dict(row) for row in cursor.fetchall()]
+    done_rows_raw = attach_done_meta(done_rows_raw)
 
     if is_logistics:
         cursor.execute(
@@ -3263,18 +3288,95 @@ def raw_materials():
         )
     raw_code_profiles = [dict(r) for r in cursor.fetchall()]
 
+    def _safe_float(value):
+        try:
+            if value is None:
+                return 0.0
+            if isinstance(value, str):
+                value = value.replace(',', '').strip()
+                if not value:
+                    return 0.0
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
     done_dates = sorted(
         {
             str(row.get('done_date') or '').strip()
             for row in raw_materials
             if (
-                float(row.get('current_stock') or 0) <= 0
+                _safe_float(row.get('current_stock')) <= 0
                 and str(row.get('done_date') or '').strip()
                 and bool(row.get('_done_kind_match'))
             )
         },
         reverse=True,
     )
+
+    def build_raw_groups(rows):
+        groups = {}
+        order = []
+        for row in rows:
+            total_stock_value = _safe_float(row.get('total_stock'))
+            current_stock_value = _safe_float(row.get('current_stock'))
+            used_quantity_value = _safe_float(row.get('used_quantity'))
+            stock_percent = int((current_stock_value / total_stock_value) * 100) if total_stock_value > 0 else 0
+            if stock_percent > 50:
+                stock_color = 'good'
+            elif stock_percent > 20:
+                stock_color = 'warn'
+            else:
+                stock_color = 'danger'
+
+            row_view = dict(row)
+            row_view['total_stock_value'] = total_stock_value
+            row_view['current_stock_value'] = current_stock_value
+            row_view['used_quantity_value'] = used_quantity_value
+            row_view['stock_percent'] = stock_percent
+            row_view['stock_color'] = stock_color
+            row_view['current_stock_text_color'] = '#e74c3c' if current_stock_value < 10 else '#27ae60'
+
+            code = str(row.get('code') or '').strip()
+            key = code or f"NO_CODE_{int(row.get('id') or 0)}"
+            if key not in groups:
+                order.append(key)
+                groups[key] = {
+                    'group_key': key,
+                    'code': code or '미지정',
+                    'name': str(row.get('name') or '').strip() or '원초',
+                    'items': [],
+                    'total_stock_sum': 0.0,
+                    'current_stock_sum': 0.0,
+                    'used_quantity_sum': 0.0,
+                }
+            groups[key]['items'].append(row_view)
+            groups[key]['total_stock_sum'] += total_stock_value
+            groups[key]['current_stock_sum'] += current_stock_value
+            groups[key]['used_quantity_sum'] += used_quantity_value
+
+        grouped_rows = []
+        for idx, key in enumerate(order):
+            group = groups[key]
+            group['color_index'] = idx % 6
+            group['item_count'] = len(group['items'])
+            grouped_rows.append(group)
+        return grouped_rows
+
+    active_raw_groups = build_raw_groups([row for row in raw_materials if _safe_float(row.get('current_stock')) > 0])
+    if selected_done_date:
+        done_source_rows = [
+            row for row in done_rows_raw
+            if _safe_float(row.get('current_stock')) <= 0
+            and bool(row.get('_done_kind_match'))
+            and str(row.get('done_date') or '').strip() == selected_done_date
+        ]
+    else:
+        done_source_rows = [
+            row for row in done_rows_raw
+            if _safe_float(row.get('current_stock')) <= 0
+            and bool(row.get('_done_kind_match'))
+        ]
+    done_raw_groups = build_raw_groups(done_source_rows)
 
     conn.close()
 
@@ -3295,6 +3397,9 @@ def raw_materials():
         logistics_workplace_tabs=logistics_workplace_tabs,
         workplaces=WORKPLACES,
         current_workplace=workplace,
+        active_raw_groups=active_raw_groups,
+        done_raw_groups=done_raw_groups,
+        done_raw_rows=done_source_rows,
     )
 
 
@@ -3930,6 +4035,81 @@ def add_raw_material():
 
     conn.commit()
     conn.close()
+
+    return redirect(url_for('materials.raw_materials'))
+
+
+@bp.route('/raw-materials/update-basic', methods=['POST'])
+@role_required('rawmat')
+def update_raw_material_basic():
+    raw_id = int(request.form.get('id') or 0)
+    workplace = get_workplace()
+    code = (request.form.get('code') or '').strip()
+    name = (request.form.get('name') or '').strip()
+    receiving_date = (request.form.get('receiving_date') or '').strip() or None
+    ja_ho = (request.form.get('ja_ho') or request.form.get('car_number') or '').strip()
+
+    try:
+        sheets_per_sok = float(request.form.get('sheets_per_sok') or 0)
+    except (TypeError, ValueError):
+        sheets_per_sok = 0
+
+    if raw_id <= 0:
+        return redirect(url_for('materials.raw_materials'))
+    if not name:
+        return redirect(url_for('materials.raw_materials'))
+    if sheets_per_sok < 0:
+        sheets_per_sok = 0
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            '''
+            SELECT *
+            FROM raw_materials
+            WHERE id = ?
+              AND workplace = ?
+            ''',
+            (raw_id, workplace),
+        )
+        before = cursor.fetchone()
+        if not before:
+            conn.close()
+            return redirect(url_for('materials.raw_materials'))
+
+        cursor.execute(
+            '''
+            UPDATE raw_materials
+            SET code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?
+            WHERE id = ?
+              AND workplace = ?
+            ''',
+            (code, name, sheets_per_sok, receiving_date, ja_ho, ja_ho, raw_id, workplace),
+        )
+        final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
+        audit_log(
+            conn,
+            'update',
+            'raw_material',
+            raw_id,
+            {
+                'before': dict(before),
+                'after': {
+                    'name': name,
+                    'code': final_code,
+                    'lot': lot,
+                    'sheets_per_sok': sheets_per_sok,
+                    'receiving_date': receiving_date,
+                    'ja_ho': ja_ho,
+                },
+            },
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+    finally:
+        conn.close()
 
     return redirect(url_for('materials.raw_materials'))
 

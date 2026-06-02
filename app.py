@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import date, timedelta
 from time import perf_counter
+from functools import wraps
 
 from flask import Flask, g, request, session
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -99,6 +100,31 @@ def create_app():
         return response
 
     register_blueprints(app)
+
+    def _wrap_exception_logging(endpoint_name):
+        view = app.view_functions.get(endpoint_name)
+        if not view or getattr(view, '_yemat_exception_wrapped', False):
+            return
+
+        @wraps(view)
+        def _wrapped_view(*args, **kwargs):
+            try:
+                return view(*args, **kwargs)
+            except Exception:
+                logging.getLogger('yemat.waitress').exception(
+                    'Unhandled exception at %s | path=%s | args=%s | user=%r | workplace=%r',
+                    endpoint_name,
+                    request.path,
+                    dict(request.args),
+                    session.get('user'),
+                    session.get('workplace'),
+                )
+                raise
+
+        _wrapped_view._yemat_exception_wrapped = True
+        app.view_functions[endpoint_name] = _wrapped_view
+
+    _wrap_exception_logging('materials.raw_materials')
 
     def _normalize_schedule_status(status_value):
         s = (status_value or '').strip()

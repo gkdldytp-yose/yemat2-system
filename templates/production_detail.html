@@ -241,6 +241,12 @@
         {% if production.status == '완료' %}
         <a href="/production/{{ production.id }}/print?autoprint=1" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ A4 출력</a>
         {% endif %}
+        {% if can_prod %}
+        <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% else %}생산건을 삭제할까요?{% endif %}')">
+            <input type="hidden" name="next" value="/production{% if production.status == '완료' %}?tab=done{% endif %}">
+            <button type="submit" class="btn btn-small btn-danger">삭제</button>
+        </form>
+        {% endif %}
         <a href="/production" class="btn btn-secondary btn-small">← 목록</a>
     </div>
 </div>

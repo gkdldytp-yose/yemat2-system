@@ -183,7 +183,7 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
             <td>{{ p.expiry_months or 12 }}개월</td>
             <td>
                 <div class="product-action-group">
-                    <a href="/products/{{ p.id }}/bom" class="btn btn-small">BOM</a>
+                    <a href="{{ url_for('products.product_bom', product_id=p.id, return_to=current_list_url) }}" class="btn btn-small">BOM</a>
                     {% if p.spec_sheet_stored_name %}
                     <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small btn-secondary">사양서 보기</a>
                     {% elif can_prod %}
