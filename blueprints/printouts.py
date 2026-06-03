@@ -624,10 +624,19 @@ def journals():
 
             cursor.execute(
                 f'''
-                SELECT material_id, action, quantity, note, created_at
-                FROM material_lot_logs
-                WHERE material_id IN ({placeholders})
-                ORDER BY id
+                SELECT
+                    mll.material_id,
+                    mll.material_lot_id,
+                    COALESCE(mll.action, '') as action,
+                    COALESCE(mll.quantity, 0) as quantity,
+                    COALESCE(mll.note, '') as note,
+                    COALESCE(mll.created_at, '') as created_at,
+                    COALESCE(ml.receiving_date, '') as receiving_date,
+                    COALESCE(ml.is_disposed, 0) as is_disposed
+                FROM material_lot_logs mll
+                LEFT JOIN material_lots ml ON ml.id = mll.material_lot_id
+                WHERE mll.material_id IN ({placeholders})
+                ORDER BY mll.id
                 ''',
                 packaging_material_ids,
             )
@@ -638,19 +647,28 @@ def journals():
                     continue
                 action = (row.get('action') or '').strip()
                 note = (row.get('note') or '').strip()
-                action_date = _get_print_workday(row.get('created_at'))
                 qty = float(row.get('quantity') or 0)
-                if not action_date:
-                    continue
                 incoming_qty = 0.0
                 outgoing_qty = 0.0
+                action_date = ''
                 if action == 'create':
                     incoming_qty = abs(qty)
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
                 elif action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     incoming_qty = abs(qty)
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                elif action == 'issue_request_update' and workplace_prefix and note.startswith(workplace_prefix):
+                    incoming_qty = abs(qty)
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                elif action in ('issue_request_cancel', 'delete'):
+                    incoming_qty = -abs(qty)
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
                 elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     outgoing_qty = abs(qty)
+                    action_date = _get_print_workday(row.get('created_at'))
                 else:
+                    continue
+                if not action_date:
                     continue
                 bucket = packaging_date_map.setdefault(
                     action_date,
@@ -665,6 +683,10 @@ def journals():
                 row['item_count'] = len(row.get('item_ids') or set())
                 row['incoming_total'] = round(float(row.get('incoming_total') or 0.0), 1)
                 row['outgoing_total'] = round(float(row.get('outgoing_total') or 0.0), 1)
+            packaging_journal_rows = [
+                row for row in packaging_journal_rows
+                if float(row.get('incoming_total') or 0.0) > 0 or float(row.get('outgoing_total') or 0.0) > 0
+            ]
             packaging_available_dates = [row['production_date'] for row in packaging_journal_rows if row.get('production_date')]
             if selected_packaging_date and selected_packaging_date not in packaging_available_dates:
                 selected_packaging_date = ''
@@ -1157,23 +1179,34 @@ def packaging_checksheet_preview():
                     continue
                 action = (row.get('action') or '').strip()
                 note = (row.get('note') or '').strip()
-                action_date = _get_print_workday(row.get('created_at'))
                 qty = float(row.get('quantity') or 0)
-                if action_date != selected_date:
-                    continue
                 received_qty = 0.0
                 outgoing_qty = 0.0
                 note_text = ''
+                action_date = ''
                 if action == 'create':
                     received_qty = abs(qty)
                     note_text = '신규 로트 입고'
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
                 elif action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     received_qty = abs(qty)
                     note_text = '불출 입고'
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                elif action == 'issue_request_update' and workplace_prefix and note.startswith(workplace_prefix):
+                    received_qty = abs(qty)
+                    note_text = '불출 입고'
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                elif action in ('issue_request_cancel', 'delete'):
+                    received_qty = -abs(qty)
+                    note_text = '불출 입고'
+                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
                 elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     outgoing_qty = abs(qty)
                     note_text = _format_packaging_export_note(note, workplace_prefix)
+                    action_date = _get_print_workday(row.get('created_at'))
                 else:
+                    continue
+                if action_date != selected_date:
                     continue
 
                 base_item = packaging_material_map.get(material_id, {})
@@ -1210,6 +1243,12 @@ def packaging_checksheet_preview():
                         },
                     )
                     bucket['quantity'] += outgoing_qty
+
+            incoming_map = {
+                key: value
+                for key, value in incoming_map.items()
+                if round(float(value.get('quantity') or 0), 4) > 0
+            }
 
             cursor.execute(
                 f'''

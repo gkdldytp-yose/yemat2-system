@@ -285,6 +285,7 @@ def index():
 
     low_stock_materials = []
     raw_shortages = []
+    material_need_map = {}
     if product_box_map:
         product_ids = list(product_box_map.keys())
         placeholders = ','.join(['?'] * len(product_ids))
@@ -335,7 +336,6 @@ def index():
                 )
                 workplace_material_stock_map = {int(r['material_id']): float(r['qty'] or 0) for r in cursor.fetchall()}
 
-        material_need_map = {}
         for row in material_bom_rows:
             product_id = int(row['product_id'] or 0)
             material_id = int(row['material_id'] or 0)
@@ -361,11 +361,17 @@ def index():
         for item in material_need_map.values():
             current_stock = float(item['current_stock'] or 0)
             required_qty = float(item['required_qty'] or 0)
-            shortage_qty = required_qty - current_stock
+
+            # Keep the shortage decision aligned with the dashboard's displayed precision
+            # so tiny floating-point residuals don't survive as "부족 0.0".
+            current_stock_rounded = round(current_stock, 1)
+            required_qty_rounded = round(required_qty, 1)
+            shortage_qty = round(required_qty_rounded - current_stock_rounded, 1)
+
             if shortage_qty > 0:
-                item['current_stock'] = round(current_stock, 1)
-                item['required_qty'] = round(required_qty, 1)
-                item['shortage_qty'] = round(shortage_qty, 1)
+                item['current_stock'] = current_stock_rounded
+                item['required_qty'] = required_qty_rounded
+                item['shortage_qty'] = shortage_qty
                 low_stock_materials.append(item)
 
         low_stock_materials.sort(
@@ -442,11 +448,13 @@ def index():
         for item in raw_need_map.values():
             current_stock = float(item['current_stock'] or 0)
             required_qty = float(item['required_qty'] or 0)
-            shortage_qty = required_qty - current_stock
+            current_stock_rounded = round(current_stock, 1)
+            required_qty_rounded = round(required_qty, 1)
+            shortage_qty = round(required_qty_rounded - current_stock_rounded, 1)
             if shortage_qty > 0:
-                item['current_stock'] = round(current_stock, 1)
-                item['required_qty'] = round(required_qty, 1)
-                item['shortage_qty'] = round(shortage_qty, 1)
+                item['current_stock'] = current_stock_rounded
+                item['required_qty'] = required_qty_rounded
+                item['shortage_qty'] = shortage_qty
                 raw_shortages.append(item)
 
         raw_shortages.sort(key=lambda x: (-x['shortage_qty'], x['code'], x['name']))
