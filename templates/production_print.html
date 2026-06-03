@@ -568,6 +568,13 @@
   </div>
 
   <script>
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        window.close();
+      }
+    });
+
     if (new URLSearchParams(window.location.search).get('autoprint') === '1') {
       window.onload = () => { window.print(); };
     }

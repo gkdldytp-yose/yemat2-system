@@ -715,6 +715,11 @@ window.addEventListener('load', syncAllNoteEditors);
 window.addEventListener('load', applyPreviewZoom);
 
 document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        window.close();
+        return;
+    }
     if (!(event.ctrlKey || event.metaKey)) return;
     if (event.key === '+' || event.key === '=') {
         event.preventDefault();

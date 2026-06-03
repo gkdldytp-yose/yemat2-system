@@ -3007,7 +3007,7 @@ def delete_material(material_id):
 def raw_materials():
     """?? ?? ??"""
     workplace = get_workplace()
-    is_logistics = False
+    is_logistics = workplace == LOGISTICS_WORKPLACE
     selected_raw_search_field = (request.args.get('raw_search_field') or 'all').strip() or 'all'
     if selected_raw_search_field not in ('all', 'code', 'name', 'car_number', 'receiving_date'):
         selected_raw_search_field = 'all'
@@ -3508,7 +3508,7 @@ def raw_materials_activity():
 def raw_material_detail(raw_material_id):
     """원초 로트 상세 조회(원초명 클릭 모달용)"""
     workplace = get_workplace()
-    is_logistics = False
+    is_logistics = workplace == LOGISTICS_WORKPLACE
     conn = get_db()
     cursor = conn.cursor()
     try:
