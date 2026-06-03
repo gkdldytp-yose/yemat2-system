@@ -26,6 +26,34 @@ bp = Blueprint('materials', __name__)
 def _local_timestamp_str():
     return now_local().strftime('%Y-%m-%d %H:%M:%S')
 
+
+def _parse_manual_processed_at(raw_value):
+    value = (raw_value or '').strip()
+    if not value:
+        return _local_timestamp_str()
+    for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+        try:
+            parsed = datetime.strptime(value, fmt)
+            if fmt == '%Y-%m-%d':
+                return f"{parsed.strftime('%Y-%m-%d')} 00:00:00"
+            return parsed.strftime('%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            continue
+    raise ValueError('실제 처리 일시 형식이 올바르지 않습니다.')
+
+
+def _parse_manual_processed_from_form(form):
+    processed_date = (form.get('processed_date') or '').strip()
+    processed_time = (form.get('processed_time') or '').strip()
+    combined = (form.get('processed_at') or '').strip()
+
+    if processed_date:
+        if processed_time:
+            return _parse_manual_processed_at(f'{processed_date} {processed_time}')
+        return f'{processed_date} {now_local().strftime("%H:%M:%S")}'
+
+    return _parse_manual_processed_at(combined)
+
 PURCHASE_STATUS_NEEDED = '\ubc1c\uc8fc\ud544\uc694'
 PURCHASE_STATUS_ORDERED = '\ubc1c\uc8fc\uc911'
 PURCHASE_STATUS_RECEIVED = '\uc785\uace0\uc644\ub8cc'
@@ -1169,8 +1197,9 @@ def _create_request_receipt_lot(
     expiry_date_unknown=0,
     log_action='issue_request_complete',
     log_note=None,
+    created_at=None,
 ):
-    created_at = _local_timestamp_str()
+    created_at = (created_at or '').strip() or _local_timestamp_str()
     receiving_date = (receiving_date or '').strip() or today_local_str()
     manufacture_date = (manufacture_date or '').strip() or None
     expiry_date = (expiry_date or '').strip() or None
@@ -5852,7 +5881,10 @@ def delete_all_pending_export_requests():
 def complete_issue_request(req_id):
     approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
-    processed_at = _local_timestamp_str()
+    try:
+        processed_at = _parse_manual_processed_from_form(request.form)
+    except ValueError as e:
+        return _alert_back(str(e))
     if approved_qty <= 0:
         return "<script>alert('?? ?? ??? ??? ???.'); history.back();</script>"
     split_rows = _build_receipt_split_rows(request.form, approved_qty)
@@ -5896,6 +5928,7 @@ def complete_issue_request(req_id):
                 row.get('expiry_date'),
                 int(row.get('manufacture_date_unknown') or 0),
                 int(row.get('expiry_date_unknown') or 0),
+                created_at=processed_at,
             )
             created_receipt_rows.append((int(lot_id), float(row.get('quantity') or 0)))
         for lot_id, quantity in created_receipt_rows:
@@ -6073,6 +6106,10 @@ def update_completed_issue_request(req_id):
     approved_qty = float(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
     receipt_updated_at = _local_timestamp_str()
+    try:
+        processed_at = _parse_manual_processed_from_form(request.form)
+    except ValueError as e:
+        return _alert_back(str(e))
     if approved_qty <= 0:
         return _alert_back('실입고 수량을 입력해주세요.')
     split_rows = _build_receipt_split_rows(request.form, approved_qty)
@@ -6115,12 +6152,13 @@ def update_completed_issue_request(req_id):
         if _receipt_rows_include_disposed(detail_rows):
             return _alert_back('폐기된 로트가 포함된 완료건은 수정할 수 없습니다.')
         previous_approved_qty = _round_to_1_decimal(req_row['approved_quantity'] or 0)
+        previous_processed_date = (req_row['processed_at'] or '')[:10]
         _rebuild_material_fifo_for_workplace(
             conn,
             cursor,
             int(req_row['material_id']),
             req_row['requester_workplace'],
-            (req_row['processed_at'] or '')[:10],
+            previous_processed_date,
             reconsume=False,
         )
         _rollback_issue_receipt_rows(cursor, req_row, receipt_rows, '실입고 완료 수정 롤백')
@@ -6145,6 +6183,7 @@ def update_completed_issue_request(req_id):
                     previous_approved_qty,
                     approved_qty,
                 ),
+                created_at=processed_at,
             )
             created_receipt_rows.append((int(lot_id), float(row.get('quantity') or 0)))
         for lot_id, quantity in created_receipt_rows:
@@ -6153,7 +6192,7 @@ def update_completed_issue_request(req_id):
         cursor.execute(
             '''
             UPDATE logistics_issue_requests
-            SET approved_quantity = ?, processed_by = ?, process_note = ?,
+            SET approved_quantity = ?, processed_by = ?, processed_at = ?, process_note = ?,
                 receipt_updated_at = ?,
                 original_approved_quantity = COALESCE(original_approved_quantity, ?)
             WHERE id = ?
@@ -6161,6 +6200,7 @@ def update_completed_issue_request(req_id):
             (
                 approved_qty,
                 session.get('user', {}).get('name'),
+                processed_at,
                 process_note,
                 receipt_updated_at,
                 previous_approved_qty,
@@ -6189,7 +6229,7 @@ def update_completed_issue_request(req_id):
             cursor,
             int(req_row['material_id']),
             req_row['requester_workplace'],
-            (req_row['processed_at'] or '')[:10],
+            processed_at[:10],
         )
         conn.commit()
     except ValueError as e:
@@ -6269,6 +6309,10 @@ def reject_issue_request(req_id):
 def complete_export_request(req_id):
     approved_qty = _round_to_1_decimal(request.form.get('actual_quantity') or request.form.get('approved_quantity') or 0)
     process_note = (request.form.get('process_note') or '').strip()
+    try:
+        processed_at = _parse_manual_processed_from_form(request.form)
+    except ValueError as e:
+        return _alert_back(str(e))
     if approved_qty <= 0:
         return _alert_back('실제 반출 수량을 확인해 주세요.')
 
@@ -6284,6 +6328,7 @@ def complete_export_request(req_id):
             req_id,
             approved_qty,
             process_note,
+            processed_at,
             manager_name,
             current_username,
             current_name,
@@ -6387,8 +6432,7 @@ def cancel_completed_export_request(req_id):
     return redirect(url_for('materials.materials', req_tab='export', export_status='completed'))
 
 
-def _complete_export_request_row(conn, cursor, req_id, approved_qty, process_note, manager_name, current_username, current_name):
-    processed_at = _local_timestamp_str()
+def _complete_export_request_row(conn, cursor, req_id, approved_qty, process_note, processed_at, manager_name, current_username, current_name):
     cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
     req_row = cursor.fetchone()
     if not req_row:
@@ -6479,6 +6523,10 @@ def complete_selected_export_requests():
             req_ids.append(req_id)
     if not req_ids:
         return _alert_back('일괄 반출 완료 처리할 항목을 선택해 주세요.')
+    try:
+        processed_at = _parse_manual_processed_from_form(request.form)
+    except ValueError as e:
+        return _alert_back(str(e))
 
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     current_username = (session.get('user', {}) or {}).get('username')
@@ -6505,6 +6553,7 @@ def complete_selected_export_requests():
                     req_id,
                     approved_qty,
                     '',
+                    processed_at,
                     manager_name,
                     current_username,
                     current_name,
@@ -6766,6 +6815,9 @@ def receive_purchase_request(req_id):
     expiry_date = request.form.get('expiry_date')
     unit_price = float(request.form.get('unit_price') or 0)
     next_page = (request.form.get('next_page') or '').strip()
+    received_at = _local_timestamp_str()
+    if (receiving_date or '').strip():
+        received_at = f"{receiving_date.strip()} {now_local().strftime('%H:%M:%S')}"
 
     conn = get_db()
     cursor = conn.cursor()
@@ -6790,16 +6842,16 @@ def receive_purchase_request(req_id):
                 SET status=?, received_quantity=?, received_at=?, received_by=?
                 WHERE id=?
                 """,
-                (PURCHASE_STATUS_RECEIVED, received_qty, f"{receiving_date} 00:00:00", username, req_id),
+                (PURCHASE_STATUS_RECEIVED, received_qty, received_at, username, req_id),
             )
         else:
             cursor.execute(
                 """
                 UPDATE purchase_requests
-                SET status=?, received_quantity=?, received_at=CURRENT_TIMESTAMP, received_by=?
+                SET status=?, received_quantity=?, received_at=?, received_by=?
                 WHERE id=?
                 """,
-                (PURCHASE_STATUS_RECEIVED, received_qty, username, req_id),
+                (PURCHASE_STATUS_RECEIVED, received_qty, received_at, username, req_id),
             )
 
         cursor.execute(
@@ -6862,10 +6914,10 @@ def receive_purchase_request(req_id):
 
         cursor.execute(
             '''
-            INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
             ''',
-            (lot_id, row['material_id'], lot_action, received_qty, f'purchase_request:{req_id}'),
+            (lot_id, row['material_id'], lot_action, received_qty, f'purchase_request:{req_id}', received_at),
         )
 
         logistics_location_id = _get_inventory_location_id(cursor, '\ubb3c\ub958\ucc3d\uace0')

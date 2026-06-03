@@ -65,6 +65,49 @@
 .inventory-filter-grid > div{min-width:0;}
 .inventory-filter-grid .search-input{width:100%;min-width:0;box-sizing:border-box;}
 .inventory-filter-actions{display:flex;justify-content:flex-end;gap:0.55rem;flex-wrap:wrap;margin-top:0.9rem;}
+.integrated-filter-card{border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);}
+.integrated-filter-card label{color:#475569;font-weight:700;}
+.integrated-filter-card select,
+.integrated-filter-card input[type="text"]{
+  border:1px solid #dbe2ea;
+  border-radius:10px;
+  background:#fff;
+  color:#0f172a;
+}
+.integrated-filter-card input[type="text"]::placeholder{color:#64748b;}
+.backup-settings-card{border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);}
+.backup-settings-card label{color:#475569;font-weight:700;}
+.backup-settings-card input[type="time"],
+.backup-settings-card input[type="number"]{
+  border:1px solid #dbe2ea;
+  border-radius:10px;
+  background:#fff;
+  color:#0f172a;
+}
+.backup-settings-card .backup-static-field{
+  padding:0.45rem 0.55rem;
+  border:1px solid #dbe2ea;
+  border-radius:10px;
+  background:#f8fafc;
+  color:#334155;
+  font-weight:700;
+}
+.backup-settings-card .backup-help-text{font-size:0.84rem;color:#475569;line-height:1.5;}
+.backup-settings-card .backup-meta-row{width:100%;display:flex;gap:0.75rem;flex-wrap:wrap;font-size:0.82rem;color:#64748b;}
+.backup-settings-card .backup-toggle-label{display:flex;align-items:center;gap:0.45rem;font-size:0.92rem;color:#0f172a;font-weight:600;}
+.reqcalc-input-shell{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;width:100%;}
+.reqcalc-field{
+  min-width:180px;
+  padding:0.45rem 0.55rem;
+  border:1px solid #dbe2ea;
+  border-radius:10px;
+  background:#fff;
+  color:#0f172a;
+}
+.reqcalc-field::placeholder{color:#64748b;}
+.reqcalc-empty-text,
+.reqcalc-help-text{color:#64748b;}
+.reqcalc-inline-label{color:#0f172a;font-size:0.92rem;font-weight:700;}
 .inventory-print-title{font-size:18px;font-weight:800;color:#0f172a;margin:0 0 0.35rem;}
 .inventory-print-subtitle{font-size:12px;color:#475569;margin:0 0 0.8rem;}
 .inventory-print-meta{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.8rem;}
@@ -428,6 +471,69 @@ html[data-theme="dark"] .lot-inline-form input,
 html[data-theme="dark"] .reqcalc-stock-field{background:#0f1726;border-color:#314155;color:#eff6ff;box-shadow:none;}
 html[data-theme="dark"] .inventory-filter-card,
 html[data-theme="dark"] div[style*="재고조사 필터"]{background:linear-gradient(180deg,#121a2a,#101827);}
+html[data-theme="dark"] .integrated-filter-card{
+  background:linear-gradient(180deg,#121a2a,#101827) !important;
+  border-color:#263244 !important;
+  box-shadow:0 16px 36px rgba(2,6,23,.3);
+}
+html[data-theme="dark"] .integrated-filter-card label,
+html[data-theme="dark"] .integrated-filter-card div[style*="font-size:1.02rem"],
+html[data-theme="dark"] .integrated-filter-card div[style*="font-size:0.9rem"]{
+  color:#dbe7f5 !important;
+}
+html[data-theme="dark"] .integrated-filter-card div[style*="#64748b"]{
+  color:#8ea3bd !important;
+}
+html[data-theme="dark"] .integrated-filter-card select,
+html[data-theme="dark"] .integrated-filter-card input[type="text"]{
+  background:#0f172a !important;
+  border-color:#314155 !important;
+  color:#eff6ff !important;
+  box-shadow:none;
+}
+html[data-theme="dark"] .integrated-filter-card input[type="text"]::placeholder{
+  color:#7f93ad !important;
+}
+html[data-theme="dark"] .backup-settings-card{
+  background:linear-gradient(180deg,#121a2a,#101827) !important;
+  border-color:#263244 !important;
+  box-shadow:0 16px 36px rgba(2,6,23,.3);
+}
+html[data-theme="dark"] .backup-settings-card label,
+html[data-theme="dark"] .backup-settings-card .backup-toggle-label,
+html[data-theme="dark"] .backup-settings-card .backup-static-field{
+  color:#dbe7f5 !important;
+}
+html[data-theme="dark"] .backup-settings-card input[type="time"],
+html[data-theme="dark"] .backup-settings-card input[type="number"],
+html[data-theme="dark"] .backup-settings-card .backup-static-field{
+  background:#0f172a !important;
+  border-color:#314155 !important;
+  color:#eff6ff !important;
+  box-shadow:none;
+}
+html[data-theme="dark"] .backup-settings-card .backup-help-text,
+html[data-theme="dark"] .backup-settings-card .backup-meta-row{
+  color:#8ea3bd !important;
+}
+html[data-theme="dark"] .reqcalc-field{
+  background:#0f172a !important;
+  border-color:#314155 !important;
+  color:#eff6ff !important;
+  box-shadow:none;
+}
+html[data-theme="dark"] .reqcalc-field::placeholder{color:#7f93ad !important;}
+html[data-theme="dark"] .reqcalc-empty-text,
+html[data-theme="dark"] .reqcalc-help-text{color:#8ea3bd !important;}
+html[data-theme="dark"] .reqcalc-inline-label,
+html[data-theme="dark"] #reqCalcSummaryPanel h3,
+html[data-theme="dark"] #reqCalcSummaryPanel h4,
+html[data-theme="dark"] #reqCalcProductsPanel h3{
+  color:#eff6ff !important;
+}
+html[data-theme="dark"] #reqCalcPostActions{
+  border-top-color:#263244;
+}
 html[data-theme="dark"] .inventory-filter-grid label,
 html[data-theme="dark"] .inventory-filter-card label,
 html[data-theme="dark"] .inventory-filter-actions + *,
@@ -1017,37 +1123,37 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
         </div>
         {% endif %}
         {% if tab == 'db_backups' %}
-        <div class="header-row" style="margin-top:0.75rem;padding:0.95rem 1rem;border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);">
+        <div class="header-row backup-settings-card" style="margin-top:0.75rem;padding:0.95rem 1rem;">
             <form method="POST" action="/integrated-management/db-backups/settings" style="display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap;width:100%;">
                 <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:160px;">
                     <label style="font-size:0.82rem;color:#475569;font-weight:700;">자동 백업 사용</label>
-                    <label style="display:flex;align-items:center;gap:0.45rem;font-size:0.92rem;color:#0f172a;font-weight:600;">
+                    <label class="backup-toggle-label">
                         <input type="checkbox" name="auto_backup_enabled" value="1" {% if backup_settings.auto_backup_enabled %}checked{% endif %}>
                         지정 시각 자동 백업
                     </label>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:140px;">
                     <label style="font-size:0.82rem;color:#475569;font-weight:700;">자동 백업 시간</label>
-                    <input type="time" name="auto_backup_time" value="{{ backup_settings.auto_backup_time or '' }}" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <input type="time" name="auto_backup_time" value="{{ backup_settings.auto_backup_time or '' }}" style="padding:0.45rem 0.55rem;">
                 </div>
                 <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:120px;">
                     <label style="font-size:0.82rem;color:#475569;font-weight:700;">수동 보관개수</label>
-                    <input type="number" name="keep_count" value="{{ backup_keep_count or 10 }}" min="1" max="200" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
+                    <input type="number" name="keep_count" value="{{ backup_keep_count or 10 }}" min="1" max="200" style="padding:0.45rem 0.55rem;">
                 </div>
                 <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:120px;">
                     <label style="font-size:0.82rem;color:#475569;font-weight:700;">자동 보관기간</label>
-                    <div style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#f8fafc;color:#334155;font-weight:700;">{{ backup_retention_days }}일</div>
+                    <div class="backup-static-field">{{ backup_retention_days }}일</div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:240px;flex:1 1 240px;">
                     <label style="font-size:0.82rem;color:#475569;font-weight:700;">안내</label>
-                    <div style="font-size:0.84rem;color:#475569;line-height:1.5;">
+                    <div class="backup-help-text">
                         자동 백업은 지정 시각 이후 첫 접속 시 생성됩니다. 롤백하면 선택한 백업 시점 이후 저장된 데이터는 손실됩니다.
                     </div>
                 </div>
                 <div style="display:flex;gap:0.5rem;align-items:flex-end;margin-left:auto;">
                     <button type="submit" class="btn btn-small" style="height:42px;background:#0f766e;">자동 백업 저장</button>
                 </div>
-                <div style="width:100%;display:flex;gap:0.75rem;flex-wrap:wrap;font-size:0.82rem;color:#64748b;">
+                <div class="backup-meta-row">
                     <span>최근 자동 백업: {{ backup_settings.last_auto_backup_at or '-' }}</span>
                     <span>최근 파일: {{ backup_settings.last_auto_backup_name or '-' }}</span>
                 </div>
@@ -1055,7 +1161,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
         </div>
         {% endif %}
         {% if tab == 'materials' %}
-        <div class="header-row" style="justify-content:flex-end;margin-top:0.75rem;padding:0.9rem 1rem;border:1px solid #dbe7f4;border-radius:16px;background:linear-gradient(135deg,#fbfdff 0%,#f4f8ff 100%);box-shadow:0 10px 24px rgba(15,23,42,0.05);">
+        <div class="header-row integrated-filter-card" style="justify-content:flex-end;margin-top:0.75rem;padding:0.9rem 1rem;">
             <form method="GET" action="/integrated-management" style="display:flex;gap:0.65rem;align-items:flex-end;flex-wrap:wrap;width:100%;">
                 <input type="hidden" name="tab" value="materials">
                 {% if q %}
@@ -1164,16 +1270,16 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                     <h3 style="margin:0 0 0.35rem;">상품별 예상 생산량 입력</h3>
                     <p style="margin:0;color:#64748b;font-size:0.88rem;">상품을 여러 개 추가하고 박스 수를 입력한 뒤 계산하면 전체 필요 원초/원자재/부자재와 상품별 상세를 나눠서 보여줍니다.</p>
                 </div>
-                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;width:100%;">
-                    <select id="reqCalcWorkplaceSelect" onchange="filterRequirementCalcOptions()" style="min-width:180px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;">
+                <div class="reqcalc-input-shell">
+                    <select id="reqCalcWorkplaceSelect" onchange="filterRequirementCalcOptions()" class="reqcalc-field">
                         <option value="">작업장 선택</option>
                         {% for wp in workplaces %}
                         <option value="{{ wp }}">{{ wp }}</option>
                         {% endfor %}
                     </select>
                     <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="addRequirementCalcItemsByWorkplace()">작업장 전체 추가</button>
-                    <input type="text" id="reqCalcProductSearch" class="search-input" placeholder="상품명 키워드 검색" oninput="filterRequirementCalcOptions()">
-                    <select id="reqCalcProductSelect" ondblclick="addRequirementCalcItem()" style="min-width:280px;padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;">
+                    <input type="text" id="reqCalcProductSearch" class="reqcalc-field" placeholder="상품명 키워드 검색" oninput="filterRequirementCalcOptions()">
+                    <select id="reqCalcProductSelect" ondblclick="addRequirementCalcItem()" class="reqcalc-field" style="min-width:280px;">
                         <option value="">상품 선택</option>
                         {% for product in calculator_products %}
                         <option value="{{ product.id }}" data-name="{{ product.name|e }}" data-code="{{ product.code|e }}" data-workplace="{{ product.workplace|e }}">{{ product.name }}{% if product.code %} [{{ product.code }}]{% endif %}</option>
@@ -1195,17 +1301,17 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                         </tr>
                     </thead>
                     <tbody id="reqCalcInputBody">
-                        <tr id="reqCalcEmptyRow"><td colspan="4" style="text-align:center;color:#64748b;">선택한 상품이 없습니다.</td></tr>
+                        <tr id="reqCalcEmptyRow"><td colspan="4" class="reqcalc-empty-text" style="text-align:center;">선택한 상품이 없습니다.</td></tr>
                     </tbody>
                 </table>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;">
                 <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                    <strong style="color:#0f172a;font-size:0.92rem;">예상 생산량 일괄 입력</strong>
-                    <input type="number" id="reqCalcBulkBoxes" min="0" step="0.1" placeholder="BOX 수 입력" style="width:140px;padding:0.45rem 0.55rem;border:1px solid #cbd5e1;border-radius:10px;">
+                    <strong class="reqcalc-inline-label">예상 생산량 일괄 입력</strong>
+                    <input type="number" id="reqCalcBulkBoxes" min="0" step="0.1" placeholder="BOX 수 입력" class="reqcalc-field" style="width:140px;">
                     <button type="button" class="btn btn-small btn-secondary" onclick="applyRequirementCalcBulkBoxes()">전체 적용</button>
                 </div>
-                <div style="color:#64748b;font-size:0.86rem;">현재 추가된 모든 상품의 예상 생산량을 한 번에 변경합니다.</div>
+                <div class="reqcalc-help-text" style="font-size:0.86rem;">현재 추가된 모든 상품의 예상 생산량을 한 번에 변경합니다.</div>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1rem;align-items:center;flex-wrap:wrap;">
                 <button type="button" class="btn btn-small" style="background:#b45309;margin-right:0.5rem;" onclick="openRequirementCategoryModal()">분류 선택 계산</button>
@@ -1232,7 +1338,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
             </div>
             <div id="reqCalcSummaryPanel" class="reqcalc-result-panel active">
                 <h3 style="margin-bottom:0.75rem;">전체 필요 원부자재</h3>
-                <div id="reqCalcSummaryEmpty" style="color:#64748b;">계산 전입니다.</div>
+                <div id="reqCalcSummaryEmpty" class="reqcalc-empty-text">계산 전입니다.</div>
                 <div id="reqCalcSummaryWrap" style="display:none;">
                     <div style="margin-bottom:1.2rem;">
                         <h4 style="margin:0 0 0.45rem;">원초 합계</h4>
@@ -1250,15 +1356,15 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
             </div>
             <div id="reqCalcProductsPanel" class="reqcalc-result-panel">
                 <h3 style="margin-bottom:0.75rem;">상품별 필요 부자재</h3>
-                <div id="reqCalcProductsEmpty" style="color:#64748b;">계산 전입니다.</div>
+                <div id="reqCalcProductsEmpty" class="reqcalc-empty-text">계산 전입니다.</div>
                 <div id="reqCalcProductsWrap" style="display:none;"></div>
             </div>
             <div id="reqCalcPostActions" class="reqcalc-post-actions reqcalc-hide-print">
-                <div id="reqCalcPostHint" style="color:#64748b;font-size:0.9rem;">계산 결과를 확인한 뒤 추가 계산을 활성화하면 현재 총재고를 직접 조정하며 부족량과 예상 현재고를 바로 비교할 수 있습니다.</div>
+                <div id="reqCalcPostHint" class="reqcalc-help-text" style="font-size:0.9rem;">계산 결과를 확인한 뒤 추가 계산을 활성화하면 현재 총재고를 직접 조정하며 부족량과 예상 현재고를 바로 비교할 수 있습니다.</div>
                 <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                    <label id="reqCalcExtraPercentWrap" style="display:none;align-items:center;gap:0.4rem;color:#475569;font-size:0.88rem;font-weight:700;">
+                    <label id="reqCalcExtraPercentWrap" class="reqcalc-help-text" style="display:none;align-items:center;gap:0.4rem;font-size:0.88rem;font-weight:700;">
                         <span>여유분 %</span>
-                        <input type="number" id="reqCalcExtraPercentInput" min="0" step="0.1" value="0" style="width:88px;padding:0.4rem 0.5rem;border:1px solid #cbd5e1;border-radius:10px;text-align:right;" oninput="updateRequirementCalcExtraPercent(this.value)">
+                        <input type="number" id="reqCalcExtraPercentInput" min="0" step="0.1" value="0" class="reqcalc-field" style="width:88px;text-align:right;" oninput="updateRequirementCalcExtraPercent(this.value)">
                     </label>
                     <button type="button" id="reqCalcUsageActionBtn" class="btn btn-small" style="background:#7c3aed;" onclick="handleRequirementCalcUsageAction()">추가 계산 활성화</button>
                     <button type="button" id="reqCalcDraftSaveBtn" class="btn btn-small" style="display:none;background:#0f766e;" onclick="saveCurrentRequirementCalcDraft()">임시저장</button>
@@ -1907,7 +2013,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
         <button class="subtab-btn {% if inventory_type == 'material' %}active{% endif %}"
                 onclick="location.href='/integrated-management?tab=inventory_audit&inventory_type=material&inventory_wp={{ inventory_wp|urlencode }}&inventory_search_field={{ inventory_search_field|urlencode }}&inventory_category={{ inventory_category|urlencode }}&inventory_product_id={{ inventory_product_id|urlencode }}&inventory_q={{ inventory_q|urlencode }}'">부자재</button>
     </div>
-    <div class="card" style="padding:1.1rem 1.25rem;margin-bottom:0.9rem;border:1px solid #dbeafe;background:linear-gradient(180deg,#f8fbff 0%, #ffffff 100%);">
+    <div class="card integrated-filter-card" style="padding:1.1rem 1.25rem;margin-bottom:0.9rem;">
         <form method="get" action="/integrated-management">
             <input type="hidden" name="tab" value="inventory_audit">
             <input type="hidden" name="inventory_type" value="{{ inventory_type }}">

@@ -1166,6 +1166,7 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
                                 data-unit="{{ r.unit or '' }}"
                                 data-code="{{ r.material_code or '-' }}"
                                 data-name="{{ r.material_name or '' }}"
+                                data-processed-at=""
                                 data-receiving-date="{{ r.receipt_lot_defaults.receiving_date if r.receipt_lot_defaults else '' }}"
                                 data-manufacture-date="{{ r.receipt_lot_defaults.manufacture_date if r.receipt_lot_defaults else '' }}"
                                 data-expiry-date="{{ r.receipt_lot_defaults.expiry_date if r.receipt_lot_defaults else '' }}"
@@ -1268,6 +1269,7 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
                                         data-code="{{ r.material_code or '-' }}"
                                         data-name="{{ r.material_name or '' }}"
                                         data-process-note="{{ r.process_note or '' }}"
+                                        data-processed-at="{{ r.processed_at or '' }}"
                                         data-receiving-date="{{ first_receipt_row.receiving_date if first_receipt_row else '' }}"
                                         data-manufacture-date="{{ first_receipt_row.manufacture_date if first_receipt_row else '' }}"
                                         data-expiry-date="{{ first_receipt_row.expiry_date if first_receipt_row else '' }}"
@@ -1442,10 +1444,21 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
                                     <div class="export-pending-stack process">
                                         <span class="export-pending-kicker">처리</span>
                                         <div class="export-complete-row">
-                                            <form method="POST" action="/export-requests/{{ r.id }}/complete" class="export-complete-form" onsubmit="return confirm('실제 반출 수량으로 완료 처리하시겠습니까?');">
+                                            <form method="POST" action="/export-requests/{{ r.id }}/complete" class="export-complete-form">
                                                 <input type="hidden" name="actual_quantity" value="{{ "%.1f"|format(r.requested_quantity or 0) }}">
                                                 <div class="export-complete-actions">
-                                                    <button type="submit" class="btn btn-small" style="background:#f97316;">반출 완료</button>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-small js-open-export-complete"
+                                                        style="background:#f97316;"
+                                                        data-mode="single"
+                                                        data-req-id="{{ r.id }}"
+                                                        data-qty="{{ "%.1f"|format(r.requested_quantity or 0) }}"
+                                                        data-unit="{{ r.unit or '' }}"
+                                                        data-code="{{ r.material_code or '-' }}"
+                                                        data-name="{{ r.material_name or '' }}"
+                                                        data-process-note=""
+                                                        data-processed-at="">반출 완료</button>
                                                 </div>
                                             </form>
                                             <form method="POST" action="/export-requests/{{ r.id }}/delete" class="export-complete-delete" onsubmit="return confirm('해당 반출 요청을 삭제하시겠습니까?');">
@@ -1600,6 +1613,16 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
                         <input type="date" id="receiptExpiryDate" name="expiry_date" oninput="document.getElementById('receiptExpiryUnknown').value='0'; syncReceiptNoneState('expiry');">
                     </div>
                     <div class="receipt-field" style="grid-column:1 / -1;">
+                        <div class="receipt-field-head receiving">
+                            <label for="receiptProcessedDate">실제 입고 처리일 *</label>
+                            <span class="issue-subtext">시간 미입력 시 현재 시간 자동 적용</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,220px);gap:.6rem;">
+                            <input type="date" id="receiptProcessedDate" name="processed_date" required>
+                            <input type="time" id="receiptProcessedTime" name="processed_time" step="60" placeholder="현재 시간 자동">
+                        </div>
+                    </div>
+                    <div class="receipt-field" style="grid-column:1 / -1;">
                         <div class="receipt-field-head">
                             <label for="receiptProcessNote">메모</label>
                             <button type="button" class="receipt-split-toggle" id="receiptSplitToggleBtn" onclick="enableReceiptSplit()">로트 나누기</button>
@@ -1625,6 +1648,64 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
                 <div class="receipt-modal-actions">
                     <button type="button" class="btn btn-small btn-secondary" onclick="closeReceiptCompleteModal()">취소</button>
                     <button type="submit" class="btn btn-small" id="receiptSubmitBtn" style="background:#0ea5e9;">입고 완료 처리</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="exportCompleteModal" class="receipt-modal-bg" onclick="closeExportCompleteModal(event)">
+    <div class="receipt-modal" onclick="event.stopPropagation()">
+        <div class="receipt-modal-head">
+            <div>
+                <h3 class="receipt-modal-title" id="exportModalTitle">반출 완료 처리</h3>
+                <p class="receipt-modal-caption" id="exportModalCaption">실제 반출 처리 시각을 기록하고 완료 처리합니다.</p>
+            </div>
+            <button type="button" class="receipt-modal-close" onclick="closeExportCompleteModal()">×</button>
+        </div>
+        <form id="exportCompleteModalForm" method="POST">
+            <div id="exportCompleteModalRequestIds"></div>
+            <input type="hidden" id="exportCompleteActualQty" name="actual_quantity" value="">
+            <div class="receipt-modal-body">
+                <div class="receipt-modal-summary">
+                    <div class="receipt-summary-item">
+                        <div class="receipt-summary-label">자재명</div>
+                        <div class="receipt-summary-value" id="exportSummaryName">-</div>
+                    </div>
+                    <div class="receipt-summary-item">
+                        <div class="receipt-summary-label">코드</div>
+                        <div class="receipt-summary-value" id="exportSummaryCode">-</div>
+                    </div>
+                    <div class="receipt-summary-item">
+                        <div class="receipt-summary-label">반출수량</div>
+                        <div class="receipt-summary-value" id="exportSummaryQty">-</div>
+                    </div>
+                </div>
+                <div class="receipt-modal-grid">
+                    <div class="receipt-field" style="grid-column:1 / -1;">
+                        <div class="receipt-field-head receiving">
+                            <label for="exportProcessedDate">실제 반출 처리일 *</label>
+                            <span class="issue-subtext">시간 미입력 시 현재 시간 자동 적용</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,220px);gap:.6rem;">
+                            <input type="date" id="exportProcessedDate" name="processed_date" required>
+                            <input type="time" id="exportProcessedTime" name="processed_time" step="60" placeholder="현재 시간 자동">
+                        </div>
+                    </div>
+                    <div class="receipt-field" style="grid-column:1 / -1;">
+                        <div class="receipt-field-head">
+                            <label for="exportProcessNote">메모</label>
+                            <span style="display:inline-block;min-width:48px;"></span>
+                        </div>
+                        <input type="text" id="exportProcessNote" name="process_note" placeholder="실제 반출 관련 메모 입력">
+                    </div>
+                    <div class="receipt-help">
+                        개별 반출은 해당 건의 실제 반출 완료 시각으로 기록되고, 일괄 반출은 선택한 모든 건에 같은 완료 시각이 적용됩니다.
+                    </div>
+                </div>
+                <div class="receipt-modal-actions">
+                    <button type="button" class="btn btn-small btn-secondary" onclick="closeExportCompleteModal()">취소</button>
+                    <button type="submit" class="btn btn-small" style="background:#f97316;">반출 완료 처리</button>
                 </div>
             </div>
         </form>
@@ -2511,7 +2592,27 @@ function openReceiptSplitRows(rows){
     updateReceiptSplitSummary();
 }
 
-function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, manufactureDate, expiryDate, manufactureUnknown, expiryUnknown, mode = 'create', processNote = '', receiptRows = []){
+function getCurrentDateTimeLocalValue(){
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+function splitDateTimeValue(value){
+    const raw = String(value || '').trim();
+    const fallback = getCurrentDateTimeLocalValue();
+    const fallbackDate = fallback.slice(0, 10);
+    if(!raw) return { date: fallbackDate, time: '' };
+    if(raw.includes('T')){
+        return { date: raw.slice(0, 10), time: raw.slice(11, 16) };
+    }
+    if(raw.includes(' ')){
+        return { date: raw.slice(0, 10), time: raw.slice(11, 16) };
+    }
+    return { date: raw.slice(0, 10), time: '' };
+}
+
+function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, manufactureDate, expiryDate, manufactureUnknown, expiryUnknown, mode = 'create', processNote = '', receiptRows = [], processedAt = ''){
     const modal = document.getElementById('receiptCompleteModal');
     const form = document.getElementById('receiptCompleteForm');
     if(!modal || !form) return;
@@ -2530,6 +2631,9 @@ function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, m
     document.getElementById('receiptSummaryCode').textContent = code || '-';
     document.getElementById('receiptActualQty').value = Number(qty || 0).toFixed(2).replace(/\.00$/, '');
     document.getElementById('receiptReceivingDate').value = receivingDate || '';
+    const receiptProcessed = splitDateTimeValue(processedAt);
+    document.getElementById('receiptProcessedDate').value = receiptProcessed.date;
+    document.getElementById('receiptProcessedTime').value = receiptProcessed.time;
     document.getElementById('receiptManufactureDate').value = manufactureDate || '';
     document.getElementById('receiptExpiryDate').value = expiryDate || '';
     document.getElementById('receiptManufactureUnknown').value = String(manufactureUnknown || '0') === '1' ? '1' : '0';
@@ -2543,7 +2647,7 @@ function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, m
     syncReceiptNoneState('expiry');
     modal.classList.add('open');
     requestAnimationFrame(() => {
-        document.getElementById('receiptActualQty')?.focus();
+        document.getElementById('receiptProcessedDate')?.focus();
     });
 }
 
@@ -2577,7 +2681,73 @@ document.querySelectorAll('.js-open-receipt-complete').forEach((btn) => {
             btn.dataset.mode || 'create',
             btn.dataset.processNote || '',
             receiptRows,
+            btn.dataset.processedAt || '',
         );
+    });
+});
+
+function openExportCompleteModal(config = {}){
+    const modal = document.getElementById('exportCompleteModal');
+    const form = document.getElementById('exportCompleteModalForm');
+    const reqIdsWrap = document.getElementById('exportCompleteModalRequestIds');
+    const qtyInput = document.getElementById('exportCompleteActualQty');
+    if(!modal || !form || !reqIdsWrap || !qtyInput) return;
+    const mode = config.mode === 'bulk' ? 'bulk' : 'single';
+    form.action = mode === 'bulk' ? '/export-requests/complete-selected' : `/export-requests/${config.reqId || ''}/complete`;
+    reqIdsWrap.innerHTML = '';
+    if(mode === 'bulk'){
+        (config.requestIds || []).forEach((id) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'request_ids[]';
+            input.value = String(id);
+            reqIdsWrap.appendChild(input);
+        });
+    }
+    qtyInput.value = mode === 'single' ? String(config.qty || '') : '';
+    document.getElementById('exportSummaryName').textContent = mode === 'bulk'
+        ? `선택 ${Number(config.requestCount || 0)}건`
+        : (config.name || '-');
+    document.getElementById('exportSummaryCode').textContent = mode === 'bulk'
+        ? '일괄 반출'
+        : (config.code || '-');
+    document.getElementById('exportSummaryQty').textContent = mode === 'bulk'
+        ? '선택 건별 요청수량 기준'
+        : `${Number(config.qty || 0).toFixed(1).replace(/\.0$/, '')} ${config.unit || ''}`.trim();
+    document.getElementById('exportProcessNote').value = config.processNote || '';
+    const exportProcessed = splitDateTimeValue(config.processedAt || '');
+    document.getElementById('exportProcessedDate').value = exportProcessed.date;
+    document.getElementById('exportProcessedTime').value = exportProcessed.time;
+    document.getElementById('exportModalTitle').textContent = mode === 'bulk' ? '일괄 반출 완료 처리' : '반출 완료 처리';
+    document.getElementById('exportModalCaption').textContent = mode === 'bulk'
+        ? '선택한 반출 요청들에 같은 실제 반출 완료 시각을 적용합니다.'
+        : '해당 반출 요청의 실제 반출 완료 시각을 기록하고 완료 처리합니다.';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => {
+        document.getElementById('exportProcessedDate')?.focus();
+    });
+}
+
+function closeExportCompleteModal(event){
+    if(event && event.target && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('exportCompleteModal');
+    if(modal) modal.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+document.querySelectorAll('.js-open-export-complete').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        openExportCompleteModal({
+            mode: btn.dataset.mode || 'single',
+            reqId: btn.dataset.reqId || '',
+            qty: btn.dataset.qty || '',
+            unit: btn.dataset.unit || '',
+            code: btn.dataset.code || '-',
+            name: btn.dataset.name || '',
+            processNote: btn.dataset.processNote || '',
+            processedAt: btn.dataset.processedAt || '',
+        });
     });
 });
 
@@ -2938,7 +3108,11 @@ function submitSelectedExportCompletions(){
     if(!confirm(`선택한 ${checked.length}개 항목을 일괄 반출 완료 처리하시겠습니까?`)){
         return;
     }
-    form.requestSubmit();
+    openExportCompleteModal({
+        mode: 'bulk',
+        requestIds: checked.map((checkbox) => checkbox.value),
+        requestCount: checked.length,
+    });
 }
 
 switchReqTab(currentReqTab);
