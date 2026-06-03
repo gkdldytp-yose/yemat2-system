@@ -823,6 +823,11 @@
 .tag-overtime { background-color: #ff9800; } /* 잔업 - 주황 */
 .tag-extra { background-color: #2196f3; }    /* 특근 - 파랑 */
 
+.calendar-day.workday-work{background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);}
+.calendar-day.workday-holiday{background:linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);}
+.calendar-day.workday-overtime{background:linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);}
+.calendar-day.workday-extra{background:linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);}
+
 /* -------------------------------------------------------------------*/
 
 /* 검색 및 모달 폼 */
@@ -1254,6 +1259,168 @@
     color: #64748b;
     font-size: 0.82rem;
 }
+html[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
+html[data-theme="dark"] .schedule-page-sub{color:#8ea3bd;}
+html[data-theme="dark"] .modal-content{background:linear-gradient(180deg,#121a2a,#0f1726);border:1px solid #263244;box-shadow:0 30px 70px rgba(2,6,23,.52);}
+html[data-theme="dark"] .modal-content h2,
+html[data-theme="dark"] .calendar-month,
+html[data-theme="dark"] .req-title,
+html[data-theme="dark"] .req-section h3,
+html[data-theme="dark"] .req-product-head strong{color:#eff6ff;}
+html[data-theme="dark"] .close{color:#8ea3bd;}
+html[data-theme="dark"] .close:hover{color:#eff6ff;}
+html[data-theme="dark"] .calendar{background:linear-gradient(180deg,#121a2a 0%,#0f1726 100%);border:1px solid #263244;box-shadow:0 18px 40px rgba(2,6,23,.34);}
+html[data-theme="dark"] .calendar-header{background:linear-gradient(135deg,#0f172a 0%,#17253a 55%,#0b5da8 140%);}
+html[data-theme="dark"] .calendar-nav button{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.18);}
+html[data-theme="dark"] .view-toggle button{background:#152033;border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
+html[data-theme="dark"] .view-toggle button:hover{border-color:#60a5fa;color:#eff6ff;background:#1a2436;}
+html[data-theme="dark"] .view-toggle button.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 10px 22px rgba(37,99,235,.22);}
+html[data-theme="dark"] .calendar-header a,
+html[data-theme="dark"] .calendar-action-btn{background:#152033 !important;border:1px solid #2b3648 !important;color:#e5eefc !important;box-shadow:none !important;}
+html[data-theme="dark"] .calendar-header a:hover,
+html[data-theme="dark"] .calendar-action-btn:hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
+html[data-theme="dark"] .calendar-weekdays{background:#182234;border-bottom-color:#253246;}
+html[data-theme="dark"] .calendar-days{background:#263244;}
+html[data-theme="dark"] .calendar-day{background:#121a2a;border-color:#263244;}
+html[data-theme="dark"] .calendar-day:hover{background:#162133;box-shadow:inset 0 0 0 1px rgba(96,165,250,.24);}
+html[data-theme="dark"] .calendar-day.other-month{background:#111827;color:#314155;}
+html[data-theme="dark"] .calendar-day.today{background:linear-gradient(135deg,rgba(59,130,246,.12) 0%,rgba(37,99,235,.08) 100%);box-shadow:inset 0 0 0 1px rgba(96,165,250,.34);}
+html[data-theme="dark"] .calendar-day.today .day-number{color:#fcd34d;}
+html[data-theme="dark"] .day-number{color:#dbe7f5;}
+html[data-theme="dark"] .schedule-count{background:#2563eb;}
+html[data-theme="dark"] .holiday-caption{background:rgba(127,29,29,.2);border-color:rgba(248,113,113,.18);color:#fecaca;}
+html[data-theme="dark"] .work-status-tag{
+    color:#f8fbff;
+    border:1px solid transparent;
+    box-shadow:none;
+    text-shadow:0 1px 2px rgba(15,23,42,.32);
+}
+html[data-theme="dark"] .tag-work{
+    background:linear-gradient(180deg,rgba(34,197,94,.2),rgba(21,128,61,.42));
+    border-color:rgba(74,222,128,.22);
+    color:#f0fdf4;
+}
+html[data-theme="dark"] .tag-holiday{
+    background:linear-gradient(180deg,rgba(244,114,182,.12),rgba(127,29,29,.46));
+    border-color:rgba(244,114,182,.18);
+    color:#fff4f6;
+}
+html[data-theme="dark"] .tag-overtime{
+    background:linear-gradient(180deg,rgba(251,146,60,.12),rgba(154,52,18,.44));
+    border-color:rgba(251,146,60,.18);
+    color:#fff7ed;
+}
+html[data-theme="dark"] .tag-extra{
+    background:linear-gradient(180deg,rgba(96,165,250,.12),rgba(30,64,175,.42));
+    border-color:rgba(96,165,250,.18);
+    color:#f3f8ff;
+}
+html[data-theme="dark"] .calendar-day.workday-work{
+    background:
+        radial-gradient(circle at top left, rgba(74,222,128,.12), transparent 48%),
+        linear-gradient(180deg, rgba(21,128,61,.28), rgba(18,26,42,.1) 34%, #121a2a 100%) !important;
+}
+html[data-theme="dark"] .calendar-day.workday-holiday{
+    background:
+        radial-gradient(circle at top left, rgba(244,114,182,.1), transparent 46%),
+        linear-gradient(180deg, rgba(127,29,29,.28), rgba(18,26,42,.1) 34%, #121a2a 100%) !important;
+}
+html[data-theme="dark"] .calendar-day.workday-overtime{
+    background:
+        radial-gradient(circle at top left, rgba(251,146,60,.1), transparent 46%),
+        linear-gradient(180deg, rgba(154,52,18,.23), rgba(18,26,42,.1) 34%, #121a2a 100%) !important;
+}
+html[data-theme="dark"] .calendar-day.workday-extra{
+    background:
+        radial-gradient(circle at top left, rgba(96,165,250,.1), transparent 46%),
+        linear-gradient(180deg, rgba(30,64,175,.23), rgba(18,26,42,.1) 34%, #121a2a 100%) !important;
+}
+html[data-theme="dark"] .calendar-day[style*="background: white"],
+html[data-theme="dark"] .calendar-day[style*="background:white"]{background:#121a2a !important;}
+html[data-theme="dark"] .calendar-day.workday-holiday .day-number{color:#fff1f2;}
+html[data-theme="dark"] .calendar-day.workday-overtime .day-number{color:#fff7ed;}
+html[data-theme="dark"] .calendar-day.workday-extra .day-number{color:#eff6ff;}
+html[data-theme="dark"] .calendar-day.workday-work .day-number{color:#ecfdf5;}
+html[data-theme="dark"] .schedule-item{
+    background:linear-gradient(180deg,#162133,#0f1726);
+    border-color:#314155;
+    border-left-color:#60a5fa;
+    box-shadow:0 12px 24px rgba(2,6,23,.32);
+}
+html[data-theme="dark"] .schedule-item.done{
+    background:linear-gradient(180deg,rgba(22,163,74,.18),#121a2a);
+    border-color:rgba(74,222,128,.26);
+    border-left-color:#22c55e;
+}
+html[data-theme="dark"] .schedule-item .schedule-name{color:#eff6ff;}
+html[data-theme="dark"] .schedule-item .schedule-info span{color:#93c5fd !important;}
+html[data-theme="dark"] .schedule-item .line-tag,
+html[data-theme="dark"] .schedule-item .line-badge,
+html[data-theme="dark"] .schedule-item .badge{
+    background:#1e293b !important;
+    color:#dbe7f5 !important;
+    border:1px solid #334155;
+}
+html[data-theme="dark"] .done-badge{background:rgba(22,163,74,.18);color:#86efac;}
+html[data-theme="dark"] .calendar-delete-btn{
+    background:rgba(254,226,226,.95);
+    color:#b91c1c;
+}
+html[data-theme="dark"] .calendar-copy-btn{
+    background:rgba(255,255,255,.9);
+    color:#334155;
+}
+html[data-theme="dark"] .req-tab-btn,
+html[data-theme="dark"] .req-product-tab-btn{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] .req-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;}
+html[data-theme="dark"] .req-product-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;}
+html[data-theme="dark"] .req-section,
+html[data-theme="dark"] .req-product-card{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 14px 32px rgba(2,6,23,.26);}
+html[data-theme="dark"] .req-section h3,
+html[data-theme="dark"] .req-product-head{background:#182234;border-bottom-color:#263244;}
+html[data-theme="dark"] .req-title-raw{background:linear-gradient(90deg,rgba(22,163,74,.18),#182234) !important;}
+html[data-theme="dark"] .req-title-base{background:linear-gradient(90deg,rgba(234,88,12,.18),#182234) !important;}
+html[data-theme="dark"] .req-title-sub{background:linear-gradient(90deg,rgba(37,99,235,.18),#182234) !important;}
+html[data-theme="dark"] .req-subgroup{border-top-color:#223046;}
+html[data-theme="dark"] .req-subgroup h4,
+html[data-theme="dark"] .req-table th{background:#162133;color:#c7d3e3;}
+html[data-theme="dark"] .req-subgroup[data-sub="box"] h4{background:rgba(249,115,22,.16);color:#fdba74;}
+html[data-theme="dark"] .req-subgroup[data-sub="inner"] h4{background:rgba(37,99,235,.16);color:#bfdbfe;}
+html[data-theme="dark"] .req-subgroup[data-sub="outer"] h4{background:rgba(6,182,212,.16);color:#a5f3fc;}
+html[data-theme="dark"] .req-subgroup[data-sub="silica"] h4{background:rgba(139,92,246,.16);color:#ddd6fe;}
+html[data-theme="dark"] .req-subgroup[data-sub="tray"] h4{background:rgba(34,197,94,.16);color:#bbf7d0;}
+html[data-theme="dark"] .req-subgroup[data-sub="etc"] h4{background:#162133;color:#c7d3e3;}
+html[data-theme="dark"] .req-table th,
+html[data-theme="dark"] .req-table td{border-bottom-color:#223046;color:#dbe7f5;}
+html[data-theme="dark"] .req-table th:first-child,
+html[data-theme="dark"] .req-table td:first-child,
+html[data-theme="dark"] .req-muted{color:#8ea3bd;}
+html[data-theme="dark"] .req-shortage{color:#fda4af;}
+html[data-theme="dark"] #listView > h2,
+html[data-theme="dark"] #listView .month-pill,
+html[data-theme="dark"] #listView .nav-btn,
+html[data-theme="dark"] #listView .status-tab-btn,
+html[data-theme="dark"] #listView .product-link,
+html[data-theme="dark"] #listView tbody td,
+html[data-theme="dark"] #listView tbody td strong{color:#e5eefc !important;}
+html[data-theme="dark"] #listView .list-month-nav .nav-btn,
+html[data-theme="dark"] #listView .status-tab-btn,
+html[data-theme="dark"] #listView .month-pill,
+html[data-theme="dark"] #listView .month-picker{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] #listView .status-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;}
+html[data-theme="dark"] #listView thead th{background:#1a2436;color:#c7d3e3;border-bottom-color:#263244;}
+html[data-theme="dark"] #listView tbody tr{background:#121a2a;border-color:#263244;}
+html[data-theme="dark"] #listView tbody tr[data-status="완료"]{background:#162133;}
+html[data-theme="dark"] #listView tbody tr:hover{background:#1a2436;}
+html[data-theme="dark"] #listView .list-mobile-card-label,
+html[data-theme="dark"] #listView tbody td:nth-child(8){color:#8ea3bd;}
+html[data-theme="dark"] #listView tbody td{color:#dbe7f5 !important;}
+html[data-theme="dark"] #listView .product-link{color:#eff6ff !important;}
+html[data-theme="dark"] #listView .month-pill,
+html[data-theme="dark"] #listView .nav-btn,
+html[data-theme="dark"] #listView .status-tab-btn{color:#dbe7f5 !important;}
+html[data-theme="dark"] #listView .line-badge{background:rgba(249,115,22,.16);color:#fdba74;}
+html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);color:#fda4af;}
 
 /* 프린트 스타일 */
 @media print {
@@ -2195,22 +2362,29 @@ function renderCalendar() {
         statusTag.className = 'work-status-tag';
 
         let typeText = '';
-        if (workData.type === 'work') { typeText = '근무'; statusTag.classList.add('tag-work'); }
-        else if (workData.type === 'holiday') { typeText = '휴무'; statusTag.classList.add('tag-holiday'); }
+        if (workData.type === 'work') {
+            typeText = '근무';
+            statusTag.classList.add('tag-work');
+            dayElement.classList.add('workday-work');
+        }
+        else if (workData.type === 'holiday') {
+            typeText = '휴무';
+            statusTag.classList.add('tag-holiday');
+            dayElement.classList.add('workday-holiday');
+        }
         else if (workData.type === 'overtime') { 
             typeText = workData.hours ? `잔업(${workData.hours}h)` : '잔업'; 
             statusTag.classList.add('tag-overtime');
+            dayElement.classList.add('workday-overtime');
         }
-        else if (workData.type === 'extra') { typeText = '특근'; statusTag.classList.add('tag-extra'); }
+        else if (workData.type === 'extra') {
+            typeText = '특근';
+            statusTag.classList.add('tag-extra');
+            dayElement.classList.add('workday-extra');
+        }
 
         statusTag.textContent = typeText;
         dayHeader.appendChild(statusTag);
-
-        // 배경색 적용 (기존 배경 로직 유지)
-       if (workData.type === 'work') dayElement.style.background = 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)';
-        else if (workData.type === 'holiday') dayElement.style.background = 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
-        else if (workData.type === 'overtime') dayElement.style.background = 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)';
-        else if (workData.type === 'extra') dayElement.style.background = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
     }
 
     dayElement.appendChild(dayHeader); // 기존 dayNumber 대신 dayHeader를 추가
@@ -2323,6 +2497,14 @@ function renderCalendar() {
         calendarDays.appendChild(dayElement);
     }
     
+    const totalRendered = startingDayOfWeek + daysInMonth;
+    const trailingDays = (7 - (totalRendered % 7)) % 7;
+    for (let i = 0; i < trailingDays; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day other-month';
+        calendarDays.appendChild(emptyDay);
+    }
+
     // 월 표시 업데이트
     document.getElementById('currentMonth').textContent = `${currentYear}년 ${currentMonth}월`;
     renderMobileScheduleList();

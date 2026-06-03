@@ -149,6 +149,35 @@ def _resolve_journal_date_range():
     return parsed_from.isoformat(), parsed_to.isoformat()
 
 
+def _resolve_default_calendar_month(dates):
+    ordered_dates = [str(value or '').strip() for value in (dates or []) if str(value or '').strip()]
+    if not ordered_dates:
+        return ''
+    return ordered_dates[0][:7]
+
+
+def _normalize_calendar_month(value):
+    text = str(value or '').strip()
+    if len(text) != 7:
+        return ''
+    try:
+        datetime.strptime(text + '-01', '%Y-%m-%d')
+    except Exception:
+        return ''
+    return text
+
+
+def _filter_rows_to_calendar_month(rows, date_field, month_token):
+    if not month_token:
+        return list(rows or [])
+    filtered = []
+    for row in rows or []:
+        value = str((row or {}).get(date_field) or '').strip()
+        if value.startswith(month_token):
+            filtered.append(row)
+    return filtered
+
+
 def _get_print_inventory_location_ids(cursor, workplace):
     target = (workplace or '').strip()
     if not target:
@@ -264,6 +293,10 @@ def journals():
     selected_raw_date = (request.args.get('raw_date') or '').strip()
     selected_material_date = (request.args.get('material_date') or '').strip()
     selected_packaging_date = (request.args.get('packaging_date') or '').strip()
+    selected_production_month = _normalize_calendar_month(request.args.get('production_month'))
+    selected_raw_month = _normalize_calendar_month(request.args.get('raw_month'))
+    selected_material_month = _normalize_calendar_month(request.args.get('material_month'))
+    selected_packaging_month = _normalize_calendar_month(request.args.get('packaging_month'))
     if raw_status not in ('active', 'done'):
         raw_status = 'active'
     if raw_filter not in ('all', 'code', 'car_number', 'done_date', 'receiving_date'):
@@ -312,6 +345,13 @@ def journals():
                 row for row in production_rows
                 if (row.get('production_date') or '').strip() == selected_production_date
             ]
+        else:
+            selected_production_month = selected_production_month or _resolve_default_calendar_month(production_available_dates)
+            production_rows = _filter_rows_to_calendar_month(
+                production_rows,
+                'production_date',
+                selected_production_month,
+            )
 
         cursor.execute(
             '''
@@ -391,6 +431,12 @@ def journals():
                     row for row in raw_done_items
                     if (row.get('journal_date') or '') == selected_raw_date
                 ]
+        else:
+            selected_raw_month = selected_raw_month or _resolve_default_calendar_month(raw_available_dates)
+            if raw_status == 'active':
+                raw_active_items = _filter_rows_to_calendar_month(raw_active_items, 'journal_date', selected_raw_month)
+            else:
+                raw_done_items = _filter_rows_to_calendar_month(raw_done_items, 'journal_date', selected_raw_month)
         if raw_query:
             raw_query_lower = raw_query.lower()
 
@@ -521,6 +567,18 @@ def journals():
                 row for row in material_journal_dates_map['sinan']
                 if row.get('production_date') == selected_material_date
             ]
+        else:
+            selected_material_month = selected_material_month or _resolve_default_calendar_month(material_available_dates_map.get(material_scope, []))
+            material_journal_dates_map['yemat'] = _filter_rows_to_calendar_month(
+                material_journal_dates_map['yemat'],
+                'production_date',
+                selected_material_month,
+            )
+            material_journal_dates_map['sinan'] = _filter_rows_to_calendar_month(
+                material_journal_dates_map['sinan'],
+                'production_date',
+                selected_material_month,
+            )
 
         packaging_bom_material_map = _get_packaging_bom_material_map(cursor, workplace)
         packaging_material_ids = list(packaging_bom_material_map.keys())
@@ -615,6 +673,13 @@ def journals():
                     row for row in packaging_journal_rows
                     if row.get('production_date') == selected_packaging_date
                 ]
+            else:
+                selected_packaging_month = selected_packaging_month or _resolve_default_calendar_month(packaging_available_dates)
+                packaging_journal_rows = _filter_rows_to_calendar_month(
+                    packaging_journal_rows,
+                    'production_date',
+                    selected_packaging_month,
+                )
 
         return render_template(
             'journals.html',
@@ -627,11 +692,13 @@ def journals():
             production_rows=production_rows,
             production_available_dates=production_available_dates,
             selected_production_date=selected_production_date,
+            selected_production_month=selected_production_month,
             raw_active_items=raw_active_items,
             raw_done_items=raw_done_items,
             raw_active_available_dates=raw_active_available_dates,
             raw_done_available_dates=raw_done_available_dates,
             selected_raw_date=selected_raw_date,
+            selected_raw_month=selected_raw_month,
             raw_query=raw_query,
             raw_filter=raw_filter,
             material_scope=material_scope,
@@ -640,9 +707,11 @@ def journals():
             material_available_dates_yemat=material_available_dates_map['yemat'],
             material_available_dates_sinan=material_available_dates_map['sinan'],
             selected_material_date=selected_material_date,
+            selected_material_month=selected_material_month,
             packaging_journal_rows=packaging_journal_rows,
             packaging_available_dates=packaging_available_dates,
             selected_packaging_date=selected_packaging_date,
+            selected_packaging_month=selected_packaging_month,
         )
     finally:
         conn.close()

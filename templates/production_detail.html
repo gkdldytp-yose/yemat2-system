@@ -162,6 +162,82 @@
 .plan-line-chip{display:flex;align-items:center;gap:.45rem;padding:.58rem .65rem;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc;font-size:.84rem;font-weight:700;color:#334155;}
 .plan-line-chip input{width:16px;height:16px;accent-color:#2563eb;}
 .plan-edit-actions{display:flex;justify-content:flex-end;gap:.55rem;padding-top:.25rem;}
+html[data-theme="dark"] .sec{background:linear-gradient(180deg,#121a2a,#101827);box-shadow:0 16px 36px rgba(2,6,23,.3);}
+html[data-theme="dark"] .sec h3{color:#eff6ff;border-bottom-color:#3b82f6;}
+html[data-theme="dark"] .info-item .lbl,
+html[data-theme="dark"] .raw-meta .ml,
+html[data-theme="dark"] .expiry-split-guide,
+html[data-theme="dark"] .expiry-split-field label,
+html[data-theme="dark"] .plan-edit-field label{color:#8ea3bd;}
+html[data-theme="dark"] .info-item .val,
+html[data-theme="dark"] .raw-meta .mv,
+html[data-theme="dark"] .plan-edit-title{color:#eff6ff;}
+html[data-theme="dark"] .note-textarea,
+html[data-theme="dark"] .note-suggestion-select,
+html[data-theme="dark"] .ainput,
+html[data-theme="dark"] .expiry-split-field input,
+html[data-theme="dark"] .plan-edit-field input,
+html[data-theme="dark"] .plan-edit-field textarea{background:#0f1726;border-color:#314155;color:#eff6ff;}
+html[data-theme="dark"] .sec .info-item input[style*="border:2px solid #667eea"]{
+    background:#0f1726 !important;
+    color:#eff6ff !important;
+    border-color:#314155 !important;
+}
+html[data-theme="dark"] .note-textarea[readonly],
+html[data-theme="dark"] .actual-boxes-input[readonly],
+html[data-theme="dark"] .expiry-split-field input[readonly]{background:#162133;color:#c7d3e3;}
+html[data-theme="dark"] .raw-card,
+html[data-theme="dark"] .shortage-modal,
+html[data-theme="dark"] .journal-modal,
+html[data-theme="dark"] .raw-change-modal,
+html[data-theme="dark"] .plan-edit-sheet{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 24px 56px rgba(2,6,23,.42);}
+html[data-theme="dark"] .raw-card:hover{background:#162133;border-color:#3b82f6;}
+html[data-theme="dark"] .raw-card.active{background:rgba(34,197,94,.12);border-color:rgba(74,222,128,.35);}
+html[data-theme="dark"] .mat-tbl th{background:#1a2436;color:#c7d3e3;}
+html[data-theme="dark"] .mat-tbl td{border-bottom-color:#223046;color:#dbe7f5;}
+html[data-theme="dark"] .mat-tbl tr:hover td{background:#162133;}
+html[data-theme="dark"] .shortage-head,
+html[data-theme="dark"] .journal-modal-head,
+html[data-theme="dark"] .raw-change-head,
+html[data-theme="dark"] .plan-edit-head{background:#162133;border-bottom-color:#263244;}
+html[data-theme="dark"] .shortage-body,
+html[data-theme="dark"] .journal-modal-body,
+html[data-theme="dark"] .raw-change-body,
+html[data-theme="dark"] .plan-edit-body{background:#121a2a;color:#dbe7f5;}
+html[data-theme="dark"] .journal-modal-title,
+html[data-theme="dark"] .raw-change-title{color:#eff6ff;}
+html[data-theme="dark"] .journal-modal-close,
+html[data-theme="dark"] .raw-change-close,
+html[data-theme="dark"] .plan-edit-close{background:#223046;color:#dbe7f5;}
+html[data-theme="dark"] .journal-modal-desc,
+html[data-theme="dark"] .raw-change-sub,
+html[data-theme="dark"] .raw-change-target-label,
+html[data-theme="dark"] .raw-change-option-meta{color:#8ea3bd;}
+html[data-theme="dark"] .journal-option-btn,
+html[data-theme="dark"] .raw-change-target,
+html[data-theme="dark"] .raw-change-tab,
+html[data-theme="dark"] .raw-change-option,
+html[data-theme="dark"] .plan-line-chip{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] .raw-change-option.active,
+html[data-theme="dark"] .raw-change-target.active,
+html[data-theme="dark"] .raw-change-tab.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:none;}
+html[data-theme="dark"] .raw-change-targets,
+html[data-theme="dark"] .raw-change-empty,
+html[data-theme="dark"] .raw-change-actions{background:#162133;border-color:#263244;color:#c7d3e3;}
+html[data-theme="dark"] .lot-gap-panel,
+html[data-theme="dark"] .lot-gap-hint{background:rgba(249,115,22,.12);border-color:rgba(251,146,60,.28);color:#fdba74;}
+html[data-theme="dark"] .raw-change-stock,
+html[data-theme="dark"] .unit-stock-badge{background:#162133;border-color:#263244;color:#dbe7f5;}
+html[data-theme="dark"] .unit-stock-badge.low{background:rgba(239,68,68,.16);border-color:rgba(248,113,113,.28);color:#fda4af;}
+html[data-theme="dark"] .plan-line-chip input{accent-color:#3b82f6;}
+html[data-theme="dark"] .shortage-table th{background:#1a2436;color:#c7d3e3;border-bottom-color:#263244;}
+html[data-theme="dark"] .shortage-table td{background:#121a2a;color:#dbe7f5;border-bottom-color:#223046;}
+html[data-theme="dark"] .shortage-desc,
+html[data-theme="dark"] .journal-option-meta{color:#8ea3bd;}
+html[data-theme="dark"] [style*="background:#fff3e0"]{background:rgba(249,115,22,.12) !important;color:#fdba74 !important;border-color:rgba(251,146,60,.24) !important;}
+html[data-theme="dark"] [style*="background:#f8f9fa"]{background:#162133 !important;color:#8ea3bd !important;border-color:#263244 !important;}
+html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:12px"],
+html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{background:#162133 !important;color:#dbe7f5 !important;border-color:#263244 !important;}
 
 @media (max-width: 768px) {
     html,body{max-width:100%;overflow-x:hidden;}

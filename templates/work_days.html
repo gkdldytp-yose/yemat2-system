@@ -16,7 +16,7 @@
     <div class="page-header">
         <div>
             <h1>📅 {{ year }}년 {{ month }}월 근무일 관리</h1>
-            <p style="color: #7f8c8d; margin-top: 0.5rem;">근무일, 휴일, 특근, 잔업을 관리합니다</p>
+            <p class="page-description" style="color: #7f8c8d; margin-top: 0.5rem;">근무일, 휴일, 특근, 잔업을 관리합니다</p>
         </div>
         <a href="{{ url_for('production.schedules', year=year, month=month) }}" class="btn-secondary">← 스케줄로</a>
     </div>
@@ -108,19 +108,19 @@
 
     <!-- 통계 -->
     <div class="stats-grid">
-        <div class="stat-card" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
+        <div class="stat-card stat-work">
             <div class="stat-label">근무일</div>
             <div class="stat-value">{{ stats.work }}일</div>
         </div>
-        <div class="stat-card" style="background: #ffebee; border-left: 4px solid #f44336;">
+        <div class="stat-card stat-holiday">
             <div class="stat-label">휴일</div>
             <div class="stat-value">{{ stats.holiday }}일</div>
         </div>
-        <div class="stat-card" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
+        <div class="stat-card stat-extra">
             <div class="stat-label">특근</div>
             <div class="stat-value">{{ stats.extra }}일</div>
         </div>
-        <div class="stat-card" style="background: #fff3e0; border-left: 4px solid #ff9800;">
+        <div class="stat-card stat-overtime">
             <div class="stat-label">잔업</div>
             <div class="stat-value">{{ stats.overtime }}건</div>
         </div>
@@ -380,6 +380,26 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
+.stat-work {
+    background: #e8f5e9;
+    border-left: 4px solid #4caf50;
+}
+
+.stat-holiday {
+    background: #ffebee;
+    border-left: 4px solid #f44336;
+}
+
+.stat-extra {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+}
+
+.stat-overtime {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+}
+
 .stat-label {
     font-size: 0.9rem;
     color: #7f8c8d;
@@ -515,6 +535,116 @@
 
 .calendar-day {
     position: relative;
+}
+
+html[data-theme="dark"] .page-description {
+    color: var(--text-muted) !important;
+}
+
+html[data-theme="dark"] .month-nav-card,
+html[data-theme="dark"] .legend-card,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .modal-content {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 14px 36px rgba(2, 6, 23, 0.4);
+}
+
+html[data-theme="dark"] .month-nav-btn {
+    background: rgba(15, 23, 42, 0.78);
+    color: var(--text-primary);
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+html[data-theme="dark"] .month-nav-btn:hover {
+    background: rgba(37, 99, 235, 0.16);
+    border-color: rgba(96, 165, 250, 0.4);
+}
+
+html[data-theme="dark"] .month-nav-today {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+
+html[data-theme="dark"] .month-nav-picker {
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--input-border);
+}
+
+html[data-theme="dark"] .calendar-header {
+    background: rgba(15, 23, 42, 0.82);
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .calendar-day {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(148, 163, 184, 0.18);
+}
+
+html[data-theme="dark"] .calendar-day:hover {
+    border-color: rgba(96, 165, 250, 0.5);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+}
+
+html[data-theme="dark"] .calendar-day.day-work {
+    background: rgba(22, 163, 74, 0.14);
+    border-color: rgba(34, 197, 94, 0.45);
+}
+
+html[data-theme="dark"] .calendar-day.day-holiday {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(248, 113, 113, 0.45);
+}
+
+html[data-theme="dark"] .calendar-day.day-overtime {
+    background: rgba(249, 115, 22, 0.14);
+    border-color: rgba(251, 146, 60, 0.45);
+}
+
+html[data-theme="dark"] .calendar-day.day-extra {
+    background: rgba(37, 99, 235, 0.14);
+    border-color: rgba(96, 165, 250, 0.45);
+}
+
+html[data-theme="dark"] .day-number,
+html[data-theme="dark"] .stat-value,
+html[data-theme="dark"] .form-group label {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .stat-label {
+    color: var(--text-muted);
+}
+
+html[data-theme="dark"] .holiday-caption {
+    background: rgba(127, 29, 29, 0.3);
+    border-color: rgba(248, 113, 113, 0.28);
+    color: #fecaca;
+}
+
+html[data-theme="dark"] .stat-work {
+    background: rgba(22, 163, 74, 0.14);
+}
+
+html[data-theme="dark"] .stat-holiday {
+    background: rgba(239, 68, 68, 0.14);
+}
+
+html[data-theme="dark"] .stat-extra {
+    background: rgba(37, 99, 235, 0.14);
+}
+
+html[data-theme="dark"] .stat-overtime {
+    background: rgba(249, 115, 22, 0.14);
+}
+
+html[data-theme="dark"] #selectedDatesInfo {
+    background: rgba(245, 158, 11, 0.16) !important;
+    border: 1px solid rgba(251, 191, 36, 0.28);
+    color: #fde68a;
 }
 </style>
 

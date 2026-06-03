@@ -42,6 +42,28 @@
 .journals-material-scope-btn.active{background:linear-gradient(180deg,#1d4ed8 0%,#1e40af 100%);border-color:#1d4ed8;color:#fff;box-shadow:0 10px 24px rgba(29,78,216,0.24);}
 .journals-material-scope-btn .scope-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 .45rem;border-radius:999px;background:rgba(255,255,255,0.82);color:#1d4ed8;font-size:.76rem;font-weight:900;}
 .journals-material-scope-btn.active .scope-badge{background:rgba(255,255,255,0.18);color:#fff;}
+html[data-theme="dark"] .journals-hero p,
+html[data-theme="dark"] .journals-help{color:var(--text-muted);}
+html[data-theme="dark"] .journals-panel{background:var(--panel-bg);border-color:var(--panel-border);box-shadow:0 12px 32px rgba(2,6,23,0.45);}
+html[data-theme="dark"] .journals-actions input[type="date"],
+html[data-theme="dark"] .journals-filter-select,
+html[data-theme="dark"] .journals-filter-input{background:var(--input-bg);border-color:var(--input-border);color:var(--text-primary);}
+html[data-theme="dark"] .journals-subtab-btn{background:rgba(15,23,42,0.72);border-color:rgba(148,163,184,0.24);color:var(--text-secondary);}
+html[data-theme="dark"] .journals-subtab-btn.active{background:#2563eb;border-color:#2563eb;color:#fff;}
+html[data-theme="dark"] .journals-table th,
+html[data-theme="dark"] .journals-table td{border-bottom-color:rgba(148,163,184,0.18);color:var(--text-primary);}
+html[data-theme="dark"] .journals-table th{background:rgba(30,41,59,0.88);color:var(--text-secondary);}
+html[data-theme="dark"] .journals-table tr:hover td{background:rgba(37,99,235,0.08);}
+html[data-theme="dark"] .journals-empty{color:var(--text-muted);}
+html[data-theme="dark"] .journals-calendar{background:linear-gradient(135deg,rgba(15,23,42,0.92) 0%,rgba(30,41,59,0.88) 100%);border-color:rgba(96,165,250,0.26);}
+html[data-theme="dark"] .journals-calendar-title{color:var(--text-primary);}
+html[data-theme="dark"] .journals-calendar-weekday{background:rgba(15,23,42,0.82);color:var(--text-secondary);}
+html[data-theme="dark"] .journals-calendar-day{background:rgba(15,23,42,0.72);border-color:rgba(148,163,184,0.18);color:#64748b;}
+html[data-theme="dark"] .journals-calendar-day.has-entry{background:rgba(37,99,235,0.2);border-color:rgba(96,165,250,0.44);color:#dbeafe;}
+html[data-theme="dark"] .journals-calendar-day.has-entry:hover{background:rgba(37,99,235,0.28);}
+html[data-theme="dark"] .journals-material-scope-btn{background:linear-gradient(180deg,rgba(30,41,59,0.96) 0%,rgba(15,23,42,0.92) 100%);border-color:rgba(148,163,184,0.22);color:var(--text-secondary);box-shadow:0 8px 20px rgba(2,6,23,0.28);}
+html[data-theme="dark"] .journals-material-scope-btn:hover{background:rgba(37,99,235,0.16);border-color:rgba(96,165,250,0.42);color:#dbeafe;}
+html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgba(15,23,42,0.78);color:#bfdbfe;}
 @media (max-width:768px){
   .journals-table{font-size:.8rem;}
   .journals-table th,.journals-table td{padding:.55rem .45rem;}
@@ -77,6 +99,7 @@
         <div class="journals-actions" style="display:none;">
             <form method="GET" action="/journals" class="journals-inline-form">
                 <input type="hidden" name="tab" value="production">
+                {% if selected_production_month %}<input type="hidden" name="production_month" value="{{ selected_production_month }}">{% endif %}
                 <input type="date" name="date_from" value="{{ date_from }}">
                 <span class="journals-help">~</span>
                 <input type="date" name="date_to" value="{{ date_to }}">
@@ -141,6 +164,7 @@
         <form method="GET" action="/journals" class="journals-filter-form" id="rawFilterForm">
             <input type="hidden" name="tab" value="raw">
             <input type="hidden" name="raw_status" id="rawFilterStatus" value="{{ raw_status }}">
+            {% if selected_raw_month %}<input type="hidden" name="raw_month" value="{{ selected_raw_month }}">{% endif %}
             {% if selected_raw_date %}
             <input type="hidden" name="raw_date" value="{{ selected_raw_date }}">
             {% endif %}
@@ -249,6 +273,7 @@
             <form method="GET" action="/journals" class="journals-inline-form">
                 <input type="hidden" name="tab" value="material">
                 <input type="hidden" name="material_scope" value="{{ material_scope or 'yemat' }}">
+                {% if selected_material_month %}<input type="hidden" name="material_month" value="{{ selected_material_month }}">{% endif %}
                 <input type="date" name="date_from" value="{{ date_from }}">
                 <span class="journals-help">~</span>
                 <input type="date" name="date_to" value="{{ date_to }}">
@@ -394,33 +419,41 @@ const journalCalendarConfigs = {
     production: {
         dates: {{ production_available_dates|tojson }},
         selected: {{ selected_production_date|tojson }},
+        month: {{ selected_production_month|tojson }},
         gridId: 'productionCalendarGrid',
         labelId: 'productionCalendarLabel',
         param: 'production_date',
+        monthParam: 'production_month',
         extra: { tab: 'production' },
     },
     raw: {
         dates: {{ (raw_active_available_dates if raw_status == 'active' else raw_done_available_dates)|tojson }},
         selected: {{ selected_raw_date|tojson }},
+        month: {{ selected_raw_month|tojson }},
         gridId: 'rawCalendarGrid',
         labelId: 'rawCalendarLabel',
         param: 'raw_date',
+        monthParam: 'raw_month',
         extra: { tab: 'raw', raw_status: {{ raw_status|tojson }}, raw_filter: {{ raw_filter|tojson }}, raw_q: {{ raw_query|tojson }} },
     },
     material: {
         dates: {{ (material_available_dates_sinan if material_scope == 'sinan' else material_available_dates_yemat)|tojson }},
         selected: {{ selected_material_date|tojson }},
+        month: {{ selected_material_month|tojson }},
         gridId: 'materialCalendarGrid',
         labelId: 'materialCalendarLabel',
         param: 'material_date',
+        monthParam: 'material_month',
         extra: { tab: 'material', material_scope: {{ material_scope|tojson }} },
     },
     packaging: {
         dates: {{ packaging_available_dates|tojson }},
         selected: {{ selected_packaging_date|tojson }},
+        month: {{ selected_packaging_month|tojson }},
         gridId: 'packagingCalendarGrid',
         labelId: 'packagingCalendarLabel',
         param: 'packaging_date',
+        monthParam: 'packaging_month',
         extra: { tab: 'packaging' },
     },
 };
@@ -452,6 +485,9 @@ function switchRawStatus(status){
     url.searchParams.set('raw_status', status);
     url.searchParams.set('tab', 'raw');
     url.searchParams.delete('raw_date');
+    if(journalCalendarConfigs.raw && journalCalendarConfigs.raw.month){
+        url.searchParams.set('raw_month', journalCalendarConfigs.raw.month);
+    }
     const rawFilterStatus = document.getElementById('rawFilterStatus');
     if(rawFilterStatus) rawFilterStatus.value = status;
     window.location.href = url.toString();
@@ -470,6 +506,9 @@ function switchMaterialScope(scope){
     url.searchParams.set('material_scope', scope);
     url.searchParams.set('tab', 'material');
     url.searchParams.delete('material_date');
+    if(journalCalendarConfigs.material && journalCalendarConfigs.material.month){
+        url.searchParams.set('material_month', journalCalendarConfigs.material.month);
+    }
     window.location.href = url.toString();
     const scopeInput = document.querySelector('input[name="material_scope"]');
     if(scopeInput) scopeInput.value = scope;
@@ -478,7 +517,7 @@ function switchMaterialScope(scope){
 function initJournalCalendar(key){
     const config = journalCalendarConfigs[key];
     if(!config) return;
-    const seed = config.selected || (config.dates.length ? config.dates[0] : '');
+    const seed = config.selected || (config.month ? `${config.month}-01` : '') || (config.dates.length ? config.dates[0] : '');
     journalCalendarAnchors[key] = seed ? new Date(`${seed}T00:00:00`) : new Date();
 }
 
@@ -488,6 +527,14 @@ function buildJournalCalendarUrl(key, dateStr){
     Object.entries(config.extra || {}).forEach(([param, value]) => {
         url.searchParams.set(param, value);
     });
+    if(config.monthParam){
+        const monthValue = dateStr ? dateStr.slice(0, 7) : config.month;
+        if(monthValue){
+            url.searchParams.set(config.monthParam, monthValue);
+        } else {
+            url.searchParams.delete(config.monthParam);
+        }
+    }
     if(dateStr){
         url.searchParams.set(config.param, dateStr);
     } else {
@@ -497,10 +544,20 @@ function buildJournalCalendarUrl(key, dateStr){
 }
 
 function moveJournalCalendar(key, delta){
+    const config = journalCalendarConfigs[key];
     const anchor = journalCalendarAnchors[key];
-    if(!anchor) return;
-    journalCalendarAnchors[key] = new Date(anchor.getFullYear(), anchor.getMonth() + delta, 1);
-    renderJournalCalendar(key);
+    if(!config || !anchor) return;
+    const nextAnchor = new Date(anchor.getFullYear(), anchor.getMonth() + delta, 1);
+    const nextMonth = `${nextAnchor.getFullYear()}-${String(nextAnchor.getMonth() + 1).padStart(2, '0')}`;
+    const url = new URL(window.location.href);
+    Object.entries(config.extra || {}).forEach(([param, value]) => {
+        url.searchParams.set(param, value);
+    });
+    if(config.monthParam){
+        url.searchParams.set(config.monthParam, nextMonth);
+    }
+    url.searchParams.delete(config.param);
+    window.location.href = url.toString();
 }
 
 function renderJournalCalendar(key){

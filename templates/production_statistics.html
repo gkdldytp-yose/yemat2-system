@@ -44,6 +44,36 @@
 .stats-muted{font-size:0.8rem;color:#64748b;}
 .stats-empty{padding:3.2rem 1rem;text-align:center;color:#64748b;font-weight:700;}
 .stats-filter-note{display:flex;align-items:center;min-height:48px;padding:0.72rem 0.85rem;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;color:#64748b;font-size:0.88rem;line-height:1.5;}
+html[data-theme="dark"] .stats-hero,
+html[data-theme="dark"] .stats-summary-card,
+html[data-theme="dark"] .stats-filter-card,
+html[data-theme="dark"] .stats-table-card{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 16px 36px rgba(2,6,23,.3);}
+html[data-theme="dark"] .stats-hero-title,
+html[data-theme="dark"] .stats-summary-value,
+html[data-theme="dark"] .stats-table-title{color:#eff6ff;}
+html[data-theme="dark"] .stats-hero-desc,
+html[data-theme="dark"] .stats-summary-label,
+html[data-theme="dark"] .stats-summary-sub,
+html[data-theme="dark"] .stats-field label,
+html[data-theme="dark"] .stats-table-sub,
+html[data-theme="dark"] .stats-muted,
+html[data-theme="dark"] .stats-filter-note{color:#8ea3bd;}
+html[data-theme="dark"] .stats-chip,
+html[data-theme="dark"] .stats-pill,
+html[data-theme="dark"] .stats-qty{background:#162133;border-color:#263244;color:#c7d3e3;}
+html[data-theme="dark"] .stats-field input,
+html[data-theme="dark"] .stats-field select{background:#0f1726;border-color:#314155;color:#eff6ff;}
+html[data-theme="dark"] .stats-view-tab{background:#152033;border-color:#2b3648;color:#dbe7f5;box-shadow:0 10px 22px rgba(2,6,23,.22);}
+html[data-theme="dark"] .stats-view-tab.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;}
+html[data-theme="dark"] .stats-table-wrap{border-color:#263244;}
+html[data-theme="dark"] .stats-table thead th{background:#1a2436;color:#c7d3e3;border-bottom-color:#263244;}
+html[data-theme="dark"] .stats-table tbody td{background:#121a2a;color:#dbe7f5;border-bottom-color:#223046;}
+html[data-theme="dark"] .stats-table tbody tr:hover td{background:#162133;}
+html[data-theme="dark"] .stats-table tfoot td{background:#162133;color:#eff6ff;border-top-color:#314155;}
+html[data-theme="dark"] .stats-code{background:rgba(37,99,235,.18);border-color:rgba(96,165,250,.28);color:#bfdbfe;}
+html[data-theme="dark"] .stats-link{color:#93c5fd;}
+html[data-theme="dark"] .stats-empty{color:#8ea3bd;}
+html[data-theme="dark"] .stats-filter-note{background:#162133;border-color:#314155;}
 @media print{
   body > *:not(.container){display:none !important;}
   .container > *:not(.stats-shell){display:none !important;}
