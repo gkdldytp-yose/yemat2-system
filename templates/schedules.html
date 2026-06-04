@@ -239,6 +239,9 @@
 @media (max-width: 768px) {
     .calendar {
         overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid #dbe7f5;
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
     .calendar-header {
         padding: 1rem 0.9rem;
@@ -285,14 +288,15 @@
     }
     .mobile-calendar-list {
         display: block;
-        padding: 0.9rem;
-        background: #f8fafc;
+        padding: 0.95rem;
+        background:
+            linear-gradient(180deg, #eef5ff 0%, #f8fbff 30%, #f8fafc 100%);
     }
     .mobile-day-group {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        border-radius: 18px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
         overflow: hidden;
     }
     .mobile-day-group + .mobile-day-group {
@@ -303,7 +307,7 @@
         justify-content: space-between;
         align-items: center;
         gap: 0.6rem;
-        padding: 0.9rem 1rem 0.75rem;
+        padding: 0.95rem 1rem 0.8rem;
         background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
         border-bottom: 1px solid #e5edf7;
     }
@@ -325,20 +329,20 @@
         display: flex;
         flex-direction: column;
         gap: 0.7rem;
-        padding: 0.85rem;
+        padding: 0.9rem;
     }
     .mobile-schedule-card {
         border: 1px solid #dbe7f3;
         border-left: 5px solid #3b82f6;
-        border-radius: 14px;
-        background: #ffffff;
-        padding: 0.85rem 0.9rem;
-        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        padding: 0.95rem;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
         cursor: pointer;
     }
     .mobile-schedule-card.done {
         border-left-color: #16a34a;
-        background: #f0fdf4;
+        background: linear-gradient(180deg, #f7fff9 0%, #eefcf3 100%);
     }
     .mobile-schedule-top {
         display: flex;
@@ -383,6 +387,10 @@
     }
     .mobile-meta-item {
         min-width: 0;
+        padding: 0.42rem 0.48rem;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.72);
+        border: 1px solid #e6eef8;
     }
     .mobile-meta-label {
         display: block;
@@ -400,13 +408,14 @@
         overflow-wrap: anywhere;
     }
     .mobile-empty-state {
-        padding: 1rem;
+        padding: 1.1rem 1rem;
         text-align: center;
         font-size: 0.92rem;
         color: #64748b;
-        background: #fff;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
         border: 1px dashed #cbd5e1;
-        border-radius: 14px;
+        border-radius: 16px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
     }
     .schedule-toolbar {
         gap: 0.75rem;
@@ -432,25 +441,27 @@
         display: grid;
         grid-template-columns: 1fr;
         margin: 0 1rem 1rem;
-        padding: 0.75rem;
-        gap: 0.7rem;
+        padding: 0.9rem;
+        gap: 0.8rem;
         border: 1px solid #dbeafe;
-        border-radius: 16px;
-        background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        border-radius: 20px;
+        background:
+            radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 32%),
+            linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
     }
     #listView .list-month-nav .nav-left,
     #listView .list-month-nav .nav-right {
         display: grid;
         width: 100%;
-        gap: 0.45rem;
+        gap: 0.55rem;
     }
     #listView .list-month-nav .nav-left {
         grid-template-columns: 48px minmax(0, 1fr) 48px;
         align-items: center;
     }
     #listView .list-month-nav .nav-right {
-        grid-template-columns: minmax(0, 1fr) 82px 74px;
+        grid-template-columns: minmax(0, 1fr) 88px 78px;
         align-items: stretch;
     }
     #listView .list-month-nav .month-pill {
@@ -468,10 +479,10 @@
         margin-left: 0;
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 0.3rem;
-        padding: 0.3rem;
+        gap: 0.35rem;
+        padding: 0.35rem;
         border: 1px solid #d8e7f7;
-        border-radius: 14px;
+        border-radius: 16px;
         background: rgba(255,255,255,0.74);
         box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
     }
@@ -487,12 +498,12 @@
         text-align: center;
     }
     #listView .list-month-nav .nav-btn {
-        border-radius: 12px;
+        border-radius: 14px;
         padding: 0.45rem 0.35rem;
-        background: #ffffff;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
         border-color: #d4e3f5;
         color: #0f172a;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07);
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
     }
     #listView .list-month-nav .nav-btn:active,
     #listView .status-tab-btn:active {
@@ -530,12 +541,12 @@
         font-size: 0.95rem;
         font-weight: 800;
         color: #0f172a;
-        background: #ffffff;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 12px rgba(15, 23, 42, 0.05);
+        background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 16px rgba(15, 23, 42, 0.06);
     }
     #listView .status-tab-btn {
         border: none;
-        border-radius: 11px;
+        border-radius: 12px;
         background: transparent;
         box-shadow: none;
         padding: 0.55rem 0.25rem;
@@ -549,12 +560,12 @@
     }
     #listView .list-month-nav .month-picker {
         border: 1px solid #d4e3f5;
-        border-radius: 12px;
-        background: #ffffff;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
         min-width: 0;
         color: #0f172a;
         font-weight: 700;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
     }
     #listView .list-month-nav .nav-right .nav-btn {
         font-size: 0.8rem;
@@ -868,6 +879,246 @@
     background: #f0f9ff;
 }
 .product-item:last-child { border-bottom: none; }
+.schedule-add-form {
+    color: #0f172a;
+}
+.schedule-add-form .form-group {
+    margin-bottom: 1.25rem;
+}
+.schedule-add-form label {
+    display: block;
+    margin-bottom: 0.55rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.schedule-add-form input[type="date"],
+.schedule-add-form input[type="number"],
+.schedule-add-form textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    padding: 0.78rem 0.95rem;
+    font-size: 0.96rem;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.schedule-add-form input[type="date"]:focus,
+.schedule-add-form input[type="number"]:focus,
+.schedule-add-form textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+.schedule-add-form textarea {
+    resize: vertical;
+    min-height: 76px;
+}
+.schedule-selected-product {
+    display: none;
+    margin-top: 0.75rem;
+    padding: 1rem 1.05rem;
+    border-radius: 12px;
+    border: 1px solid #a7f3d0;
+    border-left: 5px solid #16a34a;
+    background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
+    box-shadow: 0 12px 26px rgba(22, 163, 74, 0.12);
+}
+.schedule-selected-product-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+.schedule-selected-product-title {
+    color: #166534;
+    font-weight: 800;
+}
+.schedule-selected-product-name {
+    margin-left: 0.5rem;
+    font-weight: 700;
+    color: #14532d;
+}
+.schedule-selected-product-cancel {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    border: none;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 10px 20px rgba(220, 38, 38, 0.18);
+}
+.schedule-date-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.55rem;
+}
+.schedule-date-mode-btn {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    border: none;
+    padding: 0.62rem 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 14px 24px rgba(37, 99, 235, 0.18);
+}
+.schedule-date-mode-btn.is-active {
+    background: linear-gradient(135deg, #059669, #10b981);
+    box-shadow: 0 14px 24px rgba(16, 185, 129, 0.2);
+}
+.schedule-date-count {
+    color: #475569;
+    font-weight: 700;
+}
+.schedule-date-picker {
+    display: none;
+    border: 1px solid #dbe3f0;
+    border-radius: 14px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+.schedule-date-picker-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+.schedule-date-nav-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+}
+.schedule-date-picker-month {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #1e293b;
+}
+.schedule-date-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 0.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+}
+.schedule-date-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+.schedule-date-cell,
+.schedule-date-empty {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+.schedule-date-empty {
+    background: transparent;
+}
+.schedule-date-cell {
+    background: rgba(255,255,255,0.92);
+    color: #334155;
+    border: 1px solid #dbe3f0;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+.schedule-date-cell:hover {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+}
+.schedule-date-cell.is-selected {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    border-color: #2563eb;
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.22);
+}
+.schedule-date-picker-actions {
+    margin-top: 0.75rem;
+    text-align: right;
+}
+.schedule-date-clear-btn {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    border: none;
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+.schedule-line-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+.schedule-line-option {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.72rem 0.8rem;
+    border: 1px solid #dbe3f0;
+    border-radius: 10px;
+    cursor: pointer;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    color: #334155;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s, background 0.18s;
+}
+.schedule-line-option:hover {
+    border-color: #60a5fa;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(59, 130, 246, 0.12);
+}
+.schedule-line-option input[type="checkbox"] {
+    margin: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+.schedule-line-option span {
+    font-weight: 700;
+}
+.schedule-helper-text {
+    font-size: 0.86rem;
+    color: #64748b;
+    margin-top: 0.55rem;
+}
+.schedule-product-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: #64748b;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+.schedule-product-id {
+    color: #64748b;
+    font-size: 0.85rem;
+}
+@media (max-width: 720px) {
+    .schedule-line-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
 
 /* 뷰 전환 버튼 */
 .schedule-toolbar {
@@ -1395,7 +1646,113 @@ html[data-theme="dark"] .req-table td{border-bottom-color:#223046;color:#dbe7f5;
 html[data-theme="dark"] .req-table th:first-child,
 html[data-theme="dark"] .req-table td:first-child,
 html[data-theme="dark"] .req-muted{color:#8ea3bd;}
-html[data-theme="dark"] .req-shortage{color:#fda4af;}
+html[data-theme="dark"] .req-table td.req-shortage{color:#f87171 !important;font-weight:800;}
+html[data-theme="dark"] #addModal .modal-content {
+    background: linear-gradient(180deg, #121a2a 0%, #0f1726 100%);
+}
+html[data-theme="dark"] .schedule-add-form,
+html[data-theme="dark"] .schedule-add-form label,
+html[data-theme="dark"] .schedule-date-picker-month,
+html[data-theme="dark"] .schedule-selected-product-name,
+html[data-theme="dark"] .schedule-selected-product-title {
+    color: #eff6ff;
+}
+html[data-theme="dark"] .schedule-add-form input[type="date"],
+html[data-theme="dark"] .schedule-add-form input[type="number"],
+html[data-theme="dark"] .schedule-add-form textarea,
+html[data-theme="dark"] .search-box input {
+    background: #152033;
+    border-color: #334155;
+    color: #eff6ff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+html[data-theme="dark"] .schedule-add-form input::placeholder,
+html[data-theme="dark"] .schedule-add-form textarea::placeholder,
+html[data-theme="dark"] .search-box input::placeholder {
+    color: #8ea3bd;
+}
+html[data-theme="dark"] .search-box input:focus,
+html[data-theme="dark"] .schedule-add-form input[type="date"]:focus,
+html[data-theme="dark"] .schedule-add-form input[type="number"]:focus,
+html[data-theme="dark"] .schedule-add-form textarea:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
+}
+html[data-theme="dark"] .search-icon,
+html[data-theme="dark"] .schedule-date-count,
+html[data-theme="dark"] .schedule-helper-text,
+html[data-theme="dark"] .schedule-product-id,
+html[data-theme="dark"] .schedule-date-weekdays {
+    color: #8ea3bd;
+}
+html[data-theme="dark"] .product-list {
+    border-color: #334155;
+    background: #101827;
+    box-shadow: 0 16px 28px rgba(2, 6, 23, 0.32);
+}
+html[data-theme="dark"] .product-item {
+    background: #121a2a;
+    border-bottom-color: #263244;
+    color: #eff6ff;
+}
+html[data-theme="dark"] .product-item:hover {
+    background: #1b2940;
+}
+html[data-theme="dark"] .schedule-product-empty {
+    background: #152033;
+    color: #8ea3bd;
+}
+html[data-theme="dark"] .schedule-selected-product {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.14) 0%, rgba(15, 23, 42, 0.88) 100%);
+    border-color: rgba(74, 222, 128, 0.28);
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.28);
+}
+html[data-theme="dark"] .schedule-selected-product-name {
+    color: #dcfce7;
+}
+html[data-theme="dark"] .schedule-date-picker {
+    background: linear-gradient(180deg, #152033 0%, #101827 100%);
+    border-color: #334155;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 18px 34px rgba(2, 6, 23, 0.3);
+}
+html[data-theme="dark"] .schedule-date-nav-btn {
+    background: #121a2a;
+    border-color: #334155;
+    color: #e5eefc;
+}
+html[data-theme="dark"] .schedule-date-cell {
+    background: #121a2a;
+    border-color: #334155;
+    color: #dbe7f5;
+}
+html[data-theme="dark"] .schedule-date-cell:hover {
+    background: #1b2940;
+    border-color: #60a5fa;
+    color: #eff6ff;
+}
+html[data-theme="dark"] .schedule-date-cell.is-selected {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    border-color: #3b82f6;
+}
+html[data-theme="dark"] .schedule-line-option {
+    background: linear-gradient(180deg, #152033 0%, #101827 100%);
+    border-color: #334155;
+    color: #dbe7f5;
+    box-shadow: 0 10px 20px rgba(2, 6, 23, 0.22);
+}
+html[data-theme="dark"] .schedule-line-option:hover {
+    border-color: #60a5fa;
+    background: #18263b;
+    box-shadow: 0 14px 24px rgba(2, 6, 23, 0.28);
+}
+html[data-theme="dark"] .schedule-line-option:has(input:checked) {
+    border-color: #60a5fa;
+    background: linear-gradient(135deg, rgba(37,99,235,0.22), rgba(21,32,51,0.98));
+}
+html[data-theme="dark"] .schedule-line-option input[type="checkbox"] {
+    accent-color: #3b82f6;
+}
 html[data-theme="dark"] #listView > h2,
 html[data-theme="dark"] #listView .month-pill,
 html[data-theme="dark"] #listView .nav-btn,
@@ -1421,6 +1778,100 @@ html[data-theme="dark"] #listView .nav-btn,
 html[data-theme="dark"] #listView .status-tab-btn{color:#dbe7f5 !important;}
 html[data-theme="dark"] #listView .line-badge{background:rgba(249,115,22,.16);color:#fdba74;}
 html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);color:#fda4af;}
+html[data-theme="dark"] .mobile-calendar-list{
+    background:
+        radial-gradient(circle at top right, rgba(59,130,246,.12), transparent 28%),
+        linear-gradient(180deg,#101827 0%,#0f1726 100%);
+}
+html[data-theme="dark"] .mobile-day-group{
+    background:linear-gradient(180deg,#121a2a 0%,#101827 100%);
+    border-color:#263244;
+    box-shadow:0 18px 34px rgba(2,6,23,.28);
+}
+html[data-theme="dark"] .mobile-day-header{
+    background:linear-gradient(180deg,#182234 0%,#152033 100%);
+    border-bottom-color:#263244;
+}
+html[data-theme="dark"] .mobile-day-date strong,
+html[data-theme="dark"] .mobile-schedule-name,
+html[data-theme="dark"] .mobile-meta-value{
+    color:#eff6ff;
+}
+html[data-theme="dark"] .mobile-day-date span,
+html[data-theme="dark"] .mobile-meta-label{
+    color:#8ea3bd;
+}
+html[data-theme="dark"] .mobile-schedule-card{
+    background:linear-gradient(180deg,#162133 0%,#111827 100%);
+    border-color:#314155;
+    box-shadow:0 12px 22px rgba(2,6,23,.22);
+}
+html[data-theme="dark"] .mobile-schedule-card.done{
+    background:linear-gradient(180deg,rgba(22,163,74,.16) 0%,#121a2a 100%);
+    border-color:rgba(74,222,128,.24);
+}
+html[data-theme="dark"] .mobile-meta-item{
+    background:rgba(255,255,255,.03);
+    border-color:#253246;
+}
+html[data-theme="dark"] .mobile-status-badge.planned{
+    background:linear-gradient(135deg,#2563eb,#1d4ed8);
+}
+html[data-theme="dark"] .mobile-status-badge.done{
+    background:linear-gradient(135deg,#16a34a,#15803d);
+}
+html[data-theme="dark"] .mobile-empty-state{
+    background:linear-gradient(180deg,#121a2a 0%,#101827 100%);
+    color:#8ea3bd;
+    border-color:#334155;
+    box-shadow:0 12px 24px rgba(2,6,23,.22);
+}
+html[data-theme="dark"] #listView{
+    background:linear-gradient(180deg,#121a2a 0%,#0f1726 100%);
+    border:1px solid #263244;
+    box-shadow:0 22px 40px rgba(2,6,23,.3);
+}
+html[data-theme="dark"] #listView .list-month-nav{
+    border-color:#2b3c55;
+    background:
+        radial-gradient(circle at top right, rgba(96,165,250,.15), transparent 32%),
+        linear-gradient(180deg,#152033 0%,#101827 100%);
+    box-shadow:0 18px 32px rgba(2,6,23,.28);
+}
+html[data-theme="dark"] #listView .status-tabs{
+    background:rgba(15,23,42,.55);
+    border-color:#2b3c55;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+html[data-theme="dark"] #listView .list-month-nav .nav-btn,
+html[data-theme="dark"] #listView .month-pill,
+html[data-theme="dark"] #listView .month-picker{
+    background:linear-gradient(180deg,#1a2436 0%,#152033 100%);
+    border-color:#334155;
+    box-shadow:0 10px 18px rgba(2,6,23,.2);
+}
+html[data-theme="dark"] #listView .list-month-nav .nav-btn:hover,
+html[data-theme="dark"] #listView .month-picker:hover{
+    border-color:#60a5fa;
+    color:#eff6ff;
+}
+html[data-theme="dark"] #listView .status-tab-btn{
+    color:#9fb3cc !important;
+}
+html[data-theme="dark"] #listView .status-tab-btn.active{
+    background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%);
+    box-shadow:0 12px 20px rgba(37,99,235,.26);
+}
+html[data-theme="dark"] #listView tbody tr{
+    box-shadow:0 12px 22px rgba(2,6,23,.22);
+}
+html[data-theme="dark"] #listView tbody tr[data-status="완료"]{
+    background:linear-gradient(180deg,#162133 0%,#111b2b 100%);
+    border-color:#28455a;
+}
+html[data-theme="dark"] #listView tbody td:nth-child(8){
+    border-top-color:#263244;
+}
 
 /* 프린트 스타일 */
 @media print {
@@ -1451,6 +1902,17 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
     .schedule-item button {
         display: none !important;
     }
+
+    /* 모바일/보조 뷰는 인쇄에서 완전히 제외 */
+    .mobile-calendar-list,
+    #mobileCalendarList,
+    #requirementsView,
+    #listView {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
     
     /* 프린트 전용 요소 표시 */
     .print-only {
@@ -1461,33 +1923,37 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
     .container {
         padding: 0 !important;
         margin: 0 !important;
+        width: 100% !important;
     }
     
     /* 프린트 헤더 스타일 - 간결하게 */
     .print-header {
         background: white;
-        border-bottom: 1px solid #333;
-        margin-bottom: 0.2cm;
+        border-bottom: 1px solid #475569;
+        margin-bottom: 0.12cm;
         padding: 0 !important;
     }
     
     .print-header h1 {
-        font-size: 1.1rem !important;
+        font-size: 1rem !important;
         margin: 0 !important;
-        padding: 0.2cm 0 0.05cm 0 !important;
-        font-weight: bold;
+        padding: 0.12cm 0 0.03cm 0 !important;
+        font-weight: 800;
+        letter-spacing: 0 !important;
     }
     
     .print-header h2 {
-        font-size: 0.95rem !important;
+        font-size: 0.82rem !important;
         margin: 0 !important;
-        padding: 0 0 0.15cm 0 !important;
+        padding: 0 0 0.1cm 0 !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
     }
     
     /* 페이지 설정 - 여백 최소화 */
     @page {
         size: A4 portrait;
-        margin: 0.45cm 0.45cm;
+        margin: 0.35cm 0.35cm;
     }
     
     html, body {
@@ -1495,18 +1961,29 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
         padding: 0 !important;
         margin: 0 !important;
         width: 100%;
-        height: 100%;
+        min-height: 100%;
     }
     
     /* 캘린더 컨테이너 - 전체 페이지 사용 */
+    #calendarView {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
     .calendar {
         box-shadow: none;
-        border: 2px solid #333;
+        border: 1px solid #475569;
         page-break-inside: avoid;
         margin: 0 !important;
         padding: 0 !important;
         width: 100% !important;
-        height: calc(100vh - 1.5cm) !important;
+        height: auto !important;
+        border-radius: 0 !important;
+        overflow: hidden !important;
+        background: #fff !important;
     }
     
     .calendar-header {
@@ -1515,41 +1992,45 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
     
     /* 요일 헤더 - 높이 축소 */
     .calendar-weekdays {
-        background: #f0f0f0;
-        border-bottom: 2px solid #333;
+        background: #f8fafc;
+        border-bottom: 1px solid #475569;
         display: grid;
         grid-template-columns: repeat(7, 1fr);
     }
     
     .calendar-weekday {
-        border-right: 1px solid #ccc;
-        font-weight: bold;
+        border-right: 1px solid #cbd5e1;
+        font-weight: 800;
         color: #000 !important;
-        padding: 0.15cm 0.1cm !important;
-        font-size: 0.85rem !important;
+        padding: 0.11cm 0.08cm !important;
+        font-size: 0.72rem !important;
         text-align: center;
+    }
+    .calendar-weekday:last-child {
+        border-right: none !important;
     }
     
     /* 캘린더 그리드 - 최대 공간 활용 */
     .calendar-days {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        grid-auto-rows: 1fr;
+        grid-template-rows: repeat(6, 4.32cm);
         gap: 0;
-        background: #e2e8f0;
+        background: #cbd5e1;
         padding: 0;
-        height: calc(100% - 1cm);
+        height: auto !important;
     }
     
     /* 날짜 셀 - 최적화 */
     .calendar-day {
-        border: 1px solid #999;
+        border: 1px solid #94a3b8;
         background: white;
-        padding: 0.08cm;
+        padding: 0.06cm;
         overflow: hidden;
         page-break-inside: avoid;
         display: flex;
         flex-direction: column;
+        min-height: 4.32cm;
     }
     
     .calendar-day:hover {
@@ -1561,22 +2042,29 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 0.05cm;
+        margin-bottom: 0.03cm;
     }
     
     /* 날짜 번호 */
     .day-number {
-        font-weight: bold;
+        font-weight: 800;
         color: #000;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         line-height: 1;
     }
     
     /* 근무일 상태 태그 */
     .work-status-tag {
-        font-size: 0.45rem !important;
+        font-size: 0.4rem !important;
         padding: 1px 2px !important;
         line-height: 1;
+        border-radius: 3px !important;
+        box-shadow: none !important;
+    }
+
+    .schedule-count,
+    .holiday-caption {
+        display: none !important;
     }
     
     /* 스케줄 컨테이너 */
@@ -1588,47 +2076,49 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
     /* 스케줄 항목 - 크기 최적화 */
     .schedule-item {
         background: white !important;
-        border: 1px solid #bbb !important;
+        border: 1px solid #94a3b8 !important;
         border-left: 2px solid #3b82f6 !important;
         color: #000 !important;
-        font-size: 0.48rem !important;
-        padding: 0.04cm !important;
-        margin: 0.04cm 0 !important;
-        line-height: 1.1;
+        font-size: 0.44rem !important;
+        padding: 0.04cm 0.05cm !important;
+        margin: 0.03cm 0 !important;
+        line-height: 1.08;
         overflow: hidden;
+        border-radius: 3px !important;
+        box-shadow: none !important;
     }
     
     .schedule-name {
         color: #000 !important;
-        font-weight: bold;
-        font-size: 0.52rem !important;
+        font-weight: 800;
+        font-size: 0.47rem !important;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        margin-bottom: 0.02cm;
+        margin-bottom: 0.01cm;
     }
     
     .schedule-info {
         color: #333 !important;
-        font-size: 0.48rem !important;
+        font-size: 0.4rem !important;
         display: flex;
-        gap: 0.08cm;
+        gap: 0.05cm;
         align-items: center;
         flex-wrap: nowrap;
     }
     
     .line-container {
         display: flex;
-        gap: 0.04cm;
+        gap: 0.03cm;
         flex-wrap: wrap;
     }
     
     .line-tag {
-        background: #e0e0e0 !important;
-        color: #000 !important;
-        border: 1px solid #999 !important;
-        font-size: 0.42rem !important;
-        padding: 0px 2px !important;
+        background: #e2e8f0 !important;
+        color: #334155 !important;
+        border: 1px solid #cbd5e1 !important;
+        font-size: 0.36rem !important;
+        padding: 0 2px !important;
         border-radius: 2px;
         white-space: nowrap;
         line-height: 1;
@@ -1642,14 +2132,14 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
     
     /* 오늘 표시 */
     .today {
-        background: #f5f5f5 !important;
-        border: 2px solid #000 !important;
+        background: #fff8db !important;
+        border: 1.5px solid #d97706 !important;
     }
     
     /* 다른 달 날짜 */
     .other-month {
         background: #fafafa !important;
-        opacity: 0.5;
+        opacity: 0.45;
     }
 
     /* 목록 월별 출력 모드 */
@@ -1916,7 +2406,7 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
         <span class="close" onclick="closeModal()">&times;</span>
         <h2 style="margin-bottom: 1.5rem;">스케줄 추가</h2>
         
-        <form method="POST" action="/schedules/add" id="scheduleForm">
+        <form method="POST" action="/schedules/add" id="scheduleForm" class="schedule-add-form">
             <!-- 상품 검색 -->
             <div class="form-group">
                 <label>상품 선택 * (검색해서 선택하세요)</label>
@@ -1937,14 +2427,14 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
                 </div>
                 
                 <!-- 선택된 상품 표시 -->
-                <div id="selectedProduct" style="display: none; margin-top: 0.75rem; padding: 1rem; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div id="selectedProduct" class="schedule-selected-product">
+                    <div class="schedule-selected-product-head">
                         <div>
-                            <strong style="color: #155724;">✓ 선택된 상품:</strong>
-                            <span id="selectedProductName" style="margin-left: 0.5rem; font-weight: 600;"></span>
+                            <strong class="schedule-selected-product-title">✓ 선택된 상품:</strong>
+                            <span id="selectedProductName" class="schedule-selected-product-name"></span>
                         </div>
                         <button type="button" onclick="clearSelection()" 
-                                style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                class="schedule-selected-product-cancel">
                             취소
                         </button>
                     </div>
@@ -1956,29 +2446,29 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
             
             <div class="form-group">
                 <label>예정일 * (여러 날짜 선택 가능)</label>
-                <div style="margin-bottom: 0.5rem;">
+                <div class="schedule-date-toolbar">
                     <button type="button" onclick="toggleDateSelectMode()" id="dateSelectModeBtn" 
-                            style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            class="schedule-date-mode-btn">
                         📅 여러 날짜 선택 모드
                     </button>
-                    <span id="selectedDatesCount" style="margin-left: 1rem; color: #666; font-weight: 600;"></span>
+                    <span id="selectedDatesCount" class="schedule-date-count"></span>
                 </div>
                 
                 <!-- 캘린더 미니 버전 -->
-                <div id="datePickerCalendar" style="display: none; border: 2px solid #e5e7eb; border-radius: 10px; padding: 1rem; margin-top: 0.5rem; background: #f8fafc;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <button type="button" onclick="changeDatePickerMonth(-1)" style="background: white; border: 1px solid #cbd5e1; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer;">◀</button>
-                        <span id="datePickerMonth" style="font-weight: 600; font-size: 0.95rem;"></span>
-                        <button type="button" onclick="changeDatePickerMonth(1)" style="background: white; border: 1px solid #cbd5e1; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer;">▶</button>
+                <div id="datePickerCalendar" class="schedule-date-picker">
+                    <div class="schedule-date-picker-head">
+                        <button type="button" onclick="changeDatePickerMonth(-1)" class="schedule-date-nav-btn">◀</button>
+                        <span id="datePickerMonth" class="schedule-date-picker-month"></span>
+                        <button type="button" onclick="changeDatePickerMonth(1)" class="schedule-date-nav-btn">▶</button>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 0.5rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: #64748b;">
+                    <div class="schedule-date-weekdays">
                         <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
                     </div>
-                    <div id="datePickerDays" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                    <div id="datePickerDays" class="schedule-date-days">
                         <!-- JavaScript로 생성 -->
                     </div>
-                    <div style="margin-top: 0.75rem; text-align: right;">
-                        <button type="button" onclick="clearDateSelection()" style="background: #ef4444; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                    <div class="schedule-date-picker-actions">
+                        <button type="button" onclick="clearDateSelection()" class="schedule-date-clear-btn">
                             선택 초기화
                         </button>
                     </div>
@@ -1998,16 +2488,16 @@ html[data-theme="dark"] #listView .btn-delete{background:rgba(239,68,68,.16);col
             
             <div class="form-group">
                 <label>생산 라인 * (중복 선택 가능)</label>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                <div class="schedule-line-grid">
                     {% for line in range(1, 13) %}
-                    <label style="display: flex; align-items: center; padding: 0.5rem; border: 2px solid #dee2e6; border-radius: 4px; cursor: pointer; background: white;">
+                    <label class="schedule-line-option">
                         <input type="checkbox" name="production_lines" value="{{ line }}" 
-                               style="margin-right: 0.5rem; width: 18px; height: 18px; cursor: pointer;">
-                        <span style="font-weight: 600;">라인 {{ line }}</span>
+                               >
+                        <span>라인 {{ line }}</span>
                     </label>
                     {% endfor %}
                 </div>
-                <div style="font-size: 0.85rem; color: #7f8c8d; margin-top: 0.5rem;">
+                <div class="schedule-helper-text">
                     💡 생산할 라인을 선택하세요 (여러 개 선택 가능)
                 </div>
             </div>
@@ -2832,7 +3322,7 @@ function openAddModal(selectedDate = null) {
     const modeBtn = document.getElementById('dateSelectModeBtn');
     if (modeBtn) {
         modeBtn.textContent = '📅 여러 날짜 선택 모드';
-        modeBtn.style.background = '#3b82f6';
+        modeBtn.classList.remove('is-active');
     }
     clearDateSelection();
     // 모달 열 때 포커스
@@ -2860,7 +3350,7 @@ function renderProductList(products) {
     productList.innerHTML = '';
     
     if (products.length === 0) {
-        productList.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #7f8c8d; background: #f8f9fa; border-radius: 4px;">❌ 검색 결과가 없습니다.<br><small>다른 키워드로 검색해보세요.</small></div>';
+        productList.innerHTML = '<div class="schedule-product-empty">❌ 검색 결과가 없습니다.<br><small>다른 키워드로 검색해보세요.</small></div>';
         productList.style.display = 'block';
         return;
     }
@@ -2870,7 +3360,7 @@ function renderProductList(products) {
         productItem.className = 'product-item';
         productItem.dataset.id = product.id;
         productItem.dataset.name = product.name;
-        productItem.innerHTML = `<strong>${product.name}</strong> <span style="color: #7f8c8d; font-size: 0.85rem;">(ID: ${product.id})</span>`;
+        productItem.innerHTML = `<strong>${product.name}</strong> <span class="schedule-product-id">(ID: ${product.id})</span>`;
         productItem.onclick = function() {
             selectProduct(product.id, product.name);
         };
@@ -2909,7 +3399,10 @@ function selectProduct(id, name) {
     document.getElementById('productSearch').value = '';
     
     // 선택 후 다음 입력으로 포커스 이동
-    document.querySelector('input[name="scheduled_date"]').focus();
+    const nextInput = document.getElementById('singleDateInput');
+    if (nextInput && nextInput.style.display !== 'none' && !nextInput.disabled) {
+        nextInput.focus();
+    }
 }
 
 // 선택 취소
@@ -2971,7 +3464,7 @@ function toggleDateSelectMode() {
     
     if (dateSelectMode) {
         btn.textContent = '✓ 선택 모드 활성화';
-        btn.style.background = '#10b981';
+        btn.classList.add('is-active');
         calendar.style.display = 'block';
         singleInput.style.display = 'none';
         singleInput.disabled = true;
@@ -2979,7 +3472,7 @@ function toggleDateSelectMode() {
         renderDatePickerCalendar();
     } else {
         btn.textContent = '📅 여러 날짜 선택 모드';
-        btn.style.background = '#3b82f6';
+        btn.classList.remove('is-active');
         calendar.style.display = 'none';
         singleInput.style.display = 'block';
         singleInput.disabled = false;
@@ -3001,27 +3494,18 @@ function renderDatePickerCalendar() {
     
     for (let i = 0; i < startingDayOfWeek; i++) {
         const emptyDay = document.createElement('div');
-        emptyDay.style.padding = '0.5rem';
+        emptyDay.className = 'schedule-date-empty';
         container.appendChild(emptyDay);
     }
     
     for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${datePickerYear}-${String(datePickerMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const dayElement = document.createElement('div');
+        dayElement.className = 'schedule-date-cell';
         dayElement.textContent = day;
-        dayElement.style.padding = '0.5rem';
-        dayElement.style.textAlign = 'center';
-        dayElement.style.cursor = 'pointer';
-        dayElement.style.borderRadius = '6px';
-        dayElement.style.fontWeight = '600';
-        dayElement.style.fontSize = '0.85rem';
         
         if (selectedDates.has(dateStr)) {
-            dayElement.style.background = '#3b82f6';
-            dayElement.style.color = 'white';
-        } else {
-            dayElement.style.background = 'white';
-            dayElement.style.color = '#334155';
+            dayElement.classList.add('is-selected');
         }
         
         dayElement.onclick = function() {

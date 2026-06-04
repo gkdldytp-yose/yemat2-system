@@ -181,6 +181,9 @@
             height: 40px;
             font-size: 14px;
         }
+        .usage-row.is-hidden-fit {
+            display: none;
+        }
         .usage-balance {
             display: flex;
             flex-direction: column;
@@ -543,7 +546,7 @@
         </tr>
 
         {% for row in usage_rows %}
-        <tr class="usage-row">
+        <tr class="usage-row{% if not row.use_date and not row.site_stock and not row.warehouse_stock and not row.total_stock and not row.used_quantity and not row.note %} usage-row-empty{% endif %}"{% if not row.use_date and not row.site_stock and not row.warehouse_stock and not row.total_stock and not row.used_quantity and not row.note %} data-empty-row="1"{% endif %}>
             <td>{{ row.use_date }}</td>
             <td>{{ row.site_stock }}</td>
             <td>{{ row.warehouse_stock }}</td>
@@ -613,6 +616,7 @@ function applyPreviewZoom() {
         rawZoomStatus.textContent = `${Math.round(rawPreviewZoom * 100)}%`;
     }
     localStorage.setItem(previewZoomStorageKey, String(rawPreviewZoom));
+    fitUsageRowsToSinglePage();
 }
 
 function changePreviewZoom(delta) {
@@ -635,10 +639,47 @@ function syncAllNoteEditors() {
     document.querySelectorAll('.js-note-editor').forEach((textarea) => {
         autoGrowNote(textarea);
     });
+    fitUsageRowsToSinglePage();
 }
 
 function handleNoteInput(event) {
     autoGrowNote(event.target);
+    fitUsageRowsToSinglePage();
+}
+
+function getA4HeightPx() {
+    const probe = document.createElement('div');
+    probe.style.position = 'absolute';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    probe.style.height = '297mm';
+    probe.style.width = '1px';
+    document.body.appendChild(probe);
+    const height = probe.getBoundingClientRect().height;
+    probe.remove();
+    return height;
+}
+
+function fitUsageRowsToSinglePage() {
+    if (!rawSheet) return;
+    const blankRows = Array.from(document.querySelectorAll('.usage-row[data-empty-row="1"]'));
+    if (!blankRows.length) return;
+
+    blankRows.forEach((row) => row.classList.remove('is-hidden-fit'));
+
+    const maxHeight = getA4HeightPx();
+    if (!Number.isFinite(maxHeight) || maxHeight <= 0) return;
+
+    let currentHeight = rawSheet.getBoundingClientRect().height;
+    if (currentHeight <= maxHeight) return;
+
+    for (let i = blankRows.length - 1; i >= 0; i -= 1) {
+        blankRows[i].classList.add('is-hidden-fit');
+        currentHeight = rawSheet.getBoundingClientRect().height;
+        if (currentHeight <= maxHeight) {
+            break;
+        }
+    }
 }
 
 function setNoteStatus(message, isError = false) {
@@ -698,6 +739,7 @@ async function toggleNoteEdit() {
         }
         autoGrowNote(textarea);
     });
+    fitUsageRowsToSinglePage();
 
     const btn = document.getElementById('noteEditToggleBtn');
     if (btn) {
@@ -713,6 +755,8 @@ async function toggleNoteEdit() {
 
 window.addEventListener('load', syncAllNoteEditors);
 window.addEventListener('load', applyPreviewZoom);
+window.addEventListener('resize', fitUsageRowsToSinglePage);
+window.addEventListener('beforeprint', fitUsageRowsToSinglePage);
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {

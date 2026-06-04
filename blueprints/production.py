@@ -2512,8 +2512,7 @@ def production_detail(production_id):
         )
         for row in cursor.fetchall():
             raw_id = int(row['rm_id'] or 0)
-            usage_note = (row['usage_note'] if 'usage_note' in row.keys() else '') or ''
-            if raw_id > 0 and raw_id not in existing_raw_ids and '원초 변경:' in usage_note:
+            if raw_id > 0 and raw_id not in existing_raw_ids:
                 temp_row = dict(row)
                 temp_row['is_temp_raw'] = 1
                 bom_raw_items.append(temp_row)
