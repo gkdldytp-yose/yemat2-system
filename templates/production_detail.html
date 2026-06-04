@@ -135,6 +135,7 @@
 .raw-change-option.active{border-color:#22c55e;background:#f0fdf4;box-shadow:0 0 0 3px rgba(34,197,94,.12);}
 .raw-change-option-name{font-size:.92rem;font-weight:900;color:#0f172a;line-height:1.35;}
 .raw-change-option-meta{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;font-size:.76rem;color:#64748b;}
+.raw-change-option-meta span{display:flex;flex-direction:column;gap:.14rem;}
 .raw-change-option-meta strong{display:block;color:#334155;font-size:.82rem;}
 .raw-change-stock{display:inline-flex;align-self:flex-start;align-items:center;padding:.22rem .55rem;border-radius:999px;background:#e8f5e9;color:#16a34a;font-size:.76rem;font-weight:900;}
 .raw-change-pick{display:inline-flex;align-items:center;justify-content:center;margin-top:.1rem;padding:.4rem .65rem;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:900;}
@@ -213,14 +214,20 @@ html[data-theme="dark"] .journal-modal-desc,
 html[data-theme="dark"] .raw-change-sub,
 html[data-theme="dark"] .raw-change-target-label,
 html[data-theme="dark"] .raw-change-option-meta{color:#8ea3bd;}
+html[data-theme="dark"] .raw-change-option-name{color:#f8fbff;}
+html[data-theme="dark"] .raw-change-option-meta strong{color:#e5eefc;}
 html[data-theme="dark"] .journal-option-btn,
 html[data-theme="dark"] .raw-change-target,
 html[data-theme="dark"] .raw-change-tab,
 html[data-theme="dark"] .raw-change-option,
 html[data-theme="dark"] .plan-line-chip{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] .raw-change-option:hover{background:#1a2436;border-color:#60a5fa;}
 html[data-theme="dark"] .raw-change-option.active,
 html[data-theme="dark"] .raw-change-target.active,
 html[data-theme="dark"] .raw-change-tab.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:none;}
+html[data-theme="dark"] .raw-change-option.active .raw-change-option-name,
+html[data-theme="dark"] .raw-change-option.active .raw-change-option-meta,
+html[data-theme="dark"] .raw-change-option.active .raw-change-option-meta strong{color:#ffffff;}
 html[data-theme="dark"] .raw-change-targets,
 html[data-theme="dark"] .raw-change-empty,
 html[data-theme="dark"] .raw-change-actions{background:#162133;border-color:#263244;color:#c7d3e3;}
@@ -228,6 +235,7 @@ html[data-theme="dark"] .lot-gap-panel,
 html[data-theme="dark"] .lot-gap-hint{background:rgba(249,115,22,.12);border-color:rgba(251,146,60,.28);color:#fdba74;}
 html[data-theme="dark"] .raw-change-stock,
 html[data-theme="dark"] .unit-stock-badge{background:#162133;border-color:#263244;color:#dbe7f5;}
+html[data-theme="dark"] .raw-change-pick{background:#223046;color:#bfdbfe;}
 html[data-theme="dark"] .unit-stock-badge.low{background:rgba(239,68,68,.16);border-color:rgba(248,113,113,.28);color:#fda4af;}
 html[data-theme="dark"] .plan-line-chip input{accent-color:#3b82f6;}
 html[data-theme="dark"] .shortage-table th{background:#1a2436;color:#c7d3e3;border-bottom-color:#263244;}
@@ -238,6 +246,14 @@ html[data-theme="dark"] [style*="background:#fff3e0"]{background:rgba(249,115,22
 html[data-theme="dark"] [style*="background:#f8f9fa"]{background:#162133 !important;color:#8ea3bd !important;border-color:#263244 !important;}
 html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:12px"],
 html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{background:#162133 !important;color:#dbe7f5 !important;border-color:#263244 !important;}
+html[data-theme="dark"] .section-journal-btn{background:#152033;border-color:#334155;color:#dbe7f5;}
+html[data-theme="dark"] .section-journal-btn:hover{background:#1b2940;border-color:#60a5fa;color:#eff6ff;}
+html[data-theme="dark"] .raw-input-row{border-top-color:#334155;}
+html[data-theme="dark"] .raw-note-wrap label,
+html[data-theme="dark"] [id^="raw_note_wrap_"] label{color:#8ea3bd !important;}
+html[data-theme="dark"] .raw-input-row input[type="number"],
+html[data-theme="dark"] [id^="ri_"]{background:#0f1726 !important;border-color:#314155 !important;color:#eff6ff !important;}
+html[data-theme="dark"] [id^="rw_"]{color:#fda4af !important;}
 
 @media (max-width: 768px) {
     html,body{max-width:100%;overflow-x:hidden;}
@@ -291,6 +307,11 @@ html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{b
     .plan-edit-grid{grid-template-columns:1fr;}
     .plan-line-wrap{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
+html[data-theme="dark"] .mat-tbl tr{background:linear-gradient(180deg,#121a2a 0%,#101827 100%);border-color:#263244;box-shadow:0 14px 28px rgba(2,6,23,.22);}
+html[data-theme="dark"] .mat-tbl td{background:transparent;color:#dbe7f5;border-bottom-color:#223046;}
+html[data-theme="dark"] .mat-tbl td::before{color:#8ea3bd;}
+html[data-theme="dark"] .mat-tbl td:nth-child(1){background:#162133;color:#eff6ff;}
+html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 </style>
 {% endblock %}
 
@@ -520,7 +541,7 @@ html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{b
         <div class="raw-section-title-row">
             <h3 style="border:none;padding:0;">🌿 원초 선택 및 사용량</h3>
             {% if can_edit %}
-            <button type="button" class="raw-change-btn" onclick="openRawChangeModal(event)" {% if not raw_change_options %}disabled{% endif %}>원초 변경</button>
+            <button type="button" class="raw-change-btn" onclick="openRawChangeModal(event)" {% if not raw_change_options %}disabled{% endif %}>원초 추가</button>
             {% endif %}
         </div>
         <div class="raw-section-tools">
@@ -546,17 +567,28 @@ html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{b
         <span>수율 <strong id="rawYield" style="color:#2c3e50;">{% if total_raw_yield_rate is not none %}<span style="color:{% if total_raw_yield_rate >= 95 %}#27ae60{% elif total_raw_yield_rate >= 90 %}#f39c12{% else %}#e74c3c{% endif %}">{{ "%.1f"|format(total_raw_yield_rate) }}%</span>{% else %}-{% endif %}</strong></span>
     </div>
 
+    <div id="rawCardsWrap">
     {% for rm in bom_raw_items %}
     {% set raw_saved = raw_saved_map.get(rm.rm_id, {}) %}
     {% set saved_raw_qty = raw_saved.get('qty') %}
     {% set saved_raw_note = raw_saved.get('note', '') %}
     <div class="raw-card{% if saved_raw_qty is not none and saved_raw_qty > 0 %} active{% endif %}" id="rc_{{ rm.rm_id }}"
          data-id="{{ rm.rm_id }}" data-stock="{{ rm.current_stock }}"
-         data-pbox="{{ rm.quantity_per_box }}"
+         data-pbox="{{ rm.quantity_per_box }}" data-entry-index="{{ loop.index0 }}" data-is-temp="{{ 1 if rm.is_temp_raw else 0 }}"
          {% if can_edit %}onclick="toggleCard({{ rm.rm_id }})"{% endif %}>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong class="js-raw-name">🌿 {{ rm.rm_name }}</strong>
-            <span class="js-raw-stock-badge" style="font-size:0.85rem;padding:0.2rem 0.6rem;border-radius:20px;background:{% if rm.current_stock > 20 %}#e8f5e9;color:#27ae60{% elif rm.current_stock > 5 %}#fff3e0;color:#e67e22{% else %}#fce4ec;color:#e74c3c{% endif %};">재고 {{ rm.current_stock|int }}속</span>
+            <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
+                <strong class="js-raw-name">🌿 {{ rm.rm_name }}</strong>
+                {% if rm.is_temp_raw %}
+                <span style="font-size:0.72rem;font-weight:800;padding:0.16rem 0.5rem;border-radius:999px;background:#eef2ff;color:#3730a3;">임시 추가</span>
+                {% endif %}
+            </div>
+            <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
+                <span class="js-raw-stock-badge" style="font-size:0.85rem;padding:0.2rem 0.6rem;border-radius:20px;background:{% if rm.current_stock > 20 %}#e8f5e9;color:#27ae60{% elif rm.current_stock > 5 %}#fff3e0;color:#e67e22{% else %}#fce4ec;color:#e74c3c{% endif %};">재고 {{ rm.current_stock|int }}속</span>
+                {% if can_edit and rm.is_temp_raw %}
+                <button type="button" onclick="removeTempRawCard({{ rm.rm_id }}); event.stopPropagation();" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:0.22rem 0.6rem;font-size:0.75rem;font-weight:700;cursor:pointer;">제거</button>
+                {% endif %}
+            </div>
         </div>
         <div class="raw-meta">
             <div><div class="ml">자호</div><div class="mv js-raw-car">{{ rm.car_number or '-' }}</div></div>
@@ -594,6 +626,7 @@ html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{b
         {% endif %}
     </div>
     {% endfor %}
+    </div>
 </div>
 {% endif %}
 
@@ -602,20 +635,20 @@ html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{b
     <div class="raw-change-modal" onclick="event.stopPropagation()">
         <div class="raw-change-head">
             <div>
-                <div class="raw-change-title">원초 변경</div>
-                <div class="raw-change-sub" id="rawChangeTargetText">현재 선택된 원초를 작업장 보유 원초로 임시 변경합니다.</div>
+                <div class="raw-change-title">임시 원초 추가</div>
+                <div class="raw-change-sub" id="rawChangeTargetText">현재 BOM 원초는 그대로 두고, 작업장 보유 원초를 임시로 추가해 함께 사용할 수 있습니다.</div>
             </div>
             <button type="button" class="raw-change-close" onclick="closeRawChangeModal()">×</button>
         </div>
         <div class="raw-change-body">
             <div id="rawChangeTargets" class="raw-change-targets"></div>
-            <div class="raw-change-guide">변경 대상 원초를 먼저 확인한 뒤, 아래 목록에서 임시로 사용할 원초를 선택하세요.</div>
+            <div class="raw-change-guide">기준 원초를 먼저 확인한 뒤, 아래 목록에서 함께 사용할 임시 원초를 선택하세요.</div>
             <div class="raw-change-tabs" id="rawChangeTabs"></div>
             <div class="raw-change-list" id="rawChangeList"></div>
         </div>
         <div class="raw-change-actions">
             <button type="button" class="raw-change-cancel" onclick="closeRawChangeModal()">취소</button>
-            <button type="button" class="raw-change-apply" id="rawChangeApplyBtn" onclick="applyRawChange()" disabled>변경</button>
+            <button type="button" class="raw-change-apply" id="rawChangeApplyBtn" onclick="applyRawChange()" disabled>추가</button>
         </div>
     </div>
 </div>
@@ -921,6 +954,7 @@ const IS_DONE = {{ 'false' if can_edit else 'true' }};
 const INITIAL_TOTAL_RAW_SELECTED = {{ total_raw_selected_qty or 0 }};
 const INITIAL_TOTAL_RAW_NEED = {{ total_raw_need_qty or 0 }};
 const RAW_CHANGE_OPTIONS = {{ raw_change_options_json|default('[]')|safe }};
+let nextRawEntryIndex = {{ bom_raw_items|length }};
 let expiryVisibleCount = {{ expiry_visible_count or 1 }};
 let rawChangeTargetId = null;
 let selectedRawChangeId = null;
@@ -1162,7 +1196,7 @@ function toggleRawNote(id){
 }
 
 function getRawChangeTargetCard(){
-    return document.querySelector('.raw-card.active') || document.querySelector('.raw-card');
+    return document.querySelector('.raw-card.active[data-is-temp="0"]') || document.querySelector('.raw-card[data-is-temp="0"]');
 }
 
 function formatRawNumber(value){
@@ -1221,14 +1255,14 @@ function syncRawChangeTargetText(){
     const target = getRawCardSummary(card);
     const targetText = document.getElementById('rawChangeTargetText');
     if(targetText){
-        targetText.textContent = `변경 대상: ${target.name} · 자호 ${target.car} · 입고일 ${target.date}`;
+        targetText.textContent = `기준 원초: ${target.name} · 자호 ${target.car} · 입고일 ${target.date}`;
     }
 }
 
 function renderRawChangeTargets(){
     const wrap = document.getElementById('rawChangeTargets');
     if(!wrap) return;
-    const cards = Array.from(document.querySelectorAll('.raw-card'));
+    const cards = Array.from(document.querySelectorAll('.raw-card[data-is-temp="0"]'));
     if(!cards.length){
         wrap.innerHTML = '<div class="raw-change-target-label">변경 대상 원초가 없습니다.</div>';
         return;
@@ -1294,7 +1328,7 @@ function openRawChangeModal(event){
     }
     const targetCard = getRawChangeTargetCard();
     if(!targetCard){
-        alert('변경할 원초 항목이 없습니다.');
+        alert('기준 원초 항목이 없습니다.');
         return;
     }
     rawChangeTargetId = targetCard.dataset.id;
@@ -1333,23 +1367,115 @@ function setRawStockTone(elements, stock){
     }
 }
 
-function appendRawChangeNote(targetId, oldName, option){
-    const textarea = document.getElementById(`raw_note_${targetId}`);
-    const wrap = document.getElementById(`raw_note_wrap_${targetId}`);
-    const btn = document.getElementById(`raw_note_btn_${targetId}`);
-    if(!textarea) return;
-    const newName = option.name || '원초';
-    const meta = [`자호 ${option.car_number || '-'}`, `입고일 ${option.receiving_date || '-'}`].join(', ');
-    const autoNote = `원초 변경: ${oldName} -> ${newName} (${meta})`;
-    const manualLines = (textarea.value || '')
+function appendUniqueNoteLine(textarea, line, replacePrefix){
+    if(!textarea || !line) return;
+    const lines = (textarea.value || '')
         .split('\n')
-        .filter(line => !line.trim().startsWith('원초 변경:'))
-        .join('\n')
-        .trim();
-    textarea.value = manualLines ? `${autoNote}\n${manualLines}` : autoNote;
+        .map(item => item.trim())
+        .filter(Boolean)
+        .filter(item => !replacePrefix || !item.startsWith(replacePrefix));
+    if(!lines.includes(line)){
+        lines.unshift(line);
+    }
+    textarea.value = lines.join('\n');
+}
+
+function openNoteEditorById(rawId){
+    const wrap = document.getElementById(`raw_note_wrap_${rawId}`);
+    const btn = document.getElementById(`raw_note_btn_${rawId}`);
+    const textarea = document.getElementById(`raw_note_${rawId}`);
     if(wrap) wrap.classList.add('open');
     if(btn) btn.classList.add('active');
-    autoGrowTextarea(textarea);
+    if(textarea) autoGrowTextarea(textarea);
+}
+
+function appendTargetMixNote(targetId, option){
+    const textarea = document.getElementById(`raw_note_${targetId}`);
+    if(!textarea) return;
+    const line = `임시 원초 혼용: ${option.name || '원초'} 추가 (자호 ${option.car_number || '-'}, 입고일 ${option.receiving_date || '-'})`;
+    appendUniqueNoteLine(textarea, line, '');
+    openNoteEditorById(targetId);
+}
+
+function appendTempMixNote(rawId, targetSummary){
+    const textarea = document.getElementById(`raw_note_${rawId}`);
+    if(!textarea) return;
+    const line = `임시 원초 추가: ${targetSummary.name || '기존 원초'}와 혼용 (자호 ${targetSummary.car || '-'}, 입고일 ${targetSummary.date || '-'})`;
+    appendUniqueNoteLine(textarea, line, '임시 원초 추가:');
+    openNoteEditorById(rawId);
+}
+
+function buildTempRawCard(option){
+    const rawId = Number(option.id);
+    const entryIndex = nextRawEntryIndex++;
+    const stock = Math.floor(Number(option.current_stock || 0));
+    const perBox = getCurrentPerBox();
+    const maxBoxes = perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-';
+    const wrap = document.getElementById('rawCardsWrap');
+    if(!wrap) return null;
+    const card = document.createElement('div');
+    card.className = 'raw-card';
+    card.id = `rc_${rawId}`;
+    card.dataset.id = String(rawId);
+    card.dataset.stock = String(stock);
+    card.dataset.pbox = '0';
+    card.dataset.entryIndex = String(entryIndex);
+    card.dataset.isTemp = '1';
+    card.onclick = () => toggleCard(rawId);
+    card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
+                <strong class="js-raw-name">🌿 ${escapeHtml(option.name || '원초')}</strong>
+                <span style="font-size:0.72rem;font-weight:800;padding:0.16rem 0.5rem;border-radius:999px;background:#eef2ff;color:#3730a3;">임시 추가</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
+                <span class="js-raw-stock-badge" style="font-size:0.85rem;padding:0.2rem 0.6rem;border-radius:20px;">재고 ${escapeHtml(formatRawNumber(stock))}속</span>
+                <button type="button" onclick="removeTempRawCard(${rawId}); event.stopPropagation();" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:0.22rem 0.6rem;font-size:0.75rem;font-weight:700;cursor:pointer;">제거</button>
+            </div>
+        </div>
+        <div class="raw-meta">
+            <div><div class="ml">자호</div><div class="mv js-raw-car">${escapeHtml(option.car_number || '-')}</div></div>
+            <div><div class="ml">입고일</div><div class="mv js-raw-date">${escapeHtml(option.receiving_date || '-')}</div></div>
+            <div><div class="ml">현재 재고</div><div class="mv js-raw-stock ${stock < 5 ? 'warn' : 'ok'}">${escapeHtml(formatRawNumber(stock))}속</div></div>
+            <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_${rawId}">${escapeHtml(maxBoxes)}</div></div>
+        </div>
+        <div id="iw_${rawId}" class="raw-input-row" style="display:none;flex-direction:column;align-items:stretch;" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
+                <input type="number" name="raw_actual_${entryIndex}" id="ri_${rawId}" step="1" min="0" max="${stock}" value="" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;">
+                <input type="hidden" name="raw_rm_id_${entryIndex}" value="${rawId}" class="js-raw-id-input">
+                <span id="rw_${rawId}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
+                <button type="button" id="raw_note_btn_${rawId}" class="raw-note-toggle" onclick="toggleRawNote(${rawId}); event.stopPropagation();">비고 입력</button>
+            </div>
+            <div id="raw_note_wrap_${rawId}" class="raw-note-wrap">
+                <label for="raw_note_${rawId}" style="font-size:0.83rem;color:#555;font-weight:600;">비고</label>
+                <textarea id="raw_note_${rawId}" name="raw_note_${entryIndex}" rows="3" class="note-textarea" placeholder="원초 사용 비고 입력"></textarea>
+            </div>
+        </div>
+    `;
+    wrap.appendChild(card);
+    const input = document.getElementById(`ri_${rawId}`);
+    if(input){
+        input.addEventListener('input', () => {
+            checkRawOver(rawId, stock);
+            updateTotal();
+        });
+    }
+    setRawStockTone(
+        {
+            badge: card.querySelector('.js-raw-stock-badge'),
+            stockText: card.querySelector('.js-raw-stock')
+        },
+        stock
+    );
+    return card;
+}
+
+function removeTempRawCard(rawId){
+    const card = document.getElementById(`rc_${rawId}`);
+    if(!card || card.dataset.isTemp !== '1') return;
+    card.remove();
+    updateTotal();
 }
 
 function applyRawChange(){
@@ -1357,43 +1483,28 @@ function applyRawChange(){
     const option = RAW_CHANGE_OPTIONS.find(item => Number(item.id) === Number(selectedRawChangeId));
     const card = document.getElementById(`rc_${rawChangeTargetId}`);
     if(!option || !card) return;
-    const inputWrap = document.getElementById(`iw_${rawChangeTargetId}`);
-    const input = document.getElementById(`ri_${rawChangeTargetId}`);
-    const warning = document.getElementById(`rw_${rawChangeTargetId}`);
-    const hidden = card.querySelector('.js-raw-id-input');
-    const oldName = card.querySelector('.js-raw-name')?.textContent?.replace('🌿', '').trim() || '원초';
-    const stock = Number(option.current_stock || 0);
-
-    card.dataset.changedRawId = option.id;
-    card.dataset.stock = String(stock);
-    if(hidden) hidden.value = option.id;
-    if(input){
-        input.max = String(Math.floor(stock));
-        input.setAttribute('oninput', `checkRawOver(${rawChangeTargetId}, ${Math.floor(stock)}); updateTotal()`);
+    if(Number(rawChangeTargetId) === Number(option.id)){
+        alert('같은 원초는 임시 추가할 수 없습니다.');
+        return;
     }
-    if(warning) warning.style.display = 'none';
+    const targetSummary = getRawCardSummary(card);
+    appendTargetMixNote(rawChangeTargetId, option);
 
-    const nameEl = card.querySelector('.js-raw-name');
-    const badge = card.querySelector('.js-raw-stock-badge');
-    const car = card.querySelector('.js-raw-car');
-    const received = card.querySelector('.js-raw-date');
-    const stockText = card.querySelector('.js-raw-stock');
-    const maxText = card.querySelector('.js-raw-max');
-    if(nameEl) nameEl.textContent = `🌿 ${option.name || '원초'}`;
-    if(badge) badge.textContent = `재고 ${formatRawNumber(stock)}속`;
-    if(car) car.textContent = option.car_number || '-';
-    if(received) received.textContent = option.receiving_date || '-';
-    if(stockText) stockText.textContent = ` ${formatRawNumber(stock)}속`.trim();
-    if(maxText){
-        const perBox = getCurrentPerBox();
-        maxText.textContent = perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-';
+    let tempCard = document.getElementById(`rc_${option.id}`);
+    if(!tempCard){
+        tempCard = buildTempRawCard(option);
     }
-    setRawStockTone({badge, stockText}, stock);
+    if(!tempCard) return;
 
-    card.classList.add('active');
+    tempCard.classList.add('active');
+    const inputWrap = document.getElementById(`iw_${option.id}`);
+    const input = document.getElementById(`ri_${option.id}`);
+    const warning = document.getElementById(`rw_${option.id}`);
     if(inputWrap) inputWrap.style.display = 'flex';
-    appendRawChangeNote(rawChangeTargetId, oldName, option);
-    checkRawOver(rawChangeTargetId, Math.floor(stock));
+    appendTempMixNote(option.id, targetSummary);
+    if(warning) warning.style.display = 'none';
+    checkRawOver(option.id, Math.floor(Number(option.current_stock || 0)));
+    if(input) input.focus();
     updateTotal();
     closeRawChangeModal();
 }

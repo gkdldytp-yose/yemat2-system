@@ -145,6 +145,37 @@ def _format_issue_receipt_update_note(workplace, before_qty, after_qty):
     return f'{workplace_text} 실입고 수정 {before_value:.1f} > {after_value:.1f}'
 
 
+def _format_receipt_row_date_value(row, field_name, unknown_field=None):
+    row = row or {}
+    if unknown_field and int(row.get(unknown_field) or 0) == 1:
+        return '-'
+    return (row.get(field_name) or '').strip() or '-'
+
+
+def _build_issue_receipt_update_note(workplace, before_qty, after_qty, before_row=None, after_row=None):
+    workplace_text = (workplace or '').strip() or '실입고'
+    before_value = _round_to_1_decimal(before_qty or 0)
+    after_value = _round_to_1_decimal(after_qty or 0)
+    changes = []
+    if abs(before_value - after_value) > 0.01:
+        changes.append(f'입고수량 {before_value:.1f} > {after_value:.1f}')
+
+    field_specs = [
+        ('receiving_date', '입고일', None),
+        ('manufacture_date', '제조일', 'manufacture_date_unknown'),
+        ('expiry_date', '소비기한', 'expiry_date_unknown'),
+    ]
+    for field_name, label, unknown_field in field_specs:
+        before_text = _format_receipt_row_date_value(before_row, field_name, unknown_field)
+        after_text = _format_receipt_row_date_value(after_row, field_name, unknown_field)
+        if before_text != after_text:
+            changes.append(f'{label} {before_text} > {after_text}')
+
+    if not changes:
+        return f'{workplace_text} 실입고 수정'
+    return f"{workplace_text} 실입고 수정 / {' / '.join(changes)}"
+
+
 def _ledger_workplaces():
     return [wp for wp in WORKPLACES if wp != '??']
 
@@ -2639,6 +2670,50 @@ SELECT
                 COALESCE(ml.expiry_date, '-') as expiry_date,
                 COALESCE(mll.quantity, 0) as received_quantity,
                 COALESCE(ml.is_disposed, 0) as is_disposed,
+                COALESCE(mll.action, '') as action,
+                CASE
+                    WHEN COALESCE(mll.action, '') IN ('issue_request_complete', 'issue_request_update') THEN COALESCE(
+                        (
+                            SELECT lir.id
+                            FROM logistics_issue_requests lir
+                            WHERE lir.material_id = mll.material_id
+                              AND substr(COALESCE(lir.processed_at, ''), 1, 19) = substr(COALESCE(mll.created_at, ''), 1, 19)
+                              AND (
+                                  COALESCE(lir.requester_workplace, '') = ''
+                                  OR instr(COALESCE(mll.note, ''), COALESCE(lir.requester_workplace, '')) > 0
+                              )
+                            ORDER BY lir.id DESC
+                            LIMIT 1
+                        ),
+                        (
+                            SELECT ril.request_id
+                            FROM logistics_issue_receipt_lots ril
+                            JOIN material_lots link_ml ON link_ml.id = ril.material_lot_id
+                            WHERE ril.material_lot_id = mll.material_lot_id
+                              AND COALESCE(link_ml.material_id, 0) = COALESCE(mll.material_id, 0)
+                            ORDER BY ril.id DESC
+                            LIMIT 1
+                        ),
+                        (
+                            SELECT nearest.id
+                            FROM (
+                                SELECT
+                                    lir.id,
+                                    ABS(strftime('%s', COALESCE(lir.processed_at, '')) - strftime('%s', COALESCE(mll.created_at, ''))) AS time_diff
+                                FROM logistics_issue_requests lir
+                                WHERE lir.material_id = mll.material_id
+                                  AND substr(COALESCE(lir.processed_at, ''), 1, 10) = substr(COALESCE(mll.created_at, ''), 1, 10)
+                                  AND (
+                                      COALESCE(lir.requester_workplace, '') = ''
+                                      OR instr(COALESCE(mll.note, ''), COALESCE(lir.requester_workplace, '')) > 0
+                                  )
+                            ) nearest
+                            ORDER BY nearest.time_diff ASC, nearest.id DESC
+                            LIMIT 1
+                        )
+                    )
+                    ELSE NULL
+                END as issue_request_id,
                 CASE COALESCE(mll.action, '')
                     WHEN 'create' THEN '신규 입고'
                     WHEN 'issue_request_complete' THEN '불출 입고 완료'
@@ -2661,6 +2736,19 @@ SELECT
         receive_logs = [dict(row) for row in cursor.fetchall()]
         active_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) != 1]
         disposed_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) == 1]
+        receive_complete_logs = [
+            row for row in active_receive_logs
+            if str(row.get('action') or '') in {'create', 'issue_request_complete'}
+        ]
+        receive_update_logs = [
+            row for row in active_receive_logs
+            if str(row.get('action') or '') == 'issue_request_update'
+        ]
+        for row in receive_update_logs:
+            note_text = str(row.get('note') or '').strip()
+            row['show_received_quantity'] = '입고수량 ' in note_text
+        for row in receive_complete_logs:
+            row['show_received_quantity'] = True
 
         payload = dict(material)
         payload['total_quantity'] = sum(float(row.get('location_quantity') or 0) for row in lots)
@@ -2670,7 +2758,9 @@ SELECT
             'material': payload,
             'lots': lots,
             'usage_logs': usage_logs,
-            'receive_logs': active_receive_logs,
+            'receive_logs': receive_complete_logs,
+            'receive_complete_logs': receive_complete_logs,
+            'receive_update_logs': receive_update_logs,
             'disposed_receive_logs': disposed_receive_logs,
         })
     finally:
@@ -3037,6 +3127,9 @@ def raw_materials():
     """?? ?? ??"""
     workplace = get_workplace()
     is_logistics = workplace == LOGISTICS_WORKPLACE
+    selected_tab = (request.args.get('tab') or 'active').strip() or 'active'
+    if selected_tab not in ('active', 'done'):
+        selected_tab = 'active'
     selected_raw_search_field = (request.args.get('raw_search_field') or 'all').strip() or 'all'
     if selected_raw_search_field not in ('all', 'code', 'name', 'car_number', 'receiving_date'):
         selected_raw_search_field = 'all'
@@ -3045,11 +3138,26 @@ def raw_materials():
     selected_done_kind = (request.args.get('done_kind') or 'all').strip() or 'all'
     if selected_done_kind not in ('all', 'production', 'export'):
         selected_done_kind = 'all'
+    selected_done_scope = (request.args.get('done_scope') or '').strip().lower()
+    if selected_done_scope not in ('all', 'month'):
+        selected_done_scope = ''
     conn = get_db()
     cursor = conn.cursor()
 
     # ?? ?? (???? ??)
     selected_done_date = (request.args.get('done_date') or '').strip()
+    current_month_key = datetime.now().strftime('%Y-%m')
+    selected_done_month = (request.args.get('done_month') or '').strip()
+    if selected_done_date and len(selected_done_date) >= 7:
+        selected_done_month = selected_done_date[:7]
+    elif not selected_done_month:
+        selected_done_month = current_month_key
+    if len(selected_done_month) != 7:
+        selected_done_month = current_month_key
+    if selected_tab == 'done' and not selected_done_date and selected_done_scope != 'all':
+        selected_done_scope = 'month'
+    elif selected_done_scope == '':
+        selected_done_scope = 'all'
     logistics_workplace_filter = (request.args.get('logistics_workplace') or '??').strip() if is_logistics else '??'
     logistics_workplace_tabs = ['??'] + [wp for wp in WORKPLACES if wp != LOGISTICS_WORKPLACE]
 
@@ -3399,6 +3507,13 @@ def raw_materials():
             and bool(row.get('_done_kind_match'))
             and str(row.get('done_date') or '').strip() == selected_done_date
         ]
+    elif selected_done_scope == 'month':
+        done_source_rows = [
+            row for row in done_rows_raw
+            if _safe_float(row.get('current_stock')) <= 0
+            and bool(row.get('_done_kind_match'))
+            and str(row.get('done_date') or '').strip().startswith(selected_done_month)
+        ]
     else:
         done_source_rows = [
             row for row in done_rows_raw
@@ -3418,6 +3533,8 @@ def raw_materials():
         done_dates=done_dates,
         selected_done_date=selected_done_date,
         selected_done_kind=selected_done_kind,
+        selected_done_scope=selected_done_scope,
+        selected_done_month=selected_done_month,
         selected_raw_search_field=selected_raw_search_field,
         raw_search_keyword=raw_search_keyword,
         selected_raw_name=selected_raw_name,
@@ -3807,7 +3924,7 @@ def raw_material_checksheet_preview(raw_material_id):
             for raw_note in [x.strip() for x in (log.get('usage_notes') or '').split(chr(31)) if x.strip()]:
                 for line in raw_note.splitlines():
                     clean_line = line.strip()
-                    if clean_line.startswith('원초 변경:'):
+                    if clean_line.startswith('원초 변경:') or clean_line.startswith('임시 원초 추가:') or clean_line.startswith('임시 원초 혼용:'):
                         usage_note_lines.append(clean_line)
             note_parts = []
             checksheet_note = (log.get('checksheet_note') or '').strip()
@@ -5916,7 +6033,8 @@ def complete_issue_request(req_id):
             return "<script>alert('요청을 등록한 사용자만 실입고 완료 처리할 수 있습니다.'); history.back();</script>"
 
         created_receipt_rows = []
-        for row in split_rows:
+        for idx, row in enumerate(split_rows):
+            before_row = detail_rows[idx] if idx < len(detail_rows) else None
             lot_id, _lot_name = _create_request_receipt_lot(
                 cursor,
                 int(req_row['material_id']),
@@ -6178,10 +6296,12 @@ def update_completed_issue_request(req_id):
                 int(row.get('manufacture_date_unknown') or 0),
                 int(row.get('expiry_date_unknown') or 0),
                 log_action='issue_request_update',
-                log_note=_format_issue_receipt_update_note(
+                log_note=_build_issue_receipt_update_note(
                     req_row['requester_workplace'],
                     previous_approved_qty,
                     approved_qty,
+                    before_row,
+                    row,
                 ),
                 created_at=processed_at,
             )

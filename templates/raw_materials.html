@@ -13,6 +13,7 @@
 .done-calendar-head{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;margin-bottom:0.8rem;flex-wrap:wrap;}
 .done-calendar-title{font-weight:800;color:#0f172a;}
 .done-calendar-nav{display:flex;align-items:center;gap:0.5rem;}
+.done-calendar-date-input{padding:0.4rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;color:#0f172a;min-height:36px;}
 .done-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0.35rem;}
 .done-calendar-weekday,.done-calendar-day{display:flex;align-items:center;justify-content:center;border-radius:10px;min-height:42px;font-size:0.88rem;}
 .done-calendar-weekday{font-weight:800;color:#64748b;background:#f8fafc;}
@@ -147,13 +148,15 @@
     </div>
 
     <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
-        <form method="GET" action="/raw-materials" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
-            <input type="hidden" name="tab" value="{{ request.args.get('tab', 'active') }}">
+        <form method="GET" action="/raw-materials" id="rawListFilterForm" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
+            <input type="hidden" name="tab" id="rawListFilterTab" value="{{ request.args.get('tab', 'active') }}">
+            <input type="hidden" name="done_scope" id="rawListDoneScope" value="{{ selected_done_scope or 'all' }}">
+            <input type="hidden" name="done_month" id="rawListDoneMonth" value="{{ selected_done_month or '' }}">
             {% if selected_done_date and request.args.get('tab', 'active') == 'done' %}
-            <input type="hidden" name="done_date" value="{{ selected_done_date }}">
+            <input type="hidden" name="done_date" id="rawListDoneDate" value="{{ selected_done_date }}">
             {% endif %}
             {% if selected_done_kind and selected_done_kind != 'all' and request.args.get('tab', 'active') == 'done' %}
-            <input type="hidden" name="done_kind" value="{{ selected_done_kind }}">
+            <input type="hidden" name="done_kind" id="rawListDoneKind" value="{{ selected_done_kind }}">
             {% endif %}
             <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
                 <label for="rawSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">&#xAC80;&#xC0C9; &#xAE30;&#xC900;</label>
@@ -180,7 +183,7 @@
             </div>
             <div style="grid-column:span 2;display:flex;gap:0.5rem;justify-content:flex-end;align-items:end;flex-wrap:wrap;">
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">&#xC801;&#xC6A9;</button>
-                <a href="/raw-materials?tab={{ request.args.get('tab', 'active') }}" class="btn btn-small btn-secondary">&#xCD08;&#xAE30;&#xD654;</a>
+                <a href="/raw-materials?tab={{ request.args.get('tab', 'active') }}" id="rawListFilterReset" class="btn btn-small btn-secondary">&#xCD08;&#xAE30;&#xD654;</a>
             </div>
         </form>
     </div>
@@ -212,9 +215,9 @@
                     <p>{{ group.item_count }}개 로트 묶음</p>
                 </div>
                 <div class="raw-code-summary">
-                    <div><span>총재고</span><strong>{{ group.total_stock_sum|int }}속</strong></div>
-                    <div><span>현재고</span><strong>{{ group.current_stock_sum|int }}속</strong></div>
-                    <div><span>사용량</span><strong>{{ group.used_quantity_sum|int }}속</strong></div>
+                    <div><span>총재고</span><strong>{{ "{:,}".format(group.total_stock_sum|int) }}속</strong></div>
+                    <div><span>현재고</span><strong>{{ "{:,}".format(group.current_stock_sum|int) }}속</strong></div>
+                    <div><span>사용량</span><strong>{{ "{:,}".format(group.used_quantity_sum|int) }}속</strong></div>
                 </div>
             </div>
             <div class="raw-code-items">
@@ -232,9 +235,9 @@
                             </div>
                         </div>
                         <div class="raw-code-metrics">
-                            <div class="raw-metric"><span>총재고</span><strong>{{ rm.total_stock_value|int }}속</strong></div>
-                            <div class="raw-metric"><span>현재고</span><strong style="color:{{ rm.current_stock_text_color }};">{{ rm.current_stock_value|int }}속</strong></div>
-                            <div class="raw-metric"><span>사용량</span><strong>{{ rm.used_quantity_value|int }}속</strong></div>
+                            <div class="raw-metric"><span>총재고</span><strong>{{ "{:,}".format(rm.total_stock_value|int) }}속</strong></div>
+                            <div class="raw-metric"><span>현재고</span><strong style="color:{{ rm.current_stock_text_color }};">{{ "{:,}".format(rm.current_stock_value|int) }}속</strong></div>
+                            <div class="raw-metric"><span>사용량</span><strong>{{ "{:,}".format(rm.used_quantity_value|int) }}속</strong></div>
                         </div>
                         <div class="raw-progress-row compact">
                             <div class="raw-progress-bar">
@@ -321,10 +324,11 @@
                     <option value="production" {% if selected_done_kind == 'production' %}selected{% endif %}>사용완료</option>
                     <option value="export" {% if selected_done_kind == 'export' %}selected{% endif %}>반출 완료</option>
                 </select>
+                <input type="date" id="doneDateFilter" class="done-calendar-date-input" value="{{ selected_done_date or '' }}" onchange="applyDoneDateFilter(this.value)">
                 <button type="button" class="btn btn-small btn-secondary" onclick="moveDoneCalendarMonth(-1)">◀</button>
                 <strong id="doneCalendarLabel" style="min-width:120px;text-align:center;color:#0f172a;"></strong>
                 <button type="button" class="btn btn-small btn-secondary" onclick="moveDoneCalendarMonth(1)">▶</button>
-                <a href="/raw-materials?tab=done{% if raw_search_keyword %}&raw_search_keyword={{ raw_search_keyword|urlencode }}{% endif %}{% if selected_raw_search_field and selected_raw_search_field != 'all' %}&raw_search_field={{ selected_raw_search_field|urlencode }}{% endif %}{% if selected_raw_name %}&raw_name={{ selected_raw_name|urlencode }}{% endif %}" class="btn btn-small btn-secondary">전체</a>
+                <a href="/raw-materials?tab=done&done_scope=all{% if selected_done_kind and selected_done_kind != 'all' %}&done_kind={{ selected_done_kind|urlencode }}{% endif %}{% if raw_search_keyword %}&raw_search_keyword={{ raw_search_keyword|urlencode }}{% endif %}{% if selected_raw_search_field and selected_raw_search_field != 'all' %}&raw_search_field={{ selected_raw_search_field|urlencode }}{% endif %}{% if selected_raw_name %}&raw_name={{ selected_raw_name|urlencode }}{% endif %}" class="btn btn-small btn-secondary">전체</a>
             </div>
         </div>
         <div id="doneCalendarGrid" class="done-calendar-grid"></div>
@@ -435,17 +439,13 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
             <h2 style="margin:0;">📌 원초 사용/입고/반출 내역</h2>
             <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+                <button type="button" class="btn btn-small btn-secondary" onclick="moveRawActivityDate(-1)">◀</button>
                 <input type="date" id="rawActDateInput" style="padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;">
+                <button type="button" class="btn btn-small btn-secondary" onclick="moveRawActivityDate(1)">▶</button>
                 <button type="button" class="btn btn-small" style="background:#0f172a;" onclick="searchRawActivityByDate()">일자 검색</button>
                 <button type="button" class="btn btn-small btn-secondary" onclick="loadTodayRawActivity()">오늘</button>
                 <button type="button" class="btn btn-secondary btn-small" onclick="closeRawActivityModal()">닫기</button>
             </div>
-        </div>
-        <div id="rawActWpTabs" style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.6rem;">
-            <button type="button" class="btn btn-small btn-secondary" data-wp-tab="all" onclick="setRawActivityWorkplace('all')">전체</button>
-            {% for wp in workplaces %}
-            <button type="button" class="btn btn-small btn-secondary" data-wp-tab="{{ wp }}" onclick="setRawActivityWorkplace('{{ wp }}')">{{ wp }}</button>
-            {% endfor %}
         </div>
         <p id="rawActivityPeriodText" style="margin:0 0 0.7rem;color:#64748b;font-size:0.86rem;">조회 일자: -</p>
         <div class="table-container">
@@ -802,16 +802,68 @@ function applyRawCodeProfile(code){
 }
 
 const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
-let rawActivityWorkplace = 'all';
 const rawDoneDates = {{ done_dates|tojson }};
 const rawSelectedDoneDate = {{ selected_done_date|tojson }};
-let doneCalendarAnchor = rawSelectedDoneDate ? new Date(`${rawSelectedDoneDate}T00:00:00`) : (rawDoneDates.length ? new Date(`${rawDoneDates[0]}T00:00:00`) : new Date());
+const rawSelectedDoneMonth = {{ selected_done_month|tojson }};
+const rawSelectedDoneScope = {{ selected_done_scope|tojson }};
+let rawActivityWorkplace = CURRENT_WORKPLACE || 'all';
+let doneCalendarAnchor = rawSelectedDoneDate
+    ? new Date(`${rawSelectedDoneDate}T00:00:00`)
+    : (rawSelectedDoneMonth ? new Date(`${rawSelectedDoneMonth}-01T00:00:00`) : (rawDoneDates.length ? new Date(`${rawDoneDates[0]}T00:00:00`) : new Date()));
+
+function buildDoneTabDefaultUrl(){
+    const params = new URLSearchParams(window.location.search);
+    const monthKey = rawSelectedDoneMonth || `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`;
+    params.set('tab', 'done');
+    params.set('done_scope', 'month');
+    params.set('done_month', monthKey);
+    params.delete('done_date');
+    return `/raw-materials?${params.toString()}`;
+}
 
 function switchTab(tab){
+    const params = new URLSearchParams(window.location.search);
+    const currentTab = params.get('tab') || 'active';
+    if(tab === 'done' && currentTab !== 'done'){
+        window.location.href = buildDoneTabDefaultUrl();
+        return;
+    }
+    if(tab === 'active' && currentTab === 'done'){
+        params.set('tab', 'active');
+        params.delete('done_date');
+        params.delete('done_scope');
+        params.delete('done_month');
+        window.location.href = `/raw-materials?${params.toString()}`;
+        return;
+    }
     document.getElementById('pane_active').style.display = tab==='active' ? '' : 'none';
     document.getElementById('pane_done').style.display = tab==='done' ? '' : 'none';
     document.getElementById('tab_active').classList.toggle('active', tab==='active');
     document.getElementById('tab_done').classList.toggle('active', tab==='done');
+    const tabInput = document.getElementById('rawListFilterTab');
+    if(tabInput){
+        tabInput.value = tab;
+    }
+    const resetLink = document.getElementById('rawListFilterReset');
+    if(resetLink){
+        resetLink.href = `/raw-materials?tab=${encodeURIComponent(tab)}`;
+    }
+    const doneDateInput = document.getElementById('rawListDoneDate');
+    const doneKindInput = document.getElementById('rawListDoneKind');
+    const doneScopeInput = document.getElementById('rawListDoneScope');
+    const doneMonthInput = document.getElementById('rawListDoneMonth');
+    if(doneDateInput){
+        doneDateInput.disabled = tab !== 'done';
+    }
+    if(doneKindInput){
+        doneKindInput.disabled = tab !== 'done';
+    }
+    if(doneScopeInput){
+        doneScopeInput.disabled = tab !== 'done';
+    }
+    if(doneMonthInput){
+        doneMonthInput.disabled = tab !== 'done';
+    }
 }
 
 // 페이지 로드 시 URL에서 tab 파라미터 읽어서 자동 선택
@@ -831,8 +883,12 @@ function buildDoneCalendarUrl(dateStr){
     params.set('tab', 'done');
     if(dateStr){
         params.set('done_date', dateStr);
+        params.set('done_month', dateStr.slice(0, 7));
+        params.set('done_scope', 'month');
     } else {
         params.delete('done_date');
+        params.set('done_month', `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`);
+        params.set('done_scope', 'month');
     }
     return `/raw-materials?${params.toString()}`;
 }
@@ -846,12 +902,36 @@ function applyDoneKindFilter(kind){
         params.delete('done_kind');
     }
     params.delete('done_date');
+    if((params.get('done_scope') || '') !== 'all'){
+        params.set('done_scope', 'month');
+    }
+    params.set('done_month', `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`);
+    window.location.href = `/raw-materials?${params.toString()}`;
+}
+
+function applyDoneDateFilter(dateStr){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'done');
+    if(dateStr){
+        params.set('done_date', dateStr);
+        params.set('done_month', dateStr.slice(0, 7));
+        params.set('done_scope', 'month');
+    } else {
+        params.delete('done_date');
+        params.set('done_scope', 'month');
+        params.set('done_month', `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`);
+    }
     window.location.href = `/raw-materials?${params.toString()}`;
 }
 
 function moveDoneCalendarMonth(delta){
     doneCalendarAnchor = new Date(doneCalendarAnchor.getFullYear(), doneCalendarAnchor.getMonth() + delta, 1);
-    renderDoneCalendar();
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'done');
+    params.delete('done_date');
+    params.set('done_scope', 'month');
+    params.set('done_month', `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`);
+    window.location.href = `/raw-materials?${params.toString()}`;
 }
 
 function renderDoneCalendar(){
@@ -1036,30 +1116,8 @@ function closeRawActivityModal(){
     if(modal) modal.style.display='none';
 }
 
-function renderRawActivityWorkplaceTabs(){
-    let hasCurrent = false;
-    document.querySelectorAll('#rawActWpTabs [data-wp-tab]').forEach(btn => {
-        if(btn.getAttribute('data-wp-tab') === CURRENT_WORKPLACE){
-            hasCurrent = true;
-        }
-    });
-    rawActivityWorkplace = (CURRENT_WORKPLACE && CURRENT_WORKPLACE !== 'all' && hasCurrent) ? CURRENT_WORKPLACE : 'all';
-    setRawActivityWorkplace(rawActivityWorkplace, true);
-}
-
 function setRawActivityWorkplace(wp, skipReload){
-    rawActivityWorkplace = wp || 'all';
-    document.querySelectorAll('#rawActWpTabs [data-wp-tab]').forEach(btn => {
-        if(btn.getAttribute('data-wp-tab') === rawActivityWorkplace){
-            btn.classList.remove('btn-secondary');
-            btn.style.background = '#0f172a';
-            btn.style.color = '#fff';
-        } else {
-            btn.classList.add('btn-secondary');
-            btn.style.background = '';
-            btn.style.color = '';
-        }
-    });
+    rawActivityWorkplace = CURRENT_WORKPLACE || wp || 'all';
     if(skipReload) return;
     searchRawActivityByDate();
 }
@@ -1305,6 +1363,22 @@ function searchRawActivityByDate(){
     loadRawActivityByDate(targetDate);
 }
 
+function moveRawActivityDate(deltaDays){
+    const input = document.getElementById('rawActDateInput');
+    const baseDate = (input && input.value)
+        ? new Date(`${input.value}T00:00:00`)
+        : new Date(`${getTodayIsoDate()}T00:00:00`);
+    if(Number.isNaN(baseDate.getTime())){
+        return;
+    }
+    baseDate.setDate(baseDate.getDate() + deltaDays);
+    const movedDate = `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}-${String(baseDate.getDate()).padStart(2, '0')}`;
+    if(input){
+        input.value = movedDate;
+    }
+    loadRawActivityByDate(movedDate);
+}
+
 function loadTodayRawActivity(){
     const input = document.getElementById('rawActDateInput');
     const today = getTodayIsoDate();
@@ -1318,7 +1392,7 @@ function openRawActivityModal(){
     const modal = document.getElementById('rawActivityModal');
     if(!modal) return;
     modal.style.display='block';
-    renderRawActivityWorkplaceTabs();
+    rawActivityWorkplace = CURRENT_WORKPLACE || 'all';
     loadTodayRawActivity();
 }
 
@@ -1418,6 +1492,15 @@ html[data-theme="dark"] .done-calendar-weekday{background:rgba(15,23,42,0.82);co
 html[data-theme="dark"] .done-calendar-day{background:rgba(15,23,42,0.72);border-color:rgba(148,163,184,0.18);color:#64748b;}
 html[data-theme="dark"] .done-calendar-day.has-history{background:rgba(37,99,235,0.18);border-color:rgba(96,165,250,0.42);color:#dbeafe;}
 html[data-theme="dark"] .done-calendar-day.has-history:hover{background:rgba(37,99,235,0.26);}
+html[data-theme="dark"] .done-calendar-head > div[style*="color:#64748b"]{color:#8ea3bd !important;}
+html[data-theme="dark"] .done-calendar-nav select,
+html[data-theme="dark"] .done-calendar-date-input{
+    background:#152033 !important;
+    border-color:#334155 !important;
+    color:#eff6ff !important;
+}
+html[data-theme="dark"] .done-calendar-date-input::-webkit-calendar-picker-indicator{filter:invert(1) brightness(1.2);}
+html[data-theme="dark"] #doneCalendarLabel{color:#eff6ff !important;}
 html[data-theme="dark"] .raw-add-step{background:rgba(15,23,42,0.72);border-color:rgba(148,163,184,0.24);color:var(--text-secondary);}
 html[data-theme="dark"] .raw-add-step.active{background:rgba(37,99,235,0.16);border-color:rgba(96,165,250,0.42);color:#bfdbfe;}
 html[data-theme="dark"] .raw-add-step-num{background:rgba(51,65,85,0.9);color:var(--text-primary);}

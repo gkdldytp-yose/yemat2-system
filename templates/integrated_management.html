@@ -121,6 +121,18 @@
 .material-modal-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;padding-bottom:0.6rem;border-bottom:1px solid #e2e8f0;}
 .material-header-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0.55rem;margin:0.75rem 0 1rem;}
 .material-header-item{background:#ffffff;border:1px solid #dbe5f0;border-radius:10px;padding:0.6rem 0.7rem;box-shadow:0 1px 2px rgba(15,23,42,0.04);}
+.receive-log-link{display:inline-flex;align-items:center;color:#2563eb;font-weight:800;text-decoration:none;}
+.receive-log-link:hover{text-decoration:underline;}
+.usage-filter-bar{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.55rem;padding:0.7rem 0.8rem;border:1px solid #dbe5f0;border-radius:12px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);}
+.usage-filter-left,.usage-filter-right{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;}
+.usage-filter-chip{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 0.8rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#334155;font-size:0.8rem;font-weight:800;cursor:pointer;}
+.usage-filter-chip.active{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:0 8px 20px rgba(37,99,235,.18);}
+.usage-filter-nav{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#334155;font-size:0.95rem;font-weight:900;cursor:pointer;}
+.usage-filter-nav:disabled{opacity:.45;cursor:not-allowed;}
+.usage-filter-month{min-width:88px;text-align:center;font-size:0.84rem;font-weight:900;color:#0f172a;}
+.usage-filter-date{height:34px;padding:0 0.55rem;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#0f172a;font-size:0.82rem;}
+.usage-filter-sep{font-size:0.78rem;color:#64748b;font-weight:800;}
+.usage-filter-meta{font-size:0.8rem;font-weight:800;color:#475569;}
 .subcontract-shell{display:flex;flex-direction:column;gap:1rem;}
 .subcontract-toolbar{display:flex;flex-direction:column;gap:0.95rem;margin-bottom:0.2rem;padding:1rem 1.05rem;border:1px solid #dbe7f3;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%);box-shadow:0 14px 32px rgba(15,23,42,0.05);}
 .subcontract-toolbar-top{display:grid;grid-template-columns:minmax(0,2.2fr) repeat(2,minmax(170px,0.9fr)) auto;gap:0.8rem;align-items:end;}
@@ -456,6 +468,28 @@ html[data-theme="dark"] .stats-table-card td,
 html[data-theme="dark"] .reqcalc-table td,
 html[data-theme="dark"] .meeting-eval-table td,
 html[data-theme="dark"] .material-panel table{background:#121a2a;color:#dbe7f5;border-color:#263244;}
+html[data-theme="dark"] .modal-box.material-modal{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 22px 54px rgba(2,6,23,.42);}
+html[data-theme="dark"] .material-modal-top{border-bottom-color:#263244;}
+html[data-theme="dark"] .material-modal-top h3,
+html[data-theme="dark"] .material-section-title{color:#eff6ff;}
+html[data-theme="dark"] .modal-box.material-modal .table-container{border-radius:10px;}
+html[data-theme="dark"] .material-panel thead th{background:#162133;color:#c7d3e3;border-bottom-color:#263244;}
+html[data-theme="dark"] .material-panel tbody td{border-bottom-color:#223046;color:#dbe7f5;}
+html[data-theme="dark"] .material-panel tbody tr:nth-child(even){background:#162133;}
+html[data-theme="dark"] .material-panel tbody tr:hover{background:#1b2940;}
+html[data-theme="dark"] .material-panel input[type="text"],
+html[data-theme="dark"] .material-panel input[type="date"],
+html[data-theme="dark"] .material-panel input[type="number"]{background:#0f172a;border:1px solid #314155;color:#eff6ff;box-shadow:none;}
+html[data-theme="dark"] .material-panel input[type="text"]::placeholder,
+html[data-theme="dark"] .material-panel input[type="number"]::placeholder{color:#7f93ad;}
+html[data-theme="dark"] .lot-inline-form{background:linear-gradient(180deg,#162133 0%,#101827 100%);border-color:#263244;box-shadow:0 14px 32px rgba(2,6,23,.28);}
+html[data-theme="dark"] .lot-field label{color:#8ea3bd;}
+html[data-theme="dark"] .lot-inline-form .lot-submit{box-shadow:0 10px 20px rgba(37,99,235,.2);}
+html[data-theme="dark"] .lot-code{background:#162133;border-color:#2b3648;color:#bfdbfe;}
+html[data-theme="dark"] #materialDetailModal .btn.btn-secondary,
+html[data-theme="dark"] #rawLotDetailModal .btn.btn-secondary{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] #materialDetailModal .btn.btn-secondary:hover,
+html[data-theme="dark"] #rawLotDetailModal .btn.btn-secondary:hover{background:#1a2436;border-color:#60a5fa;color:#eff6ff;}
 html[data-theme="dark"] .inventory-audit-table-card tbody tr:nth-child(even),
 html[data-theme="dark"] .subcontract-table tbody tr:nth-child(even),
 html[data-theme="dark"] .audit-table-card tbody tr:nth-child(even),
@@ -548,6 +582,15 @@ html[data-theme="dark"] .subcontract-quickpick-btn,
 html[data-theme="dark"] .subcontract-summary-card,
 html[data-theme="dark"] .meeting-calendar-popover,
 html[data-theme="dark"] .material-header-item{background:#121a2a;border-color:#263244;box-shadow:0 12px 28px rgba(2,6,23,.24);}
+html[data-theme="dark"] .receive-log-link{color:#93c5fd;}
+html[data-theme="dark"] .usage-filter-bar{background:linear-gradient(180deg,#121a2a 0%,#162133 100%);border-color:#263244;}
+html[data-theme="dark"] .usage-filter-chip,
+html[data-theme="dark"] .usage-filter-nav,
+html[data-theme="dark"] .usage-filter-date{background:#182235;border-color:#334155;color:#dbeafe;}
+html[data-theme="dark"] .usage-filter-chip.active{background:#2563eb;border-color:#2563eb;color:#fff;}
+html[data-theme="dark"] .usage-filter-month,
+html[data-theme="dark"] .usage-filter-meta{color:#e5eefc;}
+html[data-theme="dark"] .usage-filter-sep{color:#94a3b8;}
 html[data-theme="dark"] .subcontract-summary-card .label{color:#8ea3bd;}
 html[data-theme="dark"] .subcontract-summary-card .value,
 html[data-theme="dark"] .audit-stat-card .value{color:#eff6ff;}
@@ -2955,7 +2998,26 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
         </div>
 
         <div id="materialLogsPanel" class="material-panel">
-            <p class="material-section-title">부자재 사용 로그</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
+                <p class="material-section-title" style="margin:0;">부자재 사용 로그</p>
+                <div style="font-size:0.84rem;font-weight:900;color:#0f172a;">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
+            </div>
+            <div class="usage-filter-bar">
+                <div class="usage-filter-left">
+                    <button type="button" class="usage-filter-chip active" id="usageFilterMonthBtn" onclick="setUsageLogFilterMode('month')">월별</button>
+                    <button type="button" class="usage-filter-chip" id="usageFilterAllBtn" onclick="setUsageLogFilterMode('all')">전체</button>
+                    <button type="button" class="usage-filter-chip" id="usageFilterCustomBtn" onclick="setUsageLogFilterMode('custom')">기간</button>
+                    <button type="button" class="usage-filter-nav" id="usagePrevMonthBtn" onclick="moveUsageFilterMonth(-1)" title="이전달">‹</button>
+                    <div class="usage-filter-month" id="usageFilterMonthLabel">-</div>
+                    <button type="button" class="usage-filter-nav" id="usageNextMonthBtn" onclick="moveUsageFilterMonth(1)" title="다음달">›</button>
+                </div>
+                <div class="usage-filter-right">
+                    <input type="date" class="usage-filter-date" id="usageFilterStartDate" onchange="handleUsageFilterDateChange()">
+                    <span class="usage-filter-sep">~</span>
+                    <input type="date" class="usage-filter-date" id="usageFilterEndDate" onchange="handleUsageFilterDateChange()">
+                    <span class="usage-filter-meta" id="usageFilterSummary">-</span>
+                </div>
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
@@ -2965,7 +3027,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                             <th>상품명</th>
                             <th>사용 로트</th>
                             <th>사용수량</th>
-                            <th>남은수량</th>
+                            <th>로트 잔량</th>
                             <th>사용자</th>
                         </tr>
                     </thead>
@@ -2974,7 +3036,29 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
             </div>
         </div>
         <div id="materialReceivePanel" class="material-panel">
-            <p class="material-section-title">부자재 입고 로그</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
+                <p class="material-section-title" style="margin:0;">부자재 입고 로그</p>
+                <div class="material-detail-tabs" style="margin:0;">
+                    <button type="button" class="material-detail-tab active" id="receiveDoneTabBtn" onclick="switchReceiveLogTab('complete')">입고 완료</button>
+                    <button type="button" class="material-detail-tab" id="receiveUpdateTabBtn" onclick="switchReceiveLogTab('update')">입고 수정</button>
+                </div>
+            </div>
+            <div class="usage-filter-bar">
+                <div class="usage-filter-left">
+                    <button type="button" class="usage-filter-chip active" id="receiveFilterMonthBtn" onclick="setReceiveLogFilterMode('month')">월별</button>
+                    <button type="button" class="usage-filter-chip" id="receiveFilterAllBtn" onclick="setReceiveLogFilterMode('all')">전체</button>
+                    <button type="button" class="usage-filter-chip" id="receiveFilterCustomBtn" onclick="setReceiveLogFilterMode('custom')">기간</button>
+                    <button type="button" class="usage-filter-nav" id="receivePrevMonthBtn" onclick="moveReceiveFilterMonth(-1)" title="이전달">‹</button>
+                    <div class="usage-filter-month" id="receiveFilterMonthLabel">-</div>
+                    <button type="button" class="usage-filter-nav" id="receiveNextMonthBtn" onclick="moveReceiveFilterMonth(1)" title="다음달">›</button>
+                </div>
+                <div class="usage-filter-right">
+                    <input type="date" class="usage-filter-date" id="receiveFilterStartDate" onchange="handleReceiveFilterDateChange()">
+                    <span class="usage-filter-sep">~</span>
+                    <input type="date" class="usage-filter-date" id="receiveFilterEndDate" onchange="handleReceiveFilterDateChange()">
+                    <span class="usage-filter-meta" id="receiveFilterSummary">-</span>
+                </div>
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
@@ -3143,6 +3227,11 @@ document.getElementById('editModal').addEventListener('click',function(e){
 const CAN_MANAGE_MATERIAL_LOTS = {{ 'true' if can_manage_material_lots else 'false' }};
 let currentMaterialId = null;
 let currentRawLotId = null;
+let currentReceiveCompleteLogs = [];
+let currentReceiveUpdateLogs = [];
+let currentReceiveLogTab = 'complete';
+let currentReceiveFilterMode = 'month';
+let currentReceiveFilterMonth = '';
 const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
 let rawActivityWorkplace = 'all';
 let productBulkAssignMode = false;
@@ -4646,6 +4735,11 @@ async function toggleLotEdit(lotId){
 
 function renderUsageRows(logs){
     const tbody = document.getElementById('usageLogTableBody');
+    const totalEl = document.getElementById('md_usage_total_qty');
+    const totalQty = Array.isArray(logs) ? logs.reduce((sum, log) => sum + Number(log.total_used_quantity || log.used_quantity || 0), 0) : 0;
+    if(totalEl){
+        totalEl.textContent = totalQty.toFixed(1);
+    }
     if(!logs || logs.length === 0){
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
         return;
@@ -4672,14 +4766,279 @@ function renderReceiveRows(logs){
     }
     tbody.innerHTML = logs.map(log => `
         <tr>
-            <td>${(log.receive_date || '-').toString().slice(0,10)}</td>
+            <td>${formatReceiveLogDateCell(log)}</td>
             <td>${(log.manufacture_date || '-').toString().slice(0,10)}</td>
             <td>${(log.expiry_date || '-').toString().slice(0,10)}</td>
-            <td>${Number(log.received_quantity || 0).toFixed(1)}</td>
+            <td>${log.show_received_quantity === false ? '-' : Number(log.received_quantity || 0).toFixed(1)}</td>
             <td>${log.action_label || '-'}</td>
             <td>${log.note || '-'}</td>
         </tr>
     `).join('');
+}
+
+let currentUsageLogs = [];
+let currentUsageFilterMode = 'month';
+let currentUsageFilterMonth = '';
+
+function formatUsageFilterDate(date){
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getCurrentUsageMonthValue(){
+    if(currentUsageFilterMonth) return currentUsageFilterMonth;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function resetUsageLogFilter(){
+    currentUsageFilterMode = 'month';
+    currentUsageFilterMonth = '';
+    const now = new Date();
+    const startInput = document.getElementById('usageFilterStartDate');
+    const endInput = document.getElementById('usageFilterEndDate');
+    if(startInput) startInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    if(endInput) endInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    syncUsageFilterControls();
+    applyUsageLogFilter();
+}
+
+function syncUsageFilterControls(){
+    const monthBtn = document.getElementById('usageFilterMonthBtn');
+    const allBtn = document.getElementById('usageFilterAllBtn');
+    const customBtn = document.getElementById('usageFilterCustomBtn');
+    const prevBtn = document.getElementById('usagePrevMonthBtn');
+    const nextBtn = document.getElementById('usageNextMonthBtn');
+    const monthLabel = document.getElementById('usageFilterMonthLabel');
+    const startInput = document.getElementById('usageFilterStartDate');
+    const endInput = document.getElementById('usageFilterEndDate');
+    if(monthBtn) monthBtn.classList.toggle('active', currentUsageFilterMode === 'month');
+    if(allBtn) allBtn.classList.toggle('active', currentUsageFilterMode === 'all');
+    if(customBtn) customBtn.classList.toggle('active', currentUsageFilterMode === 'custom');
+    const isMonth = currentUsageFilterMode === 'month';
+    const isCustom = currentUsageFilterMode === 'custom';
+    if(prevBtn) prevBtn.disabled = !isMonth;
+    if(nextBtn) nextBtn.disabled = !isMonth;
+    if(monthLabel){
+        const monthValue = getCurrentUsageMonthValue();
+        monthLabel.textContent = `${monthValue.slice(0,4)}-${monthValue.slice(5,7)}`;
+        monthLabel.style.opacity = isMonth ? '1' : '.55';
+    }
+    if(startInput) startInput.disabled = !isCustom;
+    if(endInput) endInput.disabled = !isCustom;
+}
+
+function getUsageLogDateKey(log){
+    const raw = log?.completed_at || log?.use_date || '';
+    return String(raw).slice(0, 10);
+}
+
+function getFilteredUsageLogs(){
+    const rows = Array.isArray(currentUsageLogs) ? currentUsageLogs.slice() : [];
+    if(currentUsageFilterMode === 'all') return rows;
+    if(currentUsageFilterMode === 'custom'){
+        const startValue = document.getElementById('usageFilterStartDate')?.value || '';
+        const endValue = document.getElementById('usageFilterEndDate')?.value || '';
+        return rows.filter((log) => {
+            const dateKey = getUsageLogDateKey(log);
+            if(!dateKey) return false;
+            if(startValue && dateKey < startValue) return false;
+            if(endValue && dateKey > endValue) return false;
+            return true;
+        });
+    }
+    const monthValue = getCurrentUsageMonthValue();
+    return rows.filter((log) => getUsageLogDateKey(log).slice(0, 7) === monthValue);
+}
+
+function updateUsageFilterSummary(filteredLogs){
+    const summaryEl = document.getElementById('usageFilterSummary');
+    if(!summaryEl) return;
+    const count = Array.isArray(filteredLogs) ? filteredLogs.length : 0;
+    if(currentUsageFilterMode === 'all'){
+        summaryEl.textContent = `전체 ${count}건`;
+        return;
+    }
+    if(currentUsageFilterMode === 'custom'){
+        const startValue = document.getElementById('usageFilterStartDate')?.value || '-';
+        const endValue = document.getElementById('usageFilterEndDate')?.value || '-';
+        summaryEl.textContent = `${startValue} ~ ${endValue} / ${count}건`;
+        return;
+    }
+    summaryEl.textContent = `${getCurrentUsageMonthValue()} / ${count}건`;
+}
+
+function applyUsageLogFilter(){
+    syncUsageFilterControls();
+    const filteredLogs = getFilteredUsageLogs();
+    updateUsageFilterSummary(filteredLogs);
+    renderUsageRows(filteredLogs);
+}
+
+function setUsageLogFilterMode(mode){
+    currentUsageFilterMode = ['month', 'all', 'custom'].includes(mode) ? mode : 'month';
+    applyUsageLogFilter();
+}
+
+function moveUsageFilterMonth(offset){
+    if(currentUsageFilterMode !== 'month') return;
+    const monthValue = getCurrentUsageMonthValue();
+    const [year, month] = monthValue.split('-').map((value) => Number(value || 0));
+    const pivot = new Date(year, Math.max(0, month - 1) + offset, 1);
+    currentUsageFilterMonth = `${pivot.getFullYear()}-${String(pivot.getMonth() + 1).padStart(2, '0')}`;
+    applyUsageLogFilter();
+}
+
+function handleUsageFilterDateChange(){
+    if(currentUsageFilterMode !== 'custom'){
+        currentUsageFilterMode = 'custom';
+    }
+    const startInput = document.getElementById('usageFilterStartDate');
+    const endInput = document.getElementById('usageFilterEndDate');
+    if(startInput && endInput && startInput.value && endInput.value && startInput.value > endInput.value){
+        endInput.value = startInput.value;
+    }
+    applyUsageLogFilter();
+}
+
+function getCurrentReceiveMonthValue(){
+    if(currentReceiveFilterMonth) return currentReceiveFilterMonth;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function resetReceiveLogFilter(){
+    currentReceiveFilterMode = 'month';
+    currentReceiveFilterMonth = '';
+    const now = new Date();
+    const startInput = document.getElementById('receiveFilterStartDate');
+    const endInput = document.getElementById('receiveFilterEndDate');
+    if(startInput) startInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    if(endInput) endInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    syncReceiveFilterControls();
+}
+
+function syncReceiveFilterControls(){
+    const monthBtn = document.getElementById('receiveFilterMonthBtn');
+    const allBtn = document.getElementById('receiveFilterAllBtn');
+    const customBtn = document.getElementById('receiveFilterCustomBtn');
+    const prevBtn = document.getElementById('receivePrevMonthBtn');
+    const nextBtn = document.getElementById('receiveNextMonthBtn');
+    const monthLabel = document.getElementById('receiveFilterMonthLabel');
+    const startInput = document.getElementById('receiveFilterStartDate');
+    const endInput = document.getElementById('receiveFilterEndDate');
+    if(monthBtn) monthBtn.classList.toggle('active', currentReceiveFilterMode === 'month');
+    if(allBtn) allBtn.classList.toggle('active', currentReceiveFilterMode === 'all');
+    if(customBtn) customBtn.classList.toggle('active', currentReceiveFilterMode === 'custom');
+    const isMonth = currentReceiveFilterMode === 'month';
+    const isCustom = currentReceiveFilterMode === 'custom';
+    if(prevBtn) prevBtn.disabled = !isMonth;
+    if(nextBtn) nextBtn.disabled = !isMonth;
+    if(monthLabel){
+        const monthValue = getCurrentReceiveMonthValue();
+        monthLabel.textContent = `${monthValue.slice(0,4)}-${monthValue.slice(5,7)}`;
+        monthLabel.style.opacity = isMonth ? '1' : '.55';
+    }
+    if(startInput) startInput.disabled = !isCustom;
+    if(endInput) endInput.disabled = !isCustom;
+}
+
+function getReceiveLogDateKey(log){
+    const raw = log?.received_at || log?.receive_date || '';
+    return String(raw).slice(0, 10);
+}
+
+function getBaseReceiveLogsForCurrentTab(){
+    return currentReceiveLogTab === 'update' ? currentReceiveUpdateLogs : currentReceiveCompleteLogs;
+}
+
+function getFilteredReceiveLogs(){
+    const rows = Array.isArray(getBaseReceiveLogsForCurrentTab()) ? getBaseReceiveLogsForCurrentTab().slice() : [];
+    if(currentReceiveFilterMode === 'all') return rows;
+    if(currentReceiveFilterMode === 'custom'){
+        const startValue = document.getElementById('receiveFilterStartDate')?.value || '';
+        const endValue = document.getElementById('receiveFilterEndDate')?.value || '';
+        return rows.filter((log) => {
+            const dateKey = getReceiveLogDateKey(log);
+            if(!dateKey) return false;
+            if(startValue && dateKey < startValue) return false;
+            if(endValue && dateKey > endValue) return false;
+            return true;
+        });
+    }
+    const monthValue = getCurrentReceiveMonthValue();
+    return rows.filter((log) => getReceiveLogDateKey(log).slice(0, 7) === monthValue);
+}
+
+function updateReceiveFilterSummary(filteredLogs){
+    const summaryEl = document.getElementById('receiveFilterSummary');
+    if(!summaryEl) return;
+    const count = Array.isArray(filteredLogs) ? filteredLogs.length : 0;
+    if(currentReceiveFilterMode === 'all'){
+        summaryEl.textContent = `전체 ${count}건`;
+        return;
+    }
+    if(currentReceiveFilterMode === 'custom'){
+        const startValue = document.getElementById('receiveFilterStartDate')?.value || '-';
+        const endValue = document.getElementById('receiveFilterEndDate')?.value || '-';
+        summaryEl.textContent = `${startValue} ~ ${endValue} / ${count}건`;
+        return;
+    }
+    summaryEl.textContent = `${getCurrentReceiveMonthValue()} / ${count}건`;
+}
+
+function applyReceiveLogFilter(){
+    syncReceiveFilterControls();
+    const filteredLogs = getFilteredReceiveLogs();
+    updateReceiveFilterSummary(filteredLogs);
+    renderReceiveRows(filteredLogs);
+}
+
+function setReceiveLogFilterMode(mode){
+    currentReceiveFilterMode = ['month', 'all', 'custom'].includes(mode) ? mode : 'month';
+    applyReceiveLogFilter();
+}
+
+function moveReceiveFilterMonth(offset){
+    if(currentReceiveFilterMode !== 'month') return;
+    const monthValue = getCurrentReceiveMonthValue();
+    const [year, month] = monthValue.split('-').map((value) => Number(value || 0));
+    const pivot = new Date(year, Math.max(0, month - 1) + offset, 1);
+    currentReceiveFilterMonth = `${pivot.getFullYear()}-${String(pivot.getMonth() + 1).padStart(2, '0')}`;
+    applyReceiveLogFilter();
+}
+
+function handleReceiveFilterDateChange(){
+    if(currentReceiveFilterMode !== 'custom'){
+        currentReceiveFilterMode = 'custom';
+    }
+    const startInput = document.getElementById('receiveFilterStartDate');
+    const endInput = document.getElementById('receiveFilterEndDate');
+    if(startInput && endInput && startInput.value && endInput.value && startInput.value > endInput.value){
+        endInput.value = startInput.value;
+    }
+    applyReceiveLogFilter();
+}
+
+function formatReceiveLogDateCell(log){
+    const dateText = log.received_at
+        ? String(log.received_at).slice(0,16).replace('T', ' ')
+        : (log.receive_date || '-').toString().slice(0,10);
+    const requestId = Number(log?.issue_request_id || 0);
+    if(requestId <= 0) return dateText;
+    const targetUrl = `/materials?req_tab=issue&issue_status=completed&focus_req_id=${requestId}`;
+    return `<a href="${targetUrl}" class="receive-log-link" title="해당 입고 완료건 열기">${dateText}</a>`;
+}
+
+function switchReceiveLogTab(tab){
+    currentReceiveLogTab = tab === 'update' ? 'update' : 'complete';
+    const doneBtn = document.getElementById('receiveDoneTabBtn');
+    const updateBtn = document.getElementById('receiveUpdateTabBtn');
+    if(doneBtn) doneBtn.classList.toggle('active', currentReceiveLogTab === 'complete');
+    if(updateBtn) updateBtn.classList.toggle('active', currentReceiveLogTab === 'update');
+    applyReceiveLogFilter();
 }
 
 async function loadMaterialDetail(materialId){
@@ -4701,9 +5060,14 @@ async function loadMaterialDetail(materialId){
     document.getElementById('md_supplier').textContent = m.supplier_name || '-';
     document.getElementById('md_unit').textContent = m.unit || '-';
     document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
+    currentUsageLogs = payload.usage_logs || [];
+    currentReceiveCompleteLogs = payload.receive_complete_logs || payload.receive_logs || [];
+    currentReceiveUpdateLogs = payload.receive_update_logs || [];
+    currentReceiveLogTab = 'complete';
     renderLotRows(payload.lots || []);
-    renderUsageRows(payload.usage_logs || []);
-    renderReceiveRows(payload.receive_logs || []);
+    resetUsageLogFilter();
+    resetReceiveLogFilter();
+    switchReceiveLogTab('complete');
 }
 
 async function openMaterialDetailModal(materialId){

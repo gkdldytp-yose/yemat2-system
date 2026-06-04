@@ -50,6 +50,16 @@
 .lot-inline-form .btn{white-space:nowrap;}
 .lot-inline-form .lot-submit{grid-column:1 / -1;justify-self:end;min-width:108px;}
 .material-section-title{font-size:0.86rem;font-weight:800;color:#1e293b;margin:0 0 0.45rem;}
+.usage-filter-bar{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.55rem;padding:0.7rem 0.8rem;border:1px solid #dbe5f0;border-radius:12px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);}
+.usage-filter-left,.usage-filter-right{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;}
+.usage-filter-chip{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 0.8rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#334155;font-size:0.8rem;font-weight:800;cursor:pointer;}
+.usage-filter-chip.active{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:0 8px 20px rgba(37,99,235,.18);}
+.usage-filter-nav{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#334155;font-size:0.95rem;font-weight:900;cursor:pointer;}
+.usage-filter-nav:disabled{opacity:.45;cursor:not-allowed;}
+.usage-filter-month{min-width:88px;text-align:center;font-size:0.84rem;font-weight:900;color:#0f172a;}
+.usage-filter-date{height:34px;padding:0 0.55rem;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#0f172a;font-size:0.82rem;}
+.usage-filter-sep{font-size:0.78rem;color:#64748b;font-weight:800;}
+.usage-filter-meta{font-size:0.8rem;font-weight:800;color:#475569;}
 .material-modal .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .material-modal .table-container table{width:100%;min-width:720px;}
 .req-tabs{display:flex;gap:0.55rem;margin-bottom:0.95rem;flex-wrap:wrap;}
@@ -153,6 +163,7 @@
 .issue-unit-toggle{border:1px solid #0ea5e9;background:#eff6ff;color:#0369a1;border-radius:999px;padding:0.28rem 0.7rem;font-size:0.78rem;font-weight:900;cursor:pointer;line-height:1;}
 .issue-unit-toggle.base{border-color:#94a3b8;background:#f8fafc;color:#334155;}
 .issue-converted-hint{font-size:0.78rem;font-weight:800;color:#0f172a;}
+html[data-theme="dark"] .issue-converted-hint{color:#bfdbfe !important;}
 .issue-status-tabs{display:flex;gap:0.55rem;flex-wrap:wrap;margin:0.9rem 0 1rem;}
 .issue-status-btn{padding:0.55rem 1rem;border:1px solid #d7deea;border-radius:999px;background:linear-gradient(180deg,#ffffff,#f8fafc);font-size:0.82rem;font-weight:800;color:#0f172a;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,.05);}
 .issue-status-btn.active{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;border-color:#0f172a;box-shadow:0 10px 24px rgba(30,58,138,.18);}
@@ -194,6 +205,9 @@
 .issue-status-table tbody td{padding:0.9rem 0.65rem;border-top:1px solid #e6edf5;border-bottom:1px solid #e6edf5;vertical-align:middle;background:#fff;}
 .issue-status-table tbody td:first-child{border-left:1px solid #e6edf5;border-top-left-radius:14px;border-bottom-left-radius:14px;}
 .issue-status-table tbody td:last-child{border-right:1px solid #e6edf5;border-top-right-radius:14px;border-bottom-right-radius:14px;}
+.issue-status-table tbody tr.issue-request-focus td{background:#eff6ff;border-top-color:#93c5fd;border-bottom-color:#93c5fd;box-shadow:0 0 0 1px rgba(59,130,246,.18) inset;}
+.issue-status-table tbody tr.issue-request-focus td:first-child{border-left-color:#93c5fd;}
+.issue-status-table tbody tr.issue-request-focus td:last-child{border-right-color:#93c5fd;}
 .issue-meta-cell{min-width:116px;}
 .issue-date{font-weight:800;color:#0f172a;}
 .issue-subtext{font-size:0.76rem;color:#64748b;margin-top:0.18rem;}
@@ -210,6 +224,9 @@
 .issue-manage-stack form{display:inline-flex;gap:0.35rem;align-items:center;flex-wrap:wrap;margin:0;}
 .issue-manage-stack input[type="number"]{width:92px;}
 .issue-manage-stack input[type="text"]{width:130px;}
+.receive-log-link{display:inline-flex;align-items:center;color:#2563eb;font-weight:800;text-decoration:none;}
+.receive-log-link:hover{text-decoration:underline;}
+html[data-theme="dark"] .receive-log-link{color:#93c5fd;}
 .export-complete-row{display:flex;align-items:center;gap:.55rem;flex-wrap:nowrap;min-width:0;}
 .export-complete-form{display:flex;align-items:center;gap:.55rem;flex:0 0 auto;min-width:0;flex-wrap:nowrap;margin:0;}
 .export-complete-qty{width:92px!important;height:38px;border:1px solid #cbd5e1;border-radius:12px;padding:0 .72rem;background:linear-gradient(180deg,#ffffff,#f8fbff);color:#0f172a;font-size:.92rem;font-weight:900;text-align:right;box-shadow:0 3px 10px rgba(15,23,42,.05);}
@@ -316,6 +333,14 @@ html[data-theme="dark"] .receipt-modal-head,
 html[data-theme="dark"] .receipt-help{background:#162133;border-color:#263244;color:#c7d3e3;}
 html[data-theme="dark"] .lot-inline-form,
 html[data-theme="dark"] .req-header-btn{background:linear-gradient(180deg,#162133,#121a2a);border-color:#2b3648;color:#eff6ff;}
+html[data-theme="dark"] .usage-filter-bar{background:linear-gradient(180deg,#121a2a 0%,#162133 100%);border-color:#263244;}
+html[data-theme="dark"] .usage-filter-chip,
+html[data-theme="dark"] .usage-filter-nav,
+html[data-theme="dark"] .usage-filter-date{background:#182235;border-color:#334155;color:#dbeafe;}
+html[data-theme="dark"] .usage-filter-chip.active{background:#2563eb;border-color:#2563eb;color:#fff;}
+html[data-theme="dark"] .usage-filter-month,
+html[data-theme="dark"] .usage-filter-meta{color:#e5eefc;}
+html[data-theme="dark"] .usage-filter-sep{color:#94a3b8;}
 html[data-theme="dark"] #requestCard .form-group label,
 html[data-theme="dark"] .lot-field label,
 html[data-theme="dark"] .receipt-field label{color:#c7d3e3;}
@@ -484,7 +509,7 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
   #usageLogTableBody td:nth-child(3)::before{content:'상품명';}
   #usageLogTableBody td:nth-child(4)::before{content:'사용 로트';}
   #usageLogTableBody td:nth-child(5)::before{content:'사용수량';}
-  #usageLogTableBody td:nth-child(6)::before{content:'남은수량';}
+  #usageLogTableBody td:nth-child(6)::before{content:'로트 잔량';}
   #usageLogTableBody td:nth-child(7)::before{content:'사용자';}
   #receiveLogTableBody td:nth-child(1)::before{content:'입고일시';}
   #receiveLogTableBody td:nth-child(2)::before{content:'제조일';}
@@ -694,6 +719,60 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
   .export-complete-delete .btn{width:100%;}
 }
 
+html[data-theme="dark"] #materialsListCard{
+  background:linear-gradient(180deg,#121a2a 0%,#0f1726 100%);
+  border:1px solid #263244;
+  box-shadow:0 20px 40px rgba(2,6,23,.28);
+}
+html[data-theme="dark"] #materialsListCard h2{color:#eff6ff;}
+html[data-theme="dark"] #materialsListCard > div[style*="border:1px solid #dbeafe"]{
+  background:
+    radial-gradient(circle at top right, rgba(96,165,250,.12), transparent 34%),
+    linear-gradient(180deg,#152033 0%,#101827 100%) !important;
+  border-color:#2b3c55 !important;
+  box-shadow:0 16px 30px rgba(2,6,23,.22);
+}
+html[data-theme="dark"] #materialsFilterForm label{color:#9fb3cc !important;}
+html[data-theme="dark"] #materialsFilterForm select,
+html[data-theme="dark"] #materialsFilterForm input{
+  background:#152033 !important;
+  border-color:#334155 !important;
+  color:#eff6ff !important;
+}
+html[data-theme="dark"] #materialsFilterForm input::placeholder{color:#8ea3bd;}
+html[data-theme="dark"] #materialsFilterReset{
+  background:#223046 !important;
+  border-color:#334155 !important;
+  color:#dbe7f5 !important;
+}
+html[data-theme="dark"] #materialsTable tbody tr{
+  background:linear-gradient(180deg,#121a2a 0%,#101827 100%);
+  border-color:#263244;
+  box-shadow:0 14px 28px rgba(2,6,23,.22);
+}
+html[data-theme="dark"] #materialsTable tbody td{
+  background:transparent;
+  border-top-color:#223046;
+  color:#dbe7f5;
+}
+html[data-theme="dark"] #materialsTable tbody td::before{
+  color:#8ea3bd;
+}
+html[data-theme="dark"] #materialsTable tbody td strong,
+html[data-theme="dark"] #materialsTable .mat-name-link{
+  color:#eff6ff !important;
+}
+html[data-theme="dark"] #materialsTable tbody td:last-child{
+  background:transparent;
+}
+html[data-theme="dark"] #materialsTable tbody td:nth-child(5) strong,
+html[data-theme="dark"] #materialsTable tbody td:nth-child(6) strong{
+  color:#86efac !important;
+}
+html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
+  color:#bfdbfe !important;
+}
+
 </style>
 {% endblock %}
 {% block content %}
@@ -890,9 +969,25 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
                 <p class="material-section-title" style="margin:0;">부자재 사용 로그</p>
                 <div style="font-size:0.84rem;font-weight:900;color:#0f172a;">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
             </div>
+            <div class="usage-filter-bar">
+                <div class="usage-filter-left">
+                    <button type="button" class="usage-filter-chip active" id="usageFilterMonthBtn" onclick="setUsageLogFilterMode('month')">월별</button>
+                    <button type="button" class="usage-filter-chip" id="usageFilterAllBtn" onclick="setUsageLogFilterMode('all')">전체</button>
+                    <button type="button" class="usage-filter-chip" id="usageFilterCustomBtn" onclick="setUsageLogFilterMode('custom')">기간</button>
+                    <button type="button" class="usage-filter-nav" id="usagePrevMonthBtn" onclick="moveUsageFilterMonth(-1)" title="이전달">‹</button>
+                    <div class="usage-filter-month" id="usageFilterMonthLabel">-</div>
+                    <button type="button" class="usage-filter-nav" id="usageNextMonthBtn" onclick="moveUsageFilterMonth(1)" title="다음달">›</button>
+                </div>
+                <div class="usage-filter-right">
+                    <input type="date" class="usage-filter-date" id="usageFilterStartDate" onchange="handleUsageFilterDateChange()">
+                    <span class="usage-filter-sep">~</span>
+                    <input type="date" class="usage-filter-date" id="usageFilterEndDate" onchange="handleUsageFilterDateChange()">
+                    <span class="usage-filter-meta" id="usageFilterSummary">-</span>
+                </div>
+            </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>사용일시</th><th>생산번호</th><th>상품명</th><th>사용 로트</th><th>사용수량</th><th>남은수량</th><th>사용자</th></tr></thead>
+                    <thead><tr><th>사용일시</th><th>생산번호</th><th>상품명</th><th>사용 로트</th><th>사용수량</th><th>로트 잔량</th><th>사용자</th></tr></thead>
                     <tbody id="usageLogTableBody"></tbody>
                 </table>
             </div>
@@ -901,7 +996,29 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
         <div id="materialReceivePanel" class="material-panel">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
                 <p class="material-section-title" style="margin:0;">부자재 입고 로그</p>
-                <button type="button" class="btn btn-small btn-secondary" id="disposedReceiveToggleBtn" onclick="toggleDisposedReceiveLogs()">폐기 이력 보기</button>
+                <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
+                    <div class="material-detail-tabs" style="margin:0;">
+                        <button type="button" class="material-detail-tab active" id="receiveDoneTabBtn" onclick="switchReceiveLogTab('complete')">입고 완료</button>
+                        <button type="button" class="material-detail-tab" id="receiveUpdateTabBtn" onclick="switchReceiveLogTab('update')">입고 수정</button>
+                    </div>
+                    <button type="button" class="btn btn-small btn-secondary" id="disposedReceiveToggleBtn" onclick="toggleDisposedReceiveLogs()">폐기 이력 보기</button>
+                </div>
+            </div>
+            <div class="usage-filter-bar">
+                <div class="usage-filter-left">
+                    <button type="button" class="usage-filter-chip active" id="receiveFilterMonthBtn" onclick="setReceiveLogFilterMode('month')">월별</button>
+                    <button type="button" class="usage-filter-chip" id="receiveFilterAllBtn" onclick="setReceiveLogFilterMode('all')">전체</button>
+                    <button type="button" class="usage-filter-chip" id="receiveFilterCustomBtn" onclick="setReceiveLogFilterMode('custom')">기간</button>
+                    <button type="button" class="usage-filter-nav" id="receivePrevMonthBtn" onclick="moveReceiveFilterMonth(-1)" title="이전달">‹</button>
+                    <div class="usage-filter-month" id="receiveFilterMonthLabel">-</div>
+                    <button type="button" class="usage-filter-nav" id="receiveNextMonthBtn" onclick="moveReceiveFilterMonth(1)" title="다음달">›</button>
+                </div>
+                <div class="usage-filter-right">
+                    <input type="date" class="usage-filter-date" id="receiveFilterStartDate" onchange="handleReceiveFilterDateChange()">
+                    <span class="usage-filter-sep">~</span>
+                    <input type="date" class="usage-filter-date" id="receiveFilterEndDate" onchange="handleReceiveFilterDateChange()">
+                    <span class="usage-filter-meta" id="receiveFilterSummary">-</span>
+                </div>
             </div>
             <div class="table-container">
                 <table>
@@ -1234,7 +1351,7 @@ html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8e
                         <tbody>
                         {% for r in group['items'] %}
                         {% set first_receipt_row = (r.receipt_edit_rows[0] if r.receipt_edit_rows else None) %}
-                        <tr>
+                        <tr id="issueRequestRow{{ r.id }}" data-issue-request-row="1" data-req-id="{{ r.id }}">
                             <td class="issue-meta-cell">
                                 <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
                                 <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
@@ -1787,11 +1904,20 @@ let reqExpanded = false;
 let currentMaterialId = null;
 let currentDisposedReceiveLogs = [];
 let showDisposedReceiveLogs = false;
+let currentReceiveCompleteLogs = [];
+let currentReceiveUpdateLogs = [];
+let currentReceiveLogTab = 'complete';
+let currentReceiveFilterMode = 'month';
+let currentReceiveFilterMonth = '';
+let currentUsageLogs = [];
+let currentUsageFilterMode = 'month';
+let currentUsageFilterMonth = '';
 const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
 const MATERIALS_SCROLL_Y_KEY = 'materials_scroll_y';
 const MATERIALS_SCROLL_PATH_KEY = 'materials_scroll_path';
 const MATERIALS_SCROLL_TS_KEY = 'materials_scroll_ts';
 const MATERIALS_SCROLL_OFFSET_KEY = 'materials_scroll_offset';
+const FOCUSED_ISSUE_REQUEST_ID = (new URLSearchParams(window.location.search)).get('focus_req_id') || '';
 
 function saveMaterialsScrollPosition(){
     try{
@@ -1835,6 +1961,281 @@ function restoreMaterialsScrollPosition(){
         sessionStorage.removeItem(MATERIALS_SCROLL_TS_KEY);
         sessionStorage.removeItem(MATERIALS_SCROLL_OFFSET_KEY);
     }catch(_err){}
+}
+
+function buildReceiveLogEntryUrl(log){
+    const requestId = Number(log?.issue_request_id || 0);
+    if(requestId <= 0) return '';
+    return `/materials?req_tab=issue&issue_status=completed&focus_req_id=${requestId}`;
+}
+
+function formatReceiveLogDateCell(log){
+    const dateText = log.received_at
+        ? String(log.received_at).slice(0,16).replace('T', ' ')
+        : (log.receive_date || '-').toString().slice(0,10);
+    const targetUrl = buildReceiveLogEntryUrl(log);
+    if(!targetUrl) return dateText;
+    return `<a href="${targetUrl}" class="receive-log-link" title="해당 입고 완료건 열기" onclick="saveMaterialsScrollPosition()">${dateText}</a>`;
+}
+function formatUsageFilterDate(date){
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getCurrentUsageMonthValue(){
+    if(currentUsageFilterMonth) return currentUsageFilterMonth;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function resetUsageLogFilter(){
+    currentUsageFilterMode = 'month';
+    currentUsageFilterMonth = '';
+    const now = new Date();
+    const startInput = document.getElementById('usageFilterStartDate');
+    const endInput = document.getElementById('usageFilterEndDate');
+    if(startInput) startInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    if(endInput) endInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    syncUsageFilterControls();
+    applyUsageLogFilter();
+}
+
+function syncUsageFilterControls(){
+    const monthBtn = document.getElementById('usageFilterMonthBtn');
+    const allBtn = document.getElementById('usageFilterAllBtn');
+    const customBtn = document.getElementById('usageFilterCustomBtn');
+    const prevBtn = document.getElementById('usagePrevMonthBtn');
+    const nextBtn = document.getElementById('usageNextMonthBtn');
+    const monthLabel = document.getElementById('usageFilterMonthLabel');
+    const startInput = document.getElementById('usageFilterStartDate');
+    const endInput = document.getElementById('usageFilterEndDate');
+    if(monthBtn) monthBtn.classList.toggle('active', currentUsageFilterMode === 'month');
+    if(allBtn) allBtn.classList.toggle('active', currentUsageFilterMode === 'all');
+    if(customBtn) customBtn.classList.toggle('active', currentUsageFilterMode === 'custom');
+    const isMonth = currentUsageFilterMode === 'month';
+    const isCustom = currentUsageFilterMode === 'custom';
+    if(prevBtn) prevBtn.disabled = !isMonth;
+    if(nextBtn) nextBtn.disabled = !isMonth;
+    if(monthLabel){
+        const monthValue = getCurrentUsageMonthValue();
+        monthLabel.textContent = `${monthValue.slice(0,4)}-${monthValue.slice(5,7)}`;
+        monthLabel.style.opacity = isMonth ? '1' : '.55';
+    }
+    if(startInput) startInput.disabled = !isCustom;
+    if(endInput) endInput.disabled = !isCustom;
+}
+
+function getUsageLogDateKey(log){
+    const raw = log?.completed_at || log?.use_date || '';
+    return String(raw).slice(0, 10);
+}
+
+function getFilteredUsageLogs(){
+    const rows = Array.isArray(currentUsageLogs) ? currentUsageLogs.slice() : [];
+    if(currentUsageFilterMode === 'all') return rows;
+    if(currentUsageFilterMode === 'custom'){
+        const startValue = document.getElementById('usageFilterStartDate')?.value || '';
+        const endValue = document.getElementById('usageFilterEndDate')?.value || '';
+        return rows.filter((log) => {
+            const dateKey = getUsageLogDateKey(log);
+            if(!dateKey) return false;
+            if(startValue && dateKey < startValue) return false;
+            if(endValue && dateKey > endValue) return false;
+            return true;
+        });
+    }
+    const monthValue = getCurrentUsageMonthValue();
+    return rows.filter((log) => getUsageLogDateKey(log).slice(0, 7) === monthValue);
+}
+
+function updateUsageFilterSummary(filteredLogs){
+    const summaryEl = document.getElementById('usageFilterSummary');
+    if(!summaryEl) return;
+    const count = Array.isArray(filteredLogs) ? filteredLogs.length : 0;
+    if(currentUsageFilterMode === 'all'){
+        summaryEl.textContent = `전체 ${count}건`;
+        return;
+    }
+    if(currentUsageFilterMode === 'custom'){
+        const startValue = document.getElementById('usageFilterStartDate')?.value || '-';
+        const endValue = document.getElementById('usageFilterEndDate')?.value || '-';
+        summaryEl.textContent = `${startValue} ~ ${endValue} / ${count}건`;
+        return;
+    }
+    summaryEl.textContent = `${getCurrentUsageMonthValue()} / ${count}건`;
+}
+
+function applyUsageLogFilter(){
+    syncUsageFilterControls();
+    const filteredLogs = getFilteredUsageLogs();
+    updateUsageFilterSummary(filteredLogs);
+    renderUsageRows(filteredLogs);
+}
+
+function setUsageLogFilterMode(mode){
+    currentUsageFilterMode = ['month', 'all', 'custom'].includes(mode) ? mode : 'month';
+    applyUsageLogFilter();
+}
+
+function moveUsageFilterMonth(offset){
+    if(currentUsageFilterMode !== 'month') return;
+    const monthValue = getCurrentUsageMonthValue();
+    const [year, month] = monthValue.split('-').map((value) => Number(value || 0));
+    const pivot = new Date(year, Math.max(0, month - 1) + offset, 1);
+    currentUsageFilterMonth = `${pivot.getFullYear()}-${String(pivot.getMonth() + 1).padStart(2, '0')}`;
+    applyUsageLogFilter();
+}
+
+function handleUsageFilterDateChange(){
+    if(currentUsageFilterMode !== 'custom'){
+        currentUsageFilterMode = 'custom';
+    }
+    const startInput = document.getElementById('usageFilterStartDate');
+    const endInput = document.getElementById('usageFilterEndDate');
+    if(startInput && endInput && startInput.value && endInput.value && startInput.value > endInput.value){
+        endInput.value = startInput.value;
+    }
+    applyUsageLogFilter();
+}
+
+function getCurrentReceiveMonthValue(){
+    if(currentReceiveFilterMonth) return currentReceiveFilterMonth;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function resetReceiveLogFilter(){
+    currentReceiveFilterMode = 'month';
+    currentReceiveFilterMonth = '';
+    const now = new Date();
+    const startInput = document.getElementById('receiveFilterStartDate');
+    const endInput = document.getElementById('receiveFilterEndDate');
+    if(startInput) startInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    if(endInput) endInput.value = formatUsageFilterDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    syncReceiveFilterControls();
+}
+
+function syncReceiveFilterControls(){
+    const monthBtn = document.getElementById('receiveFilterMonthBtn');
+    const allBtn = document.getElementById('receiveFilterAllBtn');
+    const customBtn = document.getElementById('receiveFilterCustomBtn');
+    const prevBtn = document.getElementById('receivePrevMonthBtn');
+    const nextBtn = document.getElementById('receiveNextMonthBtn');
+    const monthLabel = document.getElementById('receiveFilterMonthLabel');
+    const startInput = document.getElementById('receiveFilterStartDate');
+    const endInput = document.getElementById('receiveFilterEndDate');
+    if(monthBtn) monthBtn.classList.toggle('active', currentReceiveFilterMode === 'month');
+    if(allBtn) allBtn.classList.toggle('active', currentReceiveFilterMode === 'all');
+    if(customBtn) customBtn.classList.toggle('active', currentReceiveFilterMode === 'custom');
+    const isMonth = currentReceiveFilterMode === 'month';
+    const isCustom = currentReceiveFilterMode === 'custom';
+    if(prevBtn) prevBtn.disabled = !isMonth;
+    if(nextBtn) nextBtn.disabled = !isMonth;
+    if(monthLabel){
+        const monthValue = getCurrentReceiveMonthValue();
+        monthLabel.textContent = `${monthValue.slice(0,4)}-${monthValue.slice(5,7)}`;
+        monthLabel.style.opacity = isMonth ? '1' : '.55';
+    }
+    if(startInput) startInput.disabled = !isCustom;
+    if(endInput) endInput.disabled = !isCustom;
+}
+
+function getReceiveLogDateKey(log){
+    const raw = log?.received_at || log?.receive_date || '';
+    return String(raw).slice(0, 10);
+}
+
+function getBaseReceiveLogsForCurrentTab(){
+    return currentReceiveLogTab === 'update' ? currentReceiveUpdateLogs : currentReceiveCompleteLogs;
+}
+
+function getFilteredReceiveLogs(){
+    const rows = Array.isArray(getBaseReceiveLogsForCurrentTab()) ? getBaseReceiveLogsForCurrentTab().slice() : [];
+    let filteredRows = rows;
+    if(currentReceiveFilterMode === 'custom'){
+        const startValue = document.getElementById('receiveFilterStartDate')?.value || '';
+        const endValue = document.getElementById('receiveFilterEndDate')?.value || '';
+        filteredRows = rows.filter((log) => {
+            const dateKey = getReceiveLogDateKey(log);
+            if(!dateKey) return false;
+            if(startValue && dateKey < startValue) return false;
+            if(endValue && dateKey > endValue) return false;
+            return true;
+        });
+    } else if(currentReceiveFilterMode === 'month'){
+        const monthValue = getCurrentReceiveMonthValue();
+        filteredRows = rows.filter((log) => getReceiveLogDateKey(log).slice(0, 7) === monthValue);
+    }
+    if(currentReceiveLogTab === 'complete' && showDisposedReceiveLogs && Array.isArray(currentDisposedReceiveLogs) && currentDisposedReceiveLogs.length){
+        const startValue = document.getElementById('receiveFilterStartDate')?.value || '';
+        const endValue = document.getElementById('receiveFilterEndDate')?.value || '';
+        const monthValue = getCurrentReceiveMonthValue();
+        const disposedRows = currentDisposedReceiveLogs.filter((log) => {
+            const dateKey = getReceiveLogDateKey(log);
+            if(currentReceiveFilterMode === 'all') return true;
+            if(currentReceiveFilterMode === 'custom'){
+                if(!dateKey) return false;
+                if(startValue && dateKey < startValue) return false;
+                if(endValue && dateKey > endValue) return false;
+                return true;
+            }
+            return dateKey.slice(0, 7) === monthValue;
+        });
+        filteredRows = filteredRows.concat(disposedRows);
+    }
+    return filteredRows;
+}
+
+function updateReceiveFilterSummary(filteredLogs){
+    const summaryEl = document.getElementById('receiveFilterSummary');
+    if(!summaryEl) return;
+    const count = Array.isArray(filteredLogs) ? filteredLogs.length : 0;
+    if(currentReceiveFilterMode === 'all'){
+        summaryEl.textContent = `전체 ${count}건`;
+        return;
+    }
+    if(currentReceiveFilterMode === 'custom'){
+        const startValue = document.getElementById('receiveFilterStartDate')?.value || '-';
+        const endValue = document.getElementById('receiveFilterEndDate')?.value || '-';
+        summaryEl.textContent = `${startValue} ~ ${endValue} / ${count}건`;
+        return;
+    }
+    summaryEl.textContent = `${getCurrentReceiveMonthValue()} / ${count}건`;
+}
+
+function applyReceiveLogFilter(){
+    syncReceiveFilterControls();
+    const filteredLogs = getFilteredReceiveLogs();
+    updateReceiveFilterSummary(filteredLogs);
+    renderReceiveRows(filteredLogs);
+}
+
+function setReceiveLogFilterMode(mode){
+    currentReceiveFilterMode = ['month', 'all', 'custom'].includes(mode) ? mode : 'month';
+    applyReceiveLogFilter();
+}
+
+function moveReceiveFilterMonth(offset){
+    if(currentReceiveFilterMode !== 'month') return;
+    const monthValue = getCurrentReceiveMonthValue();
+    const [year, month] = monthValue.split('-').map((value) => Number(value || 0));
+    const pivot = new Date(year, Math.max(0, month - 1) + offset, 1);
+    currentReceiveFilterMonth = `${pivot.getFullYear()}-${String(pivot.getMonth() + 1).padStart(2, '0')}`;
+    applyReceiveLogFilter();
+}
+
+function handleReceiveFilterDateChange(){
+    if(currentReceiveFilterMode !== 'custom'){
+        currentReceiveFilterMode = 'custom';
+    }
+    const startInput = document.getElementById('receiveFilterStartDate');
+    const endInput = document.getElementById('receiveFilterEndDate');
+    if(startInput && endInput && startInput.value && endInput.value && startInput.value > endInput.value){
+        endInput.value = startInput.value;
+    }
+    applyReceiveLogFilter();
 }
 let ISSUE_MATERIAL_SOURCE = [];
 let EXPORT_MATERIAL_SOURCE = [];
@@ -1997,6 +2398,32 @@ function moveIssueCompletedCalendar(offset){
         1,
     );
     renderIssueCompletedCalendar();
+}
+
+function focusIssueRequestRowFromUrl(){
+    if(!FOCUSED_ISSUE_REQUEST_ID) return;
+    const targetRow = document.getElementById(`issueRequestRow${FOCUSED_ISSUE_REQUEST_ID}`);
+    if(!targetRow) return;
+    setRequestPanelExpanded(true);
+    switchReqTab('issue');
+    switchIssueStatusTab('completed');
+    const pane = targetRow.closest('[id^="issueCompletedDatePane"]');
+    if(pane){
+        const paneIndexMatch = String(pane.id || '').match(/(\d+)$/);
+        if(paneIndexMatch){
+            switchIssueCompletedDate(Number(paneIndexMatch[1]));
+        }
+    }
+    requestAnimationFrame(() => {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetRow.classList.add('issue-request-focus');
+        window.setTimeout(() => targetRow.classList.remove('issue-request-focus'), 2600);
+    });
+    try{
+        const url = new URL(window.location.href);
+        url.searchParams.delete('focus_req_id');
+        window.history.replaceState({}, '', url.toString());
+    }catch(_err){}
 }
 
 function switchExportCompletedDate(index){
@@ -3243,7 +3670,10 @@ getExportBulkCheckboxes().forEach((checkbox) => {
     checkbox.addEventListener('change', syncExportBulkSelectAllState);
 });
 syncExportBulkModeUI();
-restoreMaterialsScrollPosition();
+if(!FOCUSED_ISSUE_REQUEST_ID){
+    restoreMaterialsScrollPosition();
+}
+focusIssueRequestRowFromUrl();
 
 function closeMaterialDetailModal(){
     document.getElementById('materialDetailModal').style.display = 'none';
@@ -3334,7 +3764,7 @@ async function toggleLotEdit(lotId){
 function renderUsageRows(logs){
     const tbody = document.getElementById('usageLogTableBody');
     const totalEl = document.getElementById('md_usage_total_qty');
-    const totalQty = Array.isArray(logs) ? logs.reduce((sum, log) => sum + Number(log.total_used_quantity || 0), 0) : 0;
+    const totalQty = Array.isArray(logs) ? logs.reduce((sum, log) => sum + Number(log.total_used_quantity || log.used_quantity || 0), 0) : 0;
     if(totalEl){
         totalEl.textContent = totalQty.toFixed(1);
     }
@@ -3360,18 +3790,17 @@ function renderReceiveRows(logs){
     if(!tbody) return;
     const toggleBtn = document.getElementById('disposedReceiveToggleBtn');
     const hint = document.getElementById('disposedReceiveHint');
+    const isCompleteTab = currentReceiveLogTab === 'complete';
     const rows = Array.isArray(logs) ? logs.slice() : [];
-    if(showDisposedReceiveLogs && Array.isArray(currentDisposedReceiveLogs) && currentDisposedReceiveLogs.length){
-        rows.push(...currentDisposedReceiveLogs);
-    }
     if(toggleBtn){
         toggleBtn.textContent = currentDisposedReceiveLogs.length
             ? (showDisposedReceiveLogs ? '폐기 이력 숨기기' : `폐기 이력 보기 (${currentDisposedReceiveLogs.length})`)
             : '폐기 이력 보기';
-        toggleBtn.disabled = currentDisposedReceiveLogs.length === 0;
+        toggleBtn.disabled = !isCompleteTab || currentDisposedReceiveLogs.length === 0;
+        toggleBtn.style.display = isCompleteTab ? '' : 'none';
     }
     if(hint){
-        hint.style.display = showDisposedReceiveLogs && currentDisposedReceiveLogs.length ? 'block' : 'none';
+        hint.style.display = isCompleteTab && showDisposedReceiveLogs && currentDisposedReceiveLogs.length ? 'block' : 'none';
     }
     if(!rows.length){
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">입고 로그가 없습니다.</td></tr>';
@@ -3379,20 +3808,29 @@ function renderReceiveRows(logs){
     }
     tbody.innerHTML = rows.map(log => `
         <tr>
-            <td>${log.received_at ? String(log.received_at).slice(0,16).replace('T', ' ') : (log.receive_date || '-').toString().slice(0,10)}</td>
+            <td>${formatReceiveLogDateCell(log)}</td>
             <td>${(log.manufacture_date || '-').toString().slice(0,10)}</td>
             <td>${(log.expiry_date || '-').toString().slice(0,10)}</td>
-            <td>${Number(log.received_quantity || 0).toFixed(1)}</td>
+            <td>${log.show_received_quantity === false ? '-' : Number(log.received_quantity || 0).toFixed(1)}</td>
             <td>${log.action_label || '-'}</td>
             <td>${log.note || '-'}${Number(log.is_disposed || 0) === 1 ? ' <span style="display:inline-flex;align-items:center;margin-left:.35rem;padding:.08rem .4rem;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:.72rem;font-weight:800;">폐기됨</span>' : ''}</td>
         </tr>
     `).join('');
 }
 
+function switchReceiveLogTab(tab){
+    currentReceiveLogTab = tab === 'update' ? 'update' : 'complete';
+    const doneBtn = document.getElementById('receiveDoneTabBtn');
+    const updateBtn = document.getElementById('receiveUpdateTabBtn');
+    if(doneBtn) doneBtn.classList.toggle('active', currentReceiveLogTab === 'complete');
+    if(updateBtn) updateBtn.classList.toggle('active', currentReceiveLogTab === 'update');
+    applyReceiveLogFilter();
+}
+
 function toggleDisposedReceiveLogs(){
     if(!currentDisposedReceiveLogs.length) return;
     showDisposedReceiveLogs = !showDisposedReceiveLogs;
-    renderReceiveRows(window.currentReceiveLogs || []);
+    applyReceiveLogFilter();
 }
 
 async function loadMaterialDetail(materialId){
@@ -3408,12 +3846,16 @@ async function loadMaterialDetail(materialId){
     document.getElementById('md_supplier').textContent = m.supplier_name || '-';
     document.getElementById('md_unit').textContent = m.unit || '-';
     document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
-    window.currentReceiveLogs = payload.receive_logs || [];
+    currentUsageLogs = payload.usage_logs || [];
+    currentReceiveCompleteLogs = payload.receive_complete_logs || payload.receive_logs || [];
+    currentReceiveUpdateLogs = payload.receive_update_logs || [];
     currentDisposedReceiveLogs = payload.disposed_receive_logs || [];
     showDisposedReceiveLogs = false;
+    currentReceiveLogTab = 'complete';
     renderLotRows(payload.lots || []);
-    renderUsageRows(payload.usage_logs || []);
-    renderReceiveRows(window.currentReceiveLogs);
+    resetUsageLogFilter();
+    resetReceiveLogFilter();
+    switchReceiveLogTab('complete');
     return true;
 }
 

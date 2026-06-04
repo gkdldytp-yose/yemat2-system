@@ -5826,19 +5826,65 @@ SELECT
             """
             SELECT
                 COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) as receive_date,
+                mll.created_at as received_at,
                 COALESCE(ml.manufacture_date, '-') as manufacture_date,
                 COALESCE(ml.expiry_date, '-') as expiry_date,
                 COALESCE(mll.quantity, 0) as received_quantity,
+                COALESCE(mll.action, '') as action,
+                CASE
+                    WHEN COALESCE(mll.action, '') IN ('issue_request_complete', 'issue_request_update') THEN COALESCE(
+                        (
+                            SELECT lir.id
+                            FROM logistics_issue_requests lir
+                            WHERE lir.material_id = mll.material_id
+                              AND substr(COALESCE(lir.processed_at, ''), 1, 19) = substr(COALESCE(mll.created_at, ''), 1, 19)
+                              AND (
+                                  COALESCE(lir.requester_workplace, '') = ''
+                                  OR instr(COALESCE(mll.note, ''), COALESCE(lir.requester_workplace, '')) > 0
+                              )
+                            ORDER BY lir.id DESC
+                            LIMIT 1
+                        ),
+                        (
+                            SELECT ril.request_id
+                            FROM logistics_issue_receipt_lots ril
+                            JOIN material_lots link_ml ON link_ml.id = ril.material_lot_id
+                            WHERE ril.material_lot_id = mll.material_lot_id
+                              AND COALESCE(link_ml.material_id, 0) = COALESCE(mll.material_id, 0)
+                            ORDER BY ril.id DESC
+                            LIMIT 1
+                        ),
+                        (
+                            SELECT nearest.id
+                            FROM (
+                                SELECT
+                                    lir.id,
+                                    ABS(strftime('%s', COALESCE(lir.processed_at, '')) - strftime('%s', COALESCE(mll.created_at, ''))) AS time_diff
+                                FROM logistics_issue_requests lir
+                                WHERE lir.material_id = mll.material_id
+                                  AND substr(COALESCE(lir.processed_at, ''), 1, 10) = substr(COALESCE(mll.created_at, ''), 1, 10)
+                                  AND (
+                                      COALESCE(lir.requester_workplace, '') = ''
+                                      OR instr(COALESCE(mll.note, ''), COALESCE(lir.requester_workplace, '')) > 0
+                                  )
+                            ) nearest
+                            ORDER BY nearest.time_diff ASC, nearest.id DESC
+                            LIMIT 1
+                        )
+                    )
+                    ELSE NULL
+                END as issue_request_id,
                 CASE COALESCE(mll.action, '')
                     WHEN 'create' THEN '신규 입고'
                     WHEN 'issue_request_complete' THEN '불출 입고 완료'
+                    WHEN 'issue_request_update' THEN '입고 수정'
                     ELSE COALESCE(mll.action, '-')
                 END as action_label,
                 COALESCE(mll.note, '-') as note
             FROM material_lot_logs mll
             LEFT JOIN material_lots ml ON ml.id = mll.material_lot_id
             WHERE mll.material_id = ?
-              AND COALESCE(mll.action, '') IN ('create', 'issue_request_complete')
+              AND COALESCE(mll.action, '') IN ('create', 'issue_request_complete', 'issue_request_update')
               AND COALESCE(mll.quantity, 0) > 0
             ORDER BY
                 COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) DESC,
@@ -5848,11 +5894,32 @@ SELECT
             (material_id,),
         )
         receive_logs = [dict(row) for row in cursor.fetchall()]
+        receive_complete_logs = [
+            row for row in receive_logs
+            if str(row.get('action') or '') in {'create', 'issue_request_complete'}
+        ]
+        receive_update_logs = [
+            row for row in receive_logs
+            if str(row.get('action') or '') == 'issue_request_update'
+        ]
+        for row in receive_update_logs:
+            note_text = str(row.get('note') or '').strip()
+            row['show_received_quantity'] = '입고수량 ' in note_text
+        for row in receive_complete_logs:
+            row['show_received_quantity'] = True
 
         payload = dict(material)
         payload['total_quantity'] = sum(float(row.get('location_quantity') or 0) for row in lots)
         payload['can_manage_lots'] = bool(can_manage_lots)
-        return jsonify({'ok': True, 'material': payload, 'lots': lots, 'usage_logs': usage_logs, 'receive_logs': receive_logs})
+        return jsonify({
+            'ok': True,
+            'material': payload,
+            'lots': lots,
+            'usage_logs': usage_logs,
+            'receive_logs': receive_complete_logs,
+            'receive_complete_logs': receive_complete_logs,
+            'receive_update_logs': receive_update_logs,
+        })
     finally:
         conn.close()
 
