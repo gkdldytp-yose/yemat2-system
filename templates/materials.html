@@ -32,6 +32,8 @@
 .material-header-item{background:#fff;border:1px solid #dbe5f0;border-radius:10px;padding:0.6rem 0.7rem;box-shadow:0 1px 2px rgba(15,23,42,0.04);}
 .material-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
 .material-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
+.material-log-total{font-size:0.84rem;font-weight:900;color:#0f172a;}
+.material-log-total span{margin-left:.2rem;}
 .material-detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.75rem;}
 .material-detail-tab{padding:0.46rem 0.95rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-weight:800;cursor:pointer;}
 .material-detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,0.2);}
@@ -298,6 +300,7 @@ html[data-theme="dark"] .issue-status-table tbody tr,
 html[data-theme="dark"] .receipt-summary-item{background:#121a2a;border-color:#263244;}
 html[data-theme="dark"] .material-header-item .value,
 html[data-theme="dark"] .material-section-title,
+html[data-theme="dark"] .material-log-total,
 html[data-theme="dark"] .req-pane h3,
 html[data-theme="dark"] .request-builder-title,
 html[data-theme="dark"] .issue-status-title,
@@ -778,7 +781,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
 {% block content %}
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
 {%- set can_manage_material_master = (user is defined and user.is_admin) or (user is defined and user.role != 'readonly') -%}
-{%- set can_manage_lots = can_manage_material_master -%}
+{%- set can_manage_lots = (user is defined and user.is_admin) -%}
 {%- set is_logistics_role = false -%}
 
 <h1>🧰 부자재 관리</h1>
@@ -966,8 +969,11 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
 
         <div id="materialLogsPanel" class="material-panel">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
-                <p class="material-section-title" style="margin:0;">부자재 사용 로그</p>
-                <div style="font-size:0.84rem;font-weight:900;color:#0f172a;">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
+                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                    <p class="material-section-title" style="margin:0;">부자재 사용 로그</p>
+                    <div class="material-log-total">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
+                </div>
+                <button type="button" class="btn btn-small btn-secondary" id="usageExportToggleBtn" onclick="toggleExportUsageLogs()">반출 기록 보기</button>
             </div>
             <div class="usage-filter-bar">
                 <div class="usage-filter-left">
@@ -995,7 +1001,11 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
 
         <div id="materialReceivePanel" class="material-panel">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
-                <p class="material-section-title" style="margin:0;">부자재 입고 로그</p>
+                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                    <p class="material-section-title" style="margin:0;">부자재 입고 로그</p>
+                    <div class="material-log-total">총 입고량 <span id="md_receive_total_qty">0.0</span></div>
+                    <div class="material-log-total">실효 총 입고량 <span id="md_effective_receive_total_qty">0.0</span></div>
+                </div>
                 <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
                     <div class="material-detail-tabs" style="margin:0;">
                         <button type="button" class="material-detail-tab active" id="receiveDoneTabBtn" onclick="switchReceiveLogTab('complete')">입고 완료</button>
@@ -1043,6 +1053,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
     </div>
     <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
         <form method="GET" action="{{ url_for('materials.materials') }}" id="materialsFilterForm" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
+            <input type="hidden" name="show_all_stock" value="{{ '1' if selected_show_all_stock else '0' }}" id="showAllStockInput">
             <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
                 <label for="materialSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">검색 기준</label>
                 <select id="materialSearchField" name="material_search_field" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
@@ -1085,6 +1096,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
                 <input id="materialSearchKeyword" type="text" name="search" class="search-input" placeholder="예: 박스,유기,P03A008 (쉼표 구분 AND 검색)" value="{{ search_keyword or '' }}">
             </div>
             <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;">
+                <button type="button" class="btn btn-small {{ 'btn-secondary' if not selected_show_all_stock else '' }}" style="{{ 'background:#0f766e;' if selected_show_all_stock else '' }}" onclick="toggleMaterialShowAllStock()">{{ '현재 재고만 보기' if selected_show_all_stock else '작업장 재고 전체 보기' }}</button>
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">적용</button>
                 <a href="{{ url_for('materials.materials') }}" id="materialsFilterReset" class="btn btn-small btn-secondary">초기화</a>
             </div>
@@ -1638,7 +1650,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
                         <thead><tr><th>요청 정보</th><th>코드</th><th>자재명</th><th>로트</th><th>반출수량</th><th>완료일</th><th>사유</th><th>메모</th>{% if not is_logistics %}<th>처리</th>{% endif %}</tr></thead>
                         <tbody>
                         {% for r in group['items'] %}
-                        <tr>
+                        <tr id="exportRequestRow{{ r.id }}">
                             <td class="issue-meta-cell">
                                 <div class="issue-date">{{ r.requested_at[:16] if r.requested_at else '-' }}</div>
                                 <div class="issue-subtext">{{ r.requester_workplace or '-' }}</div>
@@ -1906,18 +1918,25 @@ let currentDisposedReceiveLogs = [];
 let showDisposedReceiveLogs = false;
 let currentReceiveCompleteLogs = [];
 let currentReceiveUpdateLogs = [];
+let currentInitialReceiveLog = null;
+let currentEffectiveReceiveLogs = [];
+let currentEffectiveReceiveTotal = 0;
 let currentReceiveLogTab = 'complete';
 let currentReceiveFilterMode = 'month';
 let currentReceiveFilterMonth = '';
 let currentUsageLogs = [];
+let currentExportUsageLogs = [];
 let currentUsageFilterMode = 'month';
 let currentUsageFilterMonth = '';
+let currentMaterialCode = '';
+let showExportUsageLogs = false;
 const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
 const MATERIALS_SCROLL_Y_KEY = 'materials_scroll_y';
 const MATERIALS_SCROLL_PATH_KEY = 'materials_scroll_path';
 const MATERIALS_SCROLL_TS_KEY = 'materials_scroll_ts';
 const MATERIALS_SCROLL_OFFSET_KEY = 'materials_scroll_offset';
 const FOCUSED_ISSUE_REQUEST_ID = (new URLSearchParams(window.location.search)).get('focus_req_id') || '';
+const FOCUSED_EXPORT_REQUEST_ID = (new URLSearchParams(window.location.search)).get('focus_export_req_id') || '';
 
 function saveMaterialsScrollPosition(){
     try{
@@ -1967,6 +1986,14 @@ function buildReceiveLogEntryUrl(log){
     const requestId = Number(log?.issue_request_id || 0);
     if(requestId <= 0) return '';
     return `/materials?req_tab=issue&issue_status=completed&focus_req_id=${requestId}`;
+}
+
+function buildUsageLogEntryUrl(log){
+    const exportRequestId = Number(log?.export_request_id || 0);
+    if(exportRequestId > 0){
+        return `/materials?req_tab=export&export_status=completed&focus_export_req_id=${exportRequestId}`;
+    }
+    return '';
 }
 
 function formatReceiveLogDateCell(log){
@@ -2032,13 +2059,31 @@ function getUsageLogDateKey(log){
     return String(raw).slice(0, 10);
 }
 
+function formatUsageLogDateCell(log){
+    const dateText = log?.completed_at
+        ? String(log.completed_at).slice(0,16).replace('T', ' ')
+        : String(log?.use_date || '-').slice(0,10);
+    const targetUrl = buildUsageLogEntryUrl(log);
+    if(!targetUrl) return dateText;
+    return `<a href="${targetUrl}" class="receive-log-link" title="해당 반출 완료건 열기" onclick="saveMaterialsScrollPosition()">${dateText}</a>`;
+}
+
+function trimMaterialCodeFromLot(lotText){
+    const lotValue = String(lotText || '-');
+    if(!currentMaterialCode) return lotValue;
+    const prefix = `${currentMaterialCode}-`;
+    return lotValue.startsWith(prefix) ? lotValue.slice(prefix.length) : lotValue;
+}
+
 function getFilteredUsageLogs(){
     const rows = Array.isArray(currentUsageLogs) ? currentUsageLogs.slice() : [];
-    if(currentUsageFilterMode === 'all') return rows;
+    const exportRows = showExportUsageLogs && Array.isArray(currentExportUsageLogs) ? currentExportUsageLogs.slice() : [];
+    const baseRows = rows.concat(exportRows);
+    if(currentUsageFilterMode === 'all') return baseRows;
     if(currentUsageFilterMode === 'custom'){
         const startValue = document.getElementById('usageFilterStartDate')?.value || '';
         const endValue = document.getElementById('usageFilterEndDate')?.value || '';
-        return rows.filter((log) => {
+        return baseRows.filter((log) => {
             const dateKey = getUsageLogDateKey(log);
             if(!dateKey) return false;
             if(startValue && dateKey < startValue) return false;
@@ -2047,7 +2092,7 @@ function getFilteredUsageLogs(){
         });
     }
     const monthValue = getCurrentUsageMonthValue();
-    return rows.filter((log) => getUsageLogDateKey(log).slice(0, 7) === monthValue);
+    return baseRows.filter((log) => getUsageLogDateKey(log).slice(0, 7) === monthValue);
 }
 
 function updateUsageFilterSummary(filteredLogs){
@@ -2070,8 +2115,17 @@ function updateUsageFilterSummary(filteredLogs){
 function applyUsageLogFilter(){
     syncUsageFilterControls();
     const filteredLogs = getFilteredUsageLogs();
-    updateUsageFilterSummary(filteredLogs);
-    renderUsageRows(filteredLogs);
+    const aggregatedLogs = aggregateUsageLogs(filteredLogs);
+    updateUsageFilterSummary(aggregatedLogs);
+    renderUsageRows(aggregatedLogs);
+    const toggleBtn = document.getElementById('usageExportToggleBtn');
+    if(toggleBtn){
+        const exportCount = Array.isArray(currentExportUsageLogs) ? currentExportUsageLogs.length : 0;
+        toggleBtn.textContent = exportCount
+            ? (showExportUsageLogs ? '반출 기록 숨기기' : `반출 기록 보기 (${exportCount})`)
+            : '반출 기록 보기';
+        toggleBtn.disabled = exportCount === 0;
+    }
 }
 
 function setUsageLogFilterMode(mode){
@@ -2097,6 +2151,12 @@ function handleUsageFilterDateChange(){
     if(startInput && endInput && startInput.value && endInput.value && startInput.value > endInput.value){
         endInput.value = startInput.value;
     }
+    applyUsageLogFilter();
+}
+
+function toggleExportUsageLogs(){
+    if(!Array.isArray(currentExportUsageLogs) || currentExportUsageLogs.length === 0) return;
+    showExportUsageLogs = !showExportUsageLogs;
     applyUsageLogFilter();
 }
 
@@ -2148,7 +2208,11 @@ function getReceiveLogDateKey(log){
 }
 
 function getBaseReceiveLogsForCurrentTab(){
-    return currentReceiveLogTab === 'update' ? currentReceiveUpdateLogs : currentReceiveCompleteLogs;
+    if(currentReceiveLogTab === 'update') return currentReceiveUpdateLogs;
+    if(currentReceiveFilterMode === 'all' && Array.isArray(currentEffectiveReceiveLogs) && currentEffectiveReceiveLogs.length){
+        return currentEffectiveReceiveLogs.slice();
+    }
+    return Array.isArray(currentReceiveCompleteLogs) ? currentReceiveCompleteLogs.slice() : [];
 }
 
 function getFilteredReceiveLogs(){
@@ -2205,10 +2269,27 @@ function updateReceiveFilterSummary(filteredLogs){
     summaryEl.textContent = `${getCurrentReceiveMonthValue()} / ${count}건`;
 }
 
+function updateReceiveTotalQuantity(filteredLogs){
+    const totalEl = document.getElementById('md_receive_total_qty');
+    const effectiveEl = document.getElementById('md_effective_receive_total_qty');
+    if(!totalEl) return;
+    const totalQty = Array.isArray(filteredLogs)
+        ? filteredLogs.reduce((sum, log) => {
+            if(log && log.show_received_quantity === false) return sum;
+            return sum + Number(log?.received_quantity || 0);
+        }, 0)
+        : 0;
+    totalEl.textContent = totalQty.toFixed(1);
+    if(effectiveEl){
+        effectiveEl.textContent = Number(currentEffectiveReceiveTotal || 0).toFixed(1);
+    }
+}
+
 function applyReceiveLogFilter(){
     syncReceiveFilterControls();
     const filteredLogs = getFilteredReceiveLogs();
     updateReceiveFilterSummary(filteredLogs);
+    updateReceiveTotalQuantity(filteredLogs);
     renderReceiveRows(filteredLogs);
 }
 
@@ -2424,6 +2505,41 @@ function focusIssueRequestRowFromUrl(){
         url.searchParams.delete('focus_req_id');
         window.history.replaceState({}, '', url.toString());
     }catch(_err){}
+}
+
+function focusExportRequestRowFromUrl(){
+    if(!FOCUSED_EXPORT_REQUEST_ID) return;
+    const targetRow = document.getElementById(`exportRequestRow${FOCUSED_EXPORT_REQUEST_ID}`);
+    if(!targetRow) return;
+    setRequestPanelExpanded(true);
+    switchReqTab('export');
+    switchExportStatusTab('completed');
+    const pane = targetRow.closest('[id^="exportCompletedDatePane"]');
+    if(pane){
+        const paneIndexMatch = String(pane.id || '').match(/(\d+)$/);
+        if(paneIndexMatch){
+            switchExportCompletedDate(Number(paneIndexMatch[1]));
+        }
+    }
+    requestAnimationFrame(() => {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetRow.classList.add('issue-request-focus');
+        window.setTimeout(() => targetRow.classList.remove('issue-request-focus'), 2600);
+    });
+    try{
+        const url = new URL(window.location.href);
+        url.searchParams.delete('focus_export_req_id');
+        window.history.replaceState({}, '', url.toString());
+    }catch(_err){}
+}
+
+function toggleMaterialShowAllStock(){
+    const input = document.getElementById('showAllStockInput');
+    const form = document.getElementById('materialsFilterForm');
+    if(!input || !form) return;
+    input.value = String(input.value || '0') === '1' ? '0' : '1';
+    saveMaterialsScrollPosition();
+    form.requestSubmit();
 }
 
 function switchExportCompletedDate(index){
@@ -3043,9 +3159,16 @@ function openReceiptCompleteModal(reqId, qty, unit, code, name, receivingDate, m
     const modal = document.getElementById('receiptCompleteModal');
     const form = document.getElementById('receiptCompleteForm');
     if(!modal || !form) return;
+    const normalizedReqId = Number(reqId || 0);
+    if(!Number.isFinite(normalizedReqId) || normalizedReqId <= 0){
+        alert('입고 완료 대상을 다시 불러와 주세요.');
+        return;
+    }
     document.body.style.overflow = 'hidden';
     const isEdit = mode === 'edit';
-    form.action = isEdit ? `/issue-requests/${reqId}/update-complete` : `/issue-requests/${reqId}/complete`;
+    form.action = isEdit
+        ? `{{ url_for('materials.update_completed_issue_request', req_id=0) }}`.replace('/0/update-complete', `/${normalizedReqId}/update-complete`)
+        : `{{ url_for('materials.complete_issue_request', req_id=0) }}`.replace('/0/complete', `/${normalizedReqId}/complete`);
     const titleEl = document.getElementById('receiptModalTitle');
     const captionEl = document.getElementById('receiptModalCaption');
     const submitBtn = document.getElementById('receiptSubmitBtn');
@@ -3670,10 +3793,11 @@ getExportBulkCheckboxes().forEach((checkbox) => {
     checkbox.addEventListener('change', syncExportBulkSelectAllState);
 });
 syncExportBulkModeUI();
-if(!FOCUSED_ISSUE_REQUEST_ID){
+if(!FOCUSED_ISSUE_REQUEST_ID && !FOCUSED_EXPORT_REQUEST_ID){
     restoreMaterialsScrollPosition();
 }
 focusIssueRequestRowFromUrl();
+focusExportRequestRowFromUrl();
 
 function closeMaterialDetailModal(){
     document.getElementById('materialDetailModal').style.display = 'none';
@@ -3774,7 +3898,7 @@ function renderUsageRows(logs){
     }
     tbody.innerHTML = logs.map(log => `
         <tr>
-            <td>${log.completed_at ? String(log.completed_at).slice(0,16).replace('T', ' ') : (log.use_date || '-').toString().slice(0,10)}</td>
+            <td>${formatUsageLogDateCell(log)}</td>
             <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_no || '-'}</a>` : (log.production_no || '-')}</td>
             <td>${log.product_name || '-'}</td>
             <td>${log.lot || '-'}</td>
@@ -3783,6 +3907,41 @@ function renderUsageRows(logs){
             <td>${log.user_name || '-'}</td>
         </tr>
     `).join('');
+}
+
+function aggregateUsageLogs(logs){
+    const rows = Array.isArray(logs) ? logs : [];
+    const grouped = new Map();
+    rows.forEach((log, index) => {
+        const groupKey = String(
+            log?.usage_group_id
+            || log?.production_usage_id
+            || log?.export_request_id
+            || `${log?.production_id || '-'}|${log?.completed_at || log?.use_date || '-'}|${log?.product_name || '-'}|${log?.total_used_quantity || log?.used_quantity || 0}`
+        );
+        if(!grouped.has(groupKey)){
+            grouped.set(groupKey, {
+                ...log,
+                __index: index,
+                total_used_quantity: Number(log?.total_used_quantity || log?.used_quantity || 0),
+                remaining_quantity: 0,
+                lot_parts: [],
+            });
+        }
+        const bucket = grouped.get(groupKey);
+        const lotName = trimMaterialCodeFromLot(log?.lot || '-');
+        const usedQty = Number(log?.used_quantity || 0);
+        bucket.lot_parts.push(`${lotName} (${usedQty.toFixed(1)})`);
+        bucket.remaining_quantity += Number(log?.remaining_quantity || 0);
+    });
+    return Array.from(grouped.values())
+        .sort((a, b) => a.__index - b.__index)
+        .map((item) => ({
+            ...item,
+            lot: item.lot_parts.length ? item.lot_parts.join(', ') : (item.lot || '-'),
+            used_quantity: Number(item.total_used_quantity || item.used_quantity || 0),
+            remaining_quantity: Number(item.remaining_quantity || 0),
+        }));
 }
 
 function renderReceiveRows(logs){
@@ -3841,14 +4000,20 @@ async function loadMaterialDetail(materialId){
         return false;
     }
     const m = payload.material || {};
+    currentMaterialCode = m.code || '';
     document.getElementById('md_code').textContent = m.code || '-';
     document.getElementById('md_name').textContent = m.name || '-';
     document.getElementById('md_supplier').textContent = m.supplier_name || '-';
     document.getElementById('md_unit').textContent = m.unit || '-';
     document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
     currentUsageLogs = payload.usage_logs || [];
+    currentExportUsageLogs = payload.export_usage_logs || [];
+    showExportUsageLogs = false;
     currentReceiveCompleteLogs = payload.receive_complete_logs || payload.receive_logs || [];
     currentReceiveUpdateLogs = payload.receive_update_logs || [];
+    currentInitialReceiveLog = payload.initial_stock_log || null;
+    currentEffectiveReceiveLogs = payload.effective_receive_logs || [];
+    currentEffectiveReceiveTotal = Number(payload.effective_receive_total || 0);
     currentDisposedReceiveLogs = payload.disposed_receive_logs || [];
     showDisposedReceiveLogs = false;
     currentReceiveLogTab = 'complete';

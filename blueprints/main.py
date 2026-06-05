@@ -4,6 +4,7 @@ from datetime import datetime, date, timedelta
 
 from core import (
     SHARED_WORKPLACE,
+    build_session_user,
     get_db,
     get_workplace,
     hash_password,
@@ -59,6 +60,10 @@ def _normalize_todo_importance(raw_value):
     if value in ('high', 'medium', 'low'):
         return value
     return ''
+
+
+def _is_todo_owner(username, created_by):
+    return bool((username or '').strip()) and (username or '').strip() == (created_by or '').strip()
 
 
 @bp.route('/dashboard/prefill-shortage-issues', methods=['POST'])
@@ -122,7 +127,6 @@ def create_dashboard_todo():
     )
     conn.commit()
     conn.close()
-    flash('업무 To-Do를 등록했습니다.', 'success')
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 
@@ -137,7 +141,7 @@ def toggle_dashboard_todo(todo_id):
     cursor = conn.cursor()
     todo_row = cursor.execute(
         '''
-        SELECT id, workplace, is_done
+        SELECT id, workplace, is_done, created_by
         FROM dashboard_todos
         WHERE id = ? AND workplace = ?
         ''',
@@ -146,6 +150,10 @@ def toggle_dashboard_todo(todo_id):
     if not todo_row:
         conn.close()
         flash('업무 항목을 찾을 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if not _is_todo_owner(username, todo_row['created_by']):
+        conn.close()
+        flash('To-Do는 등록한 사용자만 완료 처리 또는 미완료 복귀를 할 수 있습니다.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
     cursor.execute(
@@ -160,13 +168,13 @@ def toggle_dashboard_todo(todo_id):
     )
     conn.commit()
     conn.close()
-    flash('업무 완료 상태를 반영했습니다.' if is_done else '업무를 미완료로 되돌렸습니다.', 'success')
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 @bp.route('/dashboard/todos/<int:todo_id>/edit', methods=['POST'])
 @login_required
 def update_dashboard_todo(todo_id):
     workplace = get_workplace()
+    username = (session.get('user') or {}).get('username')
     title = (request.form.get('title') or '').strip()
     detail = (request.form.get('detail') or '').strip()
     importance = _normalize_todo_importance(request.form.get('importance'))
@@ -184,7 +192,7 @@ def update_dashboard_todo(todo_id):
     cursor = conn.cursor()
     existing = cursor.execute(
         '''
-        SELECT id
+        SELECT id, created_by
         FROM dashboard_todos
         WHERE id = ? AND workplace = ?
         ''',
@@ -193,6 +201,10 @@ def update_dashboard_todo(todo_id):
     if not existing:
         conn.close()
         flash('수정할 업무 항목을 찾을 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if not _is_todo_owner(username, existing['created_by']):
+        conn.close()
+        flash('To-Do는 등록한 사용자만 수정할 수 있습니다.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
     cursor.execute(
@@ -208,18 +220,18 @@ def update_dashboard_todo(todo_id):
     )
     conn.commit()
     conn.close()
-    flash('업무 To-Do를 수정했습니다.', 'success')
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 @bp.route('/dashboard/todos/<int:todo_id>/delete', methods=['POST'])
 @login_required
 def delete_dashboard_todo(todo_id):
     workplace = get_workplace()
+    username = (session.get('user') or {}).get('username')
     conn = get_db()
     cursor = conn.cursor()
     existing = cursor.execute(
         '''
-        SELECT id
+        SELECT id, created_by
         FROM dashboard_todos
         WHERE id = ? AND workplace = ?
         ''',
@@ -228,6 +240,10 @@ def delete_dashboard_todo(todo_id):
     if not existing:
         conn.close()
         flash('삭제할 업무 항목을 찾을 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if not _is_todo_owner(username, existing['created_by']):
+        conn.close()
+        flash('To-Do는 등록한 사용자만 삭제할 수 있습니다.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
     cursor.execute(
         '''
@@ -238,9 +254,9 @@ def delete_dashboard_todo(todo_id):
     )
     conn.commit()
     conn.close()
-    flash('업무 To-Do를 삭제했습니다.', 'success')
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
+@bp.route('/dashboard')
 @bp.route('/')
 @login_required
 def index():
@@ -569,6 +585,7 @@ def set_workplace(workplace):
     user_workplaces = session['user']['workplaces']
     if workplace in user_workplaces:
         session['workplace'] = workplace
+        session['user'] = build_session_user(session['user'], workplace)
         return redirect(url_for('main.index'))
     else:
         return "권한이 없습니다", 403
@@ -736,19 +753,9 @@ def profile():
         if not workplaces:
             workplaces = ['1동 조미']
 
-        session['user'] = {
-            'id': updated_user['id'],
-            'username': updated_user['username'],
-            'name': updated_user['name'],
-            'phone': updated_user['phone'],
-            'email': updated_user['email'],
-            'department': updated_user['department'],
-            'workplace1': updated_user['workplace1'],
-            'workplace2': updated_user['workplace2'],
-            'workplaces': workplaces,
-            'role': updated_user['role'] or ('admin' if updated_user['is_admin'] else 'readonly'),
-            'is_admin': updated_user['is_admin']
-        }
+        updated_payload = dict(updated_user)
+        updated_payload['workplaces'] = workplaces
+        session['user'] = build_session_user(updated_payload, session.get('workplace'))
 
         current_workplace = session.get('workplace')
         if current_workplace not in workplaces:

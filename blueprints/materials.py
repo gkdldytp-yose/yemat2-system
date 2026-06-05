@@ -90,8 +90,7 @@ def _is_logistics_manager():
 
 def _can_manage_material_lots():
     user = session.get('user') or {}
-    role = user.get('role', 'readonly')
-    return bool(user.get('is_admin')) or role != 'readonly'
+    return bool(user.get('is_admin'))
 
 
 def _can_manage_material_master():
@@ -177,7 +176,7 @@ def _build_issue_receipt_update_note(workplace, before_qty, after_qty, before_ro
 
 
 def _ledger_workplaces():
-    return [wp for wp in WORKPLACES if wp != '??']
+    return list(WORKPLACES)
 
 
 def _normalize_ledger_code(code_value, fallback_prefix, fallback_id):
@@ -200,6 +199,13 @@ def _normalize_date_token(value):
 
 def _round_to_1_decimal(value):
     return round(float(value or 0) + 1e-9, 1)
+
+
+def _normalize_stock_quantity(value, digits=6):
+    qty = round(float(value or 0), digits)
+    if abs(qty) < 1e-6:
+        return 0.0
+    return qty
 
 
 def _has_enough_quantity(available, required):
@@ -486,7 +492,7 @@ def _get_material_stock_map_for_location(cursor, material_ids, location_name):
 
 
 def _upsert_material_lot_balance(cursor, location_id, material_lot_id, qty):
-    qty_value = float(qty or 0)
+    qty_value = _normalize_stock_quantity(qty)
     existing = cursor.execute(
         '''
         SELECT id
@@ -496,6 +502,16 @@ def _upsert_material_lot_balance(cursor, location_id, material_lot_id, qty):
         ''',
         (location_id, material_lot_id),
     ).fetchone()
+    if qty_value <= 0:
+        if existing:
+            cursor.execute(
+                '''
+                DELETE FROM inv_material_lot_balances
+                WHERE location_id = ? AND material_lot_id = ?
+                ''',
+                (location_id, material_lot_id),
+            )
+        return
     if existing:
         cursor.execute(
             '''
@@ -516,12 +532,12 @@ def _upsert_material_lot_balance(cursor, location_id, material_lot_id, qty):
 
 
 def _increase_material_lot_balance(cursor, location_id, material_lot_id, qty):
-    qty_value = float(qty or 0)
+    qty_value = _normalize_stock_quantity(qty)
     if qty_value <= 0:
         return
     existing = cursor.execute(
         '''
-        SELECT id
+        SELECT id, qty
         FROM inv_material_lot_balances
         WHERE location_id = ? AND material_lot_id = ?
         LIMIT 1
@@ -529,20 +545,14 @@ def _increase_material_lot_balance(cursor, location_id, material_lot_id, qty):
         (location_id, material_lot_id),
     ).fetchone()
     if existing:
-        cursor.execute(
-            '''
-            UPDATE inv_material_lot_balances
-            SET qty = COALESCE(qty, 0) + ?, updated_at = CURRENT_TIMESTAMP
-            WHERE location_id = ? AND material_lot_id = ?
-            ''',
-            (qty_value, location_id, material_lot_id),
-        )
+        current_qty = float(existing['qty'] or 0) if 'qty' in existing.keys() else 0.0
+        _upsert_material_lot_balance(cursor, location_id, material_lot_id, current_qty + qty_value)
     else:
         _upsert_material_lot_balance(cursor, location_id, material_lot_id, qty_value)
 
 
 def _move_lot_balance_between_locations(cursor, material_lot_id, from_location_id, to_location_id, qty):
-    qty_value = float(qty or 0)
+    qty_value = _normalize_stock_quantity(qty)
     if qty_value <= 0:
         return 0.0
 
@@ -559,14 +569,7 @@ def _move_lot_balance_between_locations(cursor, material_lot_id, from_location_i
     if from_qty < qty_value:
         raise ValueError('?? ??? ?????.')
 
-    cursor.execute(
-        '''
-        UPDATE inv_material_lot_balances
-        SET qty = qty - ?, updated_at = CURRENT_TIMESTAMP
-        WHERE location_id = ? AND material_lot_id = ?
-        ''',
-        (qty_value, from_location_id, material_lot_id),
-    )
+    _upsert_material_lot_balance(cursor, from_location_id, material_lot_id, from_qty - qty_value)
 
     existing_to = cursor.execute(
         '''
@@ -577,23 +580,8 @@ def _move_lot_balance_between_locations(cursor, material_lot_id, from_location_i
         ''',
         (to_location_id, material_lot_id),
     ).fetchone()
-    if existing_to:
-        cursor.execute(
-            '''
-            UPDATE inv_material_lot_balances
-            SET qty = qty + ?, updated_at = CURRENT_TIMESTAMP
-            WHERE location_id = ? AND material_lot_id = ?
-            ''',
-            (qty_value, to_location_id, material_lot_id),
-        )
-    else:
-        cursor.execute(
-            '''
-            INSERT INTO inv_material_lot_balances (location_id, material_lot_id, qty, updated_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ''',
-            (to_location_id, material_lot_id, qty_value),
-        )
+    to_qty = float(existing_to['qty'] or 0) if existing_to else 0.0
+    _upsert_material_lot_balance(cursor, to_location_id, material_lot_id, to_qty + qty_value)
     return qty_value
 
 
@@ -1765,6 +1753,7 @@ def materials():
     selected_product_id = (request.args.get('product_id') or '').strip()
     selected_material_search_field = (request.args.get('material_search_field') or 'all').strip() or 'all'
     selected_material_type = (request.args.get('material_type') or 'all').strip() or 'all'
+    selected_show_all_stock = str(request.args.get('show_all_stock') or '').strip().lower() in {'1', 'true', 'on', 'yes'}
     req_tab = (request.args.get('req_tab') or 'issue').strip().lower()
     if req_tab not in ('issue', 'export'):
         req_tab = 'issue'
@@ -1935,8 +1924,8 @@ def materials():
     materials = []
     for row in material_rows:
         item = dict(row)
-        workplace_stock = float(workplace_stock_by_id.get(int(item.get('id') or 0), 0) or 0)
-        if workplace_stock <= 0:
+        workplace_stock = _round_to_1_decimal(workplace_stock_by_id.get(int(item.get('id') or 0), 0) or 0)
+        if not selected_show_all_stock and workplace_stock <= 0:
             continue
         item['unit'] = _normalize_material_unit(item.get('unit'))
         item['workplace_stock'] = workplace_stock
@@ -2209,6 +2198,7 @@ def materials():
         export_completed_groups=export_completed_groups,
         export_requests_rejected=export_requests_rejected,
         is_logistics=is_logistics,
+        selected_show_all_stock=selected_show_all_stock,
         req_tab=req_tab,
         issue_status_tab=issue_status_tab,
         export_status_tab=export_status_tab,
@@ -2593,6 +2583,7 @@ SELECT
                     ),
                     pmu.created_at
                 ) as completed_at,
+                pmu.id as production_usage_id,
                 pmu.production_id as production_id,
                 ('PROD-' || pmu.production_id) as production_no,
                 COALESCE(prd.name, '-') as product_name,
@@ -2660,9 +2651,47 @@ SELECT
         )
         usage_logs = [dict(row) for row in cursor.fetchall()]
 
+        workplace_name = (session.get('workplace') or material['workplace'] or '').strip()
         cursor.execute(
             """
             SELECT
+                substr(COALESCE(lir.processed_at, lir.requested_at, ''), 1, 10) AS use_date,
+                COALESCE(lir.processed_at, lir.requested_at, '') AS completed_at,
+                ('EXPORT-' || lir.id) AS usage_group_id,
+                lir.id AS export_request_id,
+                '반출' AS production_no,
+                TRIM(
+                    COALESCE(NULLIF(lir.reason, ''), '반출')
+                    || CASE
+                        WHEN COALESCE(NULLIF(lir.reason_detail, ''), '') <> '' THEN ' / ' || lir.reason_detail
+                        ELSE ''
+                    END
+                ) AS product_name,
+                COALESCE(ml.lot, '-') AS lot,
+                COALESCE(lir.approved_quantity, lir.requested_quantity, 0) AS used_quantity,
+                COALESCE(lir.approved_quantity, lir.requested_quantity, 0) AS total_used_quantity,
+                0 AS remaining_quantity,
+                COALESCE(NULLIF(lir.processed_by, ''), NULLIF(lir.requested_by, ''), NULLIF(lir.requester_username, ''), '-') AS user_name,
+                'export' AS usage_type
+            FROM logistics_issue_requests lir
+            LEFT JOIN material_lots ml ON ml.id = lir.material_lot_id
+            WHERE lir.material_id = ?
+              AND COALESCE(lir.request_type, 'ISSUE') = 'RETURN'
+              AND COALESCE(lir.status, '') = ?
+              AND COALESCE(lir.requester_workplace, '') = ?
+              AND COALESCE(lir.approved_quantity, lir.requested_quantity, 0) > 0
+            ORDER BY COALESCE(lir.processed_at, lir.requested_at) DESC, lir.id DESC
+            LIMIT 200
+            """,
+            (material_id, ISSUE_STATUS_COMPLETED, workplace_name),
+        )
+        export_usage_logs = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute(
+            """
+            SELECT
+                mll.id as log_id,
+                mll.material_lot_id as material_lot_id,
                 COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) as receive_date,
                 mll.created_at as received_at,
                 COALESCE(ml.lot, '-') as lot,
@@ -2734,6 +2763,227 @@ SELECT
             (material_id,),
         )
         receive_logs = [dict(row) for row in cursor.fetchall()]
+        cursor.execute(
+            """
+            SELECT
+                mll.id as log_id,
+                mll.material_lot_id as material_lot_id,
+                COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) as receive_date,
+                mll.created_at as received_at,
+                COALESCE(ml.lot, '-') as lot,
+                COALESCE(ml.manufacture_date, '-') as manufacture_date,
+                COALESCE(ml.expiry_date, '-') as expiry_date,
+                ABS(COALESCE(mll.quantity, 0)) as received_quantity,
+                COALESCE(ml.is_disposed, 0) as is_disposed,
+                COALESCE(mll.action, '') as action,
+                CASE
+                    WHEN COALESCE(mll.action, '') = 'issue_request_complete' THEN COALESCE(
+                        (
+                            SELECT lir.id
+                            FROM logistics_issue_requests lir
+                            WHERE lir.material_id = mll.material_id
+                              AND substr(COALESCE(lir.processed_at, ''), 1, 19) = substr(COALESCE(mll.created_at, ''), 1, 19)
+                              AND (
+                                  COALESCE(lir.requester_workplace, '') = ''
+                                  OR instr(COALESCE(mll.note, ''), COALESCE(lir.requester_workplace, '')) > 0
+                              )
+                            ORDER BY lir.id DESC
+                            LIMIT 1
+                        ),
+                        (
+                            SELECT ril.request_id
+                            FROM logistics_issue_receipt_lots ril
+                            JOIN material_lots link_ml ON link_ml.id = ril.material_lot_id
+                            WHERE ril.material_lot_id = mll.material_lot_id
+                              AND COALESCE(link_ml.material_id, 0) = COALESCE(mll.material_id, 0)
+                            ORDER BY ril.id DESC
+                            LIMIT 1
+                        )
+                    )
+                    ELSE NULL
+                END as issue_request_id,
+                '최초 재고 등록' as action_label,
+                CASE
+                    WHEN COALESCE(mll.note, '') = 'inventory_audit_apply_workplace_plus' THEN '재고조사 반영'
+                    ELSE COALESCE(NULLIF(mll.note, ''), '-')
+                END as note
+            FROM material_lot_logs mll
+            LEFT JOIN material_lots ml ON ml.id = mll.material_lot_id
+            WHERE mll.material_id = ?
+              AND COALESCE(mll.quantity, 0) > 0
+              AND (
+                    COALESCE(mll.action, '') IN ('create', 'issue_request_complete')
+                 OR (
+                        COALESCE(mll.action, '') = 'adjustment'
+                    AND COALESCE(mll.note, '') = 'inventory_audit_apply_workplace_plus'
+                 )
+              )
+            ORDER BY
+                COALESCE(ml.receiving_date, substr(mll.created_at, 1, 10)) ASC,
+                mll.id ASC
+            LIMIT 1
+            """,
+            (material_id,),
+        )
+        initial_stock_row = cursor.fetchone()
+        initial_stock_log = dict(initial_stock_row) if initial_stock_row else None
+        cursor.execute(
+            """
+            SELECT
+                id,
+                lot,
+                receiving_date,
+                manufacture_date,
+                expiry_date,
+                COALESCE(received_quantity, 0) as received_quantity,
+                COALESCE(current_quantity, 0) as current_quantity,
+                COALESCE(quantity, 0) as legacy_quantity
+            FROM material_lots
+            WHERE material_id = ?
+            ORDER BY COALESCE(receiving_date, '') DESC, id DESC
+            """,
+            (material_id,),
+        )
+        material_lot_rows = [dict(row) for row in cursor.fetchall()]
+        cursor.execute(
+            """
+            SELECT DISTINCT material_lot_id
+            FROM production_material_lot_usage
+            WHERE material_id = ?
+              AND material_lot_id IS NOT NULL
+            """,
+            (material_id,),
+        )
+        historical_lot_ids = {
+            int(row['material_lot_id'] or 0)
+            for row in cursor.fetchall()
+            if int(row['material_lot_id'] or 0) > 0
+        }
+        cursor.execute(
+            """
+            SELECT
+                material_lot_id,
+                COALESCE(SUM(quantity), 0) as production_usage_qty
+            FROM production_material_lot_usage
+            WHERE material_id = ?
+              AND material_lot_id IS NOT NULL
+            GROUP BY material_lot_id
+            """,
+            (material_id,),
+        )
+        production_usage_qty_by_lot = {
+            int(row['material_lot_id'] or 0): _round_to_1_decimal(row['production_usage_qty'] or 0)
+            for row in cursor.fetchall()
+            if int(row['material_lot_id'] or 0) > 0
+        }
+        cursor.execute(
+            """
+            SELECT
+                material_lot_id,
+                COALESCE(SUM(quantity), 0) as export_complete_qty
+            FROM material_lot_logs
+            WHERE material_id = ?
+              AND COALESCE(action, '') = 'export_request_complete'
+              AND COALESCE(quantity, 0) > 0
+              AND material_lot_id IS NOT NULL
+            GROUP BY material_lot_id
+            """,
+            (material_id,),
+        )
+        export_complete_qty_by_lot = {
+            int(row['material_lot_id'] or 0): _round_to_1_decimal(row['export_complete_qty'] or 0)
+            for row in cursor.fetchall()
+            if int(row['material_lot_id'] or 0) > 0
+        }
+        effective_receive_logs = []
+        cancel_qty_by_lot = {}
+        positive_receive_logs_by_lot = {}
+        for row in receive_logs:
+            lot_id = int(row.get('material_lot_id') or 0)
+            if lot_id <= 0:
+                continue
+            positive_receive_logs_by_lot.setdefault(lot_id, []).append(dict(row))
+        cursor.execute(
+            """
+            SELECT
+                material_lot_id,
+                COALESCE(SUM(quantity), 0) as cancel_qty
+            FROM material_lot_logs
+            WHERE material_id = ?
+              AND COALESCE(action, '') = 'issue_request_cancel'
+              AND COALESCE(quantity, 0) > 0
+            GROUP BY material_lot_id
+            """,
+            (material_id,),
+        )
+        for row in cursor.fetchall():
+            lot_id = int(row['material_lot_id'] or 0)
+            if lot_id > 0:
+                cancel_qty_by_lot[lot_id] = _round_to_1_decimal(row['cancel_qty'] or 0)
+
+        for lot_id, rows in positive_receive_logs_by_lot.items():
+            remaining_cancel_qty = _round_to_1_decimal(cancel_qty_by_lot.get(lot_id, 0))
+            complete_rows = [row for row in rows if str(row.get('action') or '') == 'issue_request_complete']
+            other_rows = [row for row in rows if str(row.get('action') or '') != 'issue_request_complete']
+            for row in sorted(complete_rows, key=lambda item: ((item.get('received_at') or ''), int(item.get('log_id') or 0)), reverse=True):
+                row_qty = _round_to_1_decimal(row.get('received_quantity') or 0)
+                if remaining_cancel_qty > 0:
+                    if remaining_cancel_qty >= row_qty - 0.01:
+                        remaining_cancel_qty = _round_to_1_decimal(remaining_cancel_qty - row_qty)
+                        continue
+                    patched = dict(row)
+                    patched['received_quantity'] = _round_to_1_decimal(row_qty - remaining_cancel_qty)
+                    remaining_cancel_qty = 0.0
+                    effective_receive_logs.append(patched)
+                else:
+                    effective_receive_logs.append(row)
+            effective_receive_logs.extend(other_rows)
+
+        effective_lot_ids = {
+            int(row.get('material_lot_id') or 0)
+            for row in effective_receive_logs
+            if int(row.get('material_lot_id') or 0) > 0
+        }
+        for lot_row in material_lot_rows:
+            lot_id = int(lot_row.get('id') or 0)
+            if lot_id <= 0 or lot_id in effective_lot_ids:
+                continue
+            current_qty = _round_to_1_decimal(lot_row.get('current_quantity') or 0)
+            base_received_qty = _round_to_1_decimal(lot_row.get('received_quantity') or lot_row.get('legacy_quantity') or 0)
+            traced_usage_qty = _round_to_1_decimal(production_usage_qty_by_lot.get(lot_id, 0))
+            traced_export_qty = _round_to_1_decimal(export_complete_qty_by_lot.get(lot_id, 0))
+            restored_qty = _round_to_1_decimal(current_qty + traced_usage_qty + traced_export_qty)
+            received_qty = restored_qty if restored_qty > 0 else base_received_qty
+            if received_qty <= 0:
+                continue
+            if lot_id not in historical_lot_ids and current_qty <= 0:
+                continue
+            note = '과거 사용 로트 복원'
+            if restored_qty > 0 and abs(base_received_qty - restored_qty) >= 0.1:
+                note = f'과거 사용 로트 복원 (기록기준 {restored_qty:.1f})'
+            effective_receive_logs.append({
+                'log_id': -lot_id,
+                'material_lot_id': lot_id,
+                'receive_date': lot_row.get('receiving_date') or '-',
+                'received_at': f"{lot_row.get('receiving_date') or '0000-00-00'} 00:00:00",
+                'lot': lot_row.get('lot') or '-',
+                'manufacture_date': lot_row.get('manufacture_date') or '-',
+                'expiry_date': lot_row.get('expiry_date') or '-',
+                'received_quantity': received_qty,
+                'is_disposed': 0,
+                'action': 'initial_restore',
+                'issue_request_id': None,
+                'action_label': '최초 재고 등록',
+                'note': '과거 사용 로트 복원',
+                'show_received_quantity': True,
+            })
+        effective_receive_logs.sort(
+            key=lambda row: ((row.get('received_at') or ''), int(row.get('log_id') or 0)),
+            reverse=True,
+        )
+        effective_receive_total = _round_to_1_decimal(
+            sum(float(row.get('received_quantity') or 0) for row in effective_receive_logs)
+        )
         active_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) != 1]
         disposed_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) == 1]
         receive_complete_logs = [
@@ -2749,19 +2999,25 @@ SELECT
             row['show_received_quantity'] = '입고수량 ' in note_text
         for row in receive_complete_logs:
             row['show_received_quantity'] = True
+        if initial_stock_log:
+            initial_stock_log['show_received_quantity'] = True
 
         payload = dict(material)
         payload['total_quantity'] = sum(float(row.get('location_quantity') or 0) for row in lots)
-        payload['can_manage_lots'] = bool(is_logistics)
+        payload['can_manage_lots'] = bool(_can_manage_material_lots())
         return jsonify({
             'ok': True,
             'material': payload,
             'lots': lots,
             'usage_logs': usage_logs,
+            'export_usage_logs': export_usage_logs,
             'receive_logs': receive_complete_logs,
             'receive_complete_logs': receive_complete_logs,
             'receive_update_logs': receive_update_logs,
             'disposed_receive_logs': disposed_receive_logs,
+            'initial_stock_log': initial_stock_log,
+            'effective_receive_logs': effective_receive_logs,
+            'effective_receive_total': effective_receive_total,
         })
     finally:
         conn.close()
@@ -5993,6 +6249,48 @@ def delete_all_pending_export_requests():
     return redirect(url_for('materials.materials', req_tab='export', export_status_tab='pending'))
 
 
+@bp.route('/export-requests/<int:req_id>/delete', methods=['POST'])
+@login_required
+def delete_export_request(req_id):
+    workplace = get_workplace()
+    if workplace == LOGISTICS_WORKPLACE:
+        return "<script>alert('물류 작업장에서는 반출 요청 삭제를 할 수 없습니다.'); history.back();</script>"
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
+        req_row = cursor.fetchone()
+        if not req_row:
+            return "<script>alert('반출 요청을 찾을 수 없습니다.'); history.back();</script>"
+        if (req_row['request_type'] or 'ISSUE') != 'RETURN':
+            return "<script>alert('반출 요청 건만 삭제할 수 있습니다.'); history.back();</script>"
+        if req_row['requester_workplace'] != workplace:
+            return "<script>alert('현재 작업장의 요청만 삭제할 수 있습니다.'); history.back();</script>"
+        if (req_row['status'] or '') != ISSUE_STATUS_REQUESTED or req_row['processed_at']:
+            return "<script>alert('요청 중 상태의 반출 요청만 삭제할 수 있습니다.'); history.back();</script>"
+
+        cursor.execute('DELETE FROM logistics_issue_requests WHERE id = ?', (req_id,))
+        audit_log(
+            conn,
+            'delete',
+            'logistics_return_request',
+            req_id,
+            {
+                'material_id': req_row['material_id'],
+                'material_code': req_row['material_code'],
+                'material_name': req_row['material_name'],
+                'requester_workplace': workplace,
+                'requested_quantity': req_row['requested_quantity'],
+            },
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return redirect(url_for('materials.materials', req_tab='export', export_status_tab='pending'))
+
+
 @bp.route('/issue-requests/<int:req_id>/complete', methods=['POST'])
 @login_required
 def complete_issue_request(req_id):
@@ -6033,8 +6331,7 @@ def complete_issue_request(req_id):
             return "<script>alert('요청을 등록한 사용자만 실입고 완료 처리할 수 있습니다.'); history.back();</script>"
 
         created_receipt_rows = []
-        for idx, row in enumerate(split_rows):
-            before_row = detail_rows[idx] if idx < len(detail_rows) else None
+        for row in split_rows:
             lot_id, _lot_name = _create_request_receipt_lot(
                 cursor,
                 int(req_row['material_id']),

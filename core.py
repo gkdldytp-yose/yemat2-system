@@ -9,7 +9,7 @@ import hashlib
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # 공통 작업장 목록 (물류 작업장은 일반 선택 목록에서 제외)
-WORKPLACES = ['\u0031\ub3d9 \uc870\ubbf8', '\u0031\ub3d9 \uc790\ubc18', '\u0032\ub3d9 \uc2e0\uad00 \u0031\uce35', '\u0032\ub3d9 \uc2e0\uad00 \u0032\uce35', '\uae30\ud0c0']
+WORKPLACES = ['\u0031\ub3d9 \uc870\ubbf8', '\u0031\ub3d9 \uc790\ubc18', '\u0032\ub3d9 \uc2e0\uad00 \u0031\uce35', '\u0032\ub3d9 \uc2e0\uad00 \u0032\uce35']
 LOGISTICS_WORKPLACE = '\ubb3c\ub958'
 SHARED_WORKPLACE = '공통'
 SHARED_MATERIAL_CATEGORIES = {'기름', '소금', '실리카', '트레이'}
@@ -28,6 +28,97 @@ _log_retention_checked = False
 _import_schema_checked = False
 _backup_schema_checked = False
 _dashboard_todo_schema_checked = False
+USER_ROLE_OPTIONS = ('readonly', 'production', 'rawmat', 'purchase', 'logistics', 'admin')
+
+
+def normalize_user_role(role_value):
+    role = (role_value or 'readonly').strip().lower()
+    if role not in USER_ROLE_OPTIONS:
+        return 'readonly'
+    return role
+
+
+def parse_workplace_roles(raw_value):
+    if isinstance(raw_value, dict):
+        source = raw_value
+    else:
+        text = (raw_value or '').strip()
+        if not text:
+            return {}
+        try:
+            source = json.loads(text)
+        except Exception:
+            return {}
+    normalized = {}
+    for workplace, role_value in (source or {}).items():
+        wp = (workplace or '').strip()
+        if not wp or wp not in WORKPLACES:
+            continue
+        normalized[wp] = normalize_user_role(role_value)
+    return normalized
+
+
+def dump_workplace_roles(role_map, workplaces=None):
+    allowed = set(workplaces or WORKPLACES)
+    normalized = {}
+    for workplace, role_value in (role_map or {}).items():
+        wp = (workplace or '').strip()
+        if not wp or wp not in allowed:
+            continue
+        normalized[wp] = normalize_user_role(role_value)
+    return json.dumps(normalized, ensure_ascii=False)
+
+
+def get_effective_user_role(user=None, workplace=None):
+    user = user or session.get('user') or {}
+    if not user:
+        return 'readonly'
+    if bool(user.get('is_admin')):
+        return 'admin'
+    current_workplace = (workplace or session.get('workplace') or '').strip()
+    workplace_roles = parse_workplace_roles(user.get('workplace_roles'))
+    if current_workplace and current_workplace in workplace_roles:
+        return workplace_roles[current_workplace]
+    return normalize_user_role(user.get('base_role') or user.get('role'))
+
+
+def can_access_integrated_management(user=None):
+    user = user or session.get('user') or {}
+    if not user:
+        return False
+    if bool(user.get('is_admin')):
+        return True
+    if bool(user.get('can_integrated_management')):
+        return True
+    username = (user.get('username') or '').strip().lower()
+    return username == 'test'
+
+
+def build_session_user(user_row, current_workplace=None):
+    workplaces = user_row.get('workplaces') or []
+    if isinstance(workplaces, str):
+        workplaces = [value.strip() for value in workplaces.split(',') if value.strip()]
+    if not workplaces:
+        workplaces = ['1동 조미']
+    base_role = normalize_user_role(user_row.get('role') or ('admin' if user_row.get('is_admin') else 'readonly'))
+    workplace_roles = parse_workplace_roles(user_row.get('workplace_roles'))
+    payload = {
+        'id': user_row.get('id'),
+        'username': user_row.get('username'),
+        'is_admin': bool(user_row.get('is_admin')),
+        'name': user_row.get('name') or user_row.get('username'),
+        'phone': user_row.get('phone'),
+        'email': user_row.get('email'),
+        'department': user_row.get('department'),
+        'workplace1': user_row.get('workplace1'),
+        'workplace2': user_row.get('workplace2'),
+        'workplaces': workplaces,
+        'base_role': base_role,
+        'workplace_roles': workplace_roles,
+        'can_integrated_management': bool(user_row.get('can_integrated_management')),
+    }
+    payload['role'] = get_effective_user_role(payload, current_workplace or session.get('workplace'))
+    return payload
 
 # 데이터베이스 연결
 
@@ -481,6 +572,10 @@ def _ensure_user_schema(conn):
             conn.execute("ALTER TABLE users ADD COLUMN role TEXT")
         if 'workplaces' not in cols:
             conn.execute("ALTER TABLE users ADD COLUMN workplaces TEXT")
+        if 'workplace_roles' not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN workplace_roles TEXT")
+        if 'can_integrated_management' not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN can_integrated_management INTEGER DEFAULT 0")
         if 'status' not in cols:
             conn.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'approved'")
 
@@ -499,6 +594,8 @@ def _ensure_user_schema(conn):
         )
         # 그래도 비면 기본 작업장
         conn.execute("UPDATE users SET workplaces='1동 조미' WHERE workplaces IS NULL OR workplaces = ''")
+        conn.execute("UPDATE users SET can_integrated_management = 1 WHERE COALESCE(is_admin, 0) = 1")
+        conn.execute("UPDATE users SET can_integrated_management = 1 WHERE LOWER(COALESCE(username, '')) = 'test'")
     except Exception:
         pass
     _user_schema_checked = True
@@ -1001,7 +1098,7 @@ def has_role(*roles):
     user = session.get('user', {})
     if not user:
         return False
-    role = user.get('role', 'readonly')
+    role = get_effective_user_role(user)
     if role == 'admin':
         return True
     return role in roles
@@ -1033,7 +1130,11 @@ def login_required(f):
                     user = dict(user)
                     user['workplaces'] = legacy_workplaces
                     session['user'] = user
-        role = (user.get('role') or '').strip()
+        effective_role = get_effective_user_role(user)
+        if (user.get('role') or '').strip() != effective_role:
+            user = dict(user)
+            user['role'] = effective_role
+            session['user'] = user
         if (
             len(user_workplaces) > 1
             and not session.get('workplace')
@@ -1067,7 +1168,7 @@ def role_required(*roles):
         def decorated_function(*args, **kwargs):
             if 'user' not in session:
                 return redirect(url_for('auth.login'))
-            user_role = session['user'].get('role', 'readonly')
+            user_role = get_effective_user_role(session['user'])
             # admin은 모든 권한 통과
             if user_role == 'admin':
                 return f(*args, **kwargs)
