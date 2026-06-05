@@ -42,6 +42,8 @@
 .role-admin{background:#fff1f2;border-color:#fecdd3;color:#be123c;}
 .role-production{background:#ecfdf5;border-color:#bbf7d0;color:#15803d;}
 .role-rawmat{background:#fff7ed;border-color:#fed7aa;color:#c2410c;}
+.role-purchase{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+.role-logistics{background:#ecfeff;border-color:#a5f3fc;color:#0f766e;}
 .role-readonly{background:#f8fafc;border-color:#dbe4f0;color:#475569;}
 .user-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;}
 .meta-item{background:linear-gradient(180deg,#f9fbff,#f5f8fc);border:1px solid #dfe7f1;border-radius:14px;padding:.75rem .85rem;box-shadow:0 1px 0 rgba(255,255,255,.75) inset;}
@@ -61,6 +63,16 @@
 .wp-chip{display:flex;align-items:center;gap:.5rem;border:1px solid #dbe4f0;border-radius:999px;padding:.55rem .7rem;background:#fff;cursor:pointer;font-size:.82rem;font-weight:700;color:#334155;box-shadow:0 1px 0 rgba(255,255,255,.72) inset;}
 .wp-chip:hover{border-color:#bfd0e5;background:#f8fbff;}
 .wp-chip input{margin:0;}
+.workplace-role-list{display:grid;gap:.6rem;}
+.workplace-role-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,160px);gap:.55rem;align-items:center;padding:.6rem .65rem;border:1px solid #dbe4f0;border-radius:14px;background:rgba(255,255,255,.72);}
+.workplace-role-row .wp-chip{margin:0;}
+.workplace-role-select{width:100%;padding:.62rem .72rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#0f172a;font-size:.82rem;font-weight:800;}
+.integrated-access-box{display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap;padding:.75rem .85rem;border:1px solid #dbe4f0;border-radius:14px;background:linear-gradient(180deg,#fbfdff,#f8fafc);}
+.integrated-access-copy{display:flex;flex-direction:column;gap:.2rem;}
+.integrated-access-title{font-size:.82rem;font-weight:900;color:#334155;}
+.integrated-access-help{font-size:.76rem;color:#64748b;}
+.toggle-check{display:inline-flex;align-items:center;gap:.5rem;font-size:.82rem;font-weight:800;color:#334155;}
+.toggle-check input{margin:0;width:16px;height:16px;}
 .requested-chips,.assigned-chips,.list-inline-chips{display:flex;gap:.45rem;flex-wrap:wrap;}
 .req-chip,.assigned-chip{display:inline-flex;align-items:center;padding:.28rem .62rem;border-radius:999px;font-size:.75rem;font-weight:800;border:1px solid transparent;}
 .req-chip{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
@@ -134,6 +146,12 @@ html[data-theme="dark"] .access-form > div:not(.workplace-box):not(.card-actions
 html[data-theme="dark"] .list-access-top{background:linear-gradient(180deg,#111a2a,#0f1726);border-color:#263244;}
 html[data-theme="dark"] .mini-badge,
 html[data-theme="dark"] .wp-chip{background:#162133;border-color:#2b3648;color:#c7d3e3;}
+html[data-theme="dark"] .workplace-role-row,
+html[data-theme="dark"] .integrated-access-box{background:linear-gradient(180deg,#111a2a,#0f1726);border-color:#263244;}
+html[data-theme="dark"] .workplace-role-select{background:#0f1726;border-color:#314155;color:#eff6ff;}
+html[data-theme="dark"] .integrated-access-title,
+html[data-theme="dark"] .toggle-check{color:#eff6ff;}
+html[data-theme="dark"] .integrated-access-help{color:#8ea3bd;}
 html[data-theme="dark"] .wp-chip:hover{border-color:#416086;background:#192537;}
 html[data-theme="dark"] .mini-badge.me{background:rgba(34,197,94,.16);border-color:rgba(74,222,128,.26);color:#86efac;}
 html[data-theme="dark"] .req-chip{background:rgba(245,158,11,.16);color:#fdba74;}
@@ -263,6 +281,8 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                             <option value="readonly">👁️ 읽기전용</option>
                             <option value="production">🏭 생산관리</option>
                             <option value="rawmat">🌿 원초관리</option>
+                            <option value="purchase">🧾 발주관리</option>
+                            <option value="logistics">📦 물류관리</option>
                             <option value="admin">👑 관리자</option>
                         </select>
                     </div>
@@ -278,14 +298,37 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                                 <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'clear')">해제</button>
                             </div>
                         </div>
-                        <div class="workplace-grid">
+                        <div class="workplace-role-list">
                             {% for wp in workplaces %}
-                            <label class="wp-chip">
-                                <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.requested_workplaces %}checked{% endif %}>
-                                <span>{{ wp }}</span>
-                            </label>
+                            <div class="workplace-role-row">
+                                <label class="wp-chip">
+                                    <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.requested_workplaces %}checked{% endif %}>
+                                    <span>{{ wp }}</span>
+                                </label>
+                                <div>
+                                    <input type="hidden" name="workplace_role_keys[]" value="{{ wp }}">
+                                    <select name="workplace_role_values[]" class="workplace-role-select role-select-input">
+                                        <option value="readonly">읽기전용</option>
+                                        <option value="production">생산관리</option>
+                                        <option value="rawmat">원초관리</option>
+                                        <option value="purchase">발주관리</option>
+                                        <option value="logistics">물류관리</option>
+                                        <option value="admin">관리자</option>
+                                    </select>
+                                </div>
+                            </div>
                             {% endfor %}
                         </div>
+                    </div>
+                    <div class="integrated-access-box">
+                        <div class="integrated-access-copy">
+                            <div class="integrated-access-title">통합관리 모드 사용</div>
+                            <div class="integrated-access-help">통합관리 메뉴 접근 권한을 계정별로 부여합니다.</div>
+                        </div>
+                        <label class="toggle-check">
+                            <input type="checkbox" name="can_integrated_management" value="1">
+                            <span>사용 허용</span>
+                        </label>
                     </div>
                     <div class="card-actions">
                         <div class="action-note">승인하면 바로 로그인 가능한 계정으로 전환됩니다.</div>
@@ -366,6 +409,8 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                     <option value="admin">관리자</option>
                     <option value="production">생산관리</option>
                     <option value="rawmat">원초관리</option>
+                    <option value="purchase">발주관리</option>
+                    <option value="logistics">물류관리</option>
                     <option value="readonly">읽기전용</option>
                 </select>
             </div>
@@ -399,6 +444,8 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                             {% if urole == 'admin' %}👑 관리자
                             {% elif urole == 'production' %}🏭 생산관리
                             {% elif urole == 'rawmat' %}🌿 원초관리
+                            {% elif urole == 'purchase' %}🧾 발주관리
+                            {% elif urole == 'logistics' %}📦 물류관리
                             {% else %}👁️ 읽기전용{% endif %}
                         </span>
                     </div>
@@ -419,11 +466,25 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                         <div class="assigned-chips">
                             {% if u.workplace_list %}
                                 {% for wp in u.workplace_list %}
-                                <span class="assigned-chip">{{ wp }}</span>
+                                <span class="assigned-chip">{{ wp }} ·
+                                    {% set wp_role = u.workplace_roles_map.get(wp, u.role_value) %}
+                                    {% if wp_role == 'admin' %}관리자
+                                    {% elif wp_role == 'production' %}생산관리
+                                    {% elif wp_role == 'rawmat' %}원초관리
+                                    {% elif wp_role == 'purchase' %}발주관리
+                                    {% elif wp_role == 'logistics' %}물류관리
+                                    {% else %}읽기전용{% endif %}
+                                </span>
                                 {% endfor %}
                             {% else %}
                                 <span class="assigned-chip">미설정</span>
                             {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="field-label">통합관리 접근</div>
+                        <div class="assigned-chips">
+                            <span class="assigned-chip">{{ '사용 가능' if u.can_integrated_management or urole == 'admin' else '사용 안함' }}</span>
                         </div>
                     </div>
 
@@ -435,6 +496,8 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                                 <option value="readonly" {% if urole == 'readonly' %}selected{% endif %}>👁️ 읽기전용</option>
                                 <option value="production" {% if urole == 'production' %}selected{% endif %}>🏭 생산관리</option>
                                 <option value="rawmat" {% if urole == 'rawmat' %}selected{% endif %}>🌿 원초관리</option>
+                                <option value="purchase" {% if urole == 'purchase' %}selected{% endif %}>🧾 발주관리</option>
+                                <option value="logistics" {% if urole == 'logistics' %}selected{% endif %}>📦 물류관리</option>
                                 <option value="admin" {% if urole == 'admin' %}selected{% endif %}>👑 관리자</option>
                             </select>
                         </div>
@@ -450,14 +513,38 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                                     <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'clear')">해제</button>
                                 </div>
                             </div>
-                            <div class="workplace-grid">
+                            <div class="workplace-role-list">
                                 {% for wp in workplaces %}
-                                <label class="wp-chip">
-                                    <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.workplace_list %}checked{% endif %}>
-                                    <span>{{ wp }}</span>
-                                </label>
+                                {% set wp_role = u.workplace_roles_map.get(wp, urole) %}
+                                <div class="workplace-role-row">
+                                    <label class="wp-chip">
+                                        <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.workplace_list %}checked{% endif %}>
+                                        <span>{{ wp }}</span>
+                                    </label>
+                                    <div>
+                                        <input type="hidden" name="workplace_role_keys[]" value="{{ wp }}">
+                                        <select name="workplace_role_values[]" class="workplace-role-select role-select-input">
+                                            <option value="readonly" {% if wp_role == 'readonly' %}selected{% endif %}>읽기전용</option>
+                                            <option value="production" {% if wp_role == 'production' %}selected{% endif %}>생산관리</option>
+                                            <option value="rawmat" {% if wp_role == 'rawmat' %}selected{% endif %}>원초관리</option>
+                                            <option value="purchase" {% if wp_role == 'purchase' %}selected{% endif %}>발주관리</option>
+                                            <option value="logistics" {% if wp_role == 'logistics' %}selected{% endif %}>물류관리</option>
+                                            <option value="admin" {% if wp_role == 'admin' %}selected{% endif %}>관리자</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 {% endfor %}
                             </div>
+                        </div>
+                        <div class="integrated-access-box">
+                            <div class="integrated-access-copy">
+                                <div class="integrated-access-title">통합관리 모드 사용</div>
+                                <div class="integrated-access-help">계정별 통합관리 메뉴 접근을 허용합니다.</div>
+                            </div>
+                            <label class="toggle-check">
+                                <input type="checkbox" name="can_integrated_management" value="1" {% if u.can_integrated_management %}checked{% endif %}>
+                                <span>사용 허용</span>
+                            </label>
                         </div>
 
                         <div class="card-actions">
@@ -513,6 +600,8 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                                     {% if urole == 'admin' %}👑 관리자
                                     {% elif urole == 'production' %}🏭 생산관리
                                     {% elif urole == 'rawmat' %}🌿 원초관리
+                                    {% elif urole == 'purchase' %}🧾 발주관리
+                                    {% elif urole == 'logistics' %}📦 물류관리
                                     {% else %}👁️ 읽기전용{% endif %}
                                 </span>
                             </td>
@@ -520,7 +609,15 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                                 <div class="list-inline-chips">
                                     {% if u.workplace_list %}
                                         {% for wp in u.workplace_list %}
-                                        <span class="assigned-chip">{{ wp }}</span>
+                                        <span class="assigned-chip">{{ wp }} ·
+                                            {% set wp_role = u.workplace_roles_map.get(wp, urole) %}
+                                            {% if wp_role == 'admin' %}관리자
+                                            {% elif wp_role == 'production' %}생산관리
+                                            {% elif wp_role == 'rawmat' %}원초관리
+                                            {% elif wp_role == 'purchase' %}발주관리
+                                            {% elif wp_role == 'logistics' %}물류관리
+                                            {% else %}읽기전용{% endif %}
+                                        </span>
                                         {% endfor %}
                                     {% else %}
                                         <span class="assigned-chip">미설정</span>
@@ -541,6 +638,8 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                                             <option value="readonly" {% if urole == 'readonly' %}selected{% endif %}>👁️ 읽기전용</option>
                                             <option value="production" {% if urole == 'production' %}selected{% endif %}>🏭 생산관리</option>
                                             <option value="rawmat" {% if urole == 'rawmat' %}selected{% endif %}>🌿 원초관리</option>
+                                            <option value="purchase" {% if urole == 'purchase' %}selected{% endif %}>🧾 발주관리</option>
+                                            <option value="logistics" {% if urole == 'logistics' %}selected{% endif %}>📦 물류관리</option>
                                             <option value="admin" {% if urole == 'admin' %}selected{% endif %}>👑 관리자</option>
                                         </select>
                                         <div class="quick-actions" style="justify-content:flex-end;">
@@ -548,13 +647,37 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                                             <button type="button" class="quick-btn" onclick="setWorkplaceSelection(this.form, 'clear')">해제</button>
                                         </div>
                                     </div>
-                                    <div class="list-workplaces">
+                                    <div class="workplace-role-list">
                                         {% for wp in workplaces %}
-                                        <label class="wp-chip">
-                                            <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.workplace_list %}checked{% endif %}>
-                                            <span>{{ wp }}</span>
-                                        </label>
+                                        {% set wp_role = u.workplace_roles_map.get(wp, urole) %}
+                                        <div class="workplace-role-row">
+                                            <label class="wp-chip">
+                                                <input type="checkbox" name="workplaces" value="{{ wp }}" {% if wp in u.workplace_list %}checked{% endif %}>
+                                                <span>{{ wp }}</span>
+                                            </label>
+                                            <div>
+                                                <input type="hidden" name="workplace_role_keys[]" value="{{ wp }}">
+                                                <select name="workplace_role_values[]" class="workplace-role-select role-select-input">
+                                                    <option value="readonly" {% if wp_role == 'readonly' %}selected{% endif %}>읽기전용</option>
+                                                    <option value="production" {% if wp_role == 'production' %}selected{% endif %}>생산관리</option>
+                                                    <option value="rawmat" {% if wp_role == 'rawmat' %}selected{% endif %}>원초관리</option>
+                                                    <option value="purchase" {% if wp_role == 'purchase' %}selected{% endif %}>발주관리</option>
+                                                    <option value="logistics" {% if wp_role == 'logistics' %}selected{% endif %}>물류관리</option>
+                                                    <option value="admin" {% if wp_role == 'admin' %}selected{% endif %}>관리자</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                         {% endfor %}
+                                    </div>
+                                    <div class="integrated-access-box">
+                                        <div class="integrated-access-copy">
+                                            <div class="integrated-access-title">통합관리</div>
+                                            <div class="integrated-access-help">{{ '사용 가능' if u.can_integrated_management or urole == 'admin' else '사용 안함' }}</div>
+                                        </div>
+                                        <label class="toggle-check">
+                                            <input type="checkbox" name="can_integrated_management" value="1" {% if u.can_integrated_management %}checked{% endif %}>
+                                            <span>허용</span>
+                                        </label>
                                     </div>
                                     <div class="list-actions">
                                         <button type="submit" class="soft-btn primary">저장</button>
@@ -581,7 +704,7 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
 <script>
 function applyRoleSelectTheme(select){
     if(!select) return;
-    select.classList.remove('role-admin', 'role-production', 'role-rawmat', 'role-readonly');
+    select.classList.remove('role-admin', 'role-production', 'role-rawmat', 'role-purchase', 'role-logistics', 'role-readonly');
     select.classList.add(`role-${select.value || 'readonly'}`);
 }
 

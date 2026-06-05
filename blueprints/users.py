@@ -1,13 +1,21 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
 
-from core import get_db, admin_required, WORKPLACES
+from core import (
+    WORKPLACES,
+    USER_ROLE_OPTIONS,
+    admin_required,
+    build_session_user,
+    dump_workplace_roles,
+    get_db,
+    normalize_user_role,
+    parse_workplace_roles,
+)
 
 bp = Blueprint('users', __name__)
 
 
 def _normalize_role_input(role_value):
-    role = (role_value or 'readonly').strip()
-    return role
+    return normalize_user_role(role_value)
 
 
 def _normalize_workplaces_input(values):
@@ -22,6 +30,26 @@ def _normalize_workplaces_input(values):
     return normalized
 
 
+def _parse_workplace_roles_input(form, workplaces, fallback_role='readonly'):
+    selected = set(workplaces or [])
+    keys = form.getlist('workplace_role_keys[]')
+    values = form.getlist('workplace_role_values[]')
+    role_map = {}
+    for idx, raw_key in enumerate(keys):
+        workplace = (raw_key or '').strip()
+        if workplace not in selected:
+            continue
+        role_value = values[idx] if idx < len(values) else fallback_role
+        role_map[workplace] = _normalize_role_input(role_value or fallback_role)
+    for workplace in selected:
+        role_map.setdefault(workplace, _normalize_role_input(fallback_role))
+    return role_map
+
+
+def _parse_integrated_access_input(form):
+    return 1 if str(form.get('can_integrated_management') or '').strip() in {'1', 'true', 'on', 'yes'} else 0
+
+
 @bp.route('/users')
 @admin_required
 def user_management():
@@ -29,7 +57,7 @@ def user_management():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, username, name, is_admin, role, department, phone, email, created_at, status, workplaces
+        SELECT id, username, name, is_admin, role, department, phone, email, created_at, status, workplaces, workplace_roles, can_integrated_management
         FROM users
         WHERE status = 'approved'
         ORDER BY created_at DESC
@@ -48,7 +76,9 @@ def user_management():
     for user_row in users_list:
         workplaces = [value.strip() for value in (user_row.get('workplaces') or '').split(',') if value.strip()]
         user_row['workplace_list'] = workplaces
-        user_row['role_value'] = user_row.get('role') or ('admin' if user_row.get('is_admin') else 'readonly')
+        user_row['role_value'] = _normalize_role_input(user_row.get('role') or ('admin' if user_row.get('is_admin') else 'readonly'))
+        user_row['workplace_roles_map'] = parse_workplace_roles(user_row.get('workplace_roles'))
+        user_row['can_integrated_management'] = bool(user_row.get('can_integrated_management'))
 
     for pending_row in pending_users:
         requested = []
@@ -63,7 +93,8 @@ def user_management():
                            users_list=users_list,
                            pending_users=pending_users,
                            session_user_id=session['user']['id'],
-                           workplaces=WORKPLACES)
+                           workplaces=WORKPLACES,
+                           role_options=[role for role in USER_ROLE_OPTIONS if role != 'admin'] + ['admin'])
 
 
 @bp.route('/users/<int:user_id>/update-role', methods=['POST'])
@@ -87,14 +118,25 @@ def update_user_workplaces(user_id):
         return redirect(url_for('users.user_management'))
     workplaces_str = ','.join(workplaces)
     conn = get_db()
-    conn.execute("UPDATE users SET workplaces=? WHERE id=?", (workplaces_str, user_id))
+    cursor = conn.cursor()
+    cursor.execute("SELECT role, workplace_roles FROM users WHERE id = ?", (user_id,))
+    target = cursor.fetchone()
+    role = _normalize_role_input((target['role'] if target else None) or 'readonly')
+    existing_map = parse_workplace_roles(target['workplace_roles'] if target else None)
+    filtered_map = {wp: existing_map.get(wp, role) for wp in workplaces}
+    conn.execute(
+        "UPDATE users SET workplaces=?, workplace_roles=? WHERE id=?",
+        (workplaces_str, dump_workplace_roles(filtered_map, workplaces), user_id),
+    )
     conn.commit()
     conn.close()
 
     if session.get('user') and session['user']['id'] == user_id:
         session['user']['workplaces'] = workplaces
+        session['user']['workplace_roles'] = filtered_map
         if session.get('workplace') not in workplaces:
             session['workplace'] = workplaces[0]
+        session['user'] = build_session_user(session['user'], session.get('workplace'))
     return redirect(url_for('users.user_management'))
 
 
@@ -109,10 +151,21 @@ def update_user_access(user_id):
     workplaces = _normalize_workplaces_input(request.form.getlist('workplaces'))
     if not workplaces:
         return redirect(url_for('users.user_management'))
+    workplace_roles = _parse_workplace_roles_input(request.form, workplaces, role)
+    can_integrated_management = _parse_integrated_access_input(request.form)
 
     conn = get_db()
-    conn.execute("UPDATE users SET role=?, workplaces=? WHERE id=?", (role, ','.join(workplaces), user_id))
+    conn.execute(
+        "UPDATE users SET role=?, workplaces=?, workplace_roles=?, can_integrated_management=? WHERE id=?",
+        (role, ','.join(workplaces), dump_workplace_roles(workplace_roles, workplaces), can_integrated_management, user_id),
+    )
     conn.commit()
+    if session.get('user') and session['user']['id'] == user_id:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        refreshed = cursor.fetchone()
+        if refreshed:
+            session['user'] = build_session_user(dict(refreshed), session.get('workplace'))
     conn.close()
     return redirect(url_for('users.user_management'))
 
@@ -125,14 +178,16 @@ def approve_user(user_id):
     workplaces = _normalize_workplaces_input(request.form.getlist('workplaces'))
     if not workplaces:
         return redirect(url_for('users.user_management'))
+    workplace_roles = _parse_workplace_roles_input(request.form, workplaces, role)
+    can_integrated_management = _parse_integrated_access_input(request.form)
     workplaces_str = ','.join(workplaces)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT username, name FROM users WHERE id = ?", (user_id,))
     target_user = cursor.fetchone()
     conn.execute(
-        "UPDATE users SET status='approved', role=?, workplaces=? WHERE id=?",
-        (role, workplaces_str, user_id)
+        "UPDATE users SET status='approved', role=?, workplaces=?, workplace_roles=?, can_integrated_management=? WHERE id=?",
+        (role, workplaces_str, dump_workplace_roles(workplace_roles, workplaces), can_integrated_management, user_id)
     )
     if target_user:
         notification_titles = []

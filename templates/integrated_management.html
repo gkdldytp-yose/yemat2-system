@@ -293,6 +293,8 @@
 }
 .material-header-item .label{font-size:0.72rem;color:#64748b;display:block;margin-bottom:0.2rem;}
 .material-header-item .value{font-size:0.92rem;font-weight:800;color:#0f172a;word-break:break-all;}
+.material-log-total{font-size:0.84rem;font-weight:900;color:#0f172a;}
+.material-log-total span{margin-left:.2rem;}
 .integrated-readonly-banner{margin-bottom:0.9rem;padding:0.85rem 1rem;border:1px solid #dbeafe;border-radius:14px;background:linear-gradient(180deg,#f8fbff 0%,#eff6ff 100%);color:#1d4ed8;font-size:0.88rem;font-weight:800;}
 .integrated-readonly form[method="POST"],
 .integrated-readonly button[onclick*="openAddModal"],
@@ -418,6 +420,10 @@ html[data-theme="dark"] .meeting-eval-card,
 html[data-theme="dark"] .meeting-eval-day-card,
 html[data-theme="dark"] .meeting-eval-toolbar,
 html[data-theme="dark"] .integrated-readonly-banner{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 16px 36px rgba(2,6,23,.3);}
+html[data-theme="dark"] .meeting-eval-summary-row{background:linear-gradient(180deg,rgba(30,41,59,.96) 0%,rgba(15,23,42,.94) 100%);border-color:#2b3648;box-shadow:inset 0 1px 0 rgba(148,163,184,.05);}
+html[data-theme="dark"] .meeting-eval-total-chip{background:#162133;border-color:#2f4158;color:#dbeafe;}
+html[data-theme="dark"] .meeting-eval-total-chip.strong{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 12px 26px rgba(37,99,235,.24);}
+html[data-theme="dark"] .meeting-eval-block{background:linear-gradient(180deg,#111827 0%,#0f1726 100%);border-color:#263244;}
 html[data-theme="dark"] .inventory-audit-head,
 html[data-theme="dark"] .subcontract-table-head,
 html[data-theme="dark"] .audit-table-head,
@@ -434,6 +440,11 @@ html[data-theme="dark"] .audit-user-cell .main,
 html[data-theme="dark"] .audit-mono.audit-emphasis,
 html[data-theme="dark"] .material-header-item .value,
 html[data-theme="dark"] .stats-table-card h3,
+html[data-theme="dark"] .meeting-eval-card h3,
+html[data-theme="dark"] .meeting-eval-block-title h4,
+html[data-theme="dark"] .meeting-eval-name-cell strong,
+html[data-theme="dark"] .meeting-eval-amount,
+html[data-theme="dark"] .meeting-eval-total-row td,
 html[data-theme="dark"] .meeting-calendar-title{color:#eff6ff;}
 html[data-theme="dark"] .inventory-audit-head p,
 html[data-theme="dark"] .inventory-item-sub,
@@ -447,6 +458,11 @@ html[data-theme="dark"] .audit-user-cell .sub,
 html[data-theme="dark"] .audit-meta-text,
 html[data-theme="dark"] .material-header-item .label,
 html[data-theme="dark"] .integrated-readonly-banner,
+html[data-theme="dark"] .meeting-eval-card p,
+html[data-theme="dark"] .meeting-eval-block-title span,
+html[data-theme="dark"] .meeting-eval-name-sub,
+html[data-theme="dark"] .meeting-eval-input-suffix,
+html[data-theme="dark"] .meeting-eval-empty,
 html[data-theme="dark"] .meeting-calendar-weekday{color:#8ea3bd;}
 html[data-theme="dark"] .inventory-audit-chip,
 html[data-theme="dark"] .inventory-code,
@@ -454,7 +470,10 @@ html[data-theme="dark"] .inventory-print-chip,
 html[data-theme="dark"] .audit-chip,
 html[data-theme="dark"] .audit-entity-pill{background:#162133;border-color:#263244;color:#bfdbfe;}
 html[data-theme="dark"] .inventory-cat-badge,
-html[data-theme="dark"] .meeting-month-btn{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] .meeting-month-btn,
+html[data-theme="dark"] .meeting-eval-kicker,
+html[data-theme="dark"] .meeting-eval-code-badge,
+html[data-theme="dark"] .meeting-eval-qty-badge{background:#152033;border-color:#2b3648;color:#dbe7f5;}
 html[data-theme="dark"] .inventory-audit-table-card thead th,
 html[data-theme="dark"] .subcontract-table thead th,
 html[data-theme="dark"] .audit-table-card thead th,
@@ -468,10 +487,20 @@ html[data-theme="dark"] .stats-table-card td,
 html[data-theme="dark"] .reqcalc-table td,
 html[data-theme="dark"] .meeting-eval-table td,
 html[data-theme="dark"] .material-panel table{background:#121a2a;color:#dbe7f5;border-color:#263244;}
+html[data-theme="dark"] .meeting-eval-table{background:#121a2a;border-color:#263244;box-shadow:0 10px 26px rgba(2,6,23,.22);}
+html[data-theme="dark"] .meeting-eval-table tbody tr:nth-child(even) td{background:#162133;}
+html[data-theme="dark"] .meeting-eval-table tbody tr:hover td{background:#1b2940;}
+html[data-theme="dark"] .meeting-eval-total-row td{background:#1a2436 !important;border-top:1px solid #2a3a52;}
+html[data-theme="dark"] .meeting-eval-input-wrap{background:#0f172a;border-color:#2b3648;box-shadow:inset 0 1px 0 rgba(148,163,184,.04);}
+html[data-theme="dark"] .meeting-eval-price-input{background:#111b2b;border-color:#314257;color:#eff6ff;}
+html[data-theme="dark"] .meeting-eval-price-input::placeholder{color:#6f86a3;}
+html[data-theme="dark"] .meeting-eval-price-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+html[data-theme="dark"] .meeting-eval-empty{background:#121a2a;border-color:#2b3648;}
 html[data-theme="dark"] .modal-box.material-modal{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 22px 54px rgba(2,6,23,.42);}
 html[data-theme="dark"] .material-modal-top{border-bottom-color:#263244;}
 html[data-theme="dark"] .material-modal-top h3,
-html[data-theme="dark"] .material-section-title{color:#eff6ff;}
+html[data-theme="dark"] .material-section-title,
+html[data-theme="dark"] .material-log-total{color:#eff6ff;}
 html[data-theme="dark"] .modal-box.material-modal .table-container{border-radius:10px;}
 html[data-theme="dark"] .material-panel thead th{background:#162133;color:#c7d3e3;border-bottom-color:#263244;}
 html[data-theme="dark"] .material-panel tbody td{border-bottom-color:#223046;color:#dbe7f5;}
@@ -835,10 +864,8 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
     <button class="subtab-btn {% if wp_filter == 'all' %}active{% endif %}"
             onclick="location.href='/integrated-management?tab={{ tab }}&wp=all{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">전체</button>
     {% for wp in workplaces %}
-    {% if not (tab == 'materials' and wp == '기타') %}
     <button class="subtab-btn {% if wp_filter == wp %}active{% endif %}"
             onclick="location.href='/integrated-management?tab={{ tab }}&wp={{ wp|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">{{ wp }}</button>
-    {% endif %}
     {% endfor %}
     {% if tab == 'materials' %}
     <button class="subtab-btn {% if wp_filter == '물류' %}active{% endif %}"
@@ -2083,9 +2110,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                     <select name="inventory_wp" id="inventoryAuditWorkplaceSelect" class="search-input">
                         <option value="all" {% if inventory_wp == 'all' %}selected{% endif %}>전체 작업장</option>
                         {% for wp in workplaces %}
-                        {% if wp != '기타' %}
                         <option value="{{ wp }}" {% if inventory_wp == wp %}selected{% endif %}>{{ wp }}</option>
-                        {% endif %}
                         {% endfor %}
                         <option value="물류" {% if inventory_wp == '물류' %}selected{% endif %}>물류</option>
                         <option value="공통" {% if inventory_wp == '공통' %}selected{% endif %}>공통</option>
@@ -2180,7 +2205,6 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                     {% if wp_name == '2동 신관 2층' %}{% set wp_class = 'wp-2-2f' %}{% endif %}
                     {% if wp_name == '공통' %}{% set wp_class = 'wp-shared' %}{% endif %}
                     {% if wp_name == '물류' %}{% set wp_class = 'wp-logistics' %}{% endif %}
-                    {% if wp_name == '기타' %}{% set wp_class = 'wp-etc' %}{% endif %}
                     {% set cat_name = item.inv_category or '기타' %}
                     {% set cat_class = '' %}
                     {% if cat_name == '원초' %}{% set cat_class = 'raw' %}{% endif %}
@@ -2411,7 +2435,6 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                             {% elif item.workplace == '2동 신관 2층' %}wp-2-2f
                             {% elif item.workplace == '공통' %}wp-shared
                             {% elif item.workplace == '물류' %}wp-logistics
-                            {% elif item.workplace == '기타' %}wp-etc
                             {% elif not item.workplace %}wp-unassigned
                             {% endif %}">
                             {{ item.workplace or '미등록' }}
@@ -2999,8 +3022,11 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
 
         <div id="materialLogsPanel" class="material-panel">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
-                <p class="material-section-title" style="margin:0;">부자재 사용 로그</p>
-                <div style="font-size:0.84rem;font-weight:900;color:#0f172a;">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
+                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                    <p class="material-section-title" style="margin:0;">부자재 사용 로그</p>
+                    <div class="material-log-total">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
+                </div>
+                <button type="button" class="btn btn-small btn-secondary" id="usageExportToggleBtn" onclick="toggleExportUsageLogs()">반출 기록 보기</button>
             </div>
             <div class="usage-filter-bar">
                 <div class="usage-filter-left">
@@ -3037,7 +3063,11 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
         </div>
         <div id="materialReceivePanel" class="material-panel">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.45rem;">
-                <p class="material-section-title" style="margin:0;">부자재 입고 로그</p>
+                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                    <p class="material-section-title" style="margin:0;">부자재 입고 로그</p>
+                    <div class="material-log-total">총 입고량 <span id="md_receive_total_qty">0.0</span></div>
+                    <div class="material-log-total">실효 총 입고량 <span id="md_effective_receive_total_qty">0.0</span></div>
+                </div>
                 <div class="material-detail-tabs" style="margin:0;">
                     <button type="button" class="material-detail-tab active" id="receiveDoneTabBtn" onclick="switchReceiveLogTab('complete')">입고 완료</button>
                     <button type="button" class="material-detail-tab" id="receiveUpdateTabBtn" onclick="switchReceiveLogTab('update')">입고 수정</button>
@@ -3229,6 +3259,9 @@ let currentMaterialId = null;
 let currentRawLotId = null;
 let currentReceiveCompleteLogs = [];
 let currentReceiveUpdateLogs = [];
+let currentInitialReceiveLog = null;
+let currentEffectiveReceiveLogs = [];
+let currentEffectiveReceiveTotal = 0;
 let currentReceiveLogTab = 'complete';
 let currentReceiveFilterMode = 'month';
 let currentReceiveFilterMonth = '';
@@ -4746,7 +4779,7 @@ function renderUsageRows(logs){
     }
     tbody.innerHTML = logs.map(log => `
         <tr>
-            <td>${(log.use_date || '-').toString().slice(0,10)}</td>
+            <td>${formatUsageLogDateCell(log)}</td>
             <td>${log.production_no || '-'}</td>
             <td>${log.product_name || '-'}</td>
             <td>${log.lot || '-'}</td>
@@ -4755,6 +4788,41 @@ function renderUsageRows(logs){
             <td>${log.user_name || '-'}</td>
         </tr>
     `).join('');
+}
+
+function aggregateUsageLogs(logs){
+    const rows = Array.isArray(logs) ? logs : [];
+    const grouped = new Map();
+    rows.forEach((log, index) => {
+        const groupKey = String(
+            log?.usage_group_id
+            || log?.production_usage_id
+            || log?.export_request_id
+            || `${log?.production_id || '-'}|${log?.completed_at || log?.use_date || '-'}|${log?.product_name || '-'}|${log?.total_used_quantity || log?.used_quantity || 0}`
+        );
+        if(!grouped.has(groupKey)){
+            grouped.set(groupKey, {
+                ...log,
+                __index: index,
+                total_used_quantity: Number(log?.total_used_quantity || log?.used_quantity || 0),
+                remaining_quantity: 0,
+                lot_parts: [],
+            });
+        }
+        const bucket = grouped.get(groupKey);
+        const lotName = trimMaterialCodeFromLot(log?.lot || '-');
+        const usedQty = Number(log?.used_quantity || 0);
+        bucket.lot_parts.push(`${lotName} (${usedQty.toFixed(1)})`);
+        bucket.remaining_quantity += Number(log?.remaining_quantity || 0);
+    });
+    return Array.from(grouped.values())
+        .sort((a, b) => a.__index - b.__index)
+        .map((item) => ({
+            ...item,
+            lot: item.lot_parts.length ? item.lot_parts.join(', ') : (item.lot || '-'),
+            used_quantity: Number(item.total_used_quantity || item.used_quantity || 0),
+            remaining_quantity: Number(item.remaining_quantity || 0),
+        }));
 }
 
 function renderReceiveRows(logs){
@@ -4777,8 +4845,11 @@ function renderReceiveRows(logs){
 }
 
 let currentUsageLogs = [];
+let currentExportUsageLogs = [];
 let currentUsageFilterMode = 'month';
 let currentUsageFilterMonth = '';
+let currentMaterialCode = '';
+let showExportUsageLogs = false;
 
 function formatUsageFilterDate(date){
     const year = date.getFullYear();
@@ -4835,13 +4906,32 @@ function getUsageLogDateKey(log){
     return String(raw).slice(0, 10);
 }
 
+function formatUsageLogDateCell(log){
+    const dateText = log?.completed_at
+        ? String(log.completed_at).slice(0,16).replace('T', ' ')
+        : String(log?.use_date || '-').slice(0,10);
+    const exportRequestId = Number(log?.export_request_id || 0);
+    if(exportRequestId <= 0) return dateText;
+    const targetUrl = `/materials?req_tab=export&export_status=completed&focus_export_req_id=${exportRequestId}`;
+    return `<a href="${targetUrl}" class="receive-log-link" title="해당 반출 완료건 열기">${dateText}</a>`;
+}
+
+function trimMaterialCodeFromLot(lotText){
+    const lotValue = String(lotText || '-');
+    if(!currentMaterialCode) return lotValue;
+    const prefix = `${currentMaterialCode}-`;
+    return lotValue.startsWith(prefix) ? lotValue.slice(prefix.length) : lotValue;
+}
+
 function getFilteredUsageLogs(){
     const rows = Array.isArray(currentUsageLogs) ? currentUsageLogs.slice() : [];
-    if(currentUsageFilterMode === 'all') return rows;
+    const exportRows = showExportUsageLogs && Array.isArray(currentExportUsageLogs) ? currentExportUsageLogs.slice() : [];
+    const baseRows = rows.concat(exportRows);
+    if(currentUsageFilterMode === 'all') return baseRows;
     if(currentUsageFilterMode === 'custom'){
         const startValue = document.getElementById('usageFilterStartDate')?.value || '';
         const endValue = document.getElementById('usageFilterEndDate')?.value || '';
-        return rows.filter((log) => {
+        return baseRows.filter((log) => {
             const dateKey = getUsageLogDateKey(log);
             if(!dateKey) return false;
             if(startValue && dateKey < startValue) return false;
@@ -4850,7 +4940,7 @@ function getFilteredUsageLogs(){
         });
     }
     const monthValue = getCurrentUsageMonthValue();
-    return rows.filter((log) => getUsageLogDateKey(log).slice(0, 7) === monthValue);
+    return baseRows.filter((log) => getUsageLogDateKey(log).slice(0, 7) === monthValue);
 }
 
 function updateUsageFilterSummary(filteredLogs){
@@ -4873,8 +4963,17 @@ function updateUsageFilterSummary(filteredLogs){
 function applyUsageLogFilter(){
     syncUsageFilterControls();
     const filteredLogs = getFilteredUsageLogs();
-    updateUsageFilterSummary(filteredLogs);
-    renderUsageRows(filteredLogs);
+    const aggregatedLogs = aggregateUsageLogs(filteredLogs);
+    updateUsageFilterSummary(aggregatedLogs);
+    renderUsageRows(aggregatedLogs);
+    const toggleBtn = document.getElementById('usageExportToggleBtn');
+    if(toggleBtn){
+        const exportCount = Array.isArray(currentExportUsageLogs) ? currentExportUsageLogs.length : 0;
+        toggleBtn.textContent = exportCount
+            ? (showExportUsageLogs ? '반출 기록 숨기기' : `반출 기록 보기 (${exportCount})`)
+            : '반출 기록 보기';
+        toggleBtn.disabled = exportCount === 0;
+    }
 }
 
 function setUsageLogFilterMode(mode){
@@ -4900,6 +4999,12 @@ function handleUsageFilterDateChange(){
     if(startInput && endInput && startInput.value && endInput.value && startInput.value > endInput.value){
         endInput.value = startInput.value;
     }
+    applyUsageLogFilter();
+}
+
+function toggleExportUsageLogs(){
+    if(!Array.isArray(currentExportUsageLogs) || currentExportUsageLogs.length === 0) return;
+    showExportUsageLogs = !showExportUsageLogs;
     applyUsageLogFilter();
 }
 
@@ -4951,7 +5056,11 @@ function getReceiveLogDateKey(log){
 }
 
 function getBaseReceiveLogsForCurrentTab(){
-    return currentReceiveLogTab === 'update' ? currentReceiveUpdateLogs : currentReceiveCompleteLogs;
+    if(currentReceiveLogTab === 'update') return currentReceiveUpdateLogs;
+    if(currentReceiveFilterMode === 'all' && Array.isArray(currentEffectiveReceiveLogs) && currentEffectiveReceiveLogs.length){
+        return currentEffectiveReceiveLogs.slice();
+    }
+    return Array.isArray(currentReceiveCompleteLogs) ? currentReceiveCompleteLogs.slice() : [];
 }
 
 function getFilteredReceiveLogs(){
@@ -4989,10 +5098,27 @@ function updateReceiveFilterSummary(filteredLogs){
     summaryEl.textContent = `${getCurrentReceiveMonthValue()} / ${count}건`;
 }
 
+function updateReceiveTotalQuantity(filteredLogs){
+    const totalEl = document.getElementById('md_receive_total_qty');
+    const effectiveEl = document.getElementById('md_effective_receive_total_qty');
+    if(!totalEl) return;
+    const totalQty = Array.isArray(filteredLogs)
+        ? filteredLogs.reduce((sum, log) => {
+            if(log && log.show_received_quantity === false) return sum;
+            return sum + Number(log?.received_quantity || 0);
+        }, 0)
+        : 0;
+    totalEl.textContent = totalQty.toFixed(1);
+    if(effectiveEl){
+        effectiveEl.textContent = Number(currentEffectiveReceiveTotal || 0).toFixed(1);
+    }
+}
+
 function applyReceiveLogFilter(){
     syncReceiveFilterControls();
     const filteredLogs = getFilteredReceiveLogs();
     updateReceiveFilterSummary(filteredLogs);
+    updateReceiveTotalQuantity(filteredLogs);
     renderReceiveRows(filteredLogs);
 }
 
@@ -5055,14 +5181,20 @@ async function loadMaterialDetail(materialId){
         return;
     }
     const m = payload.material;
+    currentMaterialCode = m.code || '';
     document.getElementById('md_code').textContent = m.code || '-';
     document.getElementById('md_name').textContent = m.name || '-';
     document.getElementById('md_supplier').textContent = m.supplier_name || '-';
     document.getElementById('md_unit').textContent = m.unit || '-';
     document.getElementById('md_total_qty').textContent = Number(m.total_quantity || 0).toFixed(1);
     currentUsageLogs = payload.usage_logs || [];
+    currentExportUsageLogs = payload.export_usage_logs || [];
+    showExportUsageLogs = false;
     currentReceiveCompleteLogs = payload.receive_complete_logs || payload.receive_logs || [];
     currentReceiveUpdateLogs = payload.receive_update_logs || [];
+    currentInitialReceiveLog = payload.initial_stock_log || null;
+    currentEffectiveReceiveLogs = payload.effective_receive_logs || [];
+    currentEffectiveReceiveTotal = Number(payload.effective_receive_total || 0);
     currentReceiveLogTab = 'complete';
     renderLotRows(payload.lots || []);
     resetUsageLogFilter();

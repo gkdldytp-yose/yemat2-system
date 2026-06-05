@@ -483,7 +483,7 @@
 {% if user %}
         {%- set _r = user.role if user.role else ('admin' if user.is_admin else 'readonly') -%}
         {%- set _sa = user.is_admin -%}
-        {%- set _can_open_integrated = _sa or ((user.username or '')|lower == 'test') -%}
+        {%- set _can_open_integrated = _sa or user.can_integrated_management or ((user.username or '')|lower == 'test') -%}
 
 <nav>
     <div class="nav-container">
@@ -670,10 +670,13 @@
         <div class="todo-messenger-shell">
             <div class="todo-messenger-list">
                 {% if nav_dashboard_todos %}
+                    {% set current_todo_username = ((user.username if user else '') or '') %}
                     {% for todo in nav_dashboard_todos %}
+                    {% set can_manage_todo = todo.created_by == current_todo_username %}
                     <div class="todo-message-row {% if loop.index0 % 2 == 0 %}is-left{% else %}is-right{% endif %}">
                         <div class="todo-message-bubble {% if todo.is_overdue %}is-overdue{% elif todo.is_due_soon %}is-due-soon{% endif %}">
                             <div class="todo-message-tools">
+                                {% if can_manage_todo %}
                                 <form method="POST" action="/dashboard/todos/{{ todo.id }}/toggle" style="margin:0;">
                                     <input type="hidden" name="is_done" value="1">
                                     <input type="hidden" name="next" value="{{ request.path }}#todo-messenger">
@@ -697,6 +700,12 @@
                                         <button type="submit" class="btn btn-small btn-danger">삭제</button>
                                     </form>
                                 </div>
+                                {% else %}
+                                <div></div>
+                                <div style="display:flex;gap:0.4rem;flex-wrap:wrap;justify-content:flex-end;">
+                                    <span class="todo-chip">등록자만 수정/삭제/완료 가능</span>
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="todo-title">{{ todo.title }}</div>
                             <div class="todo-detail">{{ todo.detail or '상세 내용 없음' }}</div>
@@ -816,7 +825,9 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% set current_todo_username = ((user.username if user else '') or '') %}
                     {% for todo in nav_completed_dashboard_todos %}
+                    {% set can_manage_todo = todo.created_by == current_todo_username %}
                     <tr>
                         <td style="white-space:nowrap;">
                             <div>등록 {{ (todo.created_at or '')[:10] or '-' }}</div>
@@ -839,11 +850,17 @@
                         <td style="white-space:pre-wrap;">{{ todo.detail or '-' }}</td>
                         <td>
                             <span class="badge badge-success">완료</span>
+                            {% if can_manage_todo %}
                             <form method="POST" action="/dashboard/todos/{{ todo.id }}/toggle" style="margin-top:0.4rem;">
                                 <input type="hidden" name="is_done" value="0">
                                 <input type="hidden" name="next" value="{{ request.path }}#todo-completed">
                                 <button type="submit" class="btn btn-small btn-secondary">미완료 복귀</button>
                             </form>
+                            {% else %}
+                            <div style="margin-top:0.4rem;">
+                                <span class="todo-chip">등록자만 복귀 가능</span>
+                            </div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

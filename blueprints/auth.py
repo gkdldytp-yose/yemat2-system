@@ -4,6 +4,7 @@ from core import (
     WORKPLACES,
     add_user_notification,
     audit_log,
+    build_session_user,
     get_db,
     get_usernames_for_notification,
     hash_password,
@@ -46,7 +47,7 @@ def login():
         cursor = conn.cursor()
         cursor.execute(
             '''
-            SELECT id, username, is_admin, name, role, workplaces, status, password_hash
+            SELECT id, username, is_admin, name, role, workplaces, workplace_roles, can_integrated_management, status, password_hash
             FROM users
             WHERE username = ?
             ''',
@@ -73,17 +74,10 @@ def login():
             return render_template('login.html', error=msg)
 
         conn.close()
-        role = user['role'] if user['role'] else ('admin' if user['is_admin'] else 'readonly')
         workplaces = user['workplaces'].split(',') if user['workplaces'] else ['1동 조미']
-
-        session['user'] = {
-            'id': user['id'],
-            'username': user['username'],
-            'is_admin': bool(user['is_admin']),
-            'name': user['name'] or user['username'],
-            'role': role,
-            'workplaces': workplaces,
-        }
+        user_payload = dict(user)
+        user_payload['workplaces'] = workplaces
+        session['user'] = build_session_user(user_payload, workplaces[0] if len(workplaces) == 1 else None)
         if len(workplaces) == 1:
             session['workplace'] = workplaces[0]
 
