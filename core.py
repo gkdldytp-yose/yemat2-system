@@ -1,6 +1,9 @@
 from flask import session, redirect, url_for, request, flash
 from contextlib import contextmanager
+import atexit
 import sqlite3
+import threading
+from queue import Empty, Full, LifoQueue
 from functools import wraps
 import json
 from pathlib import Path
@@ -30,6 +33,119 @@ _import_schema_checked = False
 _backup_schema_checked = False
 _dashboard_todo_schema_checked = False
 USER_ROLE_OPTIONS = ('readonly', 'production', 'rawmat', 'purchase', 'logistics', 'admin')
+_DB_POOL_MAX_SIZE = 6
+_db_pool = LifoQueue(maxsize=_DB_POOL_MAX_SIZE)
+_db_pool_lock = threading.Lock()
+
+
+class PooledSQLiteConnection(sqlite3.Connection):
+    """SQLite connection that returns to the local pool on close()."""
+
+    def close(self):
+        if getattr(self, '_pool_closed', False):
+            return
+        _return_connection_to_pool(self)
+
+    def close_physical(self):
+        if getattr(self, '_pool_closed', False):
+            return
+        try:
+            super().close()
+        finally:
+            self._pool_closed = True
+            self._pool_in_pool = False
+
+
+def _configure_db_connection(conn):
+    conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA synchronous=NORMAL')
+    conn.execute('PRAGMA busy_timeout=60000')
+    conn.execute('PRAGMA cache_size=-64000')
+
+
+def _prepare_db_connection(conn):
+    _configure_db_connection(conn)
+    _ensure_user_schema(conn)
+    _ensure_purchase_schema(conn)
+    _ensure_materials_schema(conn)
+    _ensure_audit_schema(conn)
+    _ensure_shared_materials(conn)
+    _ensure_production_schema(conn)
+    _ensure_products_schema(conn)
+    _ensure_raw_material_schema(conn)
+    _ensure_material_lot_schema(conn)
+    _ensure_logistics_schema(conn)
+    _ensure_import_schema(conn)
+    _ensure_backup_schema(conn)
+    _ensure_dashboard_todo_schema(conn)
+    _cleanup_old_logs(conn)
+    return conn
+
+
+def _create_db_connection():
+    conn = sqlite3.connect(
+        str(DB_PATH),
+        timeout=60.0,
+        isolation_level=None,
+        check_same_thread=False,
+        factory=PooledSQLiteConnection,
+    )
+    conn._pool_closed = False
+    conn._pool_in_pool = False
+    return _prepare_db_connection(conn)
+
+
+def _acquire_pooled_connection():
+    while True:
+        try:
+            conn = _db_pool.get_nowait()
+        except Empty:
+            return _create_db_connection()
+
+        conn._pool_in_pool = False
+        if getattr(conn, '_pool_closed', False):
+            continue
+        try:
+            _configure_db_connection(conn)
+            conn.execute('SELECT 1')
+            return conn
+        except sqlite3.Error:
+            conn.close_physical()
+
+
+def _return_connection_to_pool(conn):
+    if conn is None or getattr(conn, '_pool_closed', False):
+        return
+    if getattr(conn, '_pool_in_pool', False):
+        return
+
+    try:
+        if conn.in_transaction:
+            conn.rollback()
+    except Exception:
+        conn.close_physical()
+        return
+
+    conn._pool_in_pool = True
+    try:
+        _db_pool.put_nowait(conn)
+    except Full:
+        conn._pool_in_pool = False
+        conn.close_physical()
+
+
+def _close_all_pooled_connections():
+    with _db_pool_lock:
+        while True:
+            try:
+                conn = _db_pool.get_nowait()
+            except Empty:
+                break
+            conn.close_physical()
+
+
+atexit.register(_close_all_pooled_connections)
 
 
 def normalize_user_role(role_value):
@@ -167,36 +283,9 @@ def password_needs_rehash(stored_hash):
 
 
 def get_db():
-    """데이터베이스 연결 - WAL 모드 + 긴 타임아웃"""
-    conn = sqlite3.connect(
-        str(DB_PATH),
-        timeout=60.0,
-        isolation_level=None,  # autocommit 모드
-        check_same_thread=False
-    )
-    conn.row_factory = sqlite3.Row
-
-    # WAL 모드 및 최적화 (매번 설정)
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.execute('PRAGMA synchronous=NORMAL')
-    conn.execute('PRAGMA busy_timeout=60000')
-    conn.execute('PRAGMA cache_size=-64000')
-
-    _ensure_user_schema(conn)
-    _ensure_purchase_schema(conn)
-    _ensure_materials_schema(conn)
-    _ensure_audit_schema(conn)
-    _ensure_shared_materials(conn)
-    _ensure_production_schema(conn)
-    _ensure_products_schema(conn)
-    _ensure_raw_material_schema(conn)
-    _ensure_material_lot_schema(conn)
-    _ensure_logistics_schema(conn)
-    _ensure_import_schema(conn)
-    _ensure_backup_schema(conn)
-    _ensure_dashboard_todo_schema(conn)
-    _cleanup_old_logs(conn)
-    return conn
+    """데이터베이스 연결 - SQLite 재사용 풀 + WAL 최적화"""
+    with _db_pool_lock:
+        return _acquire_pooled_connection()
 
 
 def close_db(conn):
@@ -204,7 +293,10 @@ def close_db(conn):
     if conn is None:
         return
     try:
-        conn.close()
+        if isinstance(conn, PooledSQLiteConnection):
+            conn.close()
+        else:
+            conn.close()
     except Exception:
         pass
 

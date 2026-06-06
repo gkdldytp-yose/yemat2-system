@@ -1765,8 +1765,9 @@ def materials():
     if export_status_tab not in ('pending', 'completed', 'rejected'):
         export_status_tab = 'pending'
 
-    with db_transaction() as conn:
-        cursor = conn.cursor()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
+    cursor = conn.cursor()
     _cleanup_orphan_material_refs(conn)
 
     if is_logistics_role:
@@ -2163,7 +2164,7 @@ def materials():
     issue_completed_groups = _group_request_rows_by_date(issue_requests_completed, 'processed_at')
     export_completed_groups = _group_request_rows_by_date(export_requests_completed, 'processed_at')
 
-    conn.close()
+    conn_context.__exit__(None, None, None)
     current_view_url = request.full_path[:-1] if request.full_path.endswith('?') else request.full_path
     dashboard_issue_prefill = session.pop('dashboard_issue_prefill', [])
 
@@ -2359,69 +2360,61 @@ def update_material():
         return "<script>alert('?? ?? ???? 0?? ?? ???.'); history.back();</script>"
 
     workplace = get_workplace()
-    conn = get_db()
-    cursor = conn.cursor()
-
     try:
-        cursor.execute('SELECT * FROM materials WHERE id = ?', (material_id,))
-        before = cursor.fetchone()
-        # 3. 통합 UPDATE 실행
-        target_workplace = SHARED_WORKPLACE if category_clean in SHARED_MATERIAL_CATEGORIES else workplace
-        cursor.execute(
-            '''
-            UPDATE materials 
-            SET code = ?, name = ?, category = ?, unit = ?, upper_unit = ?, upper_unit_qty = ?,
-                min_stock = ?, unit_price = ?, supplier_id = ?, moq = ?, workplace = ?
-            WHERE id = ?
-        ''',
-            (
-                new_code,
-                name,
-                category_clean,
-                unit,
-                upper_unit or None,
-                upper_unit_qty,
-                min_stock,
-                unit_price,
-                supplier_id,
-                moq_value,
-                target_workplace,
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM materials WHERE id = ?', (material_id,))
+            before = cursor.fetchone()
+            target_workplace = SHARED_WORKPLACE if category_clean in SHARED_MATERIAL_CATEGORIES else workplace
+            cursor.execute(
+                '''
+                UPDATE materials 
+                SET code = ?, name = ?, category = ?, unit = ?, upper_unit = ?, upper_unit_qty = ?,
+                    min_stock = ?, unit_price = ?, supplier_id = ?, moq = ?, workplace = ?
+                WHERE id = ?
+            ''',
+                (
+                    new_code,
+                    name,
+                    category_clean,
+                    unit,
+                    upper_unit or None,
+                    upper_unit_qty,
+                    min_stock,
+                    unit_price,
+                    supplier_id,
+                    moq_value,
+                    target_workplace,
+                    material_id,
+                ),
+            )
+
+            audit_log(
+                conn,
+                'update',
+                'material',
                 material_id,
-            ),
-        )
-
-        audit_log(
-            conn,
-            'update',
-            'material',
-            material_id,
-            {
-                'before': dict(before) if before else None,
-                'after': {
-                    'code': new_code,
-                    'name': name,
-                    'category': category_clean,
-                    'unit': unit,
-                    'upper_unit': upper_unit or None,
-                    'upper_unit_qty': upper_unit_qty,
-                    'min_stock': min_stock,
-                    'unit_price': unit_price,
-                    'supplier_id': supplier_id,
-                    'moq': moq_value,
-                    'workplace': target_workplace,
+                {
+                    'before': dict(before) if before else None,
+                    'after': {
+                        'code': new_code,
+                        'name': name,
+                        'category': category_clean,
+                        'unit': unit,
+                        'upper_unit': upper_unit or None,
+                        'upper_unit_qty': upper_unit_qty,
+                        'min_stock': min_stock,
+                        'unit_price': unit_price,
+                        'supplier_id': supplier_id,
+                        'moq': moq_value,
+                        'workplace': target_workplace,
+                    },
                 },
-            },
-        )
-
-        conn.commit()
+            )
     except sqlite3.IntegrityError:
-        conn.rollback()
         return "<script>alert('오류: 이미 존재하는 자재 코드입니다.'); history.back();</script>"
     except Exception as e:
-        conn.rollback()
         return f"<script>alert('수정 중 오류 발생: {str(e)}'); history.back();</script>"
-    finally:
-        conn.close()
 
     return_url = (request.form.get('return_url') or '').strip()
     if return_url.startswith('/materials'):
@@ -2439,55 +2432,51 @@ def move_material_workplace(material_id):
     if target_workplace not in valid_targets:
         return "<script>alert('??? ???? ?? ??? ???.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT id, code, name, category, workplace, unit, current_stock FROM materials WHERE id = ?', (material_id,))
-        before = cursor.fetchone()
-        if not before:
-            return "<script>alert('\ub85c\ud2b8\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.'); history.back();</script>"
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, code, name, category, workplace, unit, current_stock FROM materials WHERE id = ?', (material_id,))
+            before = cursor.fetchone()
+            if not before:
+                return "<script>alert('\ub85c\ud2b8\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.'); history.back();</script>"
 
-        source_workplace = (before['workplace'] or '').strip()
-        if target_workplace == LOGISTICS_WORKPLACE:
-            final_workplace = LOGISTICS_WORKPLACE
-        else:
-            final_workplace = SHARED_WORKPLACE if (before['category'] or '').strip() in SHARED_MATERIAL_CATEGORIES else target_workplace
-        if source_workplace == final_workplace:
-            return "<script>alert('?? ?????? ??? ? ????.'); history.back();</script>"
+            source_workplace = (before['workplace'] or '').strip()
+            if target_workplace == LOGISTICS_WORKPLACE:
+                final_workplace = LOGISTICS_WORKPLACE
+            else:
+                final_workplace = SHARED_WORKPLACE if (before['category'] or '').strip() in SHARED_MATERIAL_CATEGORIES else target_workplace
+            if source_workplace == final_workplace:
+                return "<script>alert('?? ?????? ??? ? ????.'); history.back();</script>"
 
-        cursor.execute('UPDATE materials SET workplace = ? WHERE id = ?', (final_workplace, material_id))
-        cursor.execute(
-            '''
-            INSERT INTO material_history (material_id, type, quantity, reason, note, created_at)
-            VALUES (?, 'MOVE_WORKPLACE', 0, ?, ?, datetime('now'))
-            ''',
-            (
+            cursor.execute('UPDATE materials SET workplace = ? WHERE id = ?', (final_workplace, material_id))
+            cursor.execute(
+                '''
+                INSERT INTO material_history (material_id, type, quantity, reason, note, created_at)
+                VALUES (?, 'MOVE_WORKPLACE', 0, ?, ?, datetime('now'))
+                ''',
+                (
+                    material_id,
+                    f'{source_workplace} -> {final_workplace}',
+                    move_note,
+                ),
+            )
+            audit_log(
+                conn,
+                'update',
+                'material_workplace_move',
                 material_id,
-                f'{source_workplace} -> {final_workplace}',
-                move_note,
-            ),
-        )
-        audit_log(
-            conn,
-            'update',
-            'material_workplace_move',
-            material_id,
-            {
-                'code': before['code'],
-                'name': before['name'],
-                'from_workplace': source_workplace,
-                'to_workplace': final_workplace,
-                'quantity': 0,
-                'note': move_note,
-                'stock_unchanged': True,
-            },
-        )
-        conn.commit()
+                {
+                    'code': before['code'],
+                    'name': before['name'],
+                    'from_workplace': source_workplace,
+                    'to_workplace': final_workplace,
+                    'quantity': 0,
+                    'note': move_note,
+                    'stock_unchanged': True,
+                },
+            )
     except Exception:
-        conn.rollback()
         return "<script>alert('??? ?? ? ??? ??????.'); history.back();</script>"
-    finally:
-        conn.close()
 
     return redirect(next_url or request.referrer or url_for('materials.materials'))
 
@@ -2495,9 +2484,8 @@ def move_material_workplace(material_id):
 @bp.route('/materials/<int:material_id>/detail')
 @login_required
 def material_detail(material_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_connection() as conn:
+        cursor = conn.cursor()
         _sync_material_stock_with_lots(conn, material_id)
         cursor.execute(
             """
@@ -3020,8 +3008,6 @@ SELECT
             'effective_receive_logs': effective_receive_logs,
             'effective_receive_total': effective_receive_total,
         })
-    finally:
-        conn.close()
 
 
 @bp.route('/materials/material-lots/add', methods=['POST'])
@@ -3042,59 +3028,55 @@ def add_material_lot():
     if not manufacture_date and not expiry_date:
         return jsonify({'ok': False, 'message': '\uc81c\uc870\uc77c \ub610\ub294 \uc18c\ube44\uae30\ud55c \uc911 \ud558\ub098\ub294 \uc785\ub825\ud574\uc8fc\uc138\uc694.'}), 400
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT id, code, name, unit, workplace FROM materials WHERE id = ?', (material_id,))
-        material = cursor.fetchone()
-        if not material:
-            return jsonify({'ok': False, 'message': '???? ?? ? ????.'}), 404
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, code, name, unit, workplace FROM materials WHERE id = ?', (material_id,))
+            material = cursor.fetchone()
+            if not material:
+                return jsonify({'ok': False, 'message': '???? ?? ? ????.'}), 404
 
-        lot_seq = _next_lot_seq(cursor, int(material_id), receiving_date)
-        lot = _build_material_lot(material['code'], receiving_date, lot_seq)
-        cursor.execute(
-            '''
-            INSERT INTO material_lots
-            (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''',
-            (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, current_quantity),
-        )
-        lot_id = cursor.lastrowid
-        action = 'create'
-
-        cursor.execute('UPDATE materials SET current_stock = current_stock + ?, unit_price = ? WHERE id = ?', (current_quantity, unit_price, material_id))
-
-        current_workplace = (session.get('workplace') or '').strip()
-        target_location_name = '\ubb3c\ub958\ucc3d\uace0' if current_workplace == LOGISTICS_WORKPLACE else (current_workplace or (material['workplace'] or '').strip())
-        target_location_id = _get_inventory_location_id(cursor, target_location_name)
-        if target_location_id:
-            _upsert_material_lot_balance(cursor, target_location_id, lot_id, current_quantity)
-
-        if current_workplace == LOGISTICS_WORKPLACE:
-            _increase_logistics_stock(
-                cursor,
-                material['code'],
-                material['name'],
-                material['unit'],
-                current_quantity,
-                (session.get('user') or {}).get('username'),
+            lot_seq = _next_lot_seq(cursor, int(material_id), receiving_date)
+            lot = _build_material_lot(material['code'], receiving_date, lot_seq)
+            cursor.execute(
+                '''
+                INSERT INTO material_lots
+                (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''',
+                (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, current_quantity),
             )
+            lot_id = cursor.lastrowid
+            action = 'create'
 
-        cursor.execute(
-            '''
-            INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-            VALUES (?, ?, ?, ?, ?)
-        ''',
-            (lot_id, material_id, action, current_quantity, lot),
-        )
-        conn.commit()
-        return jsonify({'ok': True, 'lot': lot, 'lot_id': lot_id})
+            cursor.execute('UPDATE materials SET current_stock = current_stock + ?, unit_price = ? WHERE id = ?', (current_quantity, unit_price, material_id))
+
+            current_workplace = (session.get('workplace') or '').strip()
+            target_location_name = '\ubb3c\ub958\ucc3d\uace0' if current_workplace == LOGISTICS_WORKPLACE else (current_workplace or (material['workplace'] or '').strip())
+            target_location_id = _get_inventory_location_id(cursor, target_location_name)
+            if target_location_id:
+                _upsert_material_lot_balance(cursor, target_location_id, lot_id, current_quantity)
+
+            if current_workplace == LOGISTICS_WORKPLACE:
+                _increase_logistics_stock(
+                    cursor,
+                    material['code'],
+                    material['name'],
+                    material['unit'],
+                    current_quantity,
+                    (session.get('user') or {}).get('username'),
+                )
+
+            cursor.execute(
+                '''
+                INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+                VALUES (?, ?, ?, ?, ?)
+            ''',
+                (lot_id, material_id, action, current_quantity, lot),
+            )
+            return jsonify({'ok': True, 'lot': lot, 'lot_id': lot_id})
     except Exception:
-        conn.rollback()
         return jsonify({'ok': False, 'message': '?? ?? ? ??? ??????.'}), 500
-    finally:
-        conn.close()
 
 @bp.route('/materials/material-lots/<int:lot_id>/update', methods=['POST'])
 @login_required
@@ -3113,19 +3095,19 @@ def update_material_lot(lot_id):
     if not manufacture_date and not expiry_date:
         return jsonify({'ok': False, 'message': '\uc81c\uc870\uc77c \ub610\ub294 \uc18c\ube44\uae30\ud55c \uc911 \ud558\ub098\ub294 \uc785\ub825\ud574\uc8fc\uc138\uc694.'}), 400
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM material_lots WHERE id = ?', (lot_id,))
-        before = cursor.fetchone()
-        if not before:
-            return jsonify({'ok': False, 'message': '\ub85c\ud2b8\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.'}), 404
-        if int(before['is_disposed'] or 0) == 1:
-            return jsonify({'ok': False, 'message': '폐기된 로트는 수정할 수 없습니다.'}), 400
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM material_lots WHERE id = ?', (lot_id,))
+            before = cursor.fetchone()
+            if not before:
+                return jsonify({'ok': False, 'message': '\ub85c\ud2b8\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.'}), 404
+            if int(before['is_disposed'] or 0) == 1:
+                return jsonify({'ok': False, 'message': '폐기된 로트는 수정할 수 없습니다.'}), 400
 
-        cursor.execute('SELECT code FROM materials WHERE id = ?', (before['material_id'],))
-        material = cursor.fetchone()
-        lot = _build_material_lot(material['code'] if material else '', receiving_date, before['lot_seq'])
+            cursor.execute('SELECT code FROM materials WHERE id = ?', (before['material_id'],))
+            material = cursor.fetchone()
+            lot = _build_material_lot(material['code'] if material else '', receiving_date, before['lot_seq'])
 
         cursor.execute('SELECT id FROM material_lots WHERE lot = ? AND id != ?', (lot, lot_id))
         if cursor.fetchone():
@@ -3187,13 +3169,9 @@ def update_material_lot(lot_id):
             (lot_id, before['material_id'], lot_total, lot),
         )
         audit_log(conn, 'update', 'material_lot', lot_id, {'before': dict(before), 'after': {'lot': lot, 'received_quantity': received_quantity, 'current_quantity': lot_total, 'supplier_lot': supplier_lot}})
-        conn.commit()
         return jsonify({'ok': True, 'lot': lot})
     except Exception as e:
-        conn.rollback()
         return jsonify({'ok': False, 'message': f'\ub85c\ud2b8 \uc218\uc815 \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4: {e}'}), 500
-    finally:
-        conn.close()
 
 
 @bp.route('/materials/material-lots/<int:lot_id>/delete', methods=['POST'])
@@ -3201,39 +3179,35 @@ def update_material_lot(lot_id):
 def delete_material_lot(lot_id):
     if not _can_manage_material_lots():
         return jsonify({'ok': False, 'message': '로트 관리 권한이 없습니다.'}), 403
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM material_lots WHERE id = ?', (lot_id,))
-        lot = cursor.fetchone()
-        if not lot:
-            return jsonify({'ok': False, 'message': '로트를 찾을 수 없습니다.'}), 404
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM material_lots WHERE id = ?', (lot_id,))
+            lot = cursor.fetchone()
+            if not lot:
+                return jsonify({'ok': False, 'message': '로트를 찾을 수 없습니다.'}), 404
 
-        current_qty = float(lot['current_quantity'] or lot['quantity'] or 0)
-        cursor.execute(
-            '''
-            UPDATE material_lots
-            SET is_disposed = 1, disposed_at = CURRENT_TIMESTAMP, current_quantity = 0, quantity = 0
-            WHERE id = ?
-        ''',
-            (lot_id,),
-        )
-        _clear_material_lot_balances(cursor, lot_id)
-        _sync_material_stock_with_lots(conn, lot['material_id'])
-        cursor.execute(
-            '''
-            INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-            VALUES (?, ?, 'delete', ?, ?)
-        ''',
-            (lot_id, lot['material_id'], current_qty, lot['lot']),
-        )
-        conn.commit()
-        return jsonify({'ok': True})
+            current_qty = float(lot['current_quantity'] or lot['quantity'] or 0)
+            cursor.execute(
+                '''
+                UPDATE material_lots
+                SET is_disposed = 1, disposed_at = CURRENT_TIMESTAMP, current_quantity = 0, quantity = 0
+                WHERE id = ?
+            ''',
+                (lot_id,),
+            )
+            _clear_material_lot_balances(cursor, lot_id)
+            _sync_material_stock_with_lots(conn, lot['material_id'])
+            cursor.execute(
+                '''
+                INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+                VALUES (?, ?, 'delete', ?, ?)
+            ''',
+                (lot_id, lot['material_id'], current_qty, lot['lot']),
+            )
+            return jsonify({'ok': True})
     except Exception:
-        conn.rollback()
         return jsonify({'ok': False, 'message': '로트 삭제 중 오류가 발생했습니다.'}), 500
-    finally:
-        conn.close()
 
 
 @bp.route('/materials/<int:material_id>/export', methods=['POST'])
@@ -3250,55 +3224,44 @@ def export_material(material_id):
     export_reason = request.form.get('export_reason', '')
     note = request.form.get('note', '')
 
-    conn = get_db()
-    cursor = conn.cursor()
-
     try:
-        # 2. 원자적 업데이트 및 재고 확인을 동시에 처리
-        begin_db_transaction(conn)
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT name, current_stock FROM materials WHERE id = ?', (material_id,))
+            material = cursor.fetchone()
 
-        cursor.execute('SELECT name, current_stock FROM materials WHERE id = ?', (material_id,))
-        material = cursor.fetchone()
+            if not material:
+                return redirect(url_for('materials.materials'))
 
-        if not material:
-            return redirect(url_for('materials.materials'))
+            if material['current_stock'] < export_quantity:
+                return "<script>alert('재고 부족'); history.back();</script>"
 
-        if material['current_stock'] < export_quantity:
-            return "<script>alert('재고 부족'); history.back();</script>"
+            cursor.execute(
+                '''
+                UPDATE materials 
+                SET current_stock = current_stock - ?
+                WHERE id = ? AND current_stock >= ?
+            ''',
+                (export_quantity, material_id, export_quantity),
+            )
 
-        # 3. 재고 차감
-        cursor.execute(
-            '''
-            UPDATE materials 
-            SET current_stock = current_stock - ?
-            WHERE id = ? AND current_stock >= ?
-        ''',
-            (export_quantity, material_id, export_quantity),
-        )
+            cursor.execute(
+                '''
+                INSERT INTO material_history (material_id, type, quantity, reason, note, created_at)
+                VALUES (?, 'EXPORT', ?, ?, ?, datetime('now'))
+            ''',
+                (material_id, export_quantity, export_reason, note),
+            )
 
-        # 4. 반출 이력 저장
-        cursor.execute(
-            '''
-            INSERT INTO material_history (material_id, type, quantity, reason, note, created_at)
-            VALUES (?, 'EXPORT', ?, ?, ?, datetime('now'))
-        ''',
-            (material_id, export_quantity, export_reason, note),
-        )
-
-        audit_log(
-            conn,
-            'export',
-            'material',
-            material_id,
-            {'quantity': export_quantity, 'reason': export_reason, 'note': note},
-        )
-
-        conn.commit()
+            audit_log(
+                conn,
+                'export',
+                'material',
+                material_id,
+                {'quantity': export_quantity, 'reason': export_reason, 'note': note},
+            )
     except Exception as e:
-        conn.rollback()
         return f"오류 발생: {str(e)}", 500
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials'))
 
@@ -3309,7 +3272,8 @@ def delete_material(material_id):
     """부자재 삭제"""
     if not _can_manage_material_master():
         return "<script>alert('부자재 삭제 권한이 없습니다.'); history.back();</script>"
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
 
     # BOM에 사용 중인지 확인
@@ -3391,7 +3355,8 @@ def raw_materials():
     selected_done_scope = (request.args.get('done_scope') or '').strip().lower()
     if selected_done_scope not in ('all', 'month'):
         selected_done_scope = ''
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
 
     # ?? ?? (???? ??)
@@ -3772,7 +3737,7 @@ def raw_materials():
         ]
     done_raw_groups = build_raw_groups(done_source_rows)
 
-    conn.close()
+    conn_context.__exit__(None, None, None)
 
     return render_template(
         'raw_materials.html',
@@ -3816,7 +3781,8 @@ def raw_materials_activity():
 
     date_s = target_date.isoformat()
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         where_clause = ''
@@ -3896,7 +3862,7 @@ def raw_materials_activity():
     except Exception as e:
         return jsonify({'ok': False, 'message': str(e)}), 500
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/raw-materials/<int:raw_material_id>/detail')
@@ -3905,7 +3871,8 @@ def raw_material_detail(raw_material_id):
     """원초 로트 상세 조회(원초명 클릭 모달용)"""
     workplace = get_workplace()
     is_logistics = workplace == LOGISTICS_WORKPLACE
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         if is_logistics:
@@ -4080,14 +4047,15 @@ def raw_material_detail(raw_material_id):
         payload['used_quantity_sum'] = sum(float(row.get('used_quantity') or 0) for row in lots)
         return jsonify({'ok': True, 'raw_material': payload, 'lots': lots, 'usage_logs': usage_logs, 'receive_logs': receive_logs})
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/raw-materials/<int:raw_material_id>/checksheet-preview')
 @login_required
 def raw_material_checksheet_preview(raw_material_id):
     workplace = get_workplace()
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -4246,7 +4214,7 @@ def raw_material_checksheet_preview(raw_material_id):
             author_name=author_name,
         )
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/raw-materials/<int:raw_material_id>/checksheet-notes', methods=['POST'])
@@ -4256,61 +4224,57 @@ def save_raw_material_checksheet_notes(raw_material_id):
     payload = request.get_json(silent=True) or {}
     rows = payload.get('rows') or []
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute(
-            '''
-            SELECT id
-            FROM raw_materials
-            WHERE id = ?
-              AND workplace = ?
-            ''',
-            (raw_material_id, workplace),
-        )
-        raw = cursor.fetchone()
-        if not raw:
-            return jsonify({'ok': False, 'message': '원초를 찾을 수 없습니다.'}), 404
-
-        username = (session.get('user', {}) or {}).get('username') or ''
-        cleaned_rows = []
-        for row in rows:
-            use_date = str((row or {}).get('use_date') or '').strip()
-            note = str((row or {}).get('note') or '').rstrip()
-            if not use_date:
-                continue
-            cleaned_rows.append((use_date, note))
-
-        if cleaned_rows:
-            cursor.executemany(
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
                 '''
-                INSERT INTO raw_material_checksheet_notes
-                (raw_material_id, use_date, note, created_by, updated_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                ON CONFLICT(raw_material_id, use_date) DO UPDATE SET
-                    note = excluded.note,
-                    updated_by = excluded.updated_by,
-                    updated_at = CURRENT_TIMESTAMP
+                SELECT id
+                FROM raw_materials
+                WHERE id = ?
+                  AND workplace = ?
                 ''',
-                [(raw_material_id, use_date, note, username, username) for use_date, note in cleaned_rows],
+                (raw_material_id, workplace),
             )
-            cursor.executemany(
-                '''
-                DELETE FROM raw_material_checksheet_notes
-                WHERE raw_material_id = ?
-                  AND use_date = ?
-                  AND COALESCE(TRIM(note), '') = ''
-                ''',
-                [(raw_material_id, use_date) for use_date, _note in cleaned_rows],
-            )
+            raw = cursor.fetchone()
+            if not raw:
+                return jsonify({'ok': False, 'message': '원초를 찾을 수 없습니다.'}), 404
 
-        conn.commit()
-        return jsonify({'ok': True})
+            username = (session.get('user', {}) or {}).get('username') or ''
+            cleaned_rows = []
+            for row in rows:
+                use_date = str((row or {}).get('use_date') or '').strip()
+                note = str((row or {}).get('note') or '').rstrip()
+                if not use_date:
+                    continue
+                cleaned_rows.append((use_date, note))
+
+            if cleaned_rows:
+                cursor.executemany(
+                    '''
+                    INSERT INTO raw_material_checksheet_notes
+                    (raw_material_id, use_date, note, created_by, updated_by, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    ON CONFLICT(raw_material_id, use_date) DO UPDATE SET
+                        note = excluded.note,
+                        updated_by = excluded.updated_by,
+                        updated_at = CURRENT_TIMESTAMP
+                    ''',
+                    [(raw_material_id, use_date, note, username, username) for use_date, note in cleaned_rows],
+                )
+                cursor.executemany(
+                    '''
+                    DELETE FROM raw_material_checksheet_notes
+                    WHERE raw_material_id = ?
+                      AND use_date = ?
+                      AND COALESCE(TRIM(note), '') = ''
+                    ''',
+                    [(raw_material_id, use_date) for use_date, _note in cleaned_rows],
+                )
+
+            return jsonify({'ok': True})
     except Exception as e:
-        conn.rollback()
         return jsonify({'ok': False, 'message': str(e)}), 500
-    finally:
-        conn.close()
 
 
 @bp.route('/raw-material-lots/<int:lot_id>/update', methods=['POST'])
@@ -4329,50 +4293,46 @@ def update_raw_material_lot(lot_id):
     if current_stock > total_stock:
         return jsonify({'ok': False, 'message': 'Current stock cannot exceed total stock.'}), 400
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM raw_materials WHERE id = ? AND workplace = ?', (lot_id, workplace))
-        before = cursor.fetchone()
-        if not before:
-            return jsonify({'ok': False, 'message': 'Raw lot not found.'}), 404
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM raw_materials WHERE id = ? AND workplace = ?', (lot_id, workplace))
+            before = cursor.fetchone()
+            if not before:
+                return jsonify({'ok': False, 'message': 'Raw lot not found.'}), 404
 
-        used_quantity = total_stock - current_stock
-        cursor.execute(
-            '''
-            UPDATE raw_materials
-            SET receiving_date = ?, ja_ho = ?, car_number = ?, sheets_per_sok = ?, total_stock = ?, current_stock = ?, used_quantity = ?
-            WHERE id = ?
-            ''',
-            (receiving_date, ja_ho, ja_ho, sheets_per_sok, total_stock, current_stock, used_quantity, lot_id),
-        )
-        final_code, lot = _ensure_raw_code_and_lot(cursor, lot_id, before['code'], receiving_date, ja_ho)
-        audit_log(
-            conn,
-            'update',
-            'raw_material_lot',
-            lot_id,
-            {
-                'before': dict(before),
-                'after': {
-                    'receiving_date': receiving_date,
-                    'ja_ho': ja_ho,
-                    'sheets_per_sok': sheets_per_sok,
-                    'total_stock': total_stock,
-                    'current_stock': current_stock,
-                    'used_quantity': used_quantity,
-                    'code': final_code,
-                    'lot': lot,
+            used_quantity = total_stock - current_stock
+            cursor.execute(
+                '''
+                UPDATE raw_materials
+                SET receiving_date = ?, ja_ho = ?, car_number = ?, sheets_per_sok = ?, total_stock = ?, current_stock = ?, used_quantity = ?
+                WHERE id = ?
+                ''',
+                (receiving_date, ja_ho, ja_ho, sheets_per_sok, total_stock, current_stock, used_quantity, lot_id),
+            )
+            final_code, lot = _ensure_raw_code_and_lot(cursor, lot_id, before['code'], receiving_date, ja_ho)
+            audit_log(
+                conn,
+                'update',
+                'raw_material_lot',
+                lot_id,
+                {
+                    'before': dict(before),
+                    'after': {
+                        'receiving_date': receiving_date,
+                        'ja_ho': ja_ho,
+                        'sheets_per_sok': sheets_per_sok,
+                        'total_stock': total_stock,
+                        'current_stock': current_stock,
+                        'used_quantity': used_quantity,
+                        'code': final_code,
+                        'lot': lot,
+                    },
                 },
-            },
-        )
-        conn.commit()
-        return jsonify({'ok': True, 'lot': lot})
+            )
+            return jsonify({'ok': True, 'lot': lot})
     except Exception:
-        conn.rollback()
         return jsonify({'ok': False, 'message': 'Failed to update raw lot.'}), 500
-    finally:
-        conn.close()
 
 
 @bp.route('/raw-materials/add', methods=['POST'])
@@ -4453,55 +4413,51 @@ def update_raw_material_basic():
     if sheets_per_sok < 0:
         sheets_per_sok = 0
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute(
-            '''
-            SELECT *
-            FROM raw_materials
-            WHERE id = ?
-              AND workplace = ?
-            ''',
-            (raw_id, workplace),
-        )
-        before = cursor.fetchone()
-        if not before:
-            conn.close()
-            return redirect(url_for('materials.raw_materials'))
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT *
+                FROM raw_materials
+                WHERE id = ?
+                  AND workplace = ?
+                ''',
+                (raw_id, workplace),
+            )
+            before = cursor.fetchone()
+            if not before:
+                return redirect(url_for('materials.raw_materials'))
 
-        cursor.execute(
-            '''
-            UPDATE raw_materials
-            SET code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?
-            WHERE id = ?
-              AND workplace = ?
-            ''',
-            (code, name, sheets_per_sok, receiving_date, ja_ho, ja_ho, raw_id, workplace),
-        )
-        final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
-        audit_log(
-            conn,
-            'update',
-            'raw_material',
-            raw_id,
-            {
-                'before': dict(before),
-                'after': {
-                    'name': name,
-                    'code': final_code,
-                    'lot': lot,
-                    'sheets_per_sok': sheets_per_sok,
-                    'receiving_date': receiving_date,
-                    'ja_ho': ja_ho,
+            cursor.execute(
+                '''
+                UPDATE raw_materials
+                SET code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?
+                WHERE id = ?
+                  AND workplace = ?
+                ''',
+                (code, name, sheets_per_sok, receiving_date, ja_ho, ja_ho, raw_id, workplace),
+            )
+            final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
+            audit_log(
+                conn,
+                'update',
+                'raw_material',
+                raw_id,
+                {
+                    'before': dict(before),
+                    'after': {
+                        'name': name,
+                        'code': final_code,
+                        'lot': lot,
+                        'sheets_per_sok': sheets_per_sok,
+                        'receiving_date': receiving_date,
+                        'ja_ho': ja_ho,
+                    },
                 },
-            },
-        )
-        conn.commit()
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('materials.raw_materials'))
 
@@ -4653,23 +4609,20 @@ def update_raw_material_stock():
 @login_required
 def raw_material_logs_data(raw_material_id):
     """원초 로그 JSON 데이터"""
-    conn = get_db()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        '''
-        SELECT rml.*, p.production_date, pr.name as product_name
-        FROM raw_material_logs rml
-        LEFT JOIN productions p ON rml.production_id = p.id
-        LEFT JOIN products pr ON p.product_id = pr.id
-        WHERE rml.raw_material_id = ?
-        ORDER BY rml.created_at DESC
-    ''',
-        (raw_material_id,),
-    )
-    logs = cursor.fetchall()
-
-    conn.close()
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT rml.*, p.production_date, pr.name as product_name
+            FROM raw_material_logs rml
+            LEFT JOIN productions p ON rml.production_id = p.id
+            LEFT JOIN products pr ON p.product_id = pr.id
+            WHERE rml.raw_material_id = ?
+            ORDER BY rml.created_at DESC
+        ''',
+            (raw_material_id,),
+        )
+        logs = cursor.fetchall()
 
     # 로그 타입 텍스트 변환
     type_map = {
@@ -4713,28 +4666,22 @@ def raw_material_logs_data(raw_material_id):
 @login_required
 def raw_material_logs(raw_material_id):
     """원초 사용 로그 조회"""
-    conn = get_db()
-    cursor = conn.cursor()
-
-    # 원초 정보
-    cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (raw_material_id,))
-    raw_material = cursor.fetchone()
-
-    # 로그 조회
-    cursor.execute(
-        '''
-        SELECT rml.*, p.production_date, pr.name as product_name
-        FROM raw_material_logs rml
-        LEFT JOIN productions p ON rml.production_id = p.id
-        LEFT JOIN products pr ON p.product_id = pr.id
-        WHERE rml.raw_material_id = ?
-        ORDER BY rml.created_at DESC
-    ''',
-        (raw_material_id,),
-    )
-    logs = cursor.fetchall()
-
-    conn.close()
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (raw_material_id,))
+        raw_material = cursor.fetchone()
+        cursor.execute(
+            '''
+            SELECT rml.*, p.production_date, pr.name as product_name
+            FROM raw_material_logs rml
+            LEFT JOIN productions p ON rml.production_id = p.id
+            LEFT JOIN products pr ON p.product_id = pr.id
+            WHERE rml.raw_material_id = ?
+            ORDER BY rml.created_at DESC
+        ''',
+            (raw_material_id,),
+        )
+        logs = cursor.fetchall()
 
     return render_template('raw_material_logs.html', user=session['user'], raw_material=raw_material, logs=logs)
 
@@ -4743,48 +4690,38 @@ def raw_material_logs(raw_material_id):
 @role_required('rawmat')
 def delete_raw_material(raw_material_id):
     """원초 삭제 (BOM에서도 자동 제거)"""
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
 
-    # BOM에서 사용 중인지 확인
-    cursor.execute('SELECT COUNT(*) as cnt FROM bom WHERE raw_material_id = ?', (raw_material_id,))
-    bom_count = cursor.fetchone()['cnt']
+        cursor.execute('SELECT COUNT(*) as cnt FROM bom WHERE raw_material_id = ?', (raw_material_id,))
+        bom_count = cursor.fetchone()['cnt']
 
-    # 생산 기록에서 사용된 적 있는지 확인
-    cursor.execute(
-        '''
-        SELECT COUNT(*) as cnt FROM production_material_usage 
-        WHERE raw_material_id = ? AND actual_quantity > 0
-    ''',
-        (raw_material_id,),
-    )
-    usage_count = cursor.fetchone()['cnt']
+        cursor.execute(
+            '''
+            SELECT COUNT(*) as cnt FROM production_material_usage 
+            WHERE raw_material_id = ? AND actual_quantity > 0
+        ''',
+            (raw_material_id,),
+        )
+        usage_count = cursor.fetchone()['cnt']
 
-    if usage_count > 0:
-        conn.close()
-        return '''
-            <script>
-                alert('이 원초는 생산 기록에 사용되었으므로 삭제할 수 없습니다.');
-                window.history.back();
-            </script>
-        '''
+        if usage_count > 0:
+            return '''
+                <script>
+                    alert('이 원초는 생산 기록에 사용되었으므로 삭제할 수 없습니다.');
+                    window.history.back();
+                </script>
+            '''
 
-    cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (raw_material_id,))
-    before = cursor.fetchone()
+        cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (raw_material_id,))
+        before = cursor.fetchone()
 
-    # BOM에서 먼저 제거
-    if bom_count > 0:
-        cursor.execute('DELETE FROM bom WHERE raw_material_id = ?', (raw_material_id,))
+        if bom_count > 0:
+            cursor.execute('DELETE FROM bom WHERE raw_material_id = ?', (raw_material_id,))
 
-    # 로그 삭제
-    cursor.execute('DELETE FROM raw_material_logs WHERE raw_material_id = ?', (raw_material_id,))
-
-    # 원초 삭제
-    cursor.execute('DELETE FROM raw_materials WHERE id = ?', (raw_material_id,))
-    audit_log(conn, 'delete', 'raw_material', raw_material_id, {'before': dict(before) if before else None})
-
-    conn.commit()
-    conn.close()
+        cursor.execute('DELETE FROM raw_material_logs WHERE raw_material_id = ?', (raw_material_id,))
+        cursor.execute('DELETE FROM raw_materials WHERE id = ?', (raw_material_id,))
+        audit_log(conn, 'delete', 'raw_material', raw_material_id, {'before': dict(before) if before else None})
 
     return redirect(url_for('materials.raw_materials'))
 
@@ -4823,7 +4760,8 @@ def _render_purchase_orders_page(
     show_low_stock_tab=True,
     disable_purchase_actions=False,
 ):
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     _cleanup_orphan_material_refs(conn)
     _sync_material_stock_with_lots(conn)
@@ -5168,8 +5106,7 @@ def _render_purchase_orders_page(
         issue_requests = cursor.fetchall()
         export_issue_requests = []
 
-    conn.close()
-
+    conn_context.__exit__(None, None, None)
     receive_next_page = 'logistics' if page_mode == 'logistics' else 'purchase'
 
     return render_template(
@@ -5219,7 +5156,8 @@ def logistics_ledger():
     workplace_q = (request.args.get('workplace') or '').strip()
     product_id_q = (request.args.get('product_id') or '').strip()
     workplaces = _ledger_workplaces()
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         _sync_missing_logistics_lot_balances(conn)
@@ -5398,7 +5336,7 @@ def logistics_ledger():
         ledger_rows.sort(key=lambda x: ((x.get('code') or ''), (x.get('name') or '')))
         category_options = sorted({str((row.get('category') or '')).strip() for row in ledger_rows if str((row.get('category') or '')).strip()})
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
     return render_template(
         'logistics_ledger.html',
@@ -5479,66 +5417,58 @@ def receive_purchase_order(order_id):
     if not _is_logistics_manager():
         return "<script>alert('물류관리 권한이 필요합니다.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
 
-    # 입고일 업데이트
-    actual_delivery_date = request.form.get('actual_delivery_date')
-    cursor.execute(
-        '''
-        UPDATE purchase_orders
-        SET actual_delivery_date = ?, status = '입고완료'
-        WHERE id = ?
-    ''',
-        (actual_delivery_date, order_id),
-    )
-
-    # 각 항목별 입고 수량 및 재고 추가
-    cursor.execute(
-        '''
-        SELECT id, material_id, quantity
-        FROM purchase_order_items
-        WHERE purchase_order_id = ?
-    ''',
-        (order_id,),
-    )
-
-    items = cursor.fetchall()
-
-    for item in items:
-        item_id = item[0]
-        material_id = item[1]
-        quantity = item[2]
-
-        # 입고 수량 (form에서)
-        received_qty_key = f'received_{item_id}'
-        received_qty = request.form.get(received_qty_key, quantity)
-
-        # 입고 수량 업데이트
+        actual_delivery_date = request.form.get('actual_delivery_date')
         cursor.execute(
             '''
-            UPDATE purchase_order_items
-            SET received_quantity = ?
+            UPDATE purchase_orders
+            SET actual_delivery_date = ?, status = '입고완료'
             WHERE id = ?
         ''',
-            (received_qty, item_id),
+            (actual_delivery_date, order_id),
         )
 
-        cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (material_id,))
-        mat_row = cursor.fetchone()
-        if mat_row:
-            pool_code = _pool_code_from_row(mat_row)
-            _increase_logistics_stock(
-                cursor,
-                pool_code,
-                mat_row['name'],
-                mat_row['unit'],
-                received_qty,
-                session.get('user', {}).get('name'),
+        cursor.execute(
+            '''
+            SELECT id, material_id, quantity
+            FROM purchase_order_items
+            WHERE purchase_order_id = ?
+        ''',
+            (order_id,),
+        )
+
+        items = cursor.fetchall()
+
+        for item in items:
+            item_id = item[0]
+            material_id = item[1]
+            quantity = item[2]
+            received_qty_key = f'received_{item_id}'
+            received_qty = request.form.get(received_qty_key, quantity)
+
+            cursor.execute(
+                '''
+                UPDATE purchase_order_items
+                SET received_quantity = ?
+                WHERE id = ?
+            ''',
+                (received_qty, item_id),
             )
 
-    conn.commit()
-    conn.close()
+            cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (material_id,))
+            mat_row = cursor.fetchone()
+            if mat_row:
+                pool_code = _pool_code_from_row(mat_row)
+                _increase_logistics_stock(
+                    cursor,
+                    pool_code,
+                    mat_row['name'],
+                    mat_row['unit'],
+                    received_qty,
+                    session.get('user', {}).get('name'),
+                )
 
     return redirect(url_for('materials.materials', req_tab='issue', issue_status='pending'))
 
@@ -5557,94 +5487,92 @@ def add_purchase_request():
     if not expected_date:
         return "<script>alert('\uc785\uace0 \uc608\uc815\uc77c\uc744 \ub4f1\ub85d\ud574 \uc8fc\uc138\uc694.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT workplace, category, name, unit FROM materials WHERE id=?",
-        (material_id,),
-    )
-    mat = cursor.fetchone()
-    mat_category = (mat['category'] or '').strip() if mat else ''
-    mat_workplace = mat['workplace'] if mat else None
-    mat_name = (mat['name'] or '\ubd80\uc790\uc7ac') if mat else '\ubd80\uc790\uc7ac'
-    mat_unit = (mat['unit'] or '').strip() if mat else ''
-    target_workplace = (
-        SHARED_WORKPLACE
-        if mat_category in SHARED_MATERIAL_CATEGORIES or mat_workplace in (None, SHARED_WORKPLACE)
-        else workplace
-    )
-
-    cursor.execute(
-        "SELECT id FROM purchase_requests WHERE material_id=? AND status!=? AND workplace=?",
-        (material_id, PURCHASE_STATUS_RECEIVED, target_workplace),
-    )
-    existing = cursor.fetchone()
-    username = session['user'].get('name') if session.get('user') else None
-    requester_username = session['user'].get('username') if session.get('user') else None
-
-    if existing:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
-            """
-            UPDATE purchase_requests
-            SET ordered_quantity=?, expected_delivery_date=?, status=?,
-                ordered_at=CURRENT_TIMESTAMP, note=?, ordered_by=?, requester_username=?
-            WHERE id=?
-        """,
-            (quantity, expected_date, PURCHASE_STATUS_ORDERED, note, username, requester_username, existing['id']),
+            "SELECT workplace, category, name, unit FROM materials WHERE id=?",
+            (material_id,),
         )
-        audit_log(
-            conn,
-            'update',
-            'purchase_request',
-            existing['id'],
-            {
-                'ordered_quantity': quantity,
-                'expected_delivery_date': expected_date,
-                'status': PURCHASE_STATUS_ORDERED,
-                'note': note,
-                'ordered_by': username,
-                'requester_username': requester_username,
-                'workplace': target_workplace,
-            },
-        )
-    else:
-        cursor.execute(
-            """
-            INSERT INTO purchase_requests
-            (material_id, status, requested_quantity, ordered_quantity, expected_delivery_date, note, ordered_at, workplace, ordered_by, requester_username)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)
-        """,
-            (material_id, PURCHASE_STATUS_ORDERED, quantity, quantity, expected_date, note, target_workplace, username, requester_username),
-        )
-        audit_log(
-            conn,
-            'create',
-            'purchase_request',
-            cursor.lastrowid,
-            {
-                'material_id': material_id,
-                'status': PURCHASE_STATUS_ORDERED,
-                'requested_quantity': quantity,
-                'ordered_quantity': quantity,
-                'expected_delivery_date': expected_date,
-                'note': note,
-                'workplace': target_workplace,
-                'ordered_by': username,
-                'requester_username': requester_username,
-            },
+        mat = cursor.fetchone()
+        mat_category = (mat['category'] or '').strip() if mat else ''
+        mat_workplace = mat['workplace'] if mat else None
+        mat_name = (mat['name'] or '\ubd80\uc790\uc7ac') if mat else '\ubd80\uc790\uc7ac'
+        mat_unit = (mat['unit'] or '').strip() if mat else ''
+        target_workplace = (
+            SHARED_WORKPLACE
+            if mat_category in SHARED_MATERIAL_CATEGORIES or mat_workplace in (None, SHARED_WORKPLACE)
+            else workplace
         )
 
-    logistics_users = get_usernames_for_notification(conn, roles=['logistics'], include_admin=True)
-    change_label = '\ubc1c\uc8fc \uc694\uccad \ubcc0\uacbd' if existing else '\uc0c8 \ubc1c\uc8fc \uc694\uccad'
-    _notify_users(
-        conn,
-        logistics_users,
-        f"{change_label}: {mat_name}",
-        f"{target_workplace} / \uc218\ub7c9 {float(quantity or 0):g}{mat_unit} / \uc785\uace0\uc608\uc815 {expected_date}",
-        '/purchase-orders',
-    )
-    conn.commit()
-    conn.close()
+        cursor.execute(
+            "SELECT id FROM purchase_requests WHERE material_id=? AND status!=? AND workplace=?",
+            (material_id, PURCHASE_STATUS_RECEIVED, target_workplace),
+        )
+        existing = cursor.fetchone()
+        username = session['user'].get('name') if session.get('user') else None
+        requester_username = session['user'].get('username') if session.get('user') else None
+
+        if existing:
+            cursor.execute(
+                """
+                UPDATE purchase_requests
+                SET ordered_quantity=?, expected_delivery_date=?, status=?,
+                    ordered_at=CURRENT_TIMESTAMP, note=?, ordered_by=?, requester_username=?
+                WHERE id=?
+            """,
+                (quantity, expected_date, PURCHASE_STATUS_ORDERED, note, username, requester_username, existing['id']),
+            )
+            audit_log(
+                conn,
+                'update',
+                'purchase_request',
+                existing['id'],
+                {
+                    'ordered_quantity': quantity,
+                    'expected_delivery_date': expected_date,
+                    'status': PURCHASE_STATUS_ORDERED,
+                    'note': note,
+                    'ordered_by': username,
+                    'requester_username': requester_username,
+                    'workplace': target_workplace,
+                },
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO purchase_requests
+                (material_id, status, requested_quantity, ordered_quantity, expected_delivery_date, note, ordered_at, workplace, ordered_by, requester_username)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)
+            """,
+                (material_id, PURCHASE_STATUS_ORDERED, quantity, quantity, expected_date, note, target_workplace, username, requester_username),
+            )
+            audit_log(
+                conn,
+                'create',
+                'purchase_request',
+                cursor.lastrowid,
+                {
+                    'material_id': material_id,
+                    'status': PURCHASE_STATUS_ORDERED,
+                    'requested_quantity': quantity,
+                    'ordered_quantity': quantity,
+                    'expected_delivery_date': expected_date,
+                    'note': note,
+                    'workplace': target_workplace,
+                    'ordered_by': username,
+                    'requester_username': requester_username,
+                },
+            )
+
+        logistics_users = get_usernames_for_notification(conn, roles=['logistics'], include_admin=True)
+        change_label = '\ubc1c\uc8fc \uc694\uccad \ubcc0\uacbd' if existing else '\uc0c8 \ubc1c\uc8fc \uc694\uccad'
+        _notify_users(
+            conn,
+            logistics_users,
+            f"{change_label}: {mat_name}",
+            f"{target_workplace} / \uc218\ub7c9 {float(quantity or 0):g}{mat_unit} / \uc785\uace0\uc608\uc815 {expected_date}",
+            '/purchase-orders',
+        )
     return redirect(url_for('materials.materials', req_tab='issue', issue_status='pending'))
 
 
@@ -5663,96 +5591,90 @@ def bulk_add_purchase_requests_from_materials():
     if not selected_material_ids:
         return "<script>alert('발주 등록할 부자재를 선택해 주세요.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
     username = session['user'].get('name') if session.get('user') else None
     requester_username = session['user'].get('username') if session.get('user') else None
     created_count = 0
     updated_count = 0
 
     try:
-        for material_id in selected_material_ids:
-            qty_raw = (request.form.get(f'qty_{material_id}') or '').strip()
-            try:
-                quantity = float(qty_raw or 0)
-            except ValueError:
-                continue
-            if quantity <= 0:
-                continue
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            for material_id in selected_material_ids:
+                qty_raw = (request.form.get(f'qty_{material_id}') or '').strip()
+                try:
+                    quantity = float(qty_raw or 0)
+                except ValueError:
+                    continue
+                if quantity <= 0:
+                    continue
 
-            cursor.execute(
-                "SELECT id, workplace, category FROM materials WHERE id=?",
-                (material_id,),
-            )
-            mat = cursor.fetchone()
-            if not mat:
-                continue
-
-            mat_category = (mat['category'] or '').strip()
-            mat_workplace = mat['workplace']
-            target_workplace = (
-                SHARED_WORKPLACE
-                if mat_category in SHARED_MATERIAL_CATEGORIES or mat_workplace in (None, SHARED_WORKPLACE)
-                else workplace
-            )
-
-            cursor.execute(
-                "SELECT id FROM purchase_requests WHERE material_id=? AND status!=? AND workplace=?",
-                (material_id, PURCHASE_STATUS_RECEIVED, target_workplace),
-            )
-            existing = cursor.fetchone()
-
-            if existing:
                 cursor.execute(
-                    """
-                    UPDATE purchase_requests
-                    SET requested_quantity=?, ordered_quantity=?, expected_delivery_date=?,
-                        status=?, ordered_at=CURRENT_TIMESTAMP, note=?, ordered_by=?, requester_username=?
-                    WHERE id=?
-                """,
-                    (
-                        quantity,
-                        quantity,
-                        expected_date,
-                        PURCHASE_STATUS_ORDERED,
-                        note,
-                        username,
-                        requester_username,
-                        existing['id'],
-                    ),
+                    "SELECT id, workplace, category FROM materials WHERE id=?",
+                    (material_id,),
                 )
-                updated_count += 1
-            else:
+                mat = cursor.fetchone()
+                if not mat:
+                    continue
+
+                mat_category = (mat['category'] or '').strip()
+                mat_workplace = mat['workplace']
+                target_workplace = (
+                    SHARED_WORKPLACE
+                    if mat_category in SHARED_MATERIAL_CATEGORIES or mat_workplace in (None, SHARED_WORKPLACE)
+                    else workplace
+                )
+
                 cursor.execute(
-                    """
-                    INSERT INTO purchase_requests
-                    (material_id, status, requested_quantity, ordered_quantity, expected_delivery_date, note, ordered_at, workplace, ordered_by, requester_username)
-                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)
-                """,
-                    (
-                        material_id,
-                        PURCHASE_STATUS_ORDERED,
-                        quantity,
-                        quantity,
-                        expected_date,
-                        note,
-                        target_workplace,
-                        username,
-                        requester_username,
-                    ),
+                    "SELECT id FROM purchase_requests WHERE material_id=? AND status!=? AND workplace=?",
+                    (material_id, PURCHASE_STATUS_RECEIVED, target_workplace),
                 )
-                created_count += 1
+                existing = cursor.fetchone()
 
-        if created_count == 0 and updated_count == 0:
-            conn.rollback()
-            return "<script>alert('선택한 부자재의 발주 수량을 확인해 주세요.'); history.back();</script>"
+                if existing:
+                    cursor.execute(
+                        """
+                        UPDATE purchase_requests
+                        SET requested_quantity=?, ordered_quantity=?, expected_delivery_date=?,
+                            status=?, ordered_at=CURRENT_TIMESTAMP, note=?, ordered_by=?, requester_username=?
+                        WHERE id=?
+                    """,
+                        (
+                            quantity,
+                            quantity,
+                            expected_date,
+                            PURCHASE_STATUS_ORDERED,
+                            note,
+                            username,
+                            requester_username,
+                            existing['id'],
+                        ),
+                    )
+                    updated_count += 1
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO purchase_requests
+                        (material_id, status, requested_quantity, ordered_quantity, expected_delivery_date, note, ordered_at, workplace, ordered_by, requester_username)
+                        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)
+                    """,
+                        (
+                            material_id,
+                            PURCHASE_STATUS_ORDERED,
+                            quantity,
+                            quantity,
+                            expected_date,
+                            note,
+                            target_workplace,
+                            username,
+                            requester_username,
+                        ),
+                    )
+                    created_count += 1
 
-        conn.commit()
+            if created_count == 0 and updated_count == 0:
+                return "<script>alert('선택한 부자재의 발주 수량을 확인해 주세요.'); history.back();</script>"
     except Exception as e:
-        conn.rollback()
         return f"<script>alert('일괄 발주 등록 중 오류가 발생했습니다: {str(e)}'); history.back();</script>"
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue'))
 
@@ -5770,9 +5692,8 @@ def add_issue_request():
     if not material_id or requested_qty <= 0:
         return "<script>alert('불출 요청 수량을 확인해주세요.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (material_id,))
         mat = cursor.fetchone()
         if not mat:
@@ -5806,9 +5727,6 @@ def add_issue_request():
                 'requester_username': req_username,
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue'))
 
@@ -5842,13 +5760,12 @@ def bulk_add_issue_request():
     if not rows:
         return "<script>alert('요청할 자재와 수량을 입력해주세요.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
     created_count = 0
     req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     req_username = session.get('user', {}).get('username')
     requested_at = _local_timestamp_str()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         for material_id, qty, note in rows:
             cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (material_id,))
             mat = cursor.fetchone()
@@ -5882,9 +5799,6 @@ def bulk_add_issue_request():
                     'bulk': True,
                 },
             )
-        conn.commit()
-    finally:
-        conn.close()
 
     if created_count == 0:
         return "<script>alert('요청 가능한 자재가 없습니다.'); history.back();</script>"
@@ -5908,41 +5822,36 @@ def add_export_request():
     except ValueError:
         quantity = 0
 
-    conn = get_db()
-    cursor = conn.cursor()
     req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     req_username = session.get('user', {}).get('username')
     try:
-        req_id, pool_code, lot_text = _register_export_request_row(
-            cursor, workplace, req_user, req_username, material_id, lot_id, quantity, reason, reason_detail, note
-        )
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            req_id, pool_code, lot_text = _register_export_request_row(
+                cursor, workplace, req_user, req_username, material_id, lot_id, quantity, reason, reason_detail, note
+            )
 
-        audit_log(
-            conn,
-            'create',
-            'logistics_return_request',
-            req_id,
-            {
-                'material_id': material_id,
-                'material_code': pool_code,
-                'material_lot_id': lot_id,
-                'lot': lot_text,
-                'workplace': workplace,
-                'quantity': quantity,
-                'reason': reason,
-                'reason_detail': reason_detail,
-                'note': note,
-            },
-        )
-        conn.commit()
+            audit_log(
+                conn,
+                'create',
+                'logistics_return_request',
+                req_id,
+                {
+                    'material_id': material_id,
+                    'material_code': pool_code,
+                    'material_lot_id': lot_id,
+                    'lot': lot_text,
+                    'workplace': workplace,
+                    'quantity': quantity,
+                    'reason': reason,
+                    'reason_detail': reason_detail,
+                    'note': note,
+                },
+            )
     except ValueError as e:
-        conn.rollback()
         return _alert_back(str(e))
     except Exception:
-        conn.rollback()
         return _alert_back('반출 요청 등록 중 오류가 발생했습니다.')
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='export'))
 
@@ -5985,50 +5894,46 @@ def bulk_add_export_request():
     if not rows:
         return _alert_back('반출 요청할 항목을 추가해주세요.')
 
-    conn = get_db()
-    cursor = conn.cursor()
     req_user = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     req_username = session.get('user', {}).get('username')
     success_count = 0
     failed_items = []
     try:
-        for idx, (mid, lid, qty, reason, reason_detail, note) in enumerate(rows, start=1):
-            try:
-                req_id, pool_code, lot_text = _register_export_request_row(
-                    cursor, workplace, req_user, req_username, mid, lid, qty, reason, reason_detail, note
-                )
-                audit_log(
-                    conn,
-                    'create',
-                    'logistics_return_request',
-                    req_id,
-                    {
-                        'material_id': mid,
-                        'material_code': pool_code,
-                        'material_lot_id': lid,
-                        'lot': lot_text,
-                        'workplace': workplace,
-                        'quantity': qty,
-                        'reason': reason,
-                        'reason_detail': reason_detail,
-                        'note': note,
-                        'bulk': True,
-                        'row_index': idx,
-                    },
-                )
-                success_count += 1
-            except ValueError as e:
-                failed_items.append(f'{idx}. {_describe_export_request_item(cursor, mid, lid)} - {str(e)}')
-        conn.commit()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            for idx, (mid, lid, qty, reason, reason_detail, note) in enumerate(rows, start=1):
+                try:
+                    req_id, pool_code, lot_text = _register_export_request_row(
+                        cursor, workplace, req_user, req_username, mid, lid, qty, reason, reason_detail, note
+                    )
+                    audit_log(
+                        conn,
+                        'create',
+                        'logistics_return_request',
+                        req_id,
+                        {
+                            'material_id': mid,
+                            'material_code': pool_code,
+                            'material_lot_id': lid,
+                            'lot': lot_text,
+                            'workplace': workplace,
+                            'quantity': qty,
+                            'reason': reason,
+                            'reason_detail': reason_detail,
+                            'note': note,
+                            'bulk': True,
+                            'row_index': idx,
+                        },
+                    )
+                    success_count += 1
+                except ValueError as e:
+                    failed_items.append(f'{idx}. {_describe_export_request_item(cursor, mid, lid)} - {str(e)}')
         if failed_items:
             summary_lines = [f'반출 요청 등록 완료 {success_count}건, 실패 {len(failed_items)}건']
             summary_lines.extend(failed_items)
             return _alert_redirect('\n'.join(summary_lines), url_for('materials.materials', req_tab='export'))
     except Exception:
-        conn.rollback()
         return _alert_back('반출 요청 등록 중 오류가 발생했습니다.')
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='export'))
 
@@ -6049,9 +5954,8 @@ def update_issue_request(req_id):
 
     note = (request.form.get('note') or '').strip()
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
@@ -6083,9 +5987,6 @@ def update_issue_request(req_id):
                 'updated_by': session.get('user', {}).get('name') or session.get('user', {}).get('username'),
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue', issue_status_tab='pending'))
 
@@ -6097,9 +5998,8 @@ def delete_issue_request(req_id):
     if workplace == LOGISTICS_WORKPLACE:
         return "<script>alert('물류 작업장에서는 불출 요청 삭제를 할 수 없습니다.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
@@ -6125,9 +6025,6 @@ def delete_issue_request(req_id):
                 'requested_quantity': req_row['requested_quantity'],
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue', issue_status_tab='pending'))
 
@@ -6139,9 +6036,8 @@ def delete_all_pending_issue_requests():
     if workplace == LOGISTICS_WORKPLACE:
         return "<script>alert('물류 작업장에서는 불출 요청 일괄 삭제를 할 수 없습니다.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             '''
             SELECT id, material_id, material_code, material_name, requested_quantity
@@ -6174,9 +6070,6 @@ def delete_all_pending_issue_requests():
                 'deleted_by': session.get('user', {}).get('name') or session.get('user', {}).get('username'),
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue', issue_status_tab='pending'))
 
@@ -6188,9 +6081,8 @@ def delete_all_pending_export_requests():
     if workplace == LOGISTICS_WORKPLACE:
         return "<script>alert('물류 작업장에서는 반출 요청 일괄 삭제를 할 수 없습니다.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             '''
             SELECT id
@@ -6222,9 +6114,6 @@ def delete_all_pending_export_requests():
                 'deleted_by': session.get('user', {}).get('name') or session.get('user', {}).get('username'),
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='export', export_status_tab='pending'))
 
@@ -6236,9 +6125,8 @@ def delete_export_request(req_id):
     if workplace == LOGISTICS_WORKPLACE:
         return "<script>alert('물류 작업장에서는 반출 요청 삭제를 할 수 없습니다.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
@@ -6264,9 +6152,6 @@ def delete_export_request(req_id):
                 'requested_quantity': req_row['requested_quantity'],
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='export', export_status_tab='pending'))
 
@@ -6294,9 +6179,8 @@ def complete_issue_request(req_id):
         if not (row.get('receiving_date') or '').strip():
             return "<script>alert('? lot? ???? ?????.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
@@ -6373,9 +6257,6 @@ def complete_issue_request(req_id):
         )
         pending_row = cursor.fetchone()
         remaining_pending_count = int(pending_row['cnt'] or 0) if pending_row else 0
-        conn.commit()
-    finally:
-        conn.close()
 
     next_issue_status = 'pending' if remaining_pending_count > 0 else 'completed'
     return redirect(url_for('materials.materials', req_tab='issue', issue_status=next_issue_status))
@@ -6386,111 +6267,107 @@ def complete_issue_request(req_id):
 def cancel_completed_issue_request(req_id):
     current_username = (session.get('user', {}) or {}).get('username')
     current_name = (session.get('user', {}) or {}).get('name')
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
-        req_row = cursor.fetchone()
-        if not req_row:
-            return _alert_back('불출 요청을 찾을 수 없습니다.')
-        if (req_row['request_type'] or 'ISSUE') != 'ISSUE':
-            return _alert_back('불출 요청 건만 취소할 수 있습니다.')
-        if req_row['status'] != ISSUE_STATUS_COMPLETED:
-            return _alert_back('완료된 불출 요청만 취소할 수 있습니다.')
-        requester_username = (req_row['requester_username'] or '').strip()
-        requester_name = (req_row['requested_by'] or '').strip()
-        if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
-            return _alert_back('요청을 등록한 사용자만 완료 취소할 수 있습니다.')
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
+            req_row = cursor.fetchone()
+            if not req_row:
+                return _alert_back('불출 요청을 찾을 수 없습니다.')
+            if (req_row['request_type'] or 'ISSUE') != 'ISSUE':
+                return _alert_back('불출 요청 건만 취소할 수 있습니다.')
+            if req_row['status'] != ISSUE_STATUS_COMPLETED:
+                return _alert_back('완료된 불출 요청만 취소할 수 있습니다.')
+            requester_username = (req_row['requester_username'] or '').strip()
+            requester_name = (req_row['requested_by'] or '').strip()
+            if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
+                return _alert_back('요청을 등록한 사용자만 완료 취소할 수 있습니다.')
 
-        receipt_rows = _load_issue_receipt_lots(cursor, req_id)
-        if not receipt_rows:
-            receipt_rows = _infer_issue_receipt_lots(cursor, req_row)
-        if not receipt_rows:
-            return _alert_back('완료 취소에 필요한 lot 정보를 찾을 수 없습니다.')
+            receipt_rows = _load_issue_receipt_lots(cursor, req_id)
+            if not receipt_rows:
+                receipt_rows = _infer_issue_receipt_lots(cursor, req_row)
+            if not receipt_rows:
+                return _alert_back('완료 취소에 필요한 lot 정보를 찾을 수 없습니다.')
 
-        detail_rows = _load_issue_receipt_lot_details(cursor, req_id)
-        if _receipt_rows_include_disposed(detail_rows):
-            return _alert_back('폐기된 로트가 포함된 완료건은 취소할 수 없습니다.')
+            detail_rows = _load_issue_receipt_lot_details(cursor, req_id)
+            if _receipt_rows_include_disposed(detail_rows):
+                return _alert_back('폐기된 로트가 포함된 완료건은 취소할 수 없습니다.')
 
-        _rebuild_material_fifo_for_workplace(
-            conn,
-            cursor,
-            int(req_row['material_id']),
-            req_row['requester_workplace'],
-            (req_row['processed_at'] or '')[:10],
-            reconsume=False,
-        )
+            _rebuild_material_fifo_for_workplace(
+                conn,
+                cursor,
+                int(req_row['material_id']),
+                req_row['requester_workplace'],
+                (req_row['processed_at'] or '')[:10],
+                reconsume=False,
+            )
 
-        for row in receipt_rows:
-            lot_qty = _get_workplace_lot_quantity(cursor, req_row['requester_workplace'], int(row['material_id']), int(row['material_lot_id']))
-            if not _has_enough_quantity(lot_qty, float(row['quantity'] or 0)):
-                return _alert_back('이미 사용되었거나 이동된 재고가 있어 완료 취소할 수 없습니다.')
+            for row in receipt_rows:
+                lot_qty = _get_workplace_lot_quantity(cursor, req_row['requester_workplace'], int(row['material_id']), int(row['material_lot_id']))
+                if not _has_enough_quantity(lot_qty, float(row['quantity'] or 0)):
+                    return _alert_back('이미 사용되었거나 이동된 재고가 있어 완료 취소할 수 없습니다.')
 
-        for row in receipt_rows:
-            rollback_qty = float(row['quantity'] or 0)
-            consumed_qty = _consume_workplace_lot_quantity(cursor, req_row['requester_workplace'], int(row['material_lot_id']), rollback_qty)
-            if not _has_enough_quantity(consumed_qty, rollback_qty):
-                raise ValueError('재고 롤백 중 수량이 변경되었습니다. 다시 시도해 주세요.')
+            for row in receipt_rows:
+                rollback_qty = float(row['quantity'] or 0)
+                consumed_qty = _consume_workplace_lot_quantity(cursor, req_row['requester_workplace'], int(row['material_lot_id']), rollback_qty)
+                if not _has_enough_quantity(consumed_qty, rollback_qty):
+                    raise ValueError('재고 롤백 중 수량이 변경되었습니다. 다시 시도해 주세요.')
+                cursor.execute(
+                    '''
+                    UPDATE material_lots
+                    SET received_quantity = MAX(COALESCE(received_quantity, 0) - ?, 0),
+                        current_quantity = MAX(COALESCE(current_quantity, 0) - ?, 0),
+                        quantity = MAX(COALESCE(quantity, 0) - ?, 0)
+                    WHERE id = ?
+                    ''',
+                    (rollback_qty, rollback_qty, rollback_qty, int(row['material_lot_id'])),
+                )
+                cursor.execute(
+                    '''
+                    INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+                    VALUES (?, ?, 'issue_request_cancel', ?, ?)
+                    ''',
+                    (
+                        int(row['material_lot_id']),
+                        int(row['material_id']),
+                        rollback_qty,
+                        f"{req_row['requester_workplace']} 실입고 완료 취소",
+                    ),
+                )
+
+            cursor.execute('DELETE FROM logistics_issue_receipt_lots WHERE request_id = ?', (req_id,))
             cursor.execute(
                 '''
-                UPDATE material_lots
-                SET received_quantity = MAX(COALESCE(received_quantity, 0) - ?, 0),
-                    current_quantity = MAX(COALESCE(current_quantity, 0) - ?, 0),
-                    quantity = MAX(COALESCE(quantity, 0) - ?, 0)
+                UPDATE logistics_issue_requests
+                SET status = ?, approved_quantity = 0, processed_by = NULL, processed_at = NULL, process_note = NULL,
+                    receipt_updated_at = NULL, original_approved_quantity = NULL
                 WHERE id = ?
                 ''',
-                (rollback_qty, rollback_qty, rollback_qty, int(row['material_lot_id'])),
+                (ISSUE_STATUS_REQUESTED, req_id),
             )
-            cursor.execute(
-                '''
-                INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-                VALUES (?, ?, 'issue_request_cancel', ?, ?)
-                ''',
-                (
-                    int(row['material_lot_id']),
-                    int(row['material_id']),
-                    rollback_qty,
-                    f"{req_row['requester_workplace']} 실입고 완료 취소",
-                ),
+            _sync_material_stock_with_lots(conn, int(req_row['material_id']))
+            audit_log(
+                conn,
+                'update',
+                'logistics_issue_request',
+                req_id,
+                {
+                    'status': ISSUE_STATUS_REQUESTED,
+                    'cancel_completed': True,
+                    'material_code': req_row['material_code'],
+                    'material_id': req_row['material_id'],
+                    'requester_workplace': req_row['requester_workplace'],
+                },
             )
-
-        cursor.execute('DELETE FROM logistics_issue_receipt_lots WHERE request_id = ?', (req_id,))
-        cursor.execute(
-            '''
-            UPDATE logistics_issue_requests
-            SET status = ?, approved_quantity = 0, processed_by = NULL, processed_at = NULL, process_note = NULL,
-                receipt_updated_at = NULL, original_approved_quantity = NULL
-            WHERE id = ?
-            ''',
-            (ISSUE_STATUS_REQUESTED, req_id),
-        )
-        _sync_material_stock_with_lots(conn, int(req_row['material_id']))
-        audit_log(
-            conn,
-            'update',
-            'logistics_issue_request',
-            req_id,
-            {
-                'status': ISSUE_STATUS_REQUESTED,
-                'cancel_completed': True,
-                'material_code': req_row['material_code'],
-                'material_id': req_row['material_id'],
-                'requester_workplace': req_row['requester_workplace'],
-            },
-        )
-        _rebuild_material_fifo_for_workplace(
-            conn,
-            cursor,
-            int(req_row['material_id']),
-            req_row['requester_workplace'],
-            (req_row['processed_at'] or '')[:10],
-        )
-        conn.commit()
+            _rebuild_material_fifo_for_workplace(
+                conn,
+                cursor,
+                int(req_row['material_id']),
+                req_row['requester_workplace'],
+                (req_row['processed_at'] or '')[:10],
+            )
     except ValueError as e:
-        conn.rollback()
         return _alert_back(str(e))
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue', issue_status='completed'))
 
@@ -6521,119 +6398,115 @@ def update_completed_issue_request(req_id):
 
     current_username = (session.get('user', {}) or {}).get('username')
     current_name = (session.get('user', {}) or {}).get('name')
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
-        req_row = cursor.fetchone()
-        if not req_row:
-            return _alert_back('불출 완료건을 찾을 수 없습니다.')
-        if (req_row['request_type'] or 'ISSUE') != 'ISSUE':
-            return _alert_back('불출 완료건만 수정할 수 있습니다.')
-        if req_row['status'] != ISSUE_STATUS_COMPLETED:
-            return _alert_back('완료된 불출건만 수정할 수 있습니다.')
-        requester_username = (req_row['requester_username'] or '').strip()
-        requester_name = (req_row['requested_by'] or '').strip()
-        if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
-            return _alert_back('요청을 등록한 사용자만 완료건을 수정할 수 있습니다.')
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
+            req_row = cursor.fetchone()
+            if not req_row:
+                return _alert_back('불출 완료건을 찾을 수 없습니다.')
+            if (req_row['request_type'] or 'ISSUE') != 'ISSUE':
+                return _alert_back('불출 완료건만 수정할 수 있습니다.')
+            if req_row['status'] != ISSUE_STATUS_COMPLETED:
+                return _alert_back('완료된 불출건만 수정할 수 있습니다.')
+            requester_username = (req_row['requester_username'] or '').strip()
+            requester_name = (req_row['requested_by'] or '').strip()
+            if current_username not in {requester_username, requester_name} and (current_name or '') not in {requester_username, requester_name}:
+                return _alert_back('요청을 등록한 사용자만 완료건을 수정할 수 있습니다.')
 
-        receipt_rows = _load_issue_receipt_lots(cursor, req_id)
-        if not receipt_rows:
-            receipt_rows = _infer_issue_receipt_lots(cursor, req_row)
-        if not receipt_rows:
-            return _alert_back('기존 실입고 lot 정보를 찾을 수 없어 수정할 수 없습니다.')
+            receipt_rows = _load_issue_receipt_lots(cursor, req_id)
+            if not receipt_rows:
+                receipt_rows = _infer_issue_receipt_lots(cursor, req_row)
+            if not receipt_rows:
+                return _alert_back('기존 실입고 lot 정보를 찾을 수 없어 수정할 수 없습니다.')
 
-        detail_rows = _load_issue_receipt_lot_details(cursor, req_id)
-        if _receipt_rows_include_disposed(detail_rows):
-            return _alert_back('폐기된 로트가 포함된 완료건은 수정할 수 없습니다.')
-        previous_approved_qty = _round_to_1_decimal(req_row['approved_quantity'] or 0)
-        previous_processed_date = (req_row['processed_at'] or '')[:10]
-        _rebuild_material_fifo_for_workplace(
-            conn,
-            cursor,
-            int(req_row['material_id']),
-            req_row['requester_workplace'],
-            previous_processed_date,
-            reconsume=False,
-        )
-        _rollback_issue_receipt_rows(cursor, req_row, receipt_rows, '실입고 완료 수정 롤백')
-        cursor.execute('DELETE FROM logistics_issue_receipt_lots WHERE request_id = ?', (req_id,))
-
-        created_receipt_rows = []
-        for row in split_rows:
-            lot_id, _lot_name = _create_request_receipt_lot(
+            detail_rows = _load_issue_receipt_lot_details(cursor, req_id)
+            if _receipt_rows_include_disposed(detail_rows):
+                return _alert_back('폐기된 로트가 포함된 완료건은 수정할 수 없습니다.')
+            previous_approved_qty = _round_to_1_decimal(req_row['approved_quantity'] or 0)
+            previous_processed_date = (req_row['processed_at'] or '')[:10]
+            _rebuild_material_fifo_for_workplace(
+                conn,
                 cursor,
                 int(req_row['material_id']),
-                req_row['material_code'],
-                float(row.get('quantity') or 0),
                 req_row['requester_workplace'],
-                row.get('receiving_date'),
-                row.get('manufacture_date'),
-                row.get('expiry_date'),
-                int(row.get('manufacture_date_unknown') or 0),
-                int(row.get('expiry_date_unknown') or 0),
-                log_action='issue_request_update',
-                log_note=_build_issue_receipt_update_note(
-                    req_row['requester_workplace'],
-                    previous_approved_qty,
-                    approved_qty,
-                    before_row,
-                    row,
-                ),
-                created_at=processed_at,
+                previous_processed_date,
+                reconsume=False,
             )
-            created_receipt_rows.append((int(lot_id), float(row.get('quantity') or 0)))
-        for lot_id, quantity in created_receipt_rows:
-            _record_issue_receipt_lot(cursor, req_id, lot_id, quantity)
+            _rollback_issue_receipt_rows(cursor, req_row, receipt_rows, '실입고 완료 수정 롤백')
+            cursor.execute('DELETE FROM logistics_issue_receipt_lots WHERE request_id = ?', (req_id,))
 
-        cursor.execute(
-            '''
-            UPDATE logistics_issue_requests
-            SET approved_quantity = ?, processed_by = ?, processed_at = ?, process_note = ?,
-                receipt_updated_at = ?,
-                original_approved_quantity = COALESCE(original_approved_quantity, ?)
-            WHERE id = ?
-            ''',
-            (
-                approved_qty,
-                session.get('user', {}).get('name'),
-                processed_at,
-                process_note,
-                receipt_updated_at,
-                previous_approved_qty,
+            created_receipt_rows = []
+            for row in split_rows:
+                lot_id, _lot_name = _create_request_receipt_lot(
+                    cursor,
+                    int(req_row['material_id']),
+                    req_row['material_code'],
+                    float(row.get('quantity') or 0),
+                    req_row['requester_workplace'],
+                    row.get('receiving_date'),
+                    row.get('manufacture_date'),
+                    row.get('expiry_date'),
+                    int(row.get('manufacture_date_unknown') or 0),
+                    int(row.get('expiry_date_unknown') or 0),
+                    log_action='issue_request_update',
+                    log_note=_build_issue_receipt_update_note(
+                        req_row['requester_workplace'],
+                        previous_approved_qty,
+                        approved_qty,
+                        before_row,
+                        row,
+                    ),
+                    created_at=processed_at,
+                )
+                created_receipt_rows.append((int(lot_id), float(row.get('quantity') or 0)))
+            for lot_id, quantity in created_receipt_rows:
+                _record_issue_receipt_lot(cursor, req_id, lot_id, quantity)
+
+            cursor.execute(
+                '''
+                UPDATE logistics_issue_requests
+                SET approved_quantity = ?, processed_by = ?, processed_at = ?, process_note = ?,
+                    receipt_updated_at = ?,
+                    original_approved_quantity = COALESCE(original_approved_quantity, ?)
+                WHERE id = ?
+                ''',
+                (
+                    approved_qty,
+                    session.get('user', {}).get('name'),
+                    processed_at,
+                    process_note,
+                    receipt_updated_at,
+                    previous_approved_qty,
+                    req_id,
+                ),
+            )
+            _sync_material_stock_with_lots(conn, int(req_row['material_id']))
+            audit_log(
+                conn,
+                'update',
+                'logistics_issue_request',
                 req_id,
-            ),
-        )
-        _sync_material_stock_with_lots(conn, int(req_row['material_id']))
-        audit_log(
-            conn,
-            'update',
-            'logistics_issue_request',
-            req_id,
-            {
-                'status': ISSUE_STATUS_COMPLETED,
-                'updated_completed_receipt': True,
-                'before_approved_quantity': previous_approved_qty,
-                'approved_quantity': approved_qty,
-                'processed_by': session.get('user', {}).get('name'),
-                'material_code': req_row['material_code'],
-                'material_id': req_row['material_id'],
-                'requester_workplace': req_row['requester_workplace'],
-            },
-        )
-        _rebuild_material_fifo_for_workplace(
-            conn,
-            cursor,
-            int(req_row['material_id']),
-            req_row['requester_workplace'],
-            processed_at[:10],
-        )
-        conn.commit()
+                {
+                    'status': ISSUE_STATUS_COMPLETED,
+                    'updated_completed_receipt': True,
+                    'before_approved_quantity': previous_approved_qty,
+                    'approved_quantity': approved_qty,
+                    'processed_by': session.get('user', {}).get('name'),
+                    'material_code': req_row['material_code'],
+                    'material_id': req_row['material_id'],
+                    'requester_workplace': req_row['requester_workplace'],
+                },
+            )
+            _rebuild_material_fifo_for_workplace(
+                conn,
+                cursor,
+                int(req_row['material_id']),
+                req_row['requester_workplace'],
+                processed_at[:10],
+            )
     except ValueError as e:
-        conn.rollback()
         return _alert_back(str(e))
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue', issue_status='completed'))
 
@@ -6647,9 +6520,8 @@ def reject_issue_request(req_id):
 
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     processed_at = _local_timestamp_str()
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
@@ -6694,9 +6566,6 @@ def reject_issue_request(req_id):
             f"\uc0ac\uc720: {rejected_reason}",
             '/materials?req_tab=issue',
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='issue', issue_status='pending'))
 
@@ -6716,41 +6585,37 @@ def complete_export_request(req_id):
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     current_username = (session.get('user', {}) or {}).get('username')
     current_name = (session.get('user', {}) or {}).get('name')
-    conn = get_db()
-    cursor = conn.cursor()
+    remaining_pending_count = 0
     try:
-        req_row = _complete_export_request_row(
-            conn,
-            cursor,
-            req_id,
-            approved_qty,
-            process_note,
-            processed_at,
-            manager_name,
-            current_username,
-            current_name,
-        )
-        cursor.execute(
-            '''
-            SELECT COUNT(*) AS cnt
-            FROM logistics_issue_requests
-            WHERE requester_workplace = ?
-              AND COALESCE(request_type, 'ISSUE') = 'RETURN'
-              AND status = ?
-            ''',
-            (req_row['requester_workplace'], ISSUE_STATUS_REQUESTED),
-        )
-        pending_row = cursor.fetchone()
-        remaining_pending_count = int((pending_row['cnt'] if pending_row else 0) or 0)
-        conn.commit()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            req_row = _complete_export_request_row(
+                conn,
+                cursor,
+                req_id,
+                approved_qty,
+                process_note,
+                processed_at,
+                manager_name,
+                current_username,
+                current_name,
+            )
+            cursor.execute(
+                '''
+                SELECT COUNT(*) AS cnt
+                FROM logistics_issue_requests
+                WHERE requester_workplace = ?
+                  AND COALESCE(request_type, 'ISSUE') = 'RETURN'
+                  AND status = ?
+                ''',
+                (req_row['requester_workplace'], ISSUE_STATUS_REQUESTED),
+            )
+            pending_row = cursor.fetchone()
+            remaining_pending_count = int((pending_row['cnt'] if pending_row else 0) or 0)
     except ValueError as e:
-        conn.rollback()
         return _alert_back(str(e))
     except Exception:
-        conn.rollback()
         return _alert_back('반출 완료 처리 중 오류가 발생했습니다.')
-    finally:
-        conn.close()
 
     next_status = 'pending' if remaining_pending_count > 0 else 'completed'
     return redirect(url_for('materials.materials', req_tab='export', export_status=next_status))
@@ -6762,9 +6627,8 @@ def cancel_completed_export_request(req_id):
     current_username = (session.get('user', {}) or {}).get('username')
     current_name = (session.get('user', {}) or {}).get('name')
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
@@ -6822,9 +6686,6 @@ def cancel_completed_export_request(req_id):
                 'requester_workplace': req_row['requester_workplace'],
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.materials', req_tab='export', export_status='completed'))
 
@@ -6928,45 +6789,41 @@ def complete_selected_export_requests():
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     current_username = (session.get('user', {}) or {}).get('username')
     current_name = (session.get('user', {}) or {}).get('name')
-    conn = get_db()
-    cursor = conn.cursor()
     completed_count = 0
     failed_items = []
     last_workplace = None
     try:
-        for req_id in req_ids:
-            savepoint_name = f'export_bulk_complete_{req_id}'
-            cursor.execute(f'SAVEPOINT {savepoint_name}')
-            try:
-                cursor.execute('SELECT requester_workplace, requested_quantity FROM logistics_issue_requests WHERE id = ?', (req_id,))
-                row = cursor.fetchone()
-                if not row:
-                    raise ValueError('반출 요청을 찾을 수 없습니다.')
-                last_workplace = row['requester_workplace']
-                approved_qty = _round_to_1_decimal(row['requested_quantity'] or 0)
-                _complete_export_request_row(
-                    conn,
-                    cursor,
-                    req_id,
-                    approved_qty,
-                    '',
-                    processed_at,
-                    manager_name,
-                    current_username,
-                    current_name,
-                )
-                cursor.execute(f'RELEASE SAVEPOINT {savepoint_name}')
-                completed_count += 1
-            except Exception as e:
-                cursor.execute(f'ROLLBACK TO SAVEPOINT {savepoint_name}')
-                cursor.execute(f'RELEASE SAVEPOINT {savepoint_name}')
-                failed_items.append(f'{_describe_export_request_by_id(cursor, req_id)} - {str(e)}')
-        conn.commit()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            for req_id in req_ids:
+                savepoint_name = f'export_bulk_complete_{req_id}'
+                cursor.execute(f'SAVEPOINT {savepoint_name}')
+                try:
+                    cursor.execute('SELECT requester_workplace, requested_quantity FROM logistics_issue_requests WHERE id = ?', (req_id,))
+                    row = cursor.fetchone()
+                    if not row:
+                        raise ValueError('반출 요청을 찾을 수 없습니다.')
+                    last_workplace = row['requester_workplace']
+                    approved_qty = _round_to_1_decimal(row['requested_quantity'] or 0)
+                    _complete_export_request_row(
+                        conn,
+                        cursor,
+                        req_id,
+                        approved_qty,
+                        '',
+                        processed_at,
+                        manager_name,
+                        current_username,
+                        current_name,
+                    )
+                    cursor.execute(f'RELEASE SAVEPOINT {savepoint_name}')
+                    completed_count += 1
+                except Exception as e:
+                    cursor.execute(f'ROLLBACK TO SAVEPOINT {savepoint_name}')
+                    cursor.execute(f'RELEASE SAVEPOINT {savepoint_name}')
+                    failed_items.append(f'{_describe_export_request_by_id(cursor, req_id)} - {str(e)}')
     except Exception:
-        conn.rollback()
         return _alert_back('일괄 반출 완료 처리 중 오류가 발생했습니다.')
-    finally:
-        conn.close()
 
     target_url = url_for('materials.materials', req_tab='export', export_status='pending')
     if completed_count > 0 and not failed_items:
@@ -6987,9 +6844,8 @@ def reject_export_request(req_id):
 
     manager_name = session.get('user', {}).get('name') or session.get('user', {}).get('username')
     processed_at = _local_timestamp_str()
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM logistics_issue_requests WHERE id = ?', (req_id,))
         req_row = cursor.fetchone()
         if not req_row:
@@ -7034,9 +6890,6 @@ def reject_export_request(req_id):
             f"사유: {rejected_reason}",
             '/materials?req_tab=export',
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     return redirect(url_for('materials.purchase_orders'))
 
@@ -7204,138 +7057,126 @@ def receive_purchase_request(req_id):
     if (receiving_date or '').strip():
         received_at = f"{receiving_date.strip()} {now_local().strftime('%H:%M:%S')}"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        SELECT pr.material_id, pr.requester_username, pr.workplace,
-               m.code as material_code, m.name as material_name, m.unit
-        FROM purchase_requests pr
-        JOIN materials m ON m.id = pr.material_id
-        WHERE pr.id = ?
-        ''',
-        (req_id,),
-    )
-    row = cursor.fetchone()
-    username = session['user'].get('name') if session.get('user') else None
-
-    if row and received_qty > 0:
-        if receiving_date:
-            cursor.execute(
-                """
-                UPDATE purchase_requests
-                SET status=?, received_quantity=?, received_at=?, received_by=?
-                WHERE id=?
-                """,
-                (PURCHASE_STATUS_RECEIVED, received_qty, received_at, username, req_id),
-            )
-        else:
-            cursor.execute(
-                """
-                UPDATE purchase_requests
-                SET status=?, received_quantity=?, received_at=?, received_by=?
-                WHERE id=?
-                """,
-                (PURCHASE_STATUS_RECEIVED, received_qty, received_at, username, req_id),
-            )
-
-        cursor.execute(
-            """
-            UPDATE materials SET unit_price = ? WHERE id=?
-            """,
-            (unit_price, row['material_id']),
-        )
-        cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (row['material_id'],))
-        mat_row = cursor.fetchone()
-        if mat_row:
-            pool_code = _pool_code_from_row(mat_row)
-            _increase_logistics_stock(
-                cursor,
-                pool_code,
-                mat_row['name'],
-                mat_row['unit'],
-                received_qty,
-                username,
-            )
-
-        supplier_lot = (request.form.get('supplier_lot') or '').strip()
-        matched_lot = _find_matching_material_lot(
-            cursor,
-            int(row['material_id']),
-            receiving_date,
-            manufacture_date=manufacture_date,
-            expiry_date=expiry_date,
-            supplier_lot=supplier_lot,
-        )
-        if matched_lot:
-            lot_id = int(matched_lot['id'])
-            lot = matched_lot['lot']
-            cursor.execute(
-                '''
-                UPDATE material_lots
-                SET unit_price = ?,
-                    received_quantity = COALESCE(received_quantity, 0) + ?,
-                    current_quantity = COALESCE(current_quantity, 0) + ?,
-                    quantity = COALESCE(quantity, 0) + ?,
-                    manufacture_date = COALESCE(manufacture_date, ?),
-                    expiry_date = COALESCE(expiry_date, ?)
-                WHERE id = ?
-                ''',
-                (unit_price, received_qty, received_qty, received_qty, manufacture_date, expiry_date, lot_id),
-            )
-            lot_action = 'update'
-        else:
-            lot, lot_seq = _next_unique_material_lot(cursor, int(row['material_id']), row['material_code'], receiving_date)
-            cursor.execute(
-                '''
-                INSERT INTO material_lots
-                (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''',
-                (row['material_id'], lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_qty, received_qty, supplier_lot, received_qty),
-            )
-            lot_id = cursor.lastrowid
-            lot_action = 'create'
-
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             '''
-            INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            SELECT pr.material_id, pr.requester_username, pr.workplace,
+                   m.code as material_code, m.name as material_name, m.unit
+            FROM purchase_requests pr
+            JOIN materials m ON m.id = pr.material_id
+            WHERE pr.id = ?
             ''',
-            (lot_id, row['material_id'], lot_action, received_qty, f'purchase_request:{req_id}', received_at),
+            (req_id,),
         )
+        row = cursor.fetchone()
+        username = session['user'].get('name') if session.get('user') else None
 
-        logistics_location_id = _get_inventory_location_id(cursor, '\ubb3c\ub958\ucc3d\uace0')
-        if logistics_location_id:
-            _increase_material_lot_balance(cursor, logistics_location_id, lot_id, received_qty)
+        if row and received_qty > 0:
+            cursor.execute(
+                """
+                UPDATE purchase_requests
+                SET status=?, received_quantity=?, received_at=?, received_by=?
+                WHERE id=?
+                """,
+                (PURCHASE_STATUS_RECEIVED, received_qty, received_at, username, req_id),
+            )
 
-        audit_log(
-            conn,
-            'receive',
-            'purchase_request',
-            req_id,
-            {
-                'received_quantity': received_qty,
-                'received_by': username,
-                'material_id': row['material_id'],
-                'receiving_date': receiving_date,
-                'manufacture_date': manufacture_date,
-                'expiry_date': expiry_date,
-                'unit_price': unit_price,
-                'lot': lot,
-                'supplier_lot': supplier_lot,
-            },
-        )
-        add_user_notification(
-            conn,
-            row['requester_username'],
-            f"\ubc1c\uc8fc \uc790\uc7ac\uac00 \uc785\uace0\ub418\uc5c8\uc2b5\ub2c8\ub2e4: {row['material_name']}",
-            f"{row['workplace']} / {received_qty:g}{row['unit'] or ''} \uc785\uace0 \uc644\ub8cc",
-            '/purchase-orders',
-        )
+            cursor.execute(
+                """
+                UPDATE materials SET unit_price = ? WHERE id=?
+                """,
+                (unit_price, row['material_id']),
+            )
+            cursor.execute('SELECT id, code, name, unit FROM materials WHERE id = ?', (row['material_id'],))
+            mat_row = cursor.fetchone()
+            if mat_row:
+                pool_code = _pool_code_from_row(mat_row)
+                _increase_logistics_stock(
+                    cursor,
+                    pool_code,
+                    mat_row['name'],
+                    mat_row['unit'],
+                    received_qty,
+                    username,
+                )
 
-    conn.commit()
-    conn.close()
+            supplier_lot = (request.form.get('supplier_lot') or '').strip()
+            matched_lot = _find_matching_material_lot(
+                cursor,
+                int(row['material_id']),
+                receiving_date,
+                manufacture_date=manufacture_date,
+                expiry_date=expiry_date,
+                supplier_lot=supplier_lot,
+            )
+            if matched_lot:
+                lot_id = int(matched_lot['id'])
+                lot = matched_lot['lot']
+                cursor.execute(
+                    '''
+                    UPDATE material_lots
+                    SET unit_price = ?,
+                        received_quantity = COALESCE(received_quantity, 0) + ?,
+                        current_quantity = COALESCE(current_quantity, 0) + ?,
+                        quantity = COALESCE(quantity, 0) + ?,
+                        manufacture_date = COALESCE(manufacture_date, ?),
+                        expiry_date = COALESCE(expiry_date, ?)
+                    WHERE id = ?
+                    ''',
+                    (unit_price, received_qty, received_qty, received_qty, manufacture_date, expiry_date, lot_id),
+                )
+                lot_action = 'update'
+            else:
+                lot, lot_seq = _next_unique_material_lot(cursor, int(row['material_id']), row['material_code'], receiving_date)
+                cursor.execute(
+                    '''
+                    INSERT INTO material_lots
+                    (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, supplier_lot, quantity)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''',
+                    (row['material_id'], lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_qty, received_qty, supplier_lot, received_qty),
+                )
+                lot_id = cursor.lastrowid
+                lot_action = 'create'
+
+            cursor.execute(
+                '''
+                INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''',
+                (lot_id, row['material_id'], lot_action, received_qty, f'purchase_request:{req_id}', received_at),
+            )
+
+            logistics_location_id = _get_inventory_location_id(cursor, '\ubb3c\ub958\ucc3d\uace0')
+            if logistics_location_id:
+                _increase_material_lot_balance(cursor, logistics_location_id, lot_id, received_qty)
+
+            audit_log(
+                conn,
+                'receive',
+                'purchase_request',
+                req_id,
+                {
+                    'received_quantity': received_qty,
+                    'received_by': username,
+                    'material_id': row['material_id'],
+                    'receiving_date': receiving_date,
+                    'manufacture_date': manufacture_date,
+                    'expiry_date': expiry_date,
+                    'unit_price': unit_price,
+                    'lot': lot,
+                    'supplier_lot': supplier_lot,
+                },
+            )
+            add_user_notification(
+                conn,
+                row['requester_username'],
+                f"\ubc1c\uc8fc \uc790\uc7ac\uac00 \uc785\uace0\ub418\uc5c8\uc2b5\ub2c8\ub2e4: {row['material_name']}",
+                f"{row['workplace']} / {received_qty:g}{row['unit'] or ''} \uc785\uace0 \uc644\ub8cc",
+                '/purchase-orders',
+            )
+
     if next_page == 'logistics':
         return redirect(url_for('materials.purchase_orders'))
     return redirect(url_for('materials.purchase_orders'))
@@ -7425,18 +7266,17 @@ def delete_supplier(supplier_id):
 def suppliers_api():
     """업체 목록 API (모달 검색용)"""
     keyword = request.args.get('q', '')
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT id, name, contact, address, note FROM suppliers
-        WHERE name LIKE ? OR contact LIKE ?
-        ORDER BY name
-    """,
-        (f'%{keyword}%', f'%{keyword}%'),
-    )
-    rows = cursor.fetchall()
-    conn.close()
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, name, contact, address, note FROM suppliers
+            WHERE name LIKE ? OR contact LIKE ?
+            ORDER BY name
+        """,
+            (f'%{keyword}%', f'%{keyword}%'),
+        )
+        rows = cursor.fetchall()
     return jsonify([dict(r) for r in rows])
 
 
@@ -7445,33 +7285,31 @@ def suppliers_api():
 @login_required
 def api_materials_by_supplier(supplier_id):
     """업체별 부자재 조회 API"""
-    conn = get_db()
-    cursor = conn.cursor()
-
     workplace = get_workplace()
-    cursor.execute(
-        '''
-        SELECT id, code, name, unit, unit_price, current_stock
-        FROM materials
-        WHERE supplier_id = ?
-          AND (workplace = ? OR workplace = ? OR workplace IS NULL)
-        ORDER BY name
-    ''',
-        (supplier_id, workplace, SHARED_WORKPLACE),
-    )
-
-    materials = []
-    for row in cursor.fetchall():
-        materials.append(
-            {
-                'id': row[0],
-                'code': row[1],
-                'name': row[2],
-                'unit': row[3],
-                'unit_price': row[4],
-                'current_stock': row[5],
-            }
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT id, code, name, unit, unit_price, current_stock
+            FROM materials
+            WHERE supplier_id = ?
+              AND (workplace = ? OR workplace = ? OR workplace IS NULL)
+            ORDER BY name
+        ''',
+            (supplier_id, workplace, SHARED_WORKPLACE),
         )
 
-    conn.close()
+        materials = []
+        for row in cursor.fetchall():
+            materials.append(
+                {
+                    'id': row[0],
+                    'code': row[1],
+                    'name': row[2],
+                    'unit': row[3],
+                    'unit_price': row[4],
+                    'current_stock': row[5],
+                }
+            )
+
     return jsonify(materials)
