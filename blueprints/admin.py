@@ -13,6 +13,11 @@ from xml.sax.saxutils import escape as xml_escape
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, send_file, Response
 
 from core import (
+    begin_db_transaction,
+    close_db,
+    commit_db,
+    db_connection,
+    db_transaction,
     get_db,
     get_workplace,
     login_required,
@@ -25,6 +30,7 @@ from core import (
     SHARED_WORKPLACE,
     SHARED_MATERIAL_CATEGORIES,
     audit_log,
+    rollback_db,
 )
 from blueprints.production import _delete_production_record
 
@@ -4244,7 +4250,7 @@ def integrated_inventory_audit_apply():
     today = datetime.now().strftime('%Y-%m-%d')
 
     try:
-        cursor.execute('BEGIN IMMEDIATE')
+        begin_db_transaction(conn, mode='IMMEDIATE')
 
         for idx, row in enumerate(rows):
             if not isinstance(row, dict):
@@ -4513,16 +4519,16 @@ def integrated_inventory_audit_apply():
             else:
                 failed.append({'index': idx, 'inv_id': inv_id, 'message': 'Unsupported inventory type.'})
 
-        cursor.execute('COMMIT')
+        commit_db(conn)
     except Exception:
         try:
-            cursor.execute('ROLLBACK')
+            rollback_db(conn)
         except Exception:
             pass
-        conn.close()
+        close_db(conn)
         return jsonify({'ok': False, 'message': 'Failed to apply inventory audit.'}), 500
 
-    conn.close()
+    close_db(conn)
     return jsonify(
         {
             'ok': True,
@@ -4853,8 +4859,8 @@ def integrated_update_raw_material_lot(lot_id):
 @bp.route('/integrated-management/db-backups/create', methods=['POST'])
 @admin_required
 def integrated_create_db_backup():
-    conn = get_db()
-    settings = _get_db_backup_settings(conn)
+    with db_connection() as conn:
+        settings = _get_db_backup_settings(conn)
     keep_count = _parse_keep_count(request.form.get('keep_count') or settings.get('manual_keep_count'))
     auto_enabled = bool(int(settings.get('auto_backup_enabled') or 0))
     auto_time = settings.get('auto_backup_time') or ''
@@ -4942,13 +4948,10 @@ def integrated_restore_db_backup(filename):
     if not current_username:
         return "<script>alert('로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.'); location.href='/login';</script>"
 
-    auth_conn = get_db()
-    try:
+    with db_connection() as auth_conn:
         auth_cursor = auth_conn.cursor()
         auth_cursor.execute('SELECT password_hash FROM users WHERE username = ?', (current_username,))
         user_row = auth_cursor.fetchone()
-    finally:
-        auth_conn.close()
 
     if not user_row or not verify_password(user_row['password_hash'], restore_password):
         return "<script>alert('계정 암호가 일치하지 않아 롤백이 취소되었습니다.'); history.back();</script>"

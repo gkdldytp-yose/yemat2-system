@@ -5,8 +5,9 @@ from core import (
     USER_ROLE_OPTIONS,
     admin_required,
     build_session_user,
+    db_connection,
+    db_transaction,
     dump_workplace_roles,
-    get_db,
     normalize_user_role,
     parse_workplace_roles,
 )
@@ -53,30 +54,35 @@ def _parse_integrated_access_input(form):
 @bp.route('/users')
 @admin_required
 def user_management():
-    """사용자 관리 (관리자 전용)"""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT id, username, name, is_admin, role, department, phone, email, created_at, status, workplaces, workplace_roles, can_integrated_management
-        FROM users
-        WHERE status = 'approved'
-        ORDER BY created_at DESC
-    """)
-    users_list = [dict(row) for row in cursor.fetchall()]
+    """User management view for admins."""
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, username, name, is_admin, role, department, phone, email, created_at, status, workplaces, workplace_roles, can_integrated_management
+            FROM users
+            WHERE status = 'approved'
+            ORDER BY created_at DESC
+            """
+        )
+        users_list = [dict(row) for row in cursor.fetchall()]
 
-    cursor.execute("""
-        SELECT id, username, name, phone, email, department, workplace1, workplace2, created_at
-        FROM users
-        WHERE status = 'pending'
-        ORDER BY created_at DESC
-    """)
-    pending_users = [dict(row) for row in cursor.fetchall()]
-    conn.close()
+        cursor.execute(
+            """
+            SELECT id, username, name, phone, email, department, workplace1, workplace2, created_at
+            FROM users
+            WHERE status = 'pending'
+            ORDER BY created_at DESC
+            """
+        )
+        pending_users = [dict(row) for row in cursor.fetchall()]
 
     for user_row in users_list:
         workplaces = [value.strip() for value in (user_row.get('workplaces') or '').split(',') if value.strip()]
         user_row['workplace_list'] = workplaces
-        user_row['role_value'] = _normalize_role_input(user_row.get('role') or ('admin' if user_row.get('is_admin') else 'readonly'))
+        user_row['role_value'] = _normalize_role_input(
+            user_row.get('role') or ('admin' if user_row.get('is_admin') else 'readonly')
+        )
         user_row['workplace_roles_map'] = parse_workplace_roles(user_row.get('workplace_roles'))
         user_row['can_integrated_management'] = bool(user_row.get('can_integrated_management'))
 
@@ -88,48 +94,47 @@ def user_management():
                 requested.append(cleaned)
         pending_row['requested_workplaces'] = requested
 
-    return render_template('user_management.html',
-                           user=session['user'],
-                           users_list=users_list,
-                           pending_users=pending_users,
-                           session_user_id=session['user']['id'],
-                           workplaces=WORKPLACES,
-                           role_options=[role for role in USER_ROLE_OPTIONS if role != 'admin'] + ['admin'])
+    return render_template(
+        'user_management.html',
+        user=session['user'],
+        users_list=users_list,
+        pending_users=pending_users,
+        session_user_id=session['user']['id'],
+        workplaces=WORKPLACES,
+        role_options=[role for role in USER_ROLE_OPTIONS if role != 'admin'] + ['admin'],
+    )
 
 
 @bp.route('/users/<int:user_id>/update-role', methods=['POST'])
 @admin_required
 def update_user_role(user_id):
-    """사용자 권한 변경"""
+    """Update a user's base role."""
     role = _normalize_role_input(request.form.get('role', 'readonly'))
-    conn = get_db()
-    conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
     return redirect(url_for('users.user_management'))
 
 
 @bp.route('/users/<int:user_id>/update-workplaces', methods=['POST'])
 @admin_required
 def update_user_workplaces(user_id):
-    """사용자 작업장 변경"""
+    """Update the workplaces assigned to a user."""
     workplaces = _normalize_workplaces_input(request.form.getlist('workplaces'))
     if not workplaces:
         return redirect(url_for('users.user_management'))
+
     workplaces_str = ','.join(workplaces)
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT role, workplace_roles FROM users WHERE id = ?", (user_id,))
-    target = cursor.fetchone()
-    role = _normalize_role_input((target['role'] if target else None) or 'readonly')
-    existing_map = parse_workplace_roles(target['workplace_roles'] if target else None)
-    filtered_map = {wp: existing_map.get(wp, role) for wp in workplaces}
-    conn.execute(
-        "UPDATE users SET workplaces=?, workplace_roles=? WHERE id=?",
-        (workplaces_str, dump_workplace_roles(filtered_map, workplaces), user_id),
-    )
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT role, workplace_roles FROM users WHERE id = ?", (user_id,))
+        target = cursor.fetchone()
+        role = _normalize_role_input((target['role'] if target else None) or 'readonly')
+        existing_map = parse_workplace_roles(target['workplace_roles'] if target else None)
+        filtered_map = {wp: existing_map.get(wp, role) for wp in workplaces}
+        conn.execute(
+            "UPDATE users SET workplaces=?, workplace_roles=? WHERE id=?",
+            (workplaces_str, dump_workplace_roles(filtered_map, workplaces), user_id),
+        )
 
     if session.get('user') and session['user']['id'] == user_id:
         session['user']['workplaces'] = workplaces
@@ -143,7 +148,7 @@ def update_user_workplaces(user_id):
 @bp.route('/users/<int:user_id>/update-access', methods=['POST'])
 @admin_required
 def update_user_access(user_id):
-    """권한과 작업장을 함께 수정"""
+    """Update role/workplace access in one step."""
     if user_id == session['user']['id']:
         return redirect(url_for('users.user_management'))
 
@@ -151,91 +156,86 @@ def update_user_access(user_id):
     workplaces = _normalize_workplaces_input(request.form.getlist('workplaces'))
     if not workplaces:
         return redirect(url_for('users.user_management'))
+
     workplace_roles = _parse_workplace_roles_input(request.form, workplaces, role)
     can_integrated_management = _parse_integrated_access_input(request.form)
 
-    conn = get_db()
-    conn.execute(
-        "UPDATE users SET role=?, workplaces=?, workplace_roles=?, can_integrated_management=? WHERE id=?",
-        (role, ','.join(workplaces), dump_workplace_roles(workplace_roles, workplaces), can_integrated_management, user_id),
-    )
-    conn.commit()
-    if session.get('user') and session['user']['id'] == user_id:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-        refreshed = cursor.fetchone()
-        if refreshed:
-            session['user'] = build_session_user(dict(refreshed), session.get('workplace'))
-    conn.close()
+    with db_transaction() as conn:
+        conn.execute(
+            "UPDATE users SET role=?, workplaces=?, workplace_roles=?, can_integrated_management=? WHERE id=?",
+            (role, ','.join(workplaces), dump_workplace_roles(workplace_roles, workplaces), can_integrated_management, user_id),
+        )
+        if session.get('user') and session['user']['id'] == user_id:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+            refreshed = cursor.fetchone()
+            if refreshed:
+                session['user'] = build_session_user(dict(refreshed), session.get('workplace'))
     return redirect(url_for('users.user_management'))
 
 
 @bp.route('/users/<int:user_id>/approve', methods=['POST'])
 @admin_required
 def approve_user(user_id):
-    """회원가입 승인"""
+    """Approve a pending user."""
     role = _normalize_role_input(request.form.get('role', 'readonly'))
     workplaces = _normalize_workplaces_input(request.form.getlist('workplaces'))
     if not workplaces:
         return redirect(url_for('users.user_management'))
+
     workplace_roles = _parse_workplace_roles_input(request.form, workplaces, role)
     can_integrated_management = _parse_integrated_access_input(request.form)
     workplaces_str = ','.join(workplaces)
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT username, name FROM users WHERE id = ?", (user_id,))
-    target_user = cursor.fetchone()
-    conn.execute(
-        "UPDATE users SET status='approved', role=?, workplaces=?, workplace_roles=?, can_integrated_management=? WHERE id=?",
-        (role, workplaces_str, dump_workplace_roles(workplace_roles, workplaces), can_integrated_management, user_id)
-    )
-    if target_user:
-        notification_titles = []
-        username = (target_user['username'] or '').strip()
-        name = (target_user['name'] or '').strip()
-        if username:
-            notification_titles.append(f'신규 회원가입 요청: {username}')
-        if name and name != username:
-            notification_titles.append(f'신규 회원가입 요청: {name}')
-        for title in notification_titles:
-            conn.execute("DELETE FROM user_notifications WHERE title = ? AND link = '/users'", (title,))
-    conn.commit()
-    conn.close()
+
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, name FROM users WHERE id = ?", (user_id,))
+        target_user = cursor.fetchone()
+        conn.execute(
+            "UPDATE users SET status='approved', role=?, workplaces=?, workplace_roles=?, can_integrated_management=? WHERE id=?",
+            (role, workplaces_str, dump_workplace_roles(workplace_roles, workplaces), can_integrated_management, user_id),
+        )
+        if target_user:
+            notification_titles = []
+            username = (target_user['username'] or '').strip()
+            name = (target_user['name'] or '').strip()
+            if username:
+                notification_titles.append(f'?좉퇋 ?뚯썝媛???붿껌: {username}')
+            if name and name != username:
+                notification_titles.append(f'?좉퇋 ?뚯썝媛???붿껌: {name}')
+            for title in notification_titles:
+                conn.execute("DELETE FROM user_notifications WHERE title = ? AND link = '/users'", (title,))
     return redirect(url_for('users.user_management'))
 
 
 @bp.route('/users/<int:user_id>/reject', methods=['POST'])
 @admin_required
 def reject_user(user_id):
-    """회원가입 반려"""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT username, name FROM users WHERE id = ?", (user_id,))
-    target_user = cursor.fetchone()
-    conn.execute("UPDATE users SET status='rejected' WHERE id=?", (user_id,))
-    if target_user:
-        notification_titles = []
-        username = (target_user['username'] or '').strip()
-        name = (target_user['name'] or '').strip()
-        if username:
-            notification_titles.append(f'신규 회원가입 요청: {username}')
-        if name and name != username:
-            notification_titles.append(f'신규 회원가입 요청: {name}')
-        for title in notification_titles:
-            conn.execute("DELETE FROM user_notifications WHERE title = ? AND link = '/users'", (title,))
-    conn.commit()
-    conn.close()
+    """Reject a pending user."""
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, name FROM users WHERE id = ?", (user_id,))
+        target_user = cursor.fetchone()
+        conn.execute("UPDATE users SET status='rejected' WHERE id=?", (user_id,))
+        if target_user:
+            notification_titles = []
+            username = (target_user['username'] or '').strip()
+            name = (target_user['name'] or '').strip()
+            if username:
+                notification_titles.append(f'?좉퇋 ?뚯썝媛???붿껌: {username}')
+            if name and name != username:
+                notification_titles.append(f'?좉퇋 ?뚯썝媛???붿껌: {name}')
+            for title in notification_titles:
+                conn.execute("DELETE FROM user_notifications WHERE title = ? AND link = '/users'", (title,))
     return redirect(url_for('users.user_management'))
 
 
 @bp.route('/users/<int:user_id>/delete', methods=['POST'])
 @admin_required
 def delete_user(user_id):
-    """사용자 삭제 (본인 제외)"""
+    """Delete a user other than the current session user."""
     if user_id == session['user']['id']:
         return redirect(url_for('users.user_management'))
-    conn = get_db()
-    conn.execute("DELETE FROM users WHERE id=?", (user_id,))
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        conn.execute("DELETE FROM users WHERE id=?", (user_id,))
     return redirect(url_for('users.user_management'))

@@ -5,7 +5,9 @@ from core import (
     add_user_notification,
     audit_log,
     build_session_user,
-    get_db,
+    commit_db,
+    db_connection,
+    db_transaction,
     get_usernames_for_notification,
     hash_password,
     now_local,
@@ -43,58 +45,52 @@ def login():
         username = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
 
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute(
-            '''
-            SELECT id, username, is_admin, name, role, workplaces, workplace_roles, can_integrated_management, status, password_hash
-            FROM users
-            WHERE username = ?
-            ''',
-            (username,),
-        )
-        user = cursor.fetchone()
-
-        if not user or not verify_password(user['password_hash'], password):
-            conn.close()
-            return render_template('login.html', error='아이디 또는 비밀번호가 올바르지 않습니다.')
-
-        if password_needs_rehash(user['password_hash']):
+        with db_connection() as conn:
+            cursor = conn.cursor()
             cursor.execute(
-                'UPDATE users SET password_hash = ? WHERE id = ?',
-                (hash_password(password), user['id']),
+                """
+                SELECT id, username, is_admin, name, role, workplaces, workplace_roles, can_integrated_management, status, password_hash
+                FROM users
+                WHERE username = ?
+                """,
+                (username,),
             )
-            conn.commit()
+            user = cursor.fetchone()
 
-        if user['status'] != 'approved':
-            conn.close()
-            msg = '승인 대기 중입니다. 최고 관리자 승인 후 로그인 가능합니다.'
-            if user['status'] == 'rejected':
-                msg = '가입 요청이 반려되었습니다. 관리자에게 문의해 주세요.'
-            return render_template('login.html', error=msg)
+            if not user or not verify_password(user['password_hash'], password):
+                return render_template('login.html', error='?꾩씠???먮뒗 鍮꾨?踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.')
 
-        conn.close()
-        workplaces = user['workplaces'].split(',') if user['workplaces'] else ['1동 조미']
-        user_payload = dict(user)
-        user_payload['workplaces'] = workplaces
-        session['user'] = build_session_user(user_payload, workplaces[0] if len(workplaces) == 1 else None)
+            user = dict(user)
+
+            if password_needs_rehash(user['password_hash']):
+                cursor.execute(
+                    'UPDATE users SET password_hash = ? WHERE id = ?',
+                    (hash_password(password), user['id']),
+                )
+                commit_db(conn)
+
+            if user['status'] != 'approved':
+                msg = '?뱀씤 ?湲?以묒엯?덈떎. 理쒓퀬 愿由ъ옄 ?뱀씤 ??濡쒓렇??媛?ν빀?덈떎.'
+                if user['status'] == 'rejected':
+                    msg = '媛???붿껌??諛섎젮?섏뿀?듬땲?? 愿由ъ옄?먭쾶 臾몄쓽??二쇱꽭??'
+                return render_template('login.html', error=msg)
+
+        workplaces = user['workplaces'].split(',') if user['workplaces'] else ['1??議곕?']
+        user['workplaces'] = workplaces
+        session['user'] = build_session_user(user, workplaces[0] if len(workplaces) == 1 else None)
         if len(workplaces) == 1:
             session['workplace'] = workplaces[0]
 
         login_payload = _build_auth_session_payload(session['user'], 'login')
-        audit_conn = get_db()
-        try:
+        with db_transaction() as audit_conn:
             audit_log(audit_conn, 'login', 'auth_session', user['id'], login_payload)
-            audit_conn.commit()
-        finally:
-            audit_conn.close()
 
         if len(workplaces) > 1:
             return redirect(url_for('main.select_workplace'))
         return redirect(url_for('main.index'))
 
     if notice == 'pending_signup':
-        return render_template('login.html', error='가입 요청이 접수되었습니다. 최고 관리자 승인 후 로그인 가능합니다.')
+        return render_template('login.html', error='媛???붿껌???묒닔?섏뿀?듬땲?? 理쒓퀬 愿由ъ옄 ?뱀씤 ??濡쒓렇??媛?ν빀?덈떎.')
     return render_template('login.html')
 
 
@@ -102,8 +98,7 @@ def login():
 def logout():
     user = session.get('user') or {}
     if user:
-        audit_conn = get_db()
-        try:
+        with db_transaction() as audit_conn:
             audit_log(
                 audit_conn,
                 'logout',
@@ -111,9 +106,6 @@ def logout():
                 user.get('id'),
                 _build_auth_session_payload(user, 'logout'),
             )
-            audit_conn.commit()
-        finally:
-            audit_conn.close()
     session.pop('user', None)
     session.pop('workplace', None)
     return redirect(url_for('auth.login'))
@@ -133,63 +125,60 @@ def register():
         workplace2 = request.form.get('workplace2')
 
         if password != password_confirm:
-            return render_template('register.html', error='비밀번호가 일치하지 않습니다')
+            return render_template('register.html', error='鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎')
 
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
-        if cursor.fetchone():
-            conn.close()
-            return render_template('register.html', error='이미 존재하는 아이디입니다')
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
+            if cursor.fetchone():
+                return render_template('register.html', error='?대? 議댁옱?섎뒗 ?꾩씠?붿엯?덈떎')
 
-        cursor.execute(
-            '''
-            INSERT INTO users (
-                username,
-                password_hash,
-                is_admin,
-                name,
-                phone,
-                email,
-                department,
-                workplace1,
-                workplace2,
-                status
+            cursor.execute(
+                '''
+                INSERT INTO users (
+                    username,
+                    password_hash,
+                    is_admin,
+                    name,
+                    phone,
+                    email,
+                    department,
+                    workplace1,
+                    workplace2,
+                    status
+                )
+                VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, 'pending')
+                ''',
+                (
+                    username,
+                    hash_password(password),
+                    name,
+                    phone,
+                    email,
+                    department,
+                    workplace1,
+                    workplace2,
+                ),
             )
-            VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, 'pending')
-            ''',
-            (
-                username,
-                hash_password(password),
-                name,
-                phone,
-                email,
-                department,
-                workplace1,
-                workplace2,
-            ),
-        )
 
-        admin_users = get_usernames_for_notification(conn, include_admin=True)
-        workplace_text = ', '.join([wp for wp in [workplace1, workplace2] if wp]) or '-'
-        add_user_notification(
-            conn,
-            admin_users[0] if admin_users else None,
-            f'신규 회원가입 요청: {name or username}',
-            f'{department or "-"} / 작업장 {workplace_text}',
-            '/users',
-        )
-        for admin_username in admin_users[1:]:
+            admin_users = get_usernames_for_notification(conn, include_admin=True)
+            workplace_text = ', '.join([wp for wp in [workplace1, workplace2] if wp]) or '-'
             add_user_notification(
                 conn,
-                admin_username,
-                f'신규 회원가입 요청: {name or username}',
-                f'{department or "-"} / 작업장 {workplace_text}',
+                admin_users[0] if admin_users else None,
+                f'?좉퇋 ?뚯썝媛???붿껌: {name or username}',
+                f'{department or "-"} / ?묒뾽??{workplace_text}',
                 '/users',
             )
+            for admin_username in admin_users[1:]:
+                add_user_notification(
+                    conn,
+                    admin_username,
+                    f'?좉퇋 ?뚯썝媛???붿껌: {name or username}',
+                    f'{department or "-"} / ?묒뾽??{workplace_text}',
+                    '/users',
+                )
 
-        conn.commit()
-        conn.close()
         return redirect(url_for('auth.login', notice='pending_signup'))
 
     return render_template('register.html', workplaces=WORKPLACES)

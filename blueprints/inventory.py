@@ -1,8 +1,17 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from flask import Blueprint, render_template, request, redirect, url_for, session
 
-from core import get_db, login_required, role_required, get_workplace, WORKPLACES, SHARED_WORKPLACE, audit_log
+from core import (
+    audit_log,
+    db_connection,
+    db_transaction,
+    get_workplace,
+    login_required,
+    role_required,
+    WORKPLACES,
+    SHARED_WORKPLACE,
+)
 
 bp = Blueprint('inventory', __name__)
 
@@ -126,51 +135,50 @@ def _issue_item_fifo(cursor, item, issue_qty, username):
 @role_required('production')
 def issue_requests():
     workplace = get_workplace()
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        SELECT r.*, COUNT(i.id) AS item_count, COALESCE(SUM(i.requested_qty), 0) AS total_requested, COALESCE(SUM(i.issued_qty), 0) AS total_issued
-        FROM inv_issue_requests r
-        LEFT JOIN inv_issue_request_items i ON i.request_id = r.id
-        WHERE r.workplace = ?
-        GROUP BY r.id
-        ORDER BY r.id DESC
-        ''',
-        (workplace,),
-    )
-    requests = cursor.fetchall()
-    request_ids = [int(r['id']) for r in requests]
-
-    items_by_request = {}
-    if request_ids:
-        ph = ','.join(['?'] * len(request_ids))
+    with db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute(
-            f'''
-            SELECT i.request_id, i.id, i.material_id, i.requested_qty, i.issued_qty, i.status, i.note,
-                   m.code AS material_code, m.name AS material_name, m.unit
-            FROM inv_issue_request_items i
-            JOIN materials m ON m.id = i.material_id
-            WHERE i.request_id IN ({ph})
-            ORDER BY i.request_id DESC, i.id ASC
+            '''
+            SELECT r.*, COUNT(i.id) AS item_count, COALESCE(SUM(i.requested_qty), 0) AS total_requested, COALESCE(SUM(i.issued_qty), 0) AS total_issued
+            FROM inv_issue_requests r
+            LEFT JOIN inv_issue_request_items i ON i.request_id = r.id
+            WHERE r.workplace = ?
+            GROUP BY r.id
+            ORDER BY r.id DESC
             ''',
-            tuple(request_ids),
+            (workplace,),
         )
-        for row in cursor.fetchall():
-            rid = int(row['request_id'])
-            items_by_request.setdefault(rid, []).append(row)
+        requests = cursor.fetchall()
+        request_ids = [int(r['id']) for r in requests]
 
-    cursor.execute(
-        '''
-        SELECT id, code, name, category, unit
-        FROM materials
-        WHERE (workplace = ? OR workplace = ?)
-        ORDER BY category, name
-        ''',
-        (workplace, SHARED_WORKPLACE),
-    )
-    materials = cursor.fetchall()
-    conn.close()
+        items_by_request = {}
+        if request_ids:
+            ph = ','.join(['?'] * len(request_ids))
+            cursor.execute(
+                f'''
+                SELECT i.request_id, i.id, i.material_id, i.requested_qty, i.issued_qty, i.status, i.note,
+                       m.code AS material_code, m.name AS material_name, m.unit
+                FROM inv_issue_request_items i
+                JOIN materials m ON m.id = i.material_id
+                WHERE i.request_id IN ({ph})
+                ORDER BY i.request_id DESC, i.id ASC
+                ''',
+                tuple(request_ids),
+            )
+            for row in cursor.fetchall():
+                rid = int(row['request_id'])
+                items_by_request.setdefault(rid, []).append(row)
+
+        cursor.execute(
+            '''
+            SELECT id, code, name, category, unit
+            FROM materials
+            WHERE (workplace = ? OR workplace = ?)
+            ORDER BY category, name
+            ''',
+            (workplace, SHARED_WORKPLACE),
+        )
+        materials = cursor.fetchall()
     return render_template(
         'inventory_issue_requests.html',
         user=session['user'],
@@ -191,7 +199,7 @@ def create_issue_request():
 
     merged = _parse_request_items(request.form)
     if not merged:
-        # 기존 단일 폼 호환
+        # 湲곗〈 ?⑥씪 ???명솚
         material_id = int(request.form.get('material_id') or 0)
         requested_qty = float(request.form.get('requested_qty') or 0)
         if material_id > 0 and requested_qty > 0:
@@ -199,14 +207,13 @@ def create_issue_request():
     if not merged:
         return redirect(url_for('inventory.issue_requests'))
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         req_no = _next_request_no(cursor)
         cursor.execute(
             '''
             INSERT INTO inv_issue_requests (request_no, workplace, status, need_date, note, created_by)
-            VALUES (?, ?, '요청', ?, ?, ?)
+            VALUES (?, ?, '?붿껌', ?, ?, ?)
             ''',
             (req_no, workplace, need_date, header_note, (session.get('user') or {}).get('username')),
         )
@@ -215,7 +222,7 @@ def create_issue_request():
             cursor.execute(
                 '''
                 INSERT INTO inv_issue_request_items (request_id, material_id, requested_qty, issued_qty, status, note)
-                VALUES (?, ?, ?, 0, '요청', ?)
+                VALUES (?, ?, ?, 0, '?붿껌', ?)
                 ''',
                 (req_id, mid, round(float(payload['qty']), 4), '; '.join(payload['notes'])[:500]),
             )
@@ -231,11 +238,7 @@ def create_issue_request():
                 'items': [{'material_id': mid, 'requested_qty': round(float(x['qty']), 4)} for mid, x in merged.items()],
             },
         )
-        conn.commit()
-    finally:
-        conn.close()
     return redirect(url_for('inventory.issue_requests'))
-
 
 @bp.route('/inventory/requests/<int:request_id>/update', methods=['POST'])
 @login_required
@@ -246,31 +249,30 @@ def update_issue_request(request_id):
     header_note = (request.form.get('note') or '').strip()
     merged = _parse_request_items(request.form)
     if not merged:
-        return "<script>alert('요청 품목을 1개 이상 입력해주세요.'); window.history.back();</script>"
+        return "<script>alert('?붿껌 ?덈ぉ??1媛??댁긽 ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         req = cursor.execute(
             "SELECT id, workplace, status FROM inv_issue_requests WHERE id = ?",
             (request_id,),
         ).fetchone()
         if not req or req['workplace'] != workplace:
-            return "<script>alert('수정 권한이 없습니다.'); window.history.back();</script>"
-        if req['status'] in ('완료', '취소'):
-            return "<script>alert('완료/취소된 요청은 수정할 수 없습니다.'); window.history.back();</script>"
+            return "<script>alert('?섏젙 沅뚰븳???놁뒿?덈떎.'); window.history.back();</script>"
+        if req['status'] in ('?꾨즺', '痍⑥냼'):
+            return "<script>alert('?꾨즺/痍⑥냼???붿껌? ?섏젙?????놁뒿?덈떎.'); window.history.back();</script>"
 
         row = cursor.execute(
             "SELECT COALESCE(SUM(issued_qty), 0) AS issued_total FROM inv_issue_request_items WHERE request_id = ?",
             (request_id,),
         ).fetchone()
         if float(row['issued_total'] or 0) > 0:
-            return "<script>alert('이미 출고된 요청은 수정할 수 없습니다.'); window.history.back();</script>"
+            return "<script>alert('?대? 異쒓퀬???붿껌? ?섏젙?????놁뒿?덈떎.'); window.history.back();</script>"
 
         cursor.execute(
             '''
             UPDATE inv_issue_requests
-            SET need_date = ?, note = ?, status = '요청'
+            SET need_date = ?, note = ?, status = '?붿껌'
             WHERE id = ?
             ''',
             (need_date, header_note, request_id),
@@ -280,32 +282,27 @@ def update_issue_request(request_id):
             cursor.execute(
                 '''
                 INSERT INTO inv_issue_request_items (request_id, material_id, requested_qty, issued_qty, status, note)
-                VALUES (?, ?, ?, 0, '요청', ?)
+                VALUES (?, ?, ?, 0, '?붿껌', ?)
                 ''',
                 (request_id, mid, round(float(payload['qty']), 4), '; '.join(payload['notes'])[:500]),
             )
         audit_log(conn, 'update', 'inv_issue_request', request_id, {'action': 'update', 'item_count': len(merged)})
-        conn.commit()
-    finally:
-        conn.close()
     return redirect(url_for('inventory.issue_requests'))
-
 
 @bp.route('/inventory/requests/<int:request_id>/cancel', methods=['POST'])
 @login_required
 @role_required('production')
 def cancel_issue_request(request_id):
     workplace = get_workplace()
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         req = cursor.execute(
             "SELECT id, workplace, status FROM inv_issue_requests WHERE id = ?",
             (request_id,),
         ).fetchone()
         if not req or req['workplace'] != workplace:
-            return "<script>alert('취소 권한이 없습니다.'); window.history.back();</script>"
-        if req['status'] in ('완료', '취소'):
+            return "<script>alert('痍⑥냼 沅뚰븳???놁뒿?덈떎.'); window.history.back();</script>"
+        if req['status'] in ('?꾨즺', '痍⑥냼'):
             return redirect(url_for('inventory.issue_requests'))
 
         row = cursor.execute(
@@ -313,80 +310,75 @@ def cancel_issue_request(request_id):
             (request_id,),
         ).fetchone()
         if float(row['issued_total'] or 0) > 0:
-            return "<script>alert('이미 출고된 요청은 취소할 수 없습니다.'); window.history.back();</script>"
+            return "<script>alert('?대? 異쒓퀬???붿껌? 痍⑥냼?????놁뒿?덈떎.'); window.history.back();</script>"
 
-        cursor.execute("UPDATE inv_issue_requests SET status = '취소' WHERE id = ?", (request_id,))
-        cursor.execute("UPDATE inv_issue_request_items SET status = '취소' WHERE request_id = ?", (request_id,))
+        cursor.execute("UPDATE inv_issue_requests SET status = '痍⑥냼' WHERE id = ?", (request_id,))
+        cursor.execute("UPDATE inv_issue_request_items SET status = '痍⑥냼' WHERE request_id = ?", (request_id,))
         audit_log(conn, 'update', 'inv_issue_request', request_id, {'action': 'cancel'})
-        conn.commit()
-    finally:
-        conn.close()
     return redirect(url_for('inventory.issue_requests'))
-
 
 @bp.route('/inventory/logistics')
 @login_required
 @role_required('purchase')
 def logistics_issue_requests():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        SELECT r.*, i.id AS item_id, i.material_id, i.requested_qty, i.issued_qty, i.status AS item_status,
-               m.code AS material_code, m.name AS material_name, m.unit
-        FROM inv_issue_requests r
-        JOIN inv_issue_request_items i ON i.request_id = r.id
-        JOIN materials m ON m.id = i.material_id
-        WHERE r.status IN ('요청', '부분출고', '승인')
-          AND i.status IN ('요청', '부분출고')
-        ORDER BY r.id DESC, i.id ASC
-        '''
-    )
-    rows = cursor.fetchall()
-    grouped_requests = []
-    group_map = {}
-
-    # 물류창고 가용 재고(로트 합)
-    cursor.execute(
-        '''
-        SELECT ml.material_id, COALESCE(SUM(b.qty), 0) AS wh_qty
-        FROM inv_material_lot_balances b
-        JOIN inv_locations l ON l.id = b.location_id
-        JOIN material_lots ml ON ml.id = b.material_lot_id
-        WHERE l.name = '물류창고'
-        GROUP BY ml.material_id
-        '''
-    )
-    wh_map = {r['material_id']: float(r['wh_qty'] or 0) for r in cursor.fetchall()}
-    for row in rows:
-        rid = int(row['id'])
-        if rid not in group_map:
-            group = {
-                'id': rid,
-                'request_no': row['request_no'],
-                'workplace': row['workplace'],
-                'status': row['status'],
-                'need_date': row['need_date'],
-                'created_by': row['created_by'],
-                'created_at': row['created_at'],
-                'item_rows': [],
-            }
-            grouped_requests.append(group)
-            group_map[rid] = group
-        group_map[rid]['item_rows'].append(
-            {
-                'item_id': row['item_id'],
-                'material_id': row['material_id'],
-                'material_code': row['material_code'],
-                'material_name': row['material_name'],
-                'unit': row['unit'],
-                'requested_qty': float(row['requested_qty'] or 0),
-                'issued_qty': float(row['issued_qty'] or 0),
-                'item_status': row['item_status'],
-                'wh_qty': float(wh_map.get(row['material_id'], 0)),
-            }
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT r.*, i.id AS item_id, i.material_id, i.requested_qty, i.issued_qty, i.status AS item_status,
+                   m.code AS material_code, m.name AS material_name, m.unit
+            FROM inv_issue_requests r
+            JOIN inv_issue_request_items i ON i.request_id = r.id
+            JOIN materials m ON m.id = i.material_id
+            WHERE r.status IN ('?붿껌', '遺遺꾩텧怨?, '?뱀씤')
+              AND i.status IN ('?붿껌', '遺遺꾩텧怨?')
+            ORDER BY r.id DESC, i.id ASC
+            '''
         )
-    conn.close()
+        rows = cursor.fetchall()
+        grouped_requests = []
+        group_map = {}
+
+        # 臾쇰쪟李쎄퀬 媛???ш퀬(濡쒗듃 ??
+        cursor.execute(
+            '''
+            SELECT ml.material_id, COALESCE(SUM(b.qty), 0) AS wh_qty
+            FROM inv_material_lot_balances b
+            JOIN inv_locations l ON l.id = b.location_id
+            JOIN material_lots ml ON ml.id = b.material_lot_id
+            WHERE l.name = '臾쇰쪟李쎄퀬'
+            GROUP BY ml.material_id
+            '''
+        )
+        wh_map = {r['material_id']: float(r['wh_qty'] or 0) for r in cursor.fetchall()}
+        for row in rows:
+            rid = int(row['id'])
+            if rid not in group_map:
+                group = {
+                    'id': rid,
+                    'request_no': row['request_no'],
+                    'workplace': row['workplace'],
+                    'status': row['status'],
+                    'need_date': row['need_date'],
+                    'created_by': row['created_by'],
+                    'created_at': row['created_at'],
+                    'item_rows': [],
+                }
+                grouped_requests.append(group)
+                group_map[rid] = group
+            group_map[rid]['item_rows'].append(
+                {
+                    'item_id': row['item_id'],
+                    'material_id': row['material_id'],
+                    'material_code': row['material_code'],
+                    'material_name': row['material_name'],
+                    'unit': row['unit'],
+                    'requested_qty': float(row['requested_qty'] or 0),
+                    'issued_qty': float(row['issued_qty'] or 0),
+                    'item_status': row['item_status'],
+                    'wh_qty': float(wh_map.get(row['material_id'], 0)),
+                }
+            )
     return render_template(
         'inventory_logistics.html',
         user=session['user'],
@@ -394,19 +386,17 @@ def logistics_issue_requests():
         workplaces=WORKPLACES,
     )
 
-
 @bp.route('/inventory/logistics/<int:request_id>/approve', methods=['POST'])
 @login_required
 @role_required('purchase')
 def approve_issue_request(request_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         username = (session.get('user') or {}).get('username')
         cursor.execute(
             '''
             UPDATE inv_issue_requests
-            SET status = CASE WHEN status = '요청' THEN '승인' ELSE status END,
+            SET status = CASE WHEN status = '?붿껌' THEN '?뱀씤' ELSE status END,
                 approved_by = COALESCE(approved_by, ?),
                 approved_at = COALESCE(approved_at, CURRENT_TIMESTAMP)
             WHERE id = ?
@@ -414,65 +404,55 @@ def approve_issue_request(request_id):
             (username, request_id),
         )
         audit_log(conn, 'update', 'inv_issue_request', request_id, {'action': 'approve'})
-        conn.commit()
-    finally:
-        conn.close()
     return redirect(url_for('inventory.logistics_issue_requests'))
-
 
 @bp.route('/inventory/logistics/<int:request_id>/reject', methods=['POST'])
 @login_required
 @role_required('purchase')
 def reject_issue_request(request_id):
     reject_note = (request.form.get('reject_note') or '').strip()
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             '''
             UPDATE inv_issue_request_items
-            SET status = CASE WHEN COALESCE(issued_qty, 0) > 0 THEN status ELSE '취소' END,
+            SET status = CASE WHEN COALESCE(issued_qty, 0) > 0 THEN status ELSE '痍⑥냼' END,
                 note = CASE
                     WHEN ? = '' THEN note
                     WHEN note IS NULL OR TRIM(note) = '' THEN ?
-                    ELSE note || ' / 반려: ' || ?
+                    ELSE note || ' / 諛섎젮: ' || ?
                 END
             WHERE request_id = ?
             ''',
-            (reject_note, f'반려:{reject_note}', reject_note, request_id),
+            (reject_note, f'諛섎젮:{reject_note}', reject_note, request_id),
         )
         cursor.execute(
             '''
             UPDATE inv_issue_requests
-            SET status = '취소',
+            SET status = '痍⑥냼',
                 note = CASE
                     WHEN ? = '' THEN note
-                    WHEN note IS NULL OR TRIM(note) = '' THEN '반려: ' || ?
-                    ELSE note || ' / 반려: ' || ?
+                    WHEN note IS NULL OR TRIM(note) = '' THEN '諛섎젮: ' || ?
+                    ELSE note || ' / 諛섎젮: ' || ?
                 END
             WHERE id = ?
             ''',
             (reject_note, reject_note, reject_note, request_id),
         )
         audit_log(conn, 'update', 'inv_issue_request', request_id, {'action': 'reject', 'note': reject_note})
-        conn.commit()
-    finally:
-        conn.close()
     return redirect(url_for('inventory.logistics_issue_requests'))
-
 
 @bp.route('/inventory/logistics/<int:request_id>/issue-all', methods=['POST'])
 @login_required
 @role_required('purchase')
 def issue_all_for_request(request_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         req = cursor.execute(
             "SELECT id, request_no, workplace, status FROM inv_issue_requests WHERE id = ?",
             (request_id,),
         ).fetchone()
-        if not req or req['status'] in ('취소',):
+        if not req or req['status'] in ('痍⑥냼',):
             return redirect(url_for('inventory.logistics_issue_requests'))
 
         items = cursor.execute(
@@ -481,7 +461,7 @@ def issue_all_for_request(request_id):
             FROM inv_issue_request_items i
             JOIN inv_issue_requests r ON r.id = i.request_id
             WHERE i.request_id = ?
-              AND i.status IN ('요청', '부분출고')
+              AND i.status IN ('?붿껌', '遺遺꾩텧怨?')
             ORDER BY i.id ASC
             ''',
             (request_id,),
@@ -499,9 +479,9 @@ def issue_all_for_request(request_id):
             UPDATE inv_issue_requests
             SET status = (
                 CASE
-                    WHEN EXISTS(SELECT 1 FROM inv_issue_request_items x WHERE x.request_id = inv_issue_requests.id AND x.status != '완료')
-                    THEN '부분출고'
-                    ELSE '완료'
+                    WHEN EXISTS(SELECT 1 FROM inv_issue_request_items x WHERE x.request_id = inv_issue_requests.id AND x.status != '?꾨즺')
+                    THEN '遺遺꾩텧怨?'
+                    ELSE '?꾨즺'
                 END
             ),
             approved_by = COALESCE(approved_by, ?),
@@ -511,11 +491,7 @@ def issue_all_for_request(request_id):
             (username, request_id),
         )
         audit_log(conn, 'update', 'inv_issue_request', request_id, {'action': 'issue_all', 'issued_qty': round(total_issued, 4)})
-        conn.commit()
-    finally:
-        conn.close()
     return redirect(url_for('inventory.logistics_issue_requests'))
-
 
 @bp.route('/inventory/logistics/<int:item_id>/issue', methods=['POST'])
 @login_required
@@ -525,9 +501,8 @@ def issue_to_workplace(item_id):
     if issue_qty <= 0:
         return redirect(url_for('inventory.logistics_issue_requests'))
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             '''
             SELECT i.*, r.workplace, r.id AS request_id, r.request_no, r.status AS request_status
@@ -540,9 +515,9 @@ def issue_to_workplace(item_id):
         item = cursor.fetchone()
         if not item:
             return redirect(url_for('inventory.logistics_issue_requests'))
-        if (item['request_status'] or '') in ('취소',):
+        if (item['request_status'] or '') in ('痍⑥냼',):
             return redirect(url_for('inventory.logistics_issue_requests'))
-        if (item['status'] or '') not in ('요청', '부분출고'):
+        if (item['status'] or '') not in ('?붿껌', '遺遺꾩텧怨?'):
             return redirect(url_for('inventory.logistics_issue_requests'))
 
         remain_need = float(item['requested_qty'] or 0) - float(item['issued_qty'] or 0)
@@ -562,9 +537,9 @@ def issue_to_workplace(item_id):
             UPDATE inv_issue_requests
             SET status = (
                 CASE
-                    WHEN EXISTS(SELECT 1 FROM inv_issue_request_items x WHERE x.request_id = inv_issue_requests.id AND x.status != '완료')
-                    THEN '부분출고'
-                    ELSE '완료'
+                    WHEN EXISTS(SELECT 1 FROM inv_issue_request_items x WHERE x.request_id = inv_issue_requests.id AND x.status != '?꾨즺')
+                    THEN '遺遺꾩텧怨?'
+                    ELSE '?꾨즺'
                 END
             ),
             approved_by = COALESCE(approved_by, ?),
@@ -574,7 +549,6 @@ def issue_to_workplace(item_id):
             (username, item['request_id']),
         )
         audit_log(conn, 'update', 'inv_issue_request_item', item_id, {'issued_qty': qty_issued, 'workplace': item['workplace']})
-        conn.commit()
-    finally:
-        conn.close()
     return redirect(url_for('inventory.logistics_issue_requests'))
+
+

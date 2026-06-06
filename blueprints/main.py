@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+﻿from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 import json
 from datetime import datetime, date, timedelta
 
 from core import (
     SHARED_WORKPLACE,
     build_session_user,
+    db_connection,
+    db_transaction,
     get_db,
     get_workplace,
     hash_password,
@@ -110,25 +112,22 @@ def create_dashboard_todo():
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
     if not title:
-        flash('업무 제목을 입력해주세요.', 'warning')
+        flash('?? ??? ??????.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
     if due_date_raw and due_date is None:
-        flash('데드라인 날짜 형식이 올바르지 않습니다.', 'warning')
+        flash('???? ?? ??? ???? ????.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        INSERT INTO dashboard_todos (workplace, title, detail, importance, due_date, created_by)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''',
-        (workplace, title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, username),
-    )
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            INSERT INTO dashboard_todos (workplace, title, detail, importance, due_date, created_by)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''',
+            (workplace, title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, username),
+        )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-
 
 @bp.route('/dashboard/todos/<int:todo_id>/toggle', methods=['POST'])
 @login_required
@@ -137,37 +136,33 @@ def toggle_dashboard_todo(todo_id):
     username = (session.get('user') or {}).get('username')
     is_done = 1 if (request.form.get('is_done') or '').strip() in ('1', 'true', 'on', 'yes') else 0
 
-    conn = get_db()
-    cursor = conn.cursor()
-    todo_row = cursor.execute(
-        '''
-        SELECT id, workplace, is_done, created_by
-        FROM dashboard_todos
-        WHERE id = ? AND workplace = ?
-        ''',
-        (todo_id, workplace),
-    ).fetchone()
-    if not todo_row:
-        conn.close()
-        flash('업무 항목을 찾을 수 없습니다.', 'warning')
-        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-    if not _is_todo_owner(username, todo_row['created_by']):
-        conn.close()
-        flash('To-Do는 등록한 사용자만 완료 처리 또는 미완료 복귀를 할 수 있습니다.', 'warning')
-        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        todo_row = cursor.execute(
+            '''
+            SELECT id, workplace, is_done, created_by
+            FROM dashboard_todos
+            WHERE id = ? AND workplace = ?
+            ''',
+            (todo_id, workplace),
+        ).fetchone()
+        if not todo_row:
+            flash('?? ??? ?? ? ????.', 'warning')
+            return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+        if not _is_todo_owner(username, todo_row['created_by']):
+            flash('To-Do? ??? ???? ?? ?? ?? ??? ??? ? ? ????.', 'warning')
+            return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
-    cursor.execute(
-        '''
-        UPDATE dashboard_todos
-        SET is_done = ?,
-            done_by = CASE WHEN ? = 1 THEN ? ELSE NULL END,
-            done_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END
-        WHERE id = ? AND workplace = ?
-        ''',
-        (is_done, is_done, username, is_done, todo_id, workplace),
-    )
-    conn.commit()
-    conn.close()
+        cursor.execute(
+            '''
+            UPDATE dashboard_todos
+            SET is_done = ?,
+                done_by = CASE WHEN ? = 1 THEN ? ELSE NULL END,
+                done_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END
+            WHERE id = ? AND workplace = ?
+            ''',
+            (is_done, is_done, username, is_done, todo_id, workplace),
+        )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 @bp.route('/dashboard/todos/<int:todo_id>/edit', methods=['POST'])
@@ -182,44 +177,40 @@ def update_dashboard_todo(todo_id):
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
     if not title:
-        flash('업무 제목을 입력해주세요.', 'warning')
+        flash('?? ??? ??????.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
     if due_date_raw and due_date is None:
-        flash('데드라인 날짜 형식이 올바르지 않습니다.', 'warning')
+        flash('???? ?? ??? ???? ????.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
-    conn = get_db()
-    cursor = conn.cursor()
-    existing = cursor.execute(
-        '''
-        SELECT id, created_by
-        FROM dashboard_todos
-        WHERE id = ? AND workplace = ?
-        ''',
-        (todo_id, workplace),
-    ).fetchone()
-    if not existing:
-        conn.close()
-        flash('수정할 업무 항목을 찾을 수 없습니다.', 'warning')
-        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-    if not _is_todo_owner(username, existing['created_by']):
-        conn.close()
-        flash('To-Do는 등록한 사용자만 수정할 수 있습니다.', 'warning')
-        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        existing = cursor.execute(
+            '''
+            SELECT id, created_by
+            FROM dashboard_todos
+            WHERE id = ? AND workplace = ?
+            ''',
+            (todo_id, workplace),
+        ).fetchone()
+        if not existing:
+            flash('??? ?? ??? ?? ? ????.', 'warning')
+            return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+        if not _is_todo_owner(username, existing['created_by']):
+            flash('To-Do? ??? ???? ??? ? ????.', 'warning')
+            return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
-    cursor.execute(
-        '''
-        UPDATE dashboard_todos
-        SET title = ?,
-            detail = ?,
-            importance = ?,
-            due_date = ?
-        WHERE id = ? AND workplace = ?
-        ''',
-        (title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, todo_id, workplace),
-    )
-    conn.commit()
-    conn.close()
+        cursor.execute(
+            '''
+            UPDATE dashboard_todos
+            SET title = ?,
+                detail = ?,
+                importance = ?,
+                due_date = ?
+            WHERE id = ? AND workplace = ?
+            ''',
+            (title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, todo_id, workplace),
+        )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 @bp.route('/dashboard/todos/<int:todo_id>/delete', methods=['POST'])
@@ -227,33 +218,29 @@ def update_dashboard_todo(todo_id):
 def delete_dashboard_todo(todo_id):
     workplace = get_workplace()
     username = (session.get('user') or {}).get('username')
-    conn = get_db()
-    cursor = conn.cursor()
-    existing = cursor.execute(
-        '''
-        SELECT id, created_by
-        FROM dashboard_todos
-        WHERE id = ? AND workplace = ?
-        ''',
-        (todo_id, workplace),
-    ).fetchone()
-    if not existing:
-        conn.close()
-        flash('삭제할 업무 항목을 찾을 수 없습니다.', 'warning')
-        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-    if not _is_todo_owner(username, existing['created_by']):
-        conn.close()
-        flash('To-Do는 등록한 사용자만 삭제할 수 있습니다.', 'warning')
-        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-    cursor.execute(
-        '''
-        DELETE FROM dashboard_todos
-        WHERE id = ? AND workplace = ?
-        ''',
-        (todo_id, workplace),
-    )
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        existing = cursor.execute(
+            '''
+            SELECT id, created_by
+            FROM dashboard_todos
+            WHERE id = ? AND workplace = ?
+            ''',
+            (todo_id, workplace),
+        ).fetchone()
+        if not existing:
+            flash('??? ?? ??? ?? ? ????.', 'warning')
+            return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+        if not _is_todo_owner(username, existing['created_by']):
+            flash('To-Do? ??? ???? ??? ? ????.', 'warning')
+            return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+        cursor.execute(
+            '''
+            DELETE FROM dashboard_todos
+            WHERE id = ? AND workplace = ?
+            ''',
+            (todo_id, workplace),
+        )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
 @bp.route('/dashboard')
@@ -602,38 +589,32 @@ def switch_workplace():
 @login_required
 def mark_notification_read(notification_id):
     username = (session.get('user') or {}).get('username')
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        UPDATE user_notifications
-        SET is_read = 1, read_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND username = ?
-        ''',
-        (notification_id, username),
-    )
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            UPDATE user_notifications
+            SET is_read = 1, read_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND username = ?
+            ''',
+            (notification_id, username),
+        )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-
 
 @bp.route('/notifications/<int:notification_id>/delete', methods=['POST'])
 @login_required
 def delete_notification(notification_id):
     username = (session.get('user') or {}).get('username')
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        DELETE FROM user_notifications
-        WHERE id = ? AND username = ?
-        ''',
-        (notification_id, username),
-    )
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            DELETE FROM user_notifications
+            WHERE id = ? AND username = ?
+            ''',
+            (notification_id, username),
+        )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-
 
 @bp.route('/notifications/dynamic-read', methods=['POST'])
 @login_required
@@ -642,21 +623,18 @@ def mark_dynamic_notification_read():
     notification_key = (request.form.get('notification_key') or '').strip()
     signature = (request.form.get('signature') or '').strip()
     if username and notification_key and signature:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute(
-            '''
-            INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(username, notification_key)
-            DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
-            ''',
-            (username, notification_key, signature),
-        )
-        conn.commit()
-        conn.close()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(username, notification_key)
+                DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
+                ''',
+                (username, notification_key, signature),
+            )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-
 
 @bp.route('/notifications/dynamic-dismiss', methods=['POST'])
 @login_required
@@ -665,21 +643,18 @@ def dismiss_dynamic_notification():
     notification_key = (request.form.get('notification_key') or '').strip()
     signature = (request.form.get('signature') or '').strip()
     if username and notification_key and signature:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute(
-            '''
-            INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(username, notification_key)
-            DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
-            ''',
-            (username, notification_key, signature),
-        )
-        conn.commit()
-        conn.close()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(username, notification_key)
+                DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
+                ''',
+                (username, notification_key, signature),
+            )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-
 
 @bp.route('/notifications/read-all', methods=['POST'])
 @login_required
@@ -687,39 +662,36 @@ def mark_all_notifications_read():
     username = (session.get('user') or {}).get('username')
     dynamic_keys = request.form.getlist('dynamic_notification_key[]')
     dynamic_signatures = request.form.getlist('dynamic_signature[]')
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        UPDATE user_notifications
-        SET is_read = 1, read_at = CURRENT_TIMESTAMP
-        WHERE username = ? AND COALESCE(is_read, 0) = 0
-        ''',
-        (username,),
-    )
-    for idx, key in enumerate(dynamic_keys):
-        notification_key = (key or '').strip()
-        signature = (dynamic_signatures[idx] if idx < len(dynamic_signatures) else '').strip()
-        if not notification_key or not signature:
-            continue
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             '''
-            INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(username, notification_key)
-            DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
+            UPDATE user_notifications
+            SET is_read = 1, read_at = CURRENT_TIMESTAMP
+            WHERE username = ? AND COALESCE(is_read, 0) = 0
             ''',
-            (username, notification_key, signature),
+            (username,),
         )
-    conn.commit()
-    conn.close()
+        for idx, key in enumerate(dynamic_keys):
+            notification_key = (key or '').strip()
+            signature = (dynamic_signatures[idx] if idx < len(dynamic_signatures) else '').strip()
+            if not notification_key or not signature:
+                continue
+            cursor.execute(
+                '''
+                INSERT INTO user_dynamic_notification_reads (username, notification_key, signature, read_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(username, notification_key)
+                DO UPDATE SET signature = excluded.signature, read_at = CURRENT_TIMESTAMP
+                ''',
+                (username, notification_key, signature),
+            )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-
 
 @bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    """사용자 프로필"""
+    """??? ???"""
     user_id = session['user']['id']
 
     if request.method == 'POST':
@@ -730,56 +702,48 @@ def profile():
         workplace1 = request.form.get('workplace1')
         workplace2 = request.form.get('workplace2')
 
-        conn = get_db()
-        cursor = conn.cursor()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users 
+                SET name = ?, phone = ?, email = ?, department = ?, workplace1 = ?, workplace2 = ?
+                WHERE id = ?
+            ''', (name, phone, email, department, workplace1, workplace2, user_id))
 
-        cursor.execute('''
-            UPDATE users 
-            SET name = ?, phone = ?, email = ?, department = ?, workplace1 = ?, workplace2 = ?
-            WHERE id = ?
-        ''', (name, phone, email, department, workplace1, workplace2, user_id))
+            cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+            updated_user = cursor.fetchone()
 
-        # 세션 정보 업데이트
-        cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
-        updated_user = cursor.fetchone()
+            workplaces = []
+            workplace1_value = (updated_user['workplace1'] or '').strip() if updated_user['workplace1'] else ''
+            workplace2_value = (updated_user['workplace2'] or '').strip() if updated_user['workplace2'] else ''
+            if workplace1_value:
+                workplaces.append(workplace1_value)
+            if workplace2_value and workplace2_value not in workplaces:
+                workplaces.append(workplace2_value)
+            if not workplaces:
+                workplaces = ['1? ??']
 
-        workplaces = []
-        workplace1_value = (updated_user['workplace1'] or '').strip() if updated_user['workplace1'] else ''
-        workplace2_value = (updated_user['workplace2'] or '').strip() if updated_user['workplace2'] else ''
-        if workplace1_value:
-            workplaces.append(workplace1_value)
-        if workplace2_value and workplace2_value not in workplaces:
-            workplaces.append(workplace2_value)
-        if not workplaces:
-            workplaces = ['1동 조미']
+            updated_payload = dict(updated_user)
+            updated_payload['workplaces'] = workplaces
+            session['user'] = build_session_user(updated_payload, session.get('workplace'))
 
-        updated_payload = dict(updated_user)
-        updated_payload['workplaces'] = workplaces
-        session['user'] = build_session_user(updated_payload, session.get('workplace'))
-
-        current_workplace = session.get('workplace')
-        if current_workplace not in workplaces:
-            session['workplace'] = workplaces[0]
-
-        conn.commit()
-        conn.close()
+            current_workplace = session.get('workplace')
+            if current_workplace not in workplaces:
+                session['workplace'] = workplaces[0]
 
         return redirect(url_for('main.profile'))
 
-    # GET 요청 시 DB에서 최신 정보 조회
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
-    user_data = cursor.fetchone()
-    conn.close()
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+        user_data = cursor.fetchone()
 
     return render_template('profile.html', user=user_data)
-
 
 @bp.route('/profile/change-password', methods=['POST'])
 @login_required
 def change_password():
-    """비밀번호 변경"""
+    """???? ??"""
     user_id = session['user']['id']
     current_password = request.form.get('current_password')
     new_password = request.form.get('new_password')
@@ -790,37 +754,31 @@ def change_password():
             <!DOCTYPE html>
             <html><head><meta charset="UTF-8"></head><body>
             <script>
-                alert("새 비밀번호가 일치하지 않습니다.");
+                alert("? ????? ???? ????.");
                 window.history.back();
             </script>
             </body></html>
         '''
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT password_hash FROM users WHERE id = ?', (user_id,))
+        user = cursor.fetchone()
 
-    # 현재 비밀번호 확인
-    cursor.execute('SELECT password_hash FROM users WHERE id = ?', (user_id,))
-    user = cursor.fetchone()
+        if not verify_password(user['password_hash'], current_password):
+            return '''
+                <!DOCTYPE html>
+                <html><head><meta charset="UTF-8"></head><body>
+                <script>
+                    alert("?? ????? ???? ????.");
+                    window.history.back();
+                </script>
+                </body></html>
+            '''
 
-    if not verify_password(user['password_hash'], current_password):
-        conn.close()
-        return '''
-            <!DOCTYPE html>
-            <html><head><meta charset="UTF-8"></head><body>
-            <script>
-                alert("현재 비밀번호가 일치하지 않습니다.");
-                window.history.back();
-            </script>
-            </body></html>
-        '''
+        new_hash = hash_password(new_password)
+        cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_hash, user_id))
 
-    # 새 비밀번호 저장
-    new_hash = hash_password(new_password)
-    cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_hash, user_id))
-
-    conn.commit()
-    conn.close()
 
     return '''
         <!DOCTYPE html>
