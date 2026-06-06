@@ -69,6 +69,10 @@ CATEGORY_SORT_ORDER = {
     '트레이': 7,
 }
 
+ISSUE_STATUS_REQUESTED = '요청'
+ISSUE_STATUS_COMPLETED = '완료'
+ISSUE_STATUS_REJECTED = '반려'
+
 
 def _can_manage_material_lots():
     user = session.get('user') or {}
@@ -3592,13 +3596,14 @@ def integrated_management():
     if inventory_wp != 'all':
         selected_inventory_wps = [inventory_wp]
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     _ensure_meeting_eval_price_schema(conn)
     backup_settings = _get_db_backup_settings(conn)
     auto_backup_name, _ = _run_scheduled_auto_backup_if_due(conn)
     if auto_backup_name:
-        conn.commit()
+        commit_db(conn)
         backup_settings = _get_db_backup_settings(conn)
     keep_count = _parse_keep_count(request.args.get('keep_count') or backup_settings.get('manual_keep_count'))
     stats = None
@@ -4100,7 +4105,8 @@ def integrated_management():
 @bp.route('/integrated-management/meeting-eval/save-prices', methods=['POST'])
 @admin_required
 def integrated_meeting_eval_save_prices():
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     _ensure_meeting_eval_price_schema(conn)
 
@@ -4181,6 +4187,7 @@ def integrated_inventory_audit_export():
         selected_inventory_wps = [inventory_wp]
 
     conn = get_db()
+    begin_db_transaction(conn)
     cursor = conn.cursor()
     try:
         rows = _query_inventory_audit_rows(
@@ -4193,7 +4200,7 @@ def integrated_inventory_audit_export():
             inventory_q,
         )
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -4243,6 +4250,7 @@ def integrated_inventory_audit_apply():
         return jsonify({'ok': False, 'message': 'No inventory rows provided.'}), 400
 
     conn = get_db()
+    begin_db_transaction(conn)
     cursor = conn.cursor()
     applied = []
     failed = []
@@ -4557,6 +4565,7 @@ def integrated_raw_material_activity():
     date_to_s = target_date.isoformat()
 
     conn = get_db()
+    begin_db_transaction(conn)
     cursor = conn.cursor()
     try:
         where_clause = ''
@@ -4644,13 +4653,14 @@ def integrated_raw_material_activity():
     except Exception as e:
         return jsonify({'ok': False, 'message': str(e)}), 500
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/integrated-management/raw-materials/<int:raw_material_id>/detail')
 @admin_required
 def integrated_raw_material_detail(raw_material_id):
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -4793,7 +4803,7 @@ def integrated_raw_material_detail(raw_material_id):
         payload['used_quantity_sum'] = sum(float(row.get('used_quantity') or 0) for row in lots)
         return jsonify({'ok': True, 'raw_material': payload, 'lots': lots, 'usage_logs': usage_logs, 'receive_logs': receive_logs})
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/integrated-management/raw-material-lots/<int:lot_id>/update', methods=['POST'])
@@ -4810,50 +4820,46 @@ def integrated_update_raw_material_lot(lot_id):
     if current_stock > total_stock:
         return jsonify({'ok': False, 'message': 'Current stock cannot exceed total stock.'}), 400
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (lot_id,))
-        before = cursor.fetchone()
-        if not before:
-            return jsonify({'ok': False, 'message': 'Raw lot not found.'}), 404
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (lot_id,))
+            before = cursor.fetchone()
+            if not before:
+                return jsonify({'ok': False, 'message': 'Raw lot not found.'}), 404
 
-        used_quantity = total_stock - current_stock
-        cursor.execute(
-            '''
-            UPDATE raw_materials
-            SET receiving_date = ?, ja_ho = ?, car_number = ?, sheets_per_sok = ?, total_stock = ?, current_stock = ?, used_quantity = ?
-            WHERE id = ?
-            ''',
-            (receiving_date, ja_ho, ja_ho, sheets_per_sok, total_stock, current_stock, used_quantity, lot_id),
-        )
-        final_code, lot = _ensure_raw_code_and_lot(cursor, lot_id, before['code'], receiving_date, ja_ho)
-        audit_log(
-            conn,
-            'update',
-            'raw_material_lot',
-            lot_id,
-            {
-                'before': dict(before),
-                'after': {
-                    'receiving_date': receiving_date,
-                    'ja_ho': ja_ho,
-                    'sheets_per_sok': sheets_per_sok,
-                    'total_stock': total_stock,
-                    'current_stock': current_stock,
-                    'used_quantity': used_quantity,
-                    'code': final_code,
-                    'lot': lot,
+            used_quantity = total_stock - current_stock
+            cursor.execute(
+                '''
+                UPDATE raw_materials
+                SET receiving_date = ?, ja_ho = ?, car_number = ?, sheets_per_sok = ?, total_stock = ?, current_stock = ?, used_quantity = ?
+                WHERE id = ?
+                ''',
+                (receiving_date, ja_ho, ja_ho, sheets_per_sok, total_stock, current_stock, used_quantity, lot_id),
+            )
+            final_code, lot = _ensure_raw_code_and_lot(cursor, lot_id, before['code'], receiving_date, ja_ho)
+            audit_log(
+                conn,
+                'update',
+                'raw_material_lot',
+                lot_id,
+                {
+                    'before': dict(before),
+                    'after': {
+                        'receiving_date': receiving_date,
+                        'ja_ho': ja_ho,
+                        'sheets_per_sok': sheets_per_sok,
+                        'total_stock': total_stock,
+                        'current_stock': current_stock,
+                        'used_quantity': used_quantity,
+                        'code': final_code,
+                        'lot': lot,
+                    },
                 },
-            },
-        )
-        conn.commit()
-        return jsonify({'ok': True, 'lot': lot})
+            )
+            return jsonify({'ok': True, 'lot': lot})
     except Exception:
-        conn.rollback()
         return jsonify({'ok': False, 'message': 'Failed to update raw lot.'}), 500
-    finally:
-        conn.close()
 
 
 @bp.route('/integrated-management/db-backups/create', methods=['POST'])
@@ -4867,26 +4873,23 @@ def integrated_create_db_backup():
     retention_days = settings.get('auto_retention_days') or AUTO_BACKUP_RETENTION_DAYS
     _cleanup_expired_auto_backups(retention_days)
     try:
-        _save_db_backup_settings(conn, auto_enabled, auto_time, keep_count)
-        backup_name, deleted_count = _create_db_backup(keep_count, backup_kind='manual')
-        audit_log(
-            conn,
-            'create',
-            'db_backup',
-            0,
-            {
-                'backup_name': backup_name,
-                'keep_count': keep_count,
-                'deleted_old_backups': deleted_count,
-                'backup_kind': 'manual',
-            },
-        )
-        conn.commit()
+        with db_transaction() as conn:
+            _save_db_backup_settings(conn, auto_enabled, auto_time, keep_count)
+            backup_name, deleted_count = _create_db_backup(keep_count, backup_kind='manual')
+            audit_log(
+                conn,
+                'create',
+                'db_backup',
+                0,
+                {
+                    'backup_name': backup_name,
+                    'keep_count': keep_count,
+                    'deleted_old_backups': deleted_count,
+                    'backup_kind': 'manual',
+                },
+            )
     except Exception:
-        conn.rollback()
         return "<script>alert('DB 백업 생성에 실패했습니다.'); history.back();</script>"
-    finally:
-        conn.close()
 
     return redirect(url_for('admin.integrated_management', tab='db_backups', keep_count=keep_count))
 
@@ -4903,30 +4906,26 @@ def integrated_save_db_backup_settings():
     if auto_enabled and not auto_time:
         return "<script>alert('자동 백업을 사용하려면 시간을 지정해 주세요.'); history.back();</script>"
 
-    conn = get_db()
     try:
-        _save_db_backup_settings(conn, auto_enabled, auto_time, keep_count)
-        _cleanup_expired_auto_backups(AUTO_BACKUP_RETENTION_DAYS)
-        auto_backup_name, _ = _run_scheduled_auto_backup_if_due(conn)
-        audit_log(
-            conn,
-            'update',
-            'db_backup_settings',
-            0,
-            {
-                'auto_backup_enabled': auto_enabled,
-                'auto_backup_time': auto_time,
-                'keep_count': keep_count,
-                'retention_days': AUTO_BACKUP_RETENTION_DAYS,
-                'auto_backup_name': auto_backup_name,
-            },
-        )
-        conn.commit()
+        with db_transaction() as conn:
+            _save_db_backup_settings(conn, auto_enabled, auto_time, keep_count)
+            _cleanup_expired_auto_backups(AUTO_BACKUP_RETENTION_DAYS)
+            auto_backup_name, _ = _run_scheduled_auto_backup_if_due(conn)
+            audit_log(
+                conn,
+                'update',
+                'db_backup_settings',
+                0,
+                {
+                    'auto_backup_enabled': auto_enabled,
+                    'auto_backup_time': auto_time,
+                    'keep_count': keep_count,
+                    'retention_days': AUTO_BACKUP_RETENTION_DAYS,
+                    'auto_backup_name': auto_backup_name,
+                },
+            )
     except Exception:
-        conn.rollback()
         return "<script>alert('자동 백업 설정 저장에 실패했습니다.'); history.back();</script>"
-    finally:
-        conn.close()
 
     return redirect(url_for('admin.integrated_management', tab='db_backups', keep_count=keep_count))
 
@@ -5013,37 +5012,33 @@ def integrated_add_product():
     if expiry_months < 1 or expiry_months > 12:
         expiry_months = 12
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        if code:
-            cursor.execute("SELECT id FROM products WHERE code = ?", (code,))
-            if cursor.fetchone():
-                conn.close()
-                return "<script>alert('???????쇨덫?? ???? ????⑥ル??????黎앸럽????룸돥??????????곗뒩筌? ?????諛몃마?????????筌?캉??'); history.back();</script>"
-        cursor.execute('''
-            INSERT INTO products (name, code, description, box_quantity, category, workplace)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (name, code, description, box_quantity, category, workplace))
-        audit_log(
-            conn,
-            'create',
-            'product',
-            cursor.lastrowid,
-            {
-                'name': name,
-                'code': code,
-                'description': description,
-                'box_quantity': box_quantity,
-                'category': category,
-                'workplace': workplace,
-            },
-        )
-        conn.commit()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            if code:
+                cursor.execute("SELECT id FROM products WHERE code = ?", (code,))
+                if cursor.fetchone():
+                    return "<script>alert('???????쇨덫?? ???? ????⑥ル??????黎앸럽????룸돥??????????곗뒩筌? ?????諛몃마?????????筌?캉??'); history.back();</script>"
+            cursor.execute('''
+                INSERT INTO products (name, code, description, box_quantity, category, workplace)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (name, code, description, box_quantity, category, workplace))
+            audit_log(
+                conn,
+                'create',
+                'product',
+                cursor.lastrowid,
+                {
+                    'name': name,
+                    'code': code,
+                    'description': description,
+                    'box_quantity': box_quantity,
+                    'category': category,
+                    'workplace': workplace,
+                },
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='products'))
 
@@ -5065,40 +5060,37 @@ def integrated_add_raw_material():
     total_stock = request.form.get('total_stock') or 0
     current_stock = request.form.get('current_stock') or 0
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute(
-            '''
-            INSERT INTO raw_materials (name, code, lot, sheets_per_sok, receiving_date, ja_ho, car_number, total_stock, current_stock, used_quantity, workplace)
-            VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, 0, ?)
-            ''',
-            (name, code, sheets_per_sok, receiving_date, ja_ho, ja_ho, total_stock, current_stock, workplace),
-        )
-        raw_id = cursor.lastrowid
-        final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
-        audit_log(
-            conn,
-            'create',
-            'raw_material',
-            raw_id,
-            {
-                'name': name,
-                'code': final_code,
-                'lot': lot,
-                'sheets_per_sok': sheets_per_sok,
-                'receiving_date': receiving_date,
-                'ja_ho': ja_ho,
-                'total_stock': total_stock,
-                'current_stock': current_stock,
-                'workplace': workplace,
-            },
-        )
-        conn.commit()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO raw_materials (name, code, lot, sheets_per_sok, receiving_date, ja_ho, car_number, total_stock, current_stock, used_quantity, workplace)
+                VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, 0, ?)
+                ''',
+                (name, code, sheets_per_sok, receiving_date, ja_ho, ja_ho, total_stock, current_stock, workplace),
+            )
+            raw_id = cursor.lastrowid
+            final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
+            audit_log(
+                conn,
+                'create',
+                'raw_material',
+                raw_id,
+                {
+                    'name': name,
+                    'code': final_code,
+                    'lot': lot,
+                    'sheets_per_sok': sheets_per_sok,
+                    'receiving_date': receiving_date,
+                    'ja_ho': ja_ho,
+                    'total_stock': total_stock,
+                    'current_stock': current_stock,
+                    'workplace': workplace,
+                },
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='raw_materials'))
 
@@ -5117,36 +5109,33 @@ def integrated_update_raw_material():
     total_stock = request.form.get('total_stock') or 0
     current_stock = request.form.get('current_stock') or 0
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (raw_id,))
-        before = cursor.fetchone()
-        cursor.execute(
-            '''
-            UPDATE raw_materials
-            SET workplace = ?, code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?,
-                total_stock = ?, current_stock = ?
-            WHERE id = ?
-        ''',
-            (workplace, code, name, sheets_per_sok, receiving_date, ja_ho, ja_ho, total_stock, current_stock, raw_id),
-        )
-        final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
-        audit_log(
-            conn,
-            'update',
-            'raw_material',
-            raw_id,
-            {
-                'before': dict(before) if before else None,
-                'after': {'code': final_code, 'lot': lot},
-            },
-        )
-        conn.commit()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (raw_id,))
+            before = cursor.fetchone()
+            cursor.execute(
+                '''
+                UPDATE raw_materials
+                SET workplace = ?, code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?,
+                    total_stock = ?, current_stock = ?
+                WHERE id = ?
+            ''',
+                (workplace, code, name, sheets_per_sok, receiving_date, ja_ho, ja_ho, total_stock, current_stock, raw_id),
+            )
+            final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
+            audit_log(
+                conn,
+                'update',
+                'raw_material',
+                raw_id,
+                {
+                    'before': dict(before) if before else None,
+                    'after': {'code': final_code, 'lot': lot},
+                },
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='raw_materials'))
 
@@ -5174,85 +5163,79 @@ def integrated_add_material():
     lot_quantity = float(request.form.get('quantity') or 0)
     target_workplace = SHARED_WORKPLACE if category_clean in SHARED_MATERIAL_CATEGORIES else workplace
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id FROM materials WHERE name = ? AND workplace = ?", (name, target_workplace))
-        if cursor.fetchone():
-            conn.close()
-            return redirect(url_for('admin.integrated_management', tab='materials'))
-
-        if custom_code:
-            cursor.execute("SELECT id FROM materials WHERE code = ?", (custom_code,))
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM materials WHERE name = ? AND workplace = ?", (name, target_workplace))
             if cursor.fetchone():
-                conn.close()
                 return redirect(url_for('admin.integrated_management', tab='materials'))
 
-        cursor.execute(
-            '''
-            INSERT INTO materials 
-            (supplier_id, name, category, unit, current_stock, min_stock, workplace, unit_price)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''',
-            (supplier_id, name, category_clean, unit, lot_quantity, min_stock, target_workplace, unit_price),
-        )
+            if custom_code:
+                cursor.execute("SELECT id FROM materials WHERE code = ?", (custom_code,))
+                if cursor.fetchone():
+                    return redirect(url_for('admin.integrated_management', tab='materials'))
 
-        new_id = cursor.lastrowid
-        final_code = custom_code if custom_code else f"M{new_id:05d}"
-        cursor.execute(
-            '''
-            UPDATE materials
-            SET code = ?
-            WHERE id = ?
-        ''',
-            (final_code, new_id),
-        )
-
-        if receiving_date or lot_quantity:
-            lot_seq = _next_lot_seq(cursor, new_id, receiving_date)
-            lot = _build_material_lot(final_code, receiving_date, lot_seq)
             cursor.execute(
                 '''
-                INSERT INTO material_lots
-                (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, quantity, supplier_lot)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO materials 
+                (supplier_id, name, category, unit, current_stock, min_stock, workplace, unit_price)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''',
-                (new_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, lot_quantity, lot_quantity, lot_quantity, ''),
+                (supplier_id, name, category_clean, unit, lot_quantity, min_stock, target_workplace, unit_price),
             )
-            lot_id = cursor.lastrowid
+
+            new_id = cursor.lastrowid
+            final_code = custom_code if custom_code else f"M{new_id:05d}"
             cursor.execute(
                 '''
-                INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
-                VALUES (?, ?, 'create', ?, ?)
+                UPDATE materials
+                SET code = ?
+                WHERE id = ?
             ''',
-                (lot_id, new_id, lot_quantity, 'initial lot create'),
+                (final_code, new_id),
             )
 
-        audit_log(
-            conn,
-            'create',
-            'material',
-            new_id,
-            {
-                'code': final_code,
-                'name': name,
-                'category': category_clean,
-                'unit': unit,
-                'current_stock': lot_quantity,
-                'min_stock': min_stock,
-                'workplace': target_workplace,
-                'receiving_date': receiving_date,
-                'manufacture_date': manufacture_date,
-                'expiry_date': expiry_date,
-                'unit_price': unit_price,
-            },
-        )
+            if receiving_date or lot_quantity:
+                lot_seq = _next_lot_seq(cursor, new_id, receiving_date)
+                lot = _build_material_lot(final_code, receiving_date, lot_seq)
+                cursor.execute(
+                    '''
+                    INSERT INTO material_lots
+                    (material_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, received_quantity, current_quantity, quantity, supplier_lot)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                    (new_id, lot, lot_seq, receiving_date, manufacture_date, expiry_date, unit_price, lot_quantity, lot_quantity, lot_quantity, ''),
+                )
+                lot_id = cursor.lastrowid
+                cursor.execute(
+                    '''
+                    INSERT INTO material_lot_logs (material_lot_id, material_id, action, quantity, note)
+                    VALUES (?, ?, 'create', ?, ?)
+                ''',
+                    (lot_id, new_id, lot_quantity, 'initial lot create'),
+                )
 
-        conn.commit()
+            audit_log(
+                conn,
+                'create',
+                'material',
+                new_id,
+                {
+                    'code': final_code,
+                    'name': name,
+                    'category': category_clean,
+                    'unit': unit,
+                    'current_stock': lot_quantity,
+                    'min_stock': min_stock,
+                    'workplace': target_workplace,
+                    'receiving_date': receiving_date,
+                    'manufacture_date': manufacture_date,
+                    'expiry_date': expiry_date,
+                    'unit_price': unit_price,
+                },
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='materials'))
 
@@ -5273,72 +5256,67 @@ def integrated_update_material():
     min_stock_raw = request.form.get('min_stock')
     moq_raw = request.form.get('moq')
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM materials WHERE id = ?', (material_id,))
-        before = cursor.fetchone()
-        if not before:
-            conn.close()
-            return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q))
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM materials WHERE id = ?', (material_id,))
+            before = cursor.fetchone()
+            if not before:
+                return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q))
 
-        current_code = (before['code'] or '').strip()
-        final_code = code or current_code
-        final_name = name or before['name']
-        final_category = (category or before['category'] or '???????').strip()
-        final_unit = unit or before['unit']
-        final_min_stock = float(min_stock_raw) if min_stock_raw not in (None, '') else float(before['min_stock'] or 0)
-        final_moq = float(moq_raw) if moq_raw not in (None, '') else float(before['moq'] or 0)
-        base_workplace = workplace or before['workplace']
-        target_workplace = SHARED_WORKPLACE if final_category in SHARED_MATERIAL_CATEGORIES else base_workplace
+            current_code = (before['code'] or '').strip()
+            final_code = code or current_code
+            final_name = name or before['name']
+            final_category = (category or before['category'] or '???????').strip()
+            final_unit = unit or before['unit']
+            final_min_stock = float(min_stock_raw) if min_stock_raw not in (None, '') else float(before['min_stock'] or 0)
+            final_moq = float(moq_raw) if moq_raw not in (None, '') else float(before['moq'] or 0)
+            base_workplace = workplace or before['workplace']
+            target_workplace = SHARED_WORKPLACE if final_category in SHARED_MATERIAL_CATEGORIES else base_workplace
 
-        if final_code:
-            cursor.execute("SELECT id FROM materials WHERE code = ? AND id != ?", (final_code, material_id))
-            if cursor.fetchone():
-                conn.close()
-                return "<script>alert('???????쇨덫?? ???? ????⑥ル??????黎앸럽????룸돥???????????????諛몃마?????????筌?캉??'); history.back();</script>"
+            if final_code:
+                cursor.execute("SELECT id FROM materials WHERE code = ? AND id != ?", (final_code, material_id))
+                if cursor.fetchone():
+                    return "<script>alert('???????쇨덫?? ???? ????⑥ル??????黎앸럽????룸돥???????????????諛몃마?????????筌?캉??'); history.back();</script>"
 
-        cursor.execute(
-            '''
-            UPDATE materials
-            SET code = ?, name = ?, category = ?, unit = ?, supplier_id = ?,
-                min_stock = ?, moq = ?, workplace = ?
-            WHERE id = ?
-        ''',
-            (final_code, final_name, final_category, final_unit, supplier_id, final_min_stock, final_moq, target_workplace, material_id),
-        )
+            cursor.execute(
+                '''
+                UPDATE materials
+                SET code = ?, name = ?, category = ?, unit = ?, supplier_id = ?,
+                    min_stock = ?, moq = ?, workplace = ?
+                WHERE id = ?
+            ''',
+                (final_code, final_name, final_category, final_unit, supplier_id, final_min_stock, final_moq, target_workplace, material_id),
+            )
 
-        if final_code and final_code != current_code:
-            cursor.execute('SELECT id, receiving_date, lot_seq FROM material_lots WHERE material_id = ?', (material_id,))
-            lots = cursor.fetchall()
-            for row in lots:
-                updated_lot = _build_material_lot(final_code, row['receiving_date'], row['lot_seq'])
-                cursor.execute('UPDATE material_lots SET lot = ? WHERE id = ?', (updated_lot, row['id']))
+            if final_code and final_code != current_code:
+                cursor.execute('SELECT id, receiving_date, lot_seq FROM material_lots WHERE material_id = ?', (material_id,))
+                lots = cursor.fetchall()
+                for row in lots:
+                    updated_lot = _build_material_lot(final_code, row['receiving_date'], row['lot_seq'])
+                    cursor.execute('UPDATE material_lots SET lot = ? WHERE id = ?', (updated_lot, row['id']))
 
-        audit_log(
-            conn,
-            'update',
-            'material',
-            material_id,
-            {
-                'before': dict(before) if before else None,
-                'after': {
-                    'code': final_code,
-                    'name': final_name,
-                    'category': final_category,
-                    'unit': final_unit,
-                    'supplier_id': supplier_id,
-                    'min_stock': final_min_stock,
-                    'moq': final_moq,
-                    'workplace': target_workplace,
+            audit_log(
+                conn,
+                'update',
+                'material',
+                material_id,
+                {
+                    'before': dict(before) if before else None,
+                    'after': {
+                        'code': final_code,
+                        'name': final_name,
+                        'category': final_category,
+                        'unit': final_unit,
+                        'supplier_id': supplier_id,
+                        'min_stock': final_min_stock,
+                        'moq': final_moq,
+                        'workplace': target_workplace,
+                    },
                 },
-            },
-        )
-        conn.commit()
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q))
 
@@ -5352,32 +5330,28 @@ def integrated_assign_material_workplace():
     wp_filter = (request.form.get('wp') or 'unassigned').strip() or 'unassigned'
     q = (request.form.get('q') or '').strip()
     product_id = (request.form.get('product_id') or '').strip()
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT category, workplace FROM materials WHERE id = ?', (material_id,))
-        row = cursor.fetchone()
-        if not row:
-            conn.close()
-            return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q, product_id=product_id or None))
-        category = (row['category'] or '').strip()
-        target_workplace = SHARED_WORKPLACE if category in SHARED_MATERIAL_CATEGORIES else workplace
-        cursor.execute(
-            'UPDATE materials SET workplace = ? WHERE id = ?',
-            (target_workplace, material_id),
-        )
-        audit_log(
-            conn,
-            'update',
-            'material',
-            material_id,
-            {'set_workplace': target_workplace},
-        )
-        conn.commit()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT category, workplace FROM materials WHERE id = ?', (material_id,))
+            row = cursor.fetchone()
+            if not row:
+                return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q, product_id=product_id or None))
+            category = (row['category'] or '').strip()
+            target_workplace = SHARED_WORKPLACE if category in SHARED_MATERIAL_CATEGORIES else workplace
+            cursor.execute(
+                'UPDATE materials SET workplace = ? WHERE id = ?',
+                (target_workplace, material_id),
+            )
+            audit_log(
+                conn,
+                'update',
+                'material',
+                material_id,
+                {'set_workplace': target_workplace},
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
     return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q, product_id=product_id or None))
 
 
@@ -5402,41 +5376,38 @@ def integrated_bulk_assign_material_workplace():
     if not target_workplace or not valid_ids:
         return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q, product_id=product_id or None))
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        placeholders = ','.join(['?'] * len(valid_ids))
-        cursor.execute(
-            f'''
-            SELECT id, category, workplace
-            FROM materials
-            WHERE id IN ({placeholders})
-            ''',
-            valid_ids,
-        )
-        rows = cursor.fetchall()
-        for row in rows:
-            category = (row['category'] or '').strip()
-            resolved_workplace = SHARED_WORKPLACE if category in SHARED_MATERIAL_CATEGORIES else target_workplace
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            placeholders = ','.join(['?'] * len(valid_ids))
             cursor.execute(
-                'UPDATE materials SET workplace = ? WHERE id = ?',
-                (resolved_workplace, row['id']),
+                f'''
+                SELECT id, category, workplace
+                FROM materials
+                WHERE id IN ({placeholders})
+                ''',
+                valid_ids,
             )
-            audit_log(
-                conn,
-                'update',
-                'material',
-                row['id'],
-                {
-                    'bulk_set_workplace': resolved_workplace,
-                    'selected_target_workplace': target_workplace,
-                },
-            )
-        conn.commit()
+            rows = cursor.fetchall()
+            for row in rows:
+                category = (row['category'] or '').strip()
+                resolved_workplace = SHARED_WORKPLACE if category in SHARED_MATERIAL_CATEGORIES else target_workplace
+                cursor.execute(
+                    'UPDATE materials SET workplace = ? WHERE id = ?',
+                    (resolved_workplace, row['id']),
+                )
+                audit_log(
+                    conn,
+                    'update',
+                    'material',
+                    row['id'],
+                    {
+                        'bulk_set_workplace': resolved_workplace,
+                        'selected_target_workplace': target_workplace,
+                    },
+                )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q, product_id=product_id or None))
 
@@ -5461,39 +5432,36 @@ def integrated_bulk_assign_product_workplace():
     if not target_workplace or not valid_ids:
         return redirect(url_for('admin.integrated_management', tab='products', wp=wp_filter, q=q))
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        placeholders = ','.join(['?'] * len(valid_ids))
-        cursor.execute(
-            f'''
-            SELECT id, workplace
-            FROM products
-            WHERE id IN ({placeholders})
-            ''',
-            valid_ids,
-        )
-        rows = cursor.fetchall()
-        for row in rows:
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            placeholders = ','.join(['?'] * len(valid_ids))
             cursor.execute(
-                'UPDATE products SET workplace = ? WHERE id = ?',
-                (target_workplace, row['id']),
+                f'''
+                SELECT id, workplace
+                FROM products
+                WHERE id IN ({placeholders})
+                ''',
+                valid_ids,
             )
-            audit_log(
-                conn,
-                'update',
-                'product',
-                row['id'],
-                {
-                    'bulk_set_workplace': target_workplace,
-                    'before_workplace': row['workplace'],
-                },
-            )
-        conn.commit()
+            rows = cursor.fetchall()
+            for row in rows:
+                cursor.execute(
+                    'UPDATE products SET workplace = ? WHERE id = ?',
+                    (target_workplace, row['id']),
+                )
+                audit_log(
+                    conn,
+                    'update',
+                    'product',
+                    row['id'],
+                    {
+                        'bulk_set_workplace': target_workplace,
+                        'before_workplace': row['workplace'],
+                    },
+                )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='products', wp=wp_filter, q=q))
 
@@ -5517,94 +5485,90 @@ def integrated_reset_material_stock():
     if not selected_workplaces:
         return "<script>alert('재고를 초기화할 작업장을 하나 이상 선택해 주세요.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        def _table_exists(name):
-            cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (name,))
-            return cursor.fetchone() is not None
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            def _table_exists(name):
+                cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (name,))
+                return cursor.fetchone() is not None
 
-        location_ids = []
-        seen_location_ids = set()
-        for workplace in selected_workplaces:
-            for location_id in _get_inventory_location_ids_for_workplace(cursor, workplace):
-                if location_id in seen_location_ids:
-                    continue
-                seen_location_ids.add(location_id)
-                location_ids.append(location_id)
+            location_ids = []
+            seen_location_ids = set()
+            for workplace in selected_workplaces:
+                for location_id in _get_inventory_location_ids_for_workplace(cursor, workplace):
+                    if location_id in seen_location_ids:
+                        continue
+                    seen_location_ids.add(location_id)
+                    location_ids.append(location_id)
 
-        if not location_ids:
-            return "<script>alert('선택한 작업장과 연결된 재고 위치를 찾지 못했습니다.'); history.back();</script>"
+            if not location_ids:
+                return "<script>alert('선택한 작업장과 연결된 재고 위치를 찾지 못했습니다.'); history.back();</script>"
 
-        placeholders = ','.join('?' for _ in location_ids)
-        affected_rows = cursor.execute(
-            f'''
-            SELECT DISTINCT
-                ml.id AS lot_id,
-                ml.material_id AS material_id
-            FROM inv_material_lot_balances b
-            JOIN material_lots ml ON ml.id = b.material_lot_id
-            WHERE b.location_id IN ({placeholders})
-            ''',
-            location_ids,
-        ).fetchall()
-
-        affected_lot_ids = []
-        affected_material_ids = []
-        seen_lot_ids = set()
-        seen_material_ids = set()
-        for row in affected_rows:
-            lot_id = int(row['lot_id'] or 0)
-            material_id = int(row['material_id'] or 0)
-            if lot_id > 0 and lot_id not in seen_lot_ids:
-                seen_lot_ids.add(lot_id)
-                affected_lot_ids.append(lot_id)
-            if material_id > 0 and material_id not in seen_material_ids:
-                seen_material_ids.add(material_id)
-                affected_material_ids.append(material_id)
-
-        logistics_stock_deleted = 0
-        balance_deleted = 0
-        defect_stock_deleted = 0
-        if _table_exists('inv_material_lot_balances'):
-            cursor.execute(
-                f'DELETE FROM inv_material_lot_balances WHERE location_id IN ({placeholders})',
+            placeholders = ','.join('?' for _ in location_ids)
+            affected_rows = cursor.execute(
+                f'''
+                SELECT DISTINCT
+                    ml.id AS lot_id,
+                    ml.material_id AS material_id
+                FROM inv_material_lot_balances b
+                JOIN material_lots ml ON ml.id = b.material_lot_id
+                WHERE b.location_id IN ({placeholders})
+                ''',
                 location_ids,
+            ).fetchall()
+
+            affected_lot_ids = []
+            affected_material_ids = []
+            seen_lot_ids = set()
+            seen_material_ids = set()
+            for row in affected_rows:
+                lot_id = int(row['lot_id'] or 0)
+                material_id = int(row['material_id'] or 0)
+                if lot_id > 0 and lot_id not in seen_lot_ids:
+                    seen_lot_ids.add(lot_id)
+                    affected_lot_ids.append(lot_id)
+                if material_id > 0 and material_id not in seen_material_ids:
+                    seen_material_ids.add(material_id)
+                    affected_material_ids.append(material_id)
+
+            logistics_stock_deleted = 0
+            balance_deleted = 0
+            defect_stock_deleted = 0
+            if _table_exists('inv_material_lot_balances'):
+                cursor.execute(
+                    f'DELETE FROM inv_material_lot_balances WHERE location_id IN ({placeholders})',
+                    location_ids,
+                )
+                balance_deleted = cursor.rowcount if cursor.rowcount is not None else 0
+            if LOGISTICS_WORKPLACE in selected_workplaces and _table_exists('logistics_stocks'):
+                cursor.execute('DELETE FROM logistics_stocks')
+                logistics_stock_deleted = cursor.rowcount if cursor.rowcount is not None else 0
+            if LOGISTICS_WORKPLACE in selected_workplaces and _table_exists('logistics_defect_stocks'):
+                cursor.execute('DELETE FROM logistics_defect_stocks')
+                defect_stock_deleted = cursor.rowcount if cursor.rowcount is not None else 0
+
+            _sync_material_lot_quantity_from_balances(cursor, affected_lot_ids)
+            for material_id in affected_material_ids:
+                _sync_material_stock_with_lots(conn, material_id)
+
+            audit_log(
+                conn,
+                'update',
+                'material_stock',
+                0,
+                {
+                    'action': 'integrated_reset_stock_by_workplace',
+                    'workplaces': selected_workplaces,
+                    'location_ids': location_ids,
+                    'materials_updated': len(affected_material_ids),
+                    'lots_updated': len(affected_lot_ids),
+                    'logistics_stocks_deleted': logistics_stock_deleted,
+                    'logistics_defect_stocks_deleted': defect_stock_deleted,
+                    'lot_balances_deleted': balance_deleted,
+                },
             )
-            balance_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-        if LOGISTICS_WORKPLACE in selected_workplaces and _table_exists('logistics_stocks'):
-            cursor.execute('DELETE FROM logistics_stocks')
-            logistics_stock_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-        if LOGISTICS_WORKPLACE in selected_workplaces and _table_exists('logistics_defect_stocks'):
-            cursor.execute('DELETE FROM logistics_defect_stocks')
-            defect_stock_deleted = cursor.rowcount if cursor.rowcount is not None else 0
-
-        _sync_material_lot_quantity_from_balances(cursor, affected_lot_ids)
-        for material_id in affected_material_ids:
-            _sync_material_stock_with_lots(conn, material_id)
-
-        audit_log(
-            conn,
-            'update',
-            'material_stock',
-            0,
-            {
-                'action': 'integrated_reset_stock_by_workplace',
-                'workplaces': selected_workplaces,
-                'location_ids': location_ids,
-                'materials_updated': len(affected_material_ids),
-                'lots_updated': len(affected_lot_ids),
-                'logistics_stocks_deleted': logistics_stock_deleted,
-                'logistics_defect_stocks_deleted': defect_stock_deleted,
-                'lot_balances_deleted': balance_deleted,
-            },
-        )
-        conn.commit()
     except Exception:
-        conn.rollback()
         return "<script>alert('?? ??? ? ??? ??????. ?? ??? ???.'); history.back();</script>"
-    finally:
-        conn.close()
 
     return redirect(url_for('admin.integrated_management', tab='materials', wp=wp_filter, q=q, product_id=product_id or None))
 
@@ -5618,7 +5582,8 @@ def integrated_delete_all_productions():
     if prod_tab not in ('active', 'done', 'temp'):
         prod_tab = 'done'
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         query = '''
@@ -5690,12 +5655,12 @@ def integrated_delete_all_productions():
                 'deleted_count': len(target_ids),
             },
         )
-        conn.commit()
+        commit_db(conn)
     except Exception as e:
-        conn.rollback()
+        rollback_db(conn)
         return f"<script>alert('생산건 전체 삭제 중 오류가 발생했습니다: {str(e)}'); history.back();</script>"
     finally:
-        conn.close()
+        close_db(conn)
 
     return redirect(url_for('admin.integrated_management', tab='productions', wp=wp_filter, q=q, prod_tab=prod_tab))
 
@@ -5703,7 +5668,8 @@ def integrated_delete_all_productions():
 @bp.route('/integrated-management/materials/<int:material_id>/detail')
 @admin_required
 def integrated_material_detail(material_id):
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         _sync_material_stock_with_lots(conn, material_id)
@@ -6200,7 +6166,7 @@ SELECT
             'effective_receive_total': effective_receive_total,
         })
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/integrated-management/material-lots/add', methods=['POST'])
@@ -6222,6 +6188,7 @@ def integrated_add_material_lot():
         return jsonify({'ok': False, 'message': '\uc81c\uc870\uc77c \ub610\ub294 \uc18c\ube44\uae30\ud55c \uc911 \ud558\ub098\ub294 \uc785\ub825\ud574\uc8fc\uc138\uc694.'}), 400
 
     conn = get_db()
+    begin_db_transaction(conn)
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT id, code, name, unit, workplace FROM materials WHERE id = ?', (material_id,))
@@ -6257,13 +6224,13 @@ def integrated_add_material_lot():
             (lot_id, material_id, current_quantity, lot),
         )
         audit_log(conn, 'create', 'material_lot', lot_id, {'material_id': material_id, 'lot': lot, 'received_quantity': received_quantity, 'current_quantity': current_quantity, 'supplier_lot': supplier_lot})
-        conn.commit()
+        commit_db(conn)
         return jsonify({'ok': True, 'lot': lot, 'lot_id': lot_id})
     except Exception:
-        conn.rollback()
+        rollback_db(conn)
         return jsonify({'ok': False, 'message': '?? ?? ? ??? ??????.'}), 500
     finally:
-        conn.close()
+        close_db(conn)
 
 @bp.route('/integrated-management/material-lots/<int:lot_id>/update', methods=['POST'])
 @login_required
@@ -6283,6 +6250,7 @@ def integrated_update_material_lot(lot_id):
         return jsonify({'ok': False, 'message': '\uc81c\uc870\uc77c \ub610\ub294 \uc18c\ube44\uae30\ud55c \uc911 \ud558\ub098\ub294 \uc785\ub825\ud574\uc8fc\uc138\uc694.'}), 400
 
     conn = get_db()
+    begin_db_transaction(conn)
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT * FROM material_lots WHERE id = ?', (lot_id,))
@@ -6328,13 +6296,13 @@ def integrated_update_material_lot(lot_id):
             (lot_id, before['material_id'], lot_total, lot),
         )
         audit_log(conn, 'update', 'material_lot', lot_id, {'before': dict(before), 'after': {'lot': lot, 'received_quantity': received_quantity, 'current_quantity': lot_total, 'supplier_lot': supplier_lot}})
-        conn.commit()
+        commit_db(conn)
         return jsonify({'ok': True, 'lot': lot})
     except Exception as e:
-        conn.rollback()
+        rollback_db(conn)
         return jsonify({'ok': False, 'message': f'\ub85c\ud2b8 \uc218\uc815 \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4: {e}'}), 500
     finally:
-        conn.close()
+        close_db(conn)
 
 
 @bp.route('/integrated-management/material-lots/<int:lot_id>/delete', methods=['POST'])
@@ -6343,6 +6311,7 @@ def integrated_delete_material_lot(lot_id):
     if not _can_manage_material_lots():
         return jsonify({'ok': False, 'message': '로트 관리 권한이 없습니다.'}), 403
     conn = get_db()
+    begin_db_transaction(conn)
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT * FROM material_lots WHERE id = ?', (lot_id,))
@@ -6368,13 +6337,13 @@ def integrated_delete_material_lot(lot_id):
             (lot_id, lot['material_id'], current_qty, lot['lot']),
         )
         audit_log(conn, 'delete', 'material_lot', lot_id, {'before': dict(lot), 'disposed_quantity': current_qty})
-        conn.commit()
+        commit_db(conn)
         return jsonify({'ok': True})
     except Exception:
-        conn.rollback()
+        rollback_db(conn)
         return jsonify({'ok': False, 'message': '????癲????????????????쇨덫????????밸븶筌믩끃???ル봿留싷┼??돘????????????????곸죩.'}), 500
     finally:
-        conn.close()
+        close_db(conn)
 
 
 @bp.route('/integrated-management/products/update', methods=['POST'])
@@ -6393,49 +6362,45 @@ def integrated_update_product():
     sok_per_box = _round_to_1_decimal(request.form.get('sok_per_box') or 0)
     expiry_months = request.form.get('expiry_months', 12)
 
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
-        before = cursor.fetchone()
-        if code:
-            cursor.execute("SELECT id FROM products WHERE code = ? AND id != ?", (code, product_id))
-            if cursor.fetchone():
-                conn.close()
-                return "<script>alert('???????쇨덫?? ???? ????⑥ル??????黎앸럽????룸돥??????????곗뒩筌? ?????諛몃마?????????筌?캉??'); history.back();</script>"
-        cursor.execute(
-            '''
-            UPDATE products
-            SET workplace = ?, name = ?, code = ?, description = ?, box_quantity = ?,
-                category = ?, sheets_per_pack = ?, cuts_per_sheet = ?, sok_per_box = ?, expiry_months = ?
-            WHERE id = ?
-        ''',
-            (
-                workplace,
-                name,
-                code,
-                description,
-                box_quantity,
-                category,
-                sheets_per_pack,
-                cuts_per_sheet,
-                sok_per_box,
-                expiry_months,
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+            before = cursor.fetchone()
+            if code:
+                cursor.execute("SELECT id FROM products WHERE code = ? AND id != ?", (code, product_id))
+                if cursor.fetchone():
+                    return "<script>alert('???????쇨덫?? ???? ????⑥ル??????黎앸럽????룸돥??????????곗뒩筌? ?????諛몃마?????????筌?캉??'); history.back();</script>"
+            cursor.execute(
+                '''
+                UPDATE products
+                SET workplace = ?, name = ?, code = ?, description = ?, box_quantity = ?,
+                    category = ?, sheets_per_pack = ?, cuts_per_sheet = ?, sok_per_box = ?, expiry_months = ?
+                WHERE id = ?
+            ''',
+                (
+                    workplace,
+                    name,
+                    code,
+                    description,
+                    box_quantity,
+                    category,
+                    sheets_per_pack,
+                    cuts_per_sheet,
+                    sok_per_box,
+                    expiry_months,
+                    product_id,
+                ),
+            )
+            audit_log(
+                conn,
+                'update',
+                'product',
                 product_id,
-            ),
-        )
-        audit_log(
-            conn,
-            'update',
-            'product',
-            product_id,
-            {'before': dict(before) if before else None},
-        )
-        conn.commit()
+                {'before': dict(before) if before else None},
+            )
     except Exception:
-        conn.rollback()
-    finally:
-        conn.close()
+        pass
 
     return redirect(url_for('admin.integrated_management', tab='products'))
 
@@ -6447,13 +6412,14 @@ def integrated_requirements_calculator_data():
     items = payload.get('items') or []
     selected_categories = payload.get('categories') or []
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         result = _build_integrated_requirement_payload(cursor, items)
         return jsonify(_filter_integrated_requirement_payload(result, selected_categories))
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/integrated-management/requirements-calculator-export', methods=['POST'])
@@ -6464,13 +6430,14 @@ def integrated_requirements_calculator_export():
     selected_categories = payload.get('categories') or []
     mode = 'products' if (payload.get('mode') or '').strip() == 'products' else 'summary'
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         result = _build_integrated_requirement_payload(cursor, items)
         result = _filter_integrated_requirement_payload(result, selected_categories)
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
     headers = [
         '구분',
@@ -6519,7 +6486,8 @@ def integrated_audit_logs_export():
     audit_date_to = (request.args.get('audit_date_to') or '').strip()
     login_event_type = (request.args.get('login_event_type') or '').strip()
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         if tab == 'login_audit_logs':
@@ -6546,7 +6514,7 @@ def integrated_audit_logs_export():
                 limit=0,
             )
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
     if tab == 'login_audit_logs':
         headers = ['??', '???ID', '??', '??', '?? ???', '?? ?? ???', 'IP', '????', '???', '?? ??', '???', '??']
@@ -6605,7 +6573,8 @@ def integrated_subcontract_production_export():
     date_from = (request.args.get('date_from') or '').strip()
     date_to = (request.args.get('date_to') or '').strip()
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         _sync_material_stock_with_lots(conn)
@@ -6617,7 +6586,7 @@ def integrated_subcontract_production_export():
             date_to=date_to,
         )
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
     selected_product = payload.get('selected_product') or {}
     product_name = (selected_product.get('name') or '임가공생산관리').strip() or '임가공생산관리'
@@ -6713,7 +6682,8 @@ def production_statistics():
 
     payload = _empty_production_statistics_payload(current_view, effective_workplace)
     if searched:
-        conn = get_db()
+        conn_context = db_connection()
+        conn = conn_context.__enter__()
         cursor = conn.cursor()
         try:
             payload = _build_production_statistics_payload(
@@ -6732,9 +6702,10 @@ def production_statistics():
                 [item.get('product_id') for item in payload.get('product_options', [])],
             )
         finally:
-            conn.close()
+            conn_context.__exit__(None, None, None)
     else:
-        conn = get_db()
+        conn_context = db_connection()
+        conn = conn_context.__enter__()
         cursor = conn.cursor()
         try:
             payload['product_options'] = _load_production_statistics_product_options(cursor, current_workplace)
@@ -6744,7 +6715,7 @@ def production_statistics():
                 [item.get('product_id') for item in payload.get('product_options', [])],
             )
         finally:
-            conn.close()
+            conn_context.__exit__(None, None, None)
 
     return render_template(
         'production_statistics.html',
@@ -6790,7 +6761,8 @@ def production_statistics_export():
 
     payload = {'view': view, 'rows': []}
     if searched:
-        conn = get_db()
+        conn_context = db_connection()
+        conn = conn_context.__enter__()
         cursor = conn.cursor()
         try:
             payload = _build_production_statistics_payload(
@@ -6803,7 +6775,7 @@ def production_statistics_export():
                 product_id=product_id if view == 'product' else material_product_id if view == 'material' else '',
             )
         finally:
-            conn.close()
+            conn_context.__exit__(None, None, None)
 
     headers, rows = _build_production_statistics_export_rows(payload)
     workbook = _build_simple_xlsx('생산통계', headers, rows)
@@ -6830,7 +6802,8 @@ def integrated_update_purchase_request():
     expected_delivery_date = request.form.get('expected_delivery_date')
     note = request.form.get('note')
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT * FROM purchase_requests WHERE id = ?', (req_id,))

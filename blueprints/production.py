@@ -8,6 +8,7 @@ from core import (
     begin_db_transaction,
     close_db,
     commit_db,
+    db_connection,
     db_transaction,
     get_db,
     get_workplace,
@@ -886,71 +887,62 @@ def schedules():
     """Auto-generated docstring."""
     payload = request.get_json(silent=True) or {}
     workplace = (payload.get('workplace') or request.form.get('workplace') or get_workplace() or '').strip()
-    conn = get_db()
-    cursor = conn.cursor()
-
-    # ?곹뭹 紐⑸줉 媛?몄삤湲?(?꾩옱 ?묒뾽?λ쭔)
-    cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
-    products = cursor.fetchall()
-
-    # ?????뚮씪誘명꽣 (URL?먯꽌 諛쏄린)
     year = request.args.get('year', type=int)
     month = request.args.get('month', type=int)
-
-    # 湲곕낯媛? ?대쾲 ??
     today = today_local()
     if not year or not month:
         year = today.year
         month = today.month
 
-    # ?대떦 ?붿쓽 ?쒖옉?쇨낵 醫낅즺??
     month_start = date(year, month, 1)
     if month == 12:
         month_end = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         month_end = date(year, month + 1, 1) - timedelta(days=1)
 
-    _ensure_auto_work_days_for_month(conn, cursor, year, month)
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
+        products = cursor.fetchall()
 
-    cursor.execute(
-        '''
-        SELECT
-            ps.*,
-            p.name as product_name,
-            COALESCE(ps.production_id, pr.id) as linked_production_id,
-            pr.actual_boxes as prod_actual_boxes,
-            pr.status as prod_status
-        FROM production_schedules ps
-        LEFT JOIN products p ON ps.product_id = p.id
-        LEFT JOIN productions pr ON pr.schedule_id = ps.id
-        WHERE ps.scheduled_date BETWEEN ? AND ?
-        AND ps.workplace = ?
-        ORDER BY ps.scheduled_date
-    ''',
-        (month_start.isoformat(), month_end.isoformat(), workplace),
-    )
-    schedules = cursor.fetchall()
+        _ensure_auto_work_days_for_month(conn, cursor, year, month)
 
-    # ?대떦 ?붿쓽 洹쇰Т???뺣낫 媛?몄삤湲?
-    cursor.execute(
-        '''
-        SELECT date, type, overtime_hours, note
-        FROM work_days
-        WHERE date BETWEEN ? AND ?
-    ''',
-        (month_start.isoformat(), month_end.isoformat()),
-    )
-    work_days_data = {
-        row['date']: {
-            'type': row['type'],
-            'overtime_hours': row['overtime_hours'],
-            'note': row['note'],
-            'holiday_caption': _get_holiday_caption(datetime.strptime(row['date'], '%Y-%m-%d').date(), row['type']),
+        cursor.execute(
+            '''
+            SELECT
+                ps.*,
+                p.name as product_name,
+                COALESCE(ps.production_id, pr.id) as linked_production_id,
+                pr.actual_boxes as prod_actual_boxes,
+                pr.status as prod_status
+            FROM production_schedules ps
+            LEFT JOIN products p ON ps.product_id = p.id
+            LEFT JOIN productions pr ON pr.schedule_id = ps.id
+            WHERE ps.scheduled_date BETWEEN ? AND ?
+            AND ps.workplace = ?
+            ORDER BY ps.scheduled_date
+        ''',
+            (month_start.isoformat(), month_end.isoformat(), workplace),
+        )
+        schedules = cursor.fetchall()
+
+        cursor.execute(
+            '''
+            SELECT date, type, overtime_hours, note
+            FROM work_days
+            WHERE date BETWEEN ? AND ?
+        ''',
+            (month_start.isoformat(), month_end.isoformat()),
+        )
+        work_days_data = {
+            row['date']: {
+                'type': row['type'],
+                'overtime_hours': row['overtime_hours'],
+                'note': row['note'],
+                'holiday_caption': _get_holiday_caption(datetime.strptime(row['date'], '%Y-%m-%d').date(), row['type']),
+            }
+            for row in cursor.fetchall()
         }
-        for row in cursor.fetchall()
-    }
-
-    conn.close()
 
     # ?ㅼ?以??곗씠?곕? JSON?쇰줈 蹂??(JavaScript?먯꽌 ?ъ슜)
     schedules_view = []
@@ -1030,7 +1022,8 @@ def schedules():
 def schedule_requirements_data():
     workplace = get_workplace()
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         def _normalize_sub_category(raw_category):
@@ -1297,7 +1290,7 @@ def schedule_requirements_data():
             }
         )
     finally:
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
 
 @bp.route('/schedules/requirements-auto-purchase', methods=['POST'])
@@ -1306,22 +1299,22 @@ def schedule_requirements_auto_purchase():
     """??? ?? ?? ???? ?? ?? ???? ????."""
     payload = request.get_json(silent=True) or {}
     workplace = (payload.get('workplace') or request.form.get('workplace') or get_workplace() or '').strip()
-    conn = get_db()
-    cursor = conn.cursor()
     try:
-        cursor.execute(
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
             '''
             SELECT ps.product_id, ps.planned_boxes, ps.status
             FROM production_schedules ps
             WHERE ps.workplace = ?
             ''',
             (workplace,),
-        )
-        planned_rows = []
-        for raw_row in cursor.fetchall():
-            row = dict(raw_row)
-            if _normalize_production_status(row.get('status')) == '예정':
-                planned_rows.append(row)
+            )
+            planned_rows = []
+            for raw_row in cursor.fetchall():
+                row = dict(raw_row)
+                if _normalize_production_status(row.get('status')) == '예정':
+                    planned_rows.append(row)
 
         product_box_map = {}
         for row in planned_rows:
@@ -1483,7 +1476,6 @@ def schedule_requirements_auto_purchase():
                 'unit': unit,
             })
 
-        conn.commit()
         return jsonify(
             {
                 'ok': True,
@@ -1497,10 +1489,7 @@ def schedule_requirements_auto_purchase():
             }
         )
     except Exception as e:
-        conn.rollback()
         return jsonify({'ok': False, 'message': str(e)}), 500
-    finally:
-        conn.close()
 
 
 @bp.route('/schedules/add', methods=['POST'])
@@ -1516,62 +1505,48 @@ def add_schedule():
     production_lines_str = ','.join(production_lines) if production_lines else ''
     note = request.form.get('note', '')
 
-    conn = get_db()
-    cursor = conn.cursor()
-
     if not product_id:
-        conn.close()
         return "<script>alert('상품을 선택해 주세요.');history.back();</script>", 400
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
+        if not cursor.fetchone():
+            return "<script>alert('선택한 상품을 찾을 수 없습니다. 다시 선택해 주세요.');history.back();</script>", 400
 
-    cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
-    if not cursor.fetchone():
-        conn.close()
-        return "<script>alert('선택한 상품을 찾을 수 없습니다. 다시 선택해 주세요.');history.back();</script>", 400
-
-    # 媛??좎쭨??????ㅼ?以?異붽?
-    for scheduled_date in scheduled_dates:
-        if scheduled_date:
-            # ?ㅼ?以??앹꽦
-            cursor.execute(
-                '''
-                INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
-                VALUES (?, ?, ?, ?, '예정', ?, ?)
-            ''',
-                (product_id, scheduled_date, planned_boxes, note, production_lines_str, workplace),
-            )
-            schedule_id = cursor.lastrowid
-
-            # ???묐갑???곕룞: ?앹궛 愿由ъ뿉???먮룞 ?깅줉
-            cursor.execute(
-                '''
-                INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
-                VALUES (?, ?, ?, '예정', ?, ?, ?)
-            ''',
-                (product_id, scheduled_date, planned_boxes, note, schedule_id, workplace),
-            )
-            production_id = cursor.lastrowid
-
-            # ?ㅼ?以꾩뿉 production_id ???
-            cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
-
-            audit_log(
-                conn,
-                'create',
-                'production_schedule',
-                schedule_id,
-                {
-                    'product_id': product_id,
-                    'scheduled_date': scheduled_date,
-                    'planned_boxes': planned_boxes,
-                    'note': note,
-                    'line': production_lines_str,
-                    'workplace': workplace,
-                    'production_id': production_id,
-                },
-            )
-
-    conn.commit()
-    conn.close()
+        for scheduled_date in scheduled_dates:
+            if scheduled_date:
+                cursor.execute(
+                    '''
+                    INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
+                    VALUES (?, ?, ?, ?, '예정', ?, ?)
+                ''',
+                    (product_id, scheduled_date, planned_boxes, note, production_lines_str, workplace),
+                )
+                schedule_id = cursor.lastrowid
+                cursor.execute(
+                    '''
+                    INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
+                    VALUES (?, ?, ?, '예정', ?, ?, ?)
+                ''',
+                    (product_id, scheduled_date, planned_boxes, note, schedule_id, workplace),
+                )
+                production_id = cursor.lastrowid
+                cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
+                audit_log(
+                    conn,
+                    'create',
+                    'production_schedule',
+                    schedule_id,
+                    {
+                        'product_id': product_id,
+                        'scheduled_date': scheduled_date,
+                        'planned_boxes': planned_boxes,
+                        'note': note,
+                        'line': production_lines_str,
+                        'workplace': workplace,
+                        'production_id': production_id,
+                    },
+                )
 
     return redirect(url_for('production.schedules'))
 
@@ -1584,80 +1559,68 @@ def copy_schedule():
     schedule_id = request.form.get('schedule_id')
     target_dates = request.form.getlist('target_dates')
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT product_id, planned_boxes, note, line
+            FROM production_schedules
+            WHERE id = ?
+        ''',
+            (schedule_id,),
+        )
+        original = cursor.fetchone()
 
-    # ?먮낯 ?ㅼ?以??뺣낫 媛?몄삤湲?
-    cursor.execute(
-        '''
-        SELECT product_id, planned_boxes, note, line
-        FROM production_schedules
-        WHERE id = ?
-    ''',
-        (schedule_id,),
-    )
-    original = cursor.fetchone()
-
-    if original:
-        # 媛?紐⑺몴 ?좎쭨??蹂듭궗
-        for target_date in target_dates:
-            if target_date:
-                # ?ㅼ?以?蹂듭궗
-                cursor.execute(
-                    '''
-                    INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
-                    VALUES (?, ?, ?, ?, '예정', ?, ?)
-                ''',
-                    (
-                        original['product_id'],
-                        target_date,
-                        original['planned_boxes'],
-                        original['note'],
-                        original['line'],
-                        workplace,
-                    ),
-                )
-                new_schedule_id = cursor.lastrowid
-
-                # ???묐갑???곕룞: ?앹궛 愿由ъ뿉???먮룞 ?앹꽦
-                cursor.execute(
-                    '''
-                    INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
-                    VALUES (?, ?, ?, '예정', ?, ?, ?)
-                ''',
-                    (
-                        original['product_id'],
-                        target_date,
-                        original['planned_boxes'],
-                        original['note'],
+        if original:
+            for target_date in target_dates:
+                if target_date:
+                    cursor.execute(
+                        '''
+                        INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
+                        VALUES (?, ?, ?, ?, '예정', ?, ?)
+                    ''',
+                        (
+                            original['product_id'],
+                            target_date,
+                            original['planned_boxes'],
+                            original['note'],
+                            original['line'],
+                            workplace,
+                        ),
+                    )
+                    new_schedule_id = cursor.lastrowid
+                    cursor.execute(
+                        '''
+                        INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
+                        VALUES (?, ?, ?, '예정', ?, ?, ?)
+                    ''',
+                        (
+                            original['product_id'],
+                            target_date,
+                            original['planned_boxes'],
+                            original['note'],
+                            new_schedule_id,
+                            workplace,
+                        ),
+                    )
+                    production_id = cursor.lastrowid
+                    cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, new_schedule_id))
+                    audit_log(
+                        conn,
+                        'copy',
+                        'production_schedule',
                         new_schedule_id,
-                        workplace,
-                    ),
-                )
-                production_id = cursor.lastrowid
-
-                # ?ㅼ?以꾩뿉 production_id ???
-                cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, new_schedule_id))
-
-                audit_log(
-                    conn,
-                    'copy',
-                    'production_schedule',
-                    new_schedule_id,
-                    {
-                        'source_schedule_id': schedule_id,
-                        'product_id': original['product_id'],
-                        'scheduled_date': target_date,
-                        'planned_boxes': original['planned_boxes'],
-                        'note': original['note'],
-                        'line': original['line'],
-                        'workplace': workplace,
-                        'production_id': production_id,
-                    },
-                )
-
-    conn.commit()
-    conn.close()
+                        {
+                            'source_schedule_id': schedule_id,
+                            'product_id': original['product_id'],
+                            'scheduled_date': target_date,
+                            'planned_boxes': original['planned_boxes'],
+                            'note': original['note'],
+                            'line': original['line'],
+                            'workplace': workplace,
+                            'production_id': production_id,
+                        },
+                    )
 
     return redirect(url_for('production.schedules'))
 
@@ -1666,85 +1629,79 @@ def copy_schedule():
 @role_required('production')
 def delete_schedule(schedule_id):
     """Auto-generated docstring."""
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM production_schedules WHERE id = ?', (schedule_id,))
+        schedule_before = cursor.fetchone()
+        if not schedule_before:
+            return redirect(request.referrer or url_for('production.schedules'))
 
-    cursor.execute('SELECT * FROM production_schedules WHERE id = ?', (schedule_id,))
-    schedule_before = cursor.fetchone()
-    if not schedule_before:
-        conn.close()
-        return redirect(request.referrer or url_for('production.schedules'))
+        if _normalize_production_status(schedule_before['status']) == '완료':
+            return redirect(request.referrer or url_for('production.schedules'))
 
-    if _normalize_production_status(schedule_before['status']) == '완료':
-        conn.close()
-        return redirect(request.referrer or url_for('production.schedules'))
+        row = schedule_before
 
-    row = schedule_before
+        if row and row['production_id']:
+            production_id = row['production_id']
+            cursor.execute('SELECT status FROM productions WHERE id = ?', (production_id,))
+            prod = cursor.fetchone()
 
-    if row and row['production_id']:
-        production_id = row['production_id']
-        cursor.execute('SELECT status FROM productions WHERE id = ?', (production_id,))
-        prod = cursor.fetchone()
+            if prod and _normalize_production_status(prod['status']) == '완료':
+                cursor.execute(
+                    '''
+                    SELECT pmu.actual_quantity, pmu.material_id,
+                           pmu.raw_material_id, pmu.raw_material_name
+                    FROM production_material_usage pmu
+                    WHERE pmu.production_id = ? AND pmu.actual_quantity > 0
+                ''',
+                    (production_id,),
+                )
+                usages = cursor.fetchall()
+                legacy_material_rollbacks = []
 
-        if prod and _normalize_production_status(prod['status']) == '완료':
-            cursor.execute(
-                '''
-                SELECT pmu.actual_quantity, pmu.material_id,
-                       pmu.raw_material_id, pmu.raw_material_name
-                FROM production_material_usage pmu
-                WHERE pmu.production_id = ? AND pmu.actual_quantity > 0
-            ''',
-                (production_id,),
-            )
-            usages = cursor.fetchall()
-            legacy_material_rollbacks = []
+                for usage in usages:
+                    actual_qty = usage['actual_quantity']
+                    material_id = usage['material_id']
+                    raw_material_id = usage['raw_material_id']
+                    raw_material_name = usage['raw_material_name']
 
-            for usage in usages:
-                actual_qty = usage['actual_quantity']
-                material_id = usage['material_id']
-                raw_material_id = usage['raw_material_id']
-                raw_material_name = usage['raw_material_name']
+                    if raw_material_name and not material_id:
+                        rm_id = raw_material_id
+                        if not rm_id:
+                            cursor.execute('SELECT id FROM raw_materials WHERE name = ?', (raw_material_name,))
+                            r = cursor.fetchone()
+                            rm_id = r['id'] if r else None
+                        if rm_id:
+                            cursor.execute(
+                                '''
+                                UPDATE raw_materials
+                                SET current_stock = current_stock + ?,
+                                    used_quantity = MAX(0, used_quantity - ?)
+                                WHERE id = ?
+                            ''',
+                                (actual_qty, actual_qty, rm_id),
+                            )
+                    elif material_id:
+                        legacy_material_rollbacks.append((material_id, actual_qty))
 
-                if raw_material_name and not material_id:
-                    rm_id = raw_material_id
-                    if not rm_id:
-                        cursor.execute('SELECT id FROM raw_materials WHERE name = ?', (raw_material_name,))
-                        r = cursor.fetchone()
-                        rm_id = r['id'] if r else None
-                    if rm_id:
-                        cursor.execute(
-                            '''
-                            UPDATE raw_materials
-                            SET current_stock = current_stock + ?,
-                                used_quantity = MAX(0, used_quantity - ?)
-                            WHERE id = ?
-                        ''',
-                            (actual_qty, actual_qty, rm_id),
-                        )
-                elif material_id:
-                    legacy_material_rollbacks.append((material_id, actual_qty))
+                touched = _rollback_material_lot_usage_for_production(cursor, production_id, 'schedule_delete')
+                for mid in touched:
+                    _sync_material_stock_with_lots(conn, mid)
+                if not touched:
+                    for mat_id, qty in legacy_material_rollbacks:
+                        cursor.execute('UPDATE materials SET current_stock = current_stock + ? WHERE id = ?', (qty, mat_id))
 
-            touched = _rollback_material_lot_usage_for_production(cursor, production_id, 'schedule_delete')
-            for mid in touched:
-                _sync_material_stock_with_lots(conn, mid)
-            if not touched:
-                for mat_id, qty in legacy_material_rollbacks:
-                    cursor.execute('UPDATE materials SET current_stock = current_stock + ? WHERE id = ?', (qty, mat_id))
+            cursor.execute('DELETE FROM production_material_usage WHERE production_id = ?', (production_id,))
+            cursor.execute('DELETE FROM productions WHERE id = ?', (production_id,))
 
-        cursor.execute('DELETE FROM production_material_usage WHERE production_id = ?', (production_id,))
-        cursor.execute('DELETE FROM productions WHERE id = ?', (production_id,))
-
-    cursor.execute('DELETE FROM production_schedules WHERE id = ?', (schedule_id,))
-    audit_log(
-        conn,
-        'delete',
-        'production_schedule',
-        schedule_id,
-        {'before': dict(schedule_before) if schedule_before else None},
-    )
-
-    conn.commit()
-    conn.close()
+        cursor.execute('DELETE FROM production_schedules WHERE id = ?', (schedule_id,))
+        audit_log(
+            conn,
+            'delete',
+            'production_schedule',
+            schedule_id,
+            {'before': dict(schedule_before) if schedule_before else None},
+        )
 
     return redirect(request.referrer or url_for('production.schedules'))
 
@@ -1754,27 +1711,21 @@ def delete_schedule(schedule_id):
 def schedule_detail(date):
     """Auto-generated docstring."""
     workplace = get_workplace()
-    conn = get_db()
-    cursor = conn.cursor()
-
-    # ?대떦 ?좎쭨???ㅼ?以?媛?몄삤湲?
-    cursor.execute(
-        '''
-        SELECT ps.*, p.name as product_name
-        FROM production_schedules ps
-        LEFT JOIN products p ON ps.product_id = p.id
-        WHERE ps.scheduled_date = ? AND ps.workplace = ?
-        ORDER BY ps.created_at DESC
-    ''',
-        (date, workplace),
-    )
-    schedules = cursor.fetchall()
-
-    # ?곹뭹 紐⑸줉 (JSON 吏곷젹??媛?ν븯?꾨줉 dict濡?蹂??
-    cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
-    products = rows_to_dict(cursor.fetchall())
-
-    conn.close()
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT ps.*, p.name as product_name
+            FROM production_schedules ps
+            LEFT JOIN products p ON ps.product_id = p.id
+            WHERE ps.scheduled_date = ? AND ps.workplace = ?
+            ORDER BY ps.created_at DESC
+        ''',
+            (date, workplace),
+        )
+        schedules = cursor.fetchall()
+        cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
+        products = rows_to_dict(cursor.fetchall())
 
     return render_template('schedule_detail.html', user=session['user'], date=date, schedules=schedules, products=products)
 
@@ -1789,58 +1740,45 @@ def add_schedule_to_date(date):
     production_lines = request.form.getlist('production_lines')
     production_lines_str = ','.join(production_lines) if production_lines else ''
 
-    conn = get_db()
-    cursor = conn.cursor()
-
     if not product_id:
-        conn.close()
         return "<script>alert('상품을 선택해 주세요.');history.back();</script>", 400
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
+        if not cursor.fetchone():
+            return "<script>alert('선택한 상품을 찾을 수 없습니다. 다시 선택해 주세요.');history.back();</script>", 400
 
-    cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
-    if not cursor.fetchone():
-        conn.close()
-        return "<script>alert('선택한 상품을 찾을 수 없습니다. 다시 선택해 주세요.');history.back();</script>", 400
-
-    # ?ㅼ?以??앹꽦 (workplace 異붽?)
-    cursor.execute(
-        '''
-        INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, line, workplace)
-        VALUES (?, ?, ?, '예정', ?, ?)
-    ''',
-        (product_id, date, planned_boxes, production_lines_str, workplace),
-    )
-    schedule_id = cursor.lastrowid
-
-    # ???묐갑???곕룞: ?앹궛 愿由ъ뿉???먮룞 ?깅줉 (workplace 異붽?)
-    cursor.execute(
-        '''
-        INSERT INTO productions (product_id, production_date, planned_boxes, status, schedule_id, workplace)
-        VALUES (?, ?, ?, '예정', ?, ?)
-    ''',
-        (product_id, date, planned_boxes, schedule_id, workplace),
-    )
-    production_id = cursor.lastrowid
-
-    # ?ㅼ?以꾩뿉 production_id ???
-    cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
-
-    audit_log(
-        conn,
-        'create',
-        'production_schedule',
-        schedule_id,
-        {
-            'product_id': product_id,
-            'scheduled_date': date,
-            'planned_boxes': planned_boxes,
-            'line': production_lines_str,
-            'workplace': workplace,
-            'production_id': production_id,
-        },
-    )
-
-    conn.commit()
-    conn.close()
+        cursor.execute(
+            '''
+            INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, line, workplace)
+            VALUES (?, ?, ?, '예정', ?, ?)
+        ''',
+            (product_id, date, planned_boxes, production_lines_str, workplace),
+        )
+        schedule_id = cursor.lastrowid
+        cursor.execute(
+            '''
+            INSERT INTO productions (product_id, production_date, planned_boxes, status, schedule_id, workplace)
+            VALUES (?, ?, ?, '예정', ?, ?)
+        ''',
+            (product_id, date, planned_boxes, schedule_id, workplace),
+        )
+        production_id = cursor.lastrowid
+        cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
+        audit_log(
+            conn,
+            'create',
+            'production_schedule',
+            schedule_id,
+            {
+                'product_id': product_id,
+                'scheduled_date': date,
+                'planned_boxes': planned_boxes,
+                'line': production_lines_str,
+                'workplace': workplace,
+                'production_id': production_id,
+            },
+        )
 
     return redirect(url_for('production.schedule_detail', date=date))
 
@@ -1858,27 +1796,23 @@ def work_days():
         year = today.year
         month = today.month
 
-    conn = get_db()
-    cursor = conn.cursor()
-
-    # ?대떦 ?붿쓽 洹쇰Т???뺣낫 媛?몄삤湲?
     month_start = date(year, month, 1)
     if month == 12:
         month_end = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         month_end = date(year, month + 1, 1) - timedelta(days=1)
-
-    _ensure_auto_work_days_for_month(conn, cursor, year, month)
-
-    cursor.execute(
-        '''
-        SELECT date, type, overtime_hours, note
-        FROM work_days
-        WHERE date BETWEEN ? AND ?
-    ''',
-        (month_start.isoformat(), month_end.isoformat()),
-    )
-    work_days_data = {row['date']: row for row in cursor.fetchall()}
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        _ensure_auto_work_days_for_month(conn, cursor, year, month)
+        cursor.execute(
+            '''
+            SELECT date, type, overtime_hours, note
+            FROM work_days
+            WHERE date BETWEEN ? AND ?
+        ''',
+            (month_start.isoformat(), month_end.isoformat()),
+        )
+        work_days_data = {row['date']: row for row in cursor.fetchall()}
 
     # 罹섎┛???앹꽦
     from calendar import monthrange
@@ -1951,8 +1885,6 @@ def work_days():
         'extra': sum(1 for d in work_days_data.values() if d['type'] == 'extra'),
     }
 
-    conn.close()
-
     return render_template(
         'work_days.html',
         user=session['user'],
@@ -1972,49 +1904,42 @@ def manage_work_day():
     overtime_hours = request.form.get('overtime_hours') or 0
     note = request.form.get('note', '')
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM work_days WHERE date = ?', (work_date,))
+        existing = cursor.fetchone()
 
-    # 湲곗〈 ?곗씠?곌? ?덈뒗吏 ?뺤씤
-    cursor.execute('SELECT id FROM work_days WHERE date = ?', (work_date,))
-    existing = cursor.fetchone()
-
-    if existing:
-        # ?낅뜲?댄듃
-        cursor.execute(
-            '''
-            UPDATE work_days
-            SET type = ?, overtime_hours = ?, note = ?
-            WHERE date = ?
-        ''',
-            (work_type, overtime_hours, note, work_date),
-        )
-        audit_log(
-            conn,
-            'update',
-            'work_day',
-            None,
-            {'date': work_date, 'type': work_type, 'overtime_hours': overtime_hours, 'note': note},
-        )
-    else:
-        # ?쎌엯
-        cursor.execute(
-            '''
-            INSERT INTO work_days (date, type, overtime_hours, note)
-            VALUES (?, ?, ?, ?)
-        ''',
-            (work_date, work_type, overtime_hours, note),
-        )
-        audit_log(
-            conn,
-            'create',
-            'work_day',
-            None,
-            {'date': work_date, 'type': work_type, 'overtime_hours': overtime_hours, 'note': note},
-        )
-
-    conn.commit()
-    conn.close()
+        if existing:
+            cursor.execute(
+                '''
+                UPDATE work_days
+                SET type = ?, overtime_hours = ?, note = ?
+                WHERE date = ?
+            ''',
+                (work_type, overtime_hours, note, work_date),
+            )
+            audit_log(
+                conn,
+                'update',
+                'work_day',
+                None,
+                {'date': work_date, 'type': work_type, 'overtime_hours': overtime_hours, 'note': note},
+            )
+        else:
+            cursor.execute(
+                '''
+                INSERT INTO work_days (date, type, overtime_hours, note)
+                VALUES (?, ?, ?, ?)
+            ''',
+                (work_date, work_type, overtime_hours, note),
+            )
+            audit_log(
+                conn,
+                'create',
+                'work_day',
+                None,
+                {'date': work_date, 'type': work_type, 'overtime_hours': overtime_hours, 'note': note},
+            )
 
     # ?대떦 ?좎쭨???곗썡濡?由щ떎?대젆??
     work_date_obj = datetime.strptime(work_date, '%Y-%m-%d').date()
@@ -2026,14 +1951,10 @@ def manage_work_day():
 def delete_work_day():
     """Auto-generated docstring."""
     work_date = request.form.get('date')
-
-    conn = get_db()
-    cursor = conn.cursor()
-
-    cursor.execute('DELETE FROM work_days WHERE date = ?', (work_date,))
-    audit_log(conn, 'delete', 'work_day', None, {'date': work_date})
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM work_days WHERE date = ?', (work_date,))
+        audit_log(conn, 'delete', 'work_day', None, {'date': work_date})
 
     # ?대떦 ?좎쭨???곗썡濡?由щ떎?대젆??
     work_date_obj = datetime.strptime(work_date, '%Y-%m-%d').date()
@@ -2079,7 +2000,8 @@ def production_list():
     prev_month = prev_dt.strftime('%Y-%m')
     next_month = next_dt.strftime('%Y-%m')
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
 
     # 월별 데이터 조회 후 상태 정규화로 탭 분리
@@ -2134,7 +2056,7 @@ def production_list():
             continue
         seen_calendar_dates.add(production_date)
         available_calendar_dates.append(production_date)
-    conn.close()
+    conn_context.__exit__(None, None, None)
 
     return render_template(
         'production.html',
@@ -2161,7 +2083,8 @@ def add_production():
     workplace = get_workplace()
 
     if request.method == 'GET':
-        conn = get_db()
+        conn_context = db_connection()
+        conn = conn_context.__enter__()
         cursor = conn.cursor()
 
         # ?곹뭹 紐⑸줉 (?꾩옱 ?묒뾽?λ쭔)
@@ -2197,7 +2120,7 @@ def add_production():
         )
         bom_mat = cursor.fetchall()
 
-        conn.close()
+        conn_context.__exit__(None, None, None)
 
         # JSON?쇰줈 蹂??
         products_list = [{'id': p['id'], 'name': p['name'], 'box_quantity': p['box_quantity']} for p in products]
@@ -2255,6 +2178,7 @@ def add_production():
         return "<script>alert('?앹궛 ?쇱씤???좏깮?댁＜?몄슂.'); window.history.back();</script>"
 
     conn = get_db()
+    begin_db_transaction(conn)
     cursor = conn.cursor()
 
     # ?앹궛 湲곕줉 ?앹꽦 (workplace 異붽?)
@@ -2297,8 +2221,8 @@ def add_production():
         },
     )
 
-    conn.commit()
-    conn.close()
+    commit_db(conn)
+    close_db(conn)
 
     return redirect(url_for('production.production_detail', production_id=production_id))
 
@@ -2313,7 +2237,8 @@ def production_detail(production_id):
     if material_shortage_popup and int(material_shortage_popup.get('production_id', 0) or 0) != int(production_id):
         material_shortage_popup = None
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
 
     # ?앹궛 ?뺣낫
@@ -2332,7 +2257,7 @@ def production_detail(production_id):
     production = cursor.fetchone()
 
     if not production:
-        conn.close()
+        conn_context.__exit__(None, None, None)
         return redirect(url_for('production.production_list'))
 
     production = dict(production)
@@ -2751,7 +2676,7 @@ def production_detail(production_id):
         date=production['production_date'],
     )
 
-    conn.close()
+    conn_context.__exit__(None, None, None)
 
     return render_template(
         'production_detail.html',
@@ -2780,7 +2705,8 @@ def production_detail(production_id):
 @bp.route('/production/<int:production_id>/edit', methods=['GET', 'POST'])
 @role_required('production')
 def edit_production_plan(production_id):
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -2943,7 +2869,7 @@ def edit_production_plan(production_id):
         conn.close()
         return redirect(url_for('production.production_detail', production_id=production_id))
 
-    conn.close()
+    conn_context.__exit__(None, None, None)
     return render_template('production_edit.html', user=session['user'], production=production)
 
 
@@ -3799,7 +3725,8 @@ def production_search():
     keyword = (request.args.get('keyword', '') or '').strip()
     workplace = get_workplace()
 
-    conn = get_db()
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
 
     query = """
@@ -3829,7 +3756,7 @@ def production_search():
 
     cursor.execute(query, params)
     results = cursor.fetchall()
-    conn.close()
+    conn_context.__exit__(None, None, None)
 
     # JSON 蹂??
     data = [
