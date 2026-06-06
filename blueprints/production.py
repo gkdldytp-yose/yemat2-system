@@ -5,11 +5,16 @@ import json
 import math
 
 from core import (
+    begin_db_transaction,
+    close_db,
+    commit_db,
+    db_transaction,
     get_db,
     get_workplace,
     rows_to_dict,
     login_required,
     role_required,
+    rollback_db,
     audit_log,
     SHARED_WORKPLACE,
     SHARED_MATERIAL_CATEGORIES,
@@ -2950,7 +2955,7 @@ def update_production_usage(production_id):
     try:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute('BEGIN IMMEDIATE')
+        begin_db_transaction(conn, mode='IMMEDIATE')
 
         def _detail_redirect():
             kwargs = {'production_id': production_id}
@@ -2993,12 +2998,12 @@ def update_production_usage(production_id):
             )
             usage_row = cursor.fetchone()
             if not usage_row:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
                 return "<script>alert('정보를 적용할 부자재 항목을 찾을 수 없습니다.'); window.history.back();</script>"
 
             gap = _get_material_info_gap(cursor, int(usage_row['material_id']), usage_row['category'], current_workplace)
             if not gap:
-                cursor.execute('COMMIT')
+                commit_db(conn)
                 return _detail_redirect()
 
             _apply_missing_material_info_to_lot(
@@ -3011,7 +3016,7 @@ def update_production_usage(production_id):
                 (request.form.get(f'mat_info_manufacture_none_{apply_usage_id}') or '').strip() == '1',
                 (request.form.get(f'mat_info_expiry_none_{apply_usage_id}') or '').strip() == '1',
             )
-            cursor.execute('COMMIT')
+            commit_db(conn)
             return _detail_redirect()
 
         def _to_int(name):
@@ -3048,7 +3053,7 @@ def update_production_usage(production_id):
         expiry_date = expiry_date_input or default_expiry_date
         import re
         if expiry_date and not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_date):
-            conn.execute('ROLLBACK')
+            rollback_db(conn)
             return "<script>alert('?뚮퉬湲고븳 ?뺤떇? YYYY-MM-DD ?먮뒗 YYYY-MM-DDA ?뺥깭濡??낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
         expiry_box_inputs = [(request.form.get(f'expiry_boxes_{idx}') or '').strip() for idx in range(1, 4)]
@@ -3060,17 +3065,17 @@ def update_production_usage(production_id):
             try:
                 box_value = float(raw_box)
             except ValueError:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
                 return f"<script>alert('{idx}번째 소비기한 박스 수는 숫자로 입력해주세요.'); window.history.back();</script>"
             if box_value <= 0:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
                 return f"<script>alert('{idx}번째 소비기한 박스 수는 0보다 커야 합니다.'); window.history.back();</script>"
             parsed_expiry_boxes.append(box_value)
 
         has_secondary_expiry = bool(expiry_date_2_input or expiry_date_3_input or expiry_box_inputs[1] or expiry_box_inputs[2])
         if parsed_expiry_boxes[0] is None:
             if has_secondary_expiry:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
                 return "<script>alert('첫 번째 소비기한의 박스 수를 먼저 입력해주세요.'); window.history.back();</script>"
             parsed_expiry_boxes[0] = actual_boxes if actual_boxes > 0 else planned_boxes
 
@@ -3084,14 +3089,14 @@ def update_production_usage(production_id):
             has_date = bool(expiry_input)
             has_box = box_value is not None
             if has_date != has_box:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
                 return f"<script>alert('{idx}번째 소비기한은 날짜와 박스 수를 함께 입력해주세요.'); window.history.back();</script>"
 
         expiry_date_2 = expiry_date_2_input
         expiry_date_3 = expiry_date_3_input
         for idx, expiry_value in enumerate((expiry_date_2, expiry_date_3), start=2):
             if expiry_value and not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_value):
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
                 return f"<script>alert('{idx}번째 소비기한은 YYYY-MM-DD 또는 YYYY-MM-DDA 형식으로 입력해주세요.'); window.history.back();</script>"
 
         computed_actual_boxes = sum(float(box or 0) for box in parsed_expiry_boxes if box is not None)
@@ -3110,7 +3115,7 @@ def update_production_usage(production_id):
         if not work_time:
             missing.append('?묒뾽?쒓컙')
         if missing:
-            conn.execute('ROLLBACK')
+            rollback_db(conn)
             return f"<script>alert('?몄썝愿由??꾩닔 ?낅젰: {', '.join(missing)}'); window.history.back();</script>"
 
         cursor.execute(
@@ -3273,7 +3278,7 @@ def update_production_usage(production_id):
         )
         has_raw_bom = (cursor.fetchone()['cnt'] or 0) > 0
         if save_action != 'temp' and has_raw_bom and not raw_requests:
-            conn.execute('ROLLBACK')
+            rollback_db(conn)
             return "<script>alert('Please enter raw material usage.'); window.history.back();</script>"
 
         insufficient_raw = []
@@ -3324,7 +3329,7 @@ def update_production_usage(production_id):
         if save_action != 'temp' and insufficient_raw:
             if conn:
                 try:
-                    conn.execute('ROLLBACK')
+                    rollback_db(conn)
                 except Exception:
                     pass
                 conn.close()
@@ -3440,7 +3445,7 @@ def update_production_usage(production_id):
             if material_shortages:
                 if conn:
                     try:
-                        conn.execute('ROLLBACK')
+                        rollback_db(conn)
                     except Exception:
                         pass
                     conn.close()
@@ -3609,7 +3614,7 @@ def update_production_usage(production_id):
                     'raw_entries': raw_entries,
                 },
             )
-            cursor.execute('COMMIT')
+            commit_db(conn)
             if request.form.get('move_to_purchase') == '1':
                 return redirect(url_for('materials.purchase_orders'))
             return redirect(url_for('production.production_detail', production_id=production_id))
@@ -3646,12 +3651,12 @@ def update_production_usage(production_id):
             },
         )
 
-        cursor.execute('COMMIT')
+        commit_db(conn)
 
     except ValueError as e:
         if conn:
             try:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
             except Exception:
                 pass
         msg = str(e).replace("'", "\\'")
@@ -3659,7 +3664,7 @@ def update_production_usage(production_id):
     except Exception as e:
         if conn:
             try:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
             except Exception:
                 pass
         import traceback
@@ -3681,22 +3686,18 @@ def hide_personnel_note_suggestion():
     if not note_text or not workplace:
         return jsonify({'ok': False, 'message': 'invalid_request'}), 400
 
-    conn = get_db()
     try:
-        conn.execute(
-            '''
-            INSERT OR IGNORE INTO production_personnel_note_hidden (workplace, note_text)
-            VALUES (?, ?)
-            ''',
-            (workplace, note_text),
-        )
-        conn.commit()
+        with db_transaction() as conn:
+            conn.execute(
+                '''
+                INSERT OR IGNORE INTO production_personnel_note_hidden (workplace, note_text)
+                VALUES (?, ?)
+                ''',
+                (workplace, note_text),
+            )
         return jsonify({'ok': True})
     except Exception as e:
-        conn.rollback()
         return jsonify({'ok': False, 'message': str(e)}), 500
-    finally:
-        conn.close()
 
 
 @bp.route('/production/<int:production_id>/delete', methods=['POST'])
@@ -3777,18 +3778,14 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
 
 
 def _delete_production_record_response(production_id, success_redirect):
-    conn = get_db()
     try:
-        deleted = _delete_production_record(conn, production_id, session.get('user_id'))
-        conn.commit()
-        if not deleted:
-            return redirect(success_redirect)
+        with db_transaction() as conn:
+            deleted = _delete_production_record(conn, production_id, session.get('user_id'))
+            if not deleted:
+                return redirect(success_redirect)
     except Exception as e:
-        conn.rollback()
         print(f"CRITICAL ERROR: {e}")
         return f"삭제 실패: {str(e)}", 500
-    finally:
-        conn.close()
 
     return redirect(success_redirect)
 

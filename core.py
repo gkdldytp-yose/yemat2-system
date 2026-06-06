@@ -1,4 +1,5 @@
 from flask import session, redirect, url_for, request, flash
+from contextlib import contextmanager
 import sqlite3
 from functools import wraps
 import json
@@ -164,6 +165,7 @@ def password_needs_rehash(stored_hash):
     stored = (stored_hash or '').strip()
     return bool(stored) and not (stored.startswith('pbkdf2:') or stored.startswith('scrypt:'))
 
+
 def get_db():
     """데이터베이스 연결 - WAL 모드 + 긴 타임아웃"""
     conn = sqlite3.connect(
@@ -195,6 +197,71 @@ def get_db():
     _ensure_dashboard_todo_schema(conn)
     _cleanup_old_logs(conn)
     return conn
+
+
+def close_db(conn):
+    """Safely close a database connection."""
+    if conn is None:
+        return
+    try:
+        conn.close()
+    except Exception:
+        pass
+
+
+def commit_db(conn):
+    """Commit the current transaction if a connection exists."""
+    if conn is None:
+        return
+    conn.commit()
+
+
+def rollback_db(conn):
+    """Rollback the current transaction if a connection exists."""
+    if conn is None:
+        return
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+
+
+def begin_db_transaction(conn, mode='DEFERRED'):
+    """Start an explicit SQLite transaction with a supported lock mode."""
+    if conn is None:
+        raise ValueError('Database connection is required.')
+
+    normalized_mode = (mode or 'DEFERRED').strip().upper()
+    if normalized_mode not in {'DEFERRED', 'IMMEDIATE', 'EXCLUSIVE'}:
+        raise ValueError(f'Unsupported transaction mode: {mode}')
+
+    conn.execute(f'BEGIN {normalized_mode}')
+    return conn
+
+
+@contextmanager
+def db_connection():
+    """Yield a managed connection for reads or manual commit flows."""
+    conn = get_db()
+    try:
+        yield conn
+    finally:
+        close_db(conn)
+
+
+@contextmanager
+def db_transaction(mode='DEFERRED'):
+    """Yield a managed connection wrapped in a rollback-safe transaction."""
+    conn = get_db()
+    try:
+        begin_db_transaction(conn, mode=mode)
+        yield conn
+        commit_db(conn)
+    except Exception:
+        rollback_db(conn)
+        raise
+    finally:
+        close_db(conn)
 
 
 def _ensure_import_schema(conn):

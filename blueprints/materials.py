@@ -5,11 +5,17 @@ import json
 
 from core import (
     add_user_notification,
+    begin_db_transaction,
+    close_db,
+    commit_db,
+    db_connection,
+    db_transaction,
     get_db,
     get_usernames_for_notification,
     get_workplace,
     login_required,
     role_required,
+    rollback_db,
     WORKPLACES,
     LOGISTICS_WORKPLACE,
     SHARED_WORKPLACE,
@@ -699,7 +705,7 @@ def _sync_missing_logistics_lot_balances(conn):
         _upsert_material_lot_balance(cursor, logistics_location_id, int(row['id']), qty)
         synced += 1
     if synced:
-        conn.commit()
+        commit_db(conn)
     return synced
 
 
@@ -1678,20 +1684,19 @@ def _get_latest_workplace_lot_defaults(cursor, material_id, workplace):
 @login_required
 def suppliers():
     """?? ??"""
-    conn = get_db()
-    cursor = conn.cursor()
-    _cleanup_orphan_material_refs(conn)
-    _sync_material_stock_with_lots(conn)
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        _cleanup_orphan_material_refs(conn)
+        _sync_material_stock_with_lots(conn)
 
-    cursor.execute('''
-        SELECT s.*, COUNT(m.id) as material_count
-        FROM suppliers s
-        LEFT JOIN materials m ON s.id = m.supplier_id
-        GROUP BY s.id
-        ORDER BY s.name
-    ''')
-    suppliers = cursor.fetchall()
-    conn.close()
+        cursor.execute('''
+            SELECT s.*, COUNT(m.id) as material_count
+            FROM suppliers s
+            LEFT JOIN materials m ON s.id = m.supplier_id
+            GROUP BY s.id
+            ORDER BY s.name
+        ''')
+        suppliers = cursor.fetchall()
 
     return render_template('suppliers.html', user=session['user'], suppliers=suppliers)
 
@@ -1705,20 +1710,16 @@ def add_supplier():
     address = request.form.get('address')
     note = request.form.get('note')
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM suppliers')
+        count = cursor.fetchone()[0]
+        code = f"S{count+1:05d}"
 
-    cursor.execute('SELECT COUNT(*) FROM suppliers')
-    count = cursor.fetchone()[0]
-    code = f"S{count+1:05d}"
-
-    cursor.execute('''
-        INSERT INTO suppliers (code, name, contact, address, note)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (code, name, contact, address, note))
-
-    conn.commit()
-    conn.close()
+        cursor.execute('''
+            INSERT INTO suppliers (code, name, contact, address, note)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (code, name, contact, address, note))
 
     return redirect(url_for('materials.materials', req_tab='issue'))
 
@@ -1764,8 +1765,8 @@ def materials():
     if export_status_tab not in ('pending', 'completed', 'rejected'):
         export_status_tab = 'pending'
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
     _cleanup_orphan_material_refs(conn)
 
     if is_logistics_role:
@@ -2240,8 +2241,8 @@ def add_material():
         if upper_unit_qty <= 0:
             return "<script>alert('상위 단위 환산값은 0보다 커야 합니다.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
 
     try:
         # 2. 먼저 기본 정보 INSERT (code는 나중에 넣거나 바로 넣거나 결정)
@@ -2307,14 +2308,14 @@ def add_material():
         conn.commit()
 
     except sqlite3.IntegrityError as e:
-        conn.rollback()
+        rollback_db(conn)
         # UNIQUE 제약 조건(중복 코드) 에러 발생 시 알림
         return (
             f"<script>alert('저장 오류: 이미 존재하는 코드이거나 데이터에 문제가 있습니다. ({str(e)})'); history.back();</script>"
         )
 
     finally:
-        conn.close()
+        close_db(conn)
 
     return_url = (request.form.get('return_url') or '').strip()
     if return_url.startswith('/materials'):
@@ -3254,7 +3255,7 @@ def export_material(material_id):
 
     try:
         # 2. 원자적 업데이트 및 재고 확인을 동시에 처리
-        cursor.execute('BEGIN TRANSACTION')
+        begin_db_transaction(conn)
 
         cursor.execute('SELECT name, current_stock FROM materials WHERE id = ?', (material_id,))
         material = cursor.fetchone()
@@ -3314,7 +3315,6 @@ def delete_material(material_id):
     # BOM에 사용 중인지 확인
     cursor.execute('SELECT COUNT(*) as cnt FROM bom WHERE material_id = ?', (material_id,))
     if cursor.fetchone()['cnt'] > 0:
-        conn.close()
         return '''
             <script>
                 alert('이 부자재는 BOM에 사용 중이므로 삭제할 수 없습니다.');
@@ -3325,7 +3325,6 @@ def delete_material(material_id):
     # 생산에 사용 중인지 확인
     cursor.execute('SELECT COUNT(*) as cnt FROM production_material_usage WHERE material_id = ?', (material_id,))
     if cursor.fetchone()['cnt'] > 0:
-        conn.close()
         return '''
             <script>
                 alert('이 부자재는 생산 기록에 사용 중이므로 삭제할 수 없습니다.');
@@ -3335,7 +3334,6 @@ def delete_material(material_id):
 
     cursor.execute('SELECT COUNT(*) as cnt FROM purchase_requests WHERE material_id = ?', (material_id,))
     if cursor.fetchone()['cnt'] > 0:
-        conn.close()
         return '''
             <script>
                 alert('이 부자재는 발주 이력이 있어 삭제할 수 없습니다.');
@@ -3345,7 +3343,6 @@ def delete_material(material_id):
 
     cursor.execute('SELECT COUNT(*) as cnt FROM logistics_issue_requests WHERE material_id = ?', (material_id,))
     if cursor.fetchone()['cnt'] > 0:
-        conn.close()
         return '''
             <script>
                 alert('이 부자재는 불출 이력이 있어 삭제할 수 없습니다.');
@@ -3355,7 +3352,6 @@ def delete_material(material_id):
 
     cursor.execute('SELECT COUNT(*) as cnt FROM material_lots WHERE material_id = ?', (material_id,))
     if cursor.fetchone()['cnt'] > 0:
-        conn.close()
         return '''
             <script>
                 alert('이 부자재는 입고 로트 이력이 있어 삭제할 수 없습니다.');
@@ -3369,8 +3365,6 @@ def delete_material(material_id):
     # 삭제
     cursor.execute('DELETE FROM materials WHERE id = ?', (material_id,))
     audit_log(conn, 'delete', 'material', material_id, {'before': dict(before) if before else None})
-    conn.commit()
-    conn.close()
 
     return redirect(url_for('materials.materials'))
 
@@ -4394,49 +4388,45 @@ def add_raw_material():
     total_stock = request.form.get('total_stock', 0)
     current_stock = request.form.get('current_stock', 0)
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            INSERT INTO raw_materials (name, code, lot, sheets_per_sok, receiving_date, ja_ho, car_number, total_stock, current_stock, used_quantity, workplace)
+            VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, 0, ?)
+        ''',
+            (
+                name,
+                code,
+                sheets_per_sok,
+                receiving_date if receiving_date else None,
+                ja_ho,
+                ja_ho,
+                total_stock,
+                current_stock,
+                workplace,
+            ),
+        )
+        raw_id = cursor.lastrowid
+        final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
 
-    cursor.execute(
-        '''
-        INSERT INTO raw_materials (name, code, lot, sheets_per_sok, receiving_date, ja_ho, car_number, total_stock, current_stock, used_quantity, workplace)
-        VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, 0, ?)
-    ''',
-        (
-            name,
-            code,
-            sheets_per_sok,
-            receiving_date if receiving_date else None,
-            ja_ho,
-            ja_ho,
-            total_stock,
-            current_stock,
-            workplace,
-        ),
-    )
-    raw_id = cursor.lastrowid
-    final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
-
-    audit_log(
-        conn,
-        'create',
-        'raw_material',
-        raw_id,
-        {
-            'name': name,
-            'code': final_code,
-            'lot': lot,
-            'sheets_per_sok': sheets_per_sok,
-            'receiving_date': receiving_date,
-            'ja_ho': ja_ho,
-            'total_stock': total_stock,
-            'current_stock': current_stock,
-            'workplace': workplace,
-        },
-    )
-
-    conn.commit()
-    conn.close()
+        audit_log(
+            conn,
+            'create',
+            'raw_material',
+            raw_id,
+            {
+                'name': name,
+                'code': final_code,
+                'lot': lot,
+                'sheets_per_sok': sheets_per_sok,
+                'receiving_date': receiving_date,
+                'ja_ho': ja_ho,
+                'total_stock': total_stock,
+                'current_stock': current_stock,
+                'workplace': workplace,
+            },
+        )
 
     return redirect(url_for('materials.raw_materials'))
 
@@ -4528,11 +4518,11 @@ def update_raw_material_stock():
 
     conn = None
     try:
-        conn = get_db()
-        cursor = conn.cursor()
+        with db_connection() as conn:
+            cursor = conn.cursor()
 
         # 트랜잭션 시작
-        cursor.execute('BEGIN IMMEDIATE')
+        begin_db_transaction(conn, mode='IMMEDIATE')
 
         # 현재 재고 조회
         cursor.execute(
@@ -4639,12 +4629,12 @@ def update_raw_material_stock():
         )
 
         # 트랜잭션 커밋
-        cursor.execute('COMMIT')
+        commit_db(conn)
 
     except Exception as e:
         if conn:
             try:
-                conn.execute('ROLLBACK')
+                rollback_db(conn)
             except Exception:
                 pass
         print(f"Error in update_raw_material_stock: {e}")
@@ -4654,7 +4644,7 @@ def update_raw_material_stock():
         raise
     finally:
         if conn:
-            conn.close()
+            close_db(conn)
 
     return redirect(url_for('materials.raw_materials'))
 
@@ -5432,14 +5422,10 @@ def logistics_ledger():
 def add_purchase_order():
     """발주 추가"""
     if request.method == 'GET':
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # 업체 목록
-        cursor.execute('SELECT id, name FROM suppliers ORDER BY name')
-        suppliers = cursor.fetchall()
-
-        conn.close()
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, name FROM suppliers ORDER BY name')
+            suppliers = cursor.fetchall()
 
         return render_template('purchase_order_add.html', user=session['user'], suppliers=suppliers)
 
@@ -5455,39 +5441,33 @@ def add_purchase_order():
     quantities = request.form.getlist('quantity[]')
     unit_prices = request.form.getlist('unit_price[]')
 
-    conn = get_db()
-    cursor = conn.cursor()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            INSERT INTO purchase_orders 
+            (supplier_id, order_date, expected_delivery_date, requester, note, status)
+            VALUES (?, ?, ?, ?, ?, '발주')
+        ''',
+            (supplier_id, order_date, expected_delivery_date, requester, note),
+        )
 
-    # 발주 생성
-    cursor.execute(
-        '''
-        INSERT INTO purchase_orders 
-        (supplier_id, order_date, expected_delivery_date, requester, note, status)
-        VALUES (?, ?, ?, ?, ?, '발주')
-    ''',
-        (supplier_id, order_date, expected_delivery_date, requester, note),
-    )
+        order_id = cursor.lastrowid
 
-    order_id = cursor.lastrowid
+        for i in range(len(material_ids)):
+            if material_ids[i]:
+                quantity = float(quantities[i])
+                unit_price = float(unit_prices[i])
+                total_price = quantity * unit_price
 
-    # 발주 항목 추가
-    for i in range(len(material_ids)):
-        if material_ids[i]:
-            quantity = float(quantities[i])
-            unit_price = float(unit_prices[i])
-            total_price = quantity * unit_price
-
-            cursor.execute(
-                '''
-                INSERT INTO purchase_order_items
-                (purchase_order_id, material_id, quantity, unit_price, total_price)
-                VALUES (?, ?, ?, ?, ?)
-            ''',
-                (order_id, material_ids[i], quantity, unit_price, total_price),
-            )
-
-    conn.commit()
-    conn.close()
+                cursor.execute(
+                    '''
+                    INSERT INTO purchase_order_items
+                    (purchase_order_id, material_id, quantity, unit_price, total_price)
+                    VALUES (?, ?, ?, ?, ?)
+                ''',
+                    (order_id, material_ids[i], quantity, unit_price, total_price),
+                )
 
     return redirect(request.referrer or url_for('materials.materials', req_tab='issue'))
 
@@ -7070,9 +7050,8 @@ def reschedule_purchase_request(req_id):
     if not new_expected_date:
         return "<script>alert('\ubcc0\uacbd\ud560 \uc785\uace0 \uc608\uc815\uc77c\uc744 \uc785\ub825\ud574 \uc8fc\uc138\uc694.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM purchase_requests WHERE id = ?', (req_id,))
         before = cursor.fetchone()
         if not before:
@@ -7112,9 +7091,6 @@ def reschedule_purchase_request(req_id):
             f"\ubcc0\uacbd\uc77c {new_expected_date}" + (f" / \uc0ac\uc720: {note}" if note else ''),
             '/purchase-orders',
         )
-        conn.commit()
-    finally:
-        conn.close()
     if next_page == 'logistics':
         return redirect(url_for('materials.purchase_orders'))
     return redirect(url_for('materials.purchase_orders'))
@@ -7127,9 +7103,8 @@ def reject_close_purchase_request(req_id):
     if not reason:
         return "<script>alert('?? ?? ??? ??? ???.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM purchase_requests WHERE id = ?', (req_id,))
         row = cursor.fetchone()
         if not row:
@@ -7157,9 +7132,6 @@ def reject_close_purchase_request(req_id):
             req_id,
             {'reason': reason},
         )
-        conn.commit()
-    finally:
-        conn.close()
 
     if next_page == 'logistics':
         return redirect(url_for('materials.purchase_orders'))
@@ -7174,9 +7146,8 @@ def finalize_purchase_requests_by_date():
     if not finalize_date:
         return "<script>alert('?? ?? ??? ??? ??? ???.'); history.back();</script>"
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             '''
             SELECT COUNT(*) as cnt
@@ -7211,9 +7182,6 @@ def finalize_purchase_requests_by_date():
             None,
             {'finalize_date': finalize_date, 'closed_count': closed_count},
         )
-        conn.commit()
-    finally:
-        conn.close()
     if next_page == 'logistics':
         return redirect(url_for('materials.purchase_orders'))
     return redirect(url_for('materials.purchase_orders'))
@@ -7376,14 +7344,12 @@ def receive_purchase_request(req_id):
 @role_required('purchase')
 def delete_purchase_request(req_id):
     """발주 요청 삭제"""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM purchase_requests WHERE id=?', (req_id,))
-    before = cursor.fetchone()
-    conn.execute('DELETE FROM purchase_requests WHERE id=?', (req_id,))
-    audit_log(conn, 'delete', 'purchase_request', req_id, {'before': dict(before) if before else None})
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM purchase_requests WHERE id=?', (req_id,))
+        before = cursor.fetchone()
+        conn.execute('DELETE FROM purchase_requests WHERE id=?', (req_id,))
+        audit_log(conn, 'delete', 'purchase_request', req_id, {'before': dict(before) if before else None})
     return redirect(url_for('materials.purchase_orders'))
 
 
@@ -7392,44 +7358,42 @@ def delete_purchase_request(req_id):
 def auto_scan_low_stock():
     """최소재고 미달 부자재 발주필요 자동 등록"""
     workplace = get_workplace()
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT id, workplace FROM materials
-        WHERE current_stock < min_stock AND min_stock > 0
-          AND (workplace = ? OR workplace = ? OR workplace IS NULL)
-    """,
-        (workplace, SHARED_WORKPLACE),
-    )
-    rows = cursor.fetchall()
-    for row in rows:
-        target_workplace = SHARED_WORKPLACE if row['workplace'] in (None, SHARED_WORKPLACE) else workplace
+    with db_transaction() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT id FROM purchase_requests
-            WHERE material_id = ? AND status != '입고완료' AND workplace = ?
+            SELECT id, workplace FROM materials
+            WHERE current_stock < min_stock AND min_stock > 0
+              AND (workplace = ? OR workplace = ? OR workplace IS NULL)
         """,
-            (row['id'], target_workplace),
+            (workplace, SHARED_WORKPLACE),
         )
-        if cursor.fetchone():
-            continue
-        cursor.execute(
-            """
-            INSERT INTO purchase_requests (material_id, status, requested_quantity, workplace)
-            VALUES (?, '발주필요', 0, ?)
-        """,
-            (row['id'], target_workplace),
-        )
-        audit_log(
-            conn,
-            'create',
-            'purchase_request',
-            cursor.lastrowid,
-            {'material_id': row['id'], 'status': '발주필요', 'workplace': target_workplace},
-        )
-    conn.commit()
-    conn.close()
+        rows = cursor.fetchall()
+        for row in rows:
+            target_workplace = SHARED_WORKPLACE if row['workplace'] in (None, SHARED_WORKPLACE) else workplace
+            cursor.execute(
+                """
+                SELECT id FROM purchase_requests
+                WHERE material_id = ? AND status != '입고완료' AND workplace = ?
+            """,
+                (row['id'], target_workplace),
+            )
+            if cursor.fetchone():
+                continue
+            cursor.execute(
+                """
+                INSERT INTO purchase_requests (material_id, status, requested_quantity, workplace)
+                VALUES (?, '발주필요', 0, ?)
+            """,
+                (row['id'], target_workplace),
+            )
+            audit_log(
+                conn,
+                'create',
+                'purchase_request',
+                cursor.lastrowid,
+                {'material_id': row['id'], 'status': '발주필요', 'workplace': target_workplace},
+            )
     return redirect(url_for('materials.purchase_orders'))
 
 
@@ -7442,10 +7406,8 @@ def update_supplier():
     contact = request.form.get('contact')
     address = request.form.get('address')
     note = request.form.get('note')
-    conn = get_db()
-    conn.execute('UPDATE suppliers SET name=?,contact=?,address=?,note=? WHERE id=?', (name, contact, address, note, sid))
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        conn.execute('UPDATE suppliers SET name=?,contact=?,address=?,note=? WHERE id=?', (name, contact, address, note, sid))
     return redirect(url_for('materials.purchase_orders'))
 
 
@@ -7453,10 +7415,8 @@ def update_supplier():
 @role_required('purchase')
 def delete_supplier(supplier_id):
     """업체 삭제"""
-    conn = get_db()
-    conn.execute('DELETE FROM suppliers WHERE id=?', (supplier_id,))
-    conn.commit()
-    conn.close()
+    with db_transaction() as conn:
+        conn.execute('DELETE FROM suppliers WHERE id=?', (supplier_id,))
     return redirect(url_for('materials.purchase_orders'))
 
 
