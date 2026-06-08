@@ -3411,14 +3411,44 @@ function syncExportRowQuantityToSelectedLot(row, preserveSmaller = true){
     }
 }
 
-function appendExportItemRow(materialData, defaults = {}){
+let exportItemRowSequence = 0;
+
+function makeExportItemRowId(materialId){
+    exportItemRowSequence += 1;
+    return `export_item_${materialId}_${exportItemRowSequence}`;
+}
+
+function getExportRowsByMaterial(materialId){
+    return Array.from(document.querySelectorAll('#exportItemsBody tr[data-material-id]')).filter((row) => {
+        return String(row.dataset.materialId || '') === String(materialId || '');
+    });
+}
+
+function getUsedExportLotIds(materialId, excludeRowId = ''){
+    return getExportRowsByMaterial(materialId)
+        .filter((row) => !excludeRowId || row.id !== excludeRowId)
+        .map((row) => {
+            const lotEl = row.querySelector('.js-export-lot');
+            return String(lotEl?.value || '').trim();
+        })
+        .filter(Boolean);
+}
+
+function getNextAvailableExportLotId(materialId, excludeRowId = ''){
+    const usedLotIds = new Set(getUsedExportLotIds(materialId, excludeRowId));
+    const lots = getMaterialLots(materialId);
+    const nextLot = lots.find((lot) => !usedLotIds.has(String(lot.id || '')));
+    return String(nextLot?.id || '');
+}
+
+function appendExportItemRow(materialData, defaults = {}, options = {}){
     const body = document.getElementById('exportItemsBody');
     if(!body || !materialData) return false;
     const materialId = String(materialData.id || materialData.material_id || '');
     if(!materialId) return false;
-
-    const rowId = `export_item_${materialId}`;
-    if(document.getElementById(rowId)) return false;
+    const allowDuplicate = !!options.allowDuplicate;
+    if(!allowDuplicate && getExportRowsByMaterial(materialId).length > 0) return false;
+    const rowId = makeExportItemRowId(materialId);
 
     const empty = document.getElementById('exportEmptyRow');
     if(empty) empty.remove();
@@ -3433,6 +3463,7 @@ function appendExportItemRow(materialData, defaults = {}){
     const note = String(defaults.note || '').trim();
     const tr = document.createElement('tr');
     tr.id = rowId;
+    tr.dataset.materialId = materialId;
     tr.innerHTML = `
         <td colspan="8" class="export-draft-cell">
             <div class="export-draft-card">
@@ -3443,6 +3474,7 @@ function appendExportItemRow(materialData, defaults = {}){
                         <input type="hidden" name="material_id[]" value="${materialId}">
                     </div>
                     <div class="export-draft-delete">
+                        <button type="button" class="btn btn-small btn-secondary" onclick="duplicateExportItemRow('${rowId}')">로트 추가</button>
                         <button type="button" class="btn btn-small btn-secondary" onclick="removeExportItem('${rowId}')">삭제</button>
                     </div>
                 </div>
@@ -3497,6 +3529,41 @@ function appendExportItemRow(materialData, defaults = {}){
     return true;
 }
 
+function duplicateExportItemRow(rowId){
+    const sourceRow = document.getElementById(rowId);
+    if(!sourceRow) return;
+    const materialId = String(sourceRow.dataset.materialId || sourceRow.querySelector('input[name="material_id[]"]')?.value || '');
+    if(!materialId) return;
+    const sourceLotEl = sourceRow.querySelector('.js-export-lot');
+    const sourceReasonEl = sourceRow.querySelector('.js-export-reason');
+    const sourceReasonDetailEl = sourceRow.querySelector('.js-export-reason-detail');
+    const sourceNoteEl = sourceRow.querySelector('input[name="note[]"]');
+    const materialRow = EXPORT_MATERIAL_SOURCE.find((row) => String(row.value || row.id || '') === materialId);
+    if(!materialRow){
+        alert('부자재 정보를 다시 불러와주세요.');
+        return;
+    }
+    const nextLotId = getNextAvailableExportLotId(materialId);
+    if(!nextLotId){
+        alert('추가 가능한 다른 로트가 없습니다.');
+        return;
+    }
+    appendExportItemRow({
+        id: materialId,
+        code: materialRow.code || '-',
+        name: materialRow.name || '',
+        unit: materialRow.unit || '',
+    }, {
+        quantity: '',
+        lotId: nextLotId || String(sourceLotEl?.value || ''),
+        reason: String(sourceReasonEl?.value || '').trim(),
+        reasonDetail: String(sourceReasonDetailEl?.value || '').trim(),
+        note: String(sourceNoteEl?.value || '').trim(),
+    }, {
+        allowDuplicate: true,
+    });
+}
+
 function addExportItemFromList(){
     const list = document.getElementById('exportMaterialList');
     const body = document.getElementById('exportItemsBody');
@@ -3513,7 +3580,10 @@ function addExportItemFromList(){
         unit: opt.dataset.unit || '',
     });
     if(!appended){
-        alert('같은 자재 항목이 이미 추가되어 있습니다.');
+        const existingRow = getExportRowsByMaterial(materialId)[0];
+        if(existingRow){
+            duplicateExportItemRow(existingRow.id);
+        }
         return;
     }
 }
@@ -3535,18 +3605,36 @@ function addExportBomItems(){
     let skipped = 0;
     items.forEach((item) => {
         const materialId = Number(item.material_id || 0);
-        const lots = getMaterialLots(materialId);
-        const firstLot = lots[0] || null;
-        const totalLotQty = getMaterialTotalLotQty(materialId);
-        const appended = appendExportItemRow({
+        const materialData = {
             id: String(materialId),
             code: item.code || '-',
             name: item.name || '',
             unit: item.unit || '',
             quantity_per_box: Number(item.quantity_per_box || 0),
-        }, {
-            quantity: totalLotQty > 0 ? totalLotQty : Number(item.quantity_per_box || 0),
-            lotId: firstLot ? String(firstLot.id || '') : '',
+        };
+        const existingLotIds = new Set(getUsedExportLotIds(materialId));
+        const lots = getMaterialLots(materialId).filter((lot) => {
+            const lotId = String(lot.id || '');
+            return lotId && !existingLotIds.has(lotId) && Number(lot.current_quantity || 0) > 0;
+        });
+        if(lots.length){
+            lots.forEach((lot) => {
+                const appended = appendExportItemRow(materialData, {
+                    quantity: Number(lot.current_quantity || 0),
+                    lotId: String(lot.id || ''),
+                    reason: '기타',
+                    reasonDetail: '반출',
+                }, {
+                    allowDuplicate: true,
+                });
+                if(appended){
+                    added += 1;
+                }
+            });
+            return;
+        }
+        const appended = appendExportItemRow(materialData, {
+            quantity: Number(item.quantity_per_box || 0),
             reason: '기타',
             reasonDetail: '반출',
         });
@@ -3557,11 +3645,11 @@ function addExportBomItems(){
         }
     });
     if(added === 0){
-        alert(skipped > 0 ? '이미 목록에 있는 BOM 자재입니다.' : '추가할 BOM 자재가 없습니다.');
+        alert(skipped > 0 ? '이미 추가된 로트를 제외하면 새로 등록할 BOM 항목이 없습니다.' : '추가할 BOM 자재가 없습니다.');
         return;
     }
     if(skipped > 0){
-        alert(`BOM 자재 ${added}개를 추가했고, 이미 있던 ${skipped}개는 건너뛰었습니다.`);
+        alert(`BOM 반출 항목 ${added}건을 추가했고, 이미 있던 ${skipped}개 자재는 건너뛰었습니다.`);
     }
 }
 
