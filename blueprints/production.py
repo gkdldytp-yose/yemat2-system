@@ -2348,10 +2348,10 @@ def production_detail(production_id):
                 FROM raw_materials src
                 JOIN bom_raw_refs br
                   ON (
-                        (COALESCE(NULLIF(TRIM(br.raw_name), ''), '') <> '' AND COALESCE(NULLIF(TRIM(src.name), ''), '') = COALESCE(NULLIF(TRIM(br.raw_name), ''), ''))
+                        COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id)) = br.raw_code
                         OR (
-                            COALESCE(NULLIF(TRIM(br.raw_name), ''), '') = ''
-                            AND COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id)) = br.raw_code
+                            COALESCE(NULLIF(TRIM(br.raw_name), ''), '') <> ''
+                            AND COALESCE(NULLIF(TRIM(src.name), ''), '') = COALESCE(NULLIF(TRIM(br.raw_name), ''), '')
                         )
                      )
                 LEFT JOIN old_usage ou ON ou.raw_material_id = src.id
@@ -2392,10 +2392,10 @@ def production_detail(production_id):
                 FROM raw_materials src
                 JOIN bom_raw_refs br
                   ON (
-                        (COALESCE(NULLIF(TRIM(br.raw_name), ''), '') <> '' AND COALESCE(NULLIF(TRIM(src.name), ''), '') = COALESCE(NULLIF(TRIM(br.raw_name), ''), ''))
+                        COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id)) = br.raw_code
                         OR (
-                            COALESCE(NULLIF(TRIM(br.raw_name), ''), '') = ''
-                            AND COALESCE(NULLIF(TRIM(src.code), ''), printf('RM%05d', src.id)) = br.raw_code
+                            COALESCE(NULLIF(TRIM(br.raw_name), ''), '') <> ''
+                            AND COALESCE(NULLIF(TRIM(src.name), ''), '') = COALESCE(NULLIF(TRIM(br.raw_name), ''), '')
                         )
                      )
                 WHERE COALESCE(src.current_stock, 0) > 0

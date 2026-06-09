@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}일지관리{% endblock %}
 {% block extra_css %}
 <style>
@@ -23,6 +23,7 @@
 .journals-filter-select{padding:.6rem .8rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;min-width:120px;}
 .journals-filter-input{min-width:260px;flex:1 1 320px;padding:.6rem .8rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;}
 .journals-filter-actions{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;}
+.journals-inline-notice{margin-bottom:1rem;padding:.85rem 1rem;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;color:#64748b;}
 .journals-hero > .tab-btn{display:none;}
 .journals-calendar{margin-bottom:1rem;padding:1rem 1.05rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);}
 .journals-calendar-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;}
@@ -78,6 +79,7 @@ html[data-theme="dark"] .journals-calendar-day.has-entry:hover{background:rgba(3
 html[data-theme="dark"] .journals-material-scope-btn{background:linear-gradient(180deg,rgba(30,41,59,0.96) 0%,rgba(15,23,42,0.92) 100%);border-color:rgba(148,163,184,0.22);color:var(--text-secondary);box-shadow:0 8px 20px rgba(2,6,23,0.28);}
 html[data-theme="dark"] .journals-material-scope-btn:hover{background:rgba(37,99,235,0.16);border-color:rgba(96,165,250,0.42);color:#dbeafe;}
 html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgba(15,23,42,0.78);color:#bfdbfe;}
+html[data-theme="dark"] .journals-inline-notice{background:rgba(15,23,42,0.82);border-color:rgba(96,165,250,0.28);color:var(--text-secondary);}
 @media (max-width:768px){
   .journals-table{font-size:.8rem;}
   .journals-table th,.journals-table td{padding:.55rem .45rem;}
@@ -96,9 +98,9 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
 <div class="journals-hero">
     <div>
         <h1 style="margin-bottom:.35rem;">일지관리</h1>
-        <p>생산일지, 원재료 입출고 점검표, 부재료 입출고 점검표를 한 곳에서 확인하고 출력할 수 있습니다.</p>
+        <p>생산일지, 원재료 점검표, 부재료 입출고 점검표, 포장재 입출고 점검표를 한 곳에서 확인하고 출력할 수 있습니다.</p>
     </div>
-    <div class="journals-help">현재 작업장: {{ current_workplace }}</div>
+    <div class="journals-help">현재 작업장 {{ current_workplace }}</div>
     <button type="button" class="tab-btn {% if selected_tab == 'packaging' %}active{% endif %}" id="journalTabPackagingHero" onclick="switchJournalTab('packaging')">포장재 점검표</button>
 </div>
 
@@ -129,7 +131,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                     <div class="journals-help">생산 완료 이력이 있는 날짜만 선택할 수 있습니다.</div>
                 </div>
                 <div class="journals-calendar-nav">
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('production', -1)">◀</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('production', -1)">이전</button>
                     <div class="journals-calendar-picker">
                         <button type="button" class="journals-calendar-label-btn" id="productionCalendarPickerBtn" onclick="toggleJournalCalendarPicker('production')">
                             <strong id="productionCalendarLabel" style="min-width:110px;text-align:center;"></strong>
@@ -138,7 +140,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                         <div class="journals-calendar-picker-panel" id="productionCalendarPickerPanel" onclick="event.stopPropagation()">
                             <div class="journals-calendar-picker-grid">
                                 <div>
-                                    <label class="journals-calendar-picker-label" for="productionCalendarYear">년</label>
+                                    <label class="journals-calendar-picker-label" for="productionCalendarYear">연도</label>
                                     <select id="productionCalendarYear" class="journals-calendar-picker-select"></select>
                                 </div>
                                 <div>
@@ -152,7 +154,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('production', 1)">▶</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('production', 1)">다음</button>
                     <a href="/journals?tab=production" class="btn btn-small btn-secondary">전체</a>
                 </div>
             </div>
@@ -192,7 +194,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
     </section>
 
     <section id="journalSectionRaw" class="journals-section {% if selected_tab == 'raw' %}active{% endif %}">
-        <div class="journals-help" style="margin-bottom:.9rem;">원재료는 재고가 남아 있는 항목과 사용 완료된 항목을 나눠서 볼 수 있습니다.</div>
+        <div class="journals-help" style="margin-bottom:.9rem;">원재료는 사용 중인 항목과 사용 완료된 항목을 나누어 볼 수 있습니다.</div>
         <div class="journals-subtabs">
             <button type="button" class="journals-subtab-btn {% if raw_status == 'active' %}active{% endif %}" id="rawSubtabActive" onclick="switchRawStatus('active')">사용중</button>
             <button type="button" class="journals-subtab-btn {% if raw_status == 'done' %}active{% endif %}" id="rawSubtabDone" onclick="switchRawStatus('done')">사용완료</button>
@@ -200,15 +202,16 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
         <form method="GET" action="/journals" class="journals-filter-form" id="rawFilterForm">
             <input type="hidden" name="tab" value="raw">
             <input type="hidden" name="raw_status" id="rawFilterStatus" value="{{ raw_status }}">
-            {% if selected_raw_month %}<input type="hidden" name="raw_month" value="{{ selected_raw_month }}">{% endif %}
-            {% if selected_raw_date %}
+            <input type="hidden" name="raw_scope" id="rawFilterScope" value="{{ raw_scope or ('all' if raw_status == 'active' else 'month') }}">
+            {% if raw_status == 'done' and raw_scope == 'month' and selected_raw_month %}<input type="hidden" name="raw_month" value="{{ selected_raw_month }}">{% endif %}
+            {% if raw_status == 'done' and selected_raw_date %}
             <input type="hidden" name="raw_date" value="{{ selected_raw_date }}">
             {% endif %}
             <select name="raw_filter" class="journals-filter-select" aria-label="원재료 필터 기준">
                 <option value="all" {% if (raw_filter or 'all') == 'all' %}selected{% endif %}>전체</option>
                 <option value="code" {% if raw_filter == 'code' %}selected{% endif %}>코드</option>
                 <option value="car_number" {% if raw_filter == 'car_number' %}selected{% endif %}>자호</option>
-                <option value="done_date" {% if raw_filter == 'done_date' %}selected{% endif %}>종료</option>
+                <option value="done_date" {% if raw_filter == 'done_date' %}selected{% endif %}>완료일</option>
                 <option value="receiving_date" {% if raw_filter == 'receiving_date' %}selected{% endif %}>입고일</option>
             </select>
             <input
@@ -220,18 +223,19 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
             >
             <div class="journals-filter-actions">
                 <button type="submit" class="btn btn-small">필터 검색</button>
-                <a href="/journals?tab=raw&raw_status={{ raw_status }}{% if selected_raw_date %}&raw_date={{ selected_raw_date|urlencode }}{% endif %}" class="btn btn-small btn-secondary">초기화</a>
+                <a href="/journals?tab=raw&raw_status={{ raw_status }}{% if raw_status == 'done' and raw_scope == 'all' %}&raw_scope=all{% endif %}{% if raw_status == 'done' and selected_raw_date %}&raw_date={{ selected_raw_date|urlencode }}{% endif %}{% if raw_status == 'done' and raw_scope == 'month' and selected_raw_month %}&raw_month={{ selected_raw_month|urlencode }}&raw_scope=month{% endif %}" class="btn btn-small btn-secondary">초기화</a>
             </div>
         </form>
 
+        {% if raw_status == 'done' %}
         <div class="journals-calendar">
             <div class="journals-calendar-head">
                 <div>
                     <div class="journals-calendar-title">원재료 점검표 날짜 선택</div>
-                    <div class="journals-help">현재 탭 기준 이력이 있는 날짜만 선택할 수 있습니다.</div>
+                    <div class="journals-help">사용완료 이력이 있는 날짜만 선택할 수 있습니다.</div>
                 </div>
                 <div class="journals-calendar-nav">
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('raw', -1)">◀</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('raw', -1)">이전</button>
                     <div class="journals-calendar-picker">
                         <button type="button" class="journals-calendar-label-btn" id="rawCalendarPickerBtn" onclick="toggleJournalCalendarPicker('raw')">
                             <strong id="rawCalendarLabel" style="min-width:110px;text-align:center;"></strong>
@@ -240,7 +244,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                         <div class="journals-calendar-picker-panel" id="rawCalendarPickerPanel" onclick="event.stopPropagation()">
                             <div class="journals-calendar-picker-grid">
                                 <div>
-                                    <label class="journals-calendar-picker-label" for="rawCalendarYear">년</label>
+                                    <label class="journals-calendar-picker-label" for="rawCalendarYear">연도</label>
                                     <select id="rawCalendarYear" class="journals-calendar-picker-select"></select>
                                 </div>
                                 <div>
@@ -254,12 +258,17 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('raw', 1)">▶</button>
-                    <a href="/journals?tab=raw&raw_status={{ raw_status }}{% if raw_filter %}&raw_filter={{ raw_filter|urlencode }}{% endif %}{% if raw_query %}&raw_q={{ raw_query|urlencode }}{% endif %}" class="btn btn-small btn-secondary">전체</a>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('raw', 1)">다음</button>
+                    <a href="/journals?tab=raw&raw_status=done&raw_scope=all{% if raw_filter %}&raw_filter={{ raw_filter|urlencode }}{% endif %}{% if raw_query %}&raw_q={{ raw_query|urlencode }}{% endif %}" class="btn btn-small btn-secondary">전체</a>
                 </div>
             </div>
             <div id="rawCalendarGrid" class="journals-calendar-grid"></div>
         </div>
+        {% else %}
+        <div class="journals-help journals-inline-notice">
+            사용 중인 원재료 점검표는 전체 목록을 항상 보여줍니다.
+        </div>
+        {% endif %}
         <div id="rawStatusActive" style="{% if raw_status != 'active' %}display:none;{% endif %}">
             <div class="table-container">
                 <table class="journals-table">
@@ -285,7 +294,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="5" class="journals-empty">사용중인 원재료가 없습니다.</td></tr>
+                        <tr><td colspan="5" class="journals-empty">사용 중인 원재료가 없습니다.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -336,7 +345,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                 <input type="date" name="date_to" value="{{ date_to }}">
                 <button type="submit" class="btn btn-small">조회</button>
             </form>
-            <span class="journals-help">선택한 기간 동안 생산이 있었던 날짜 기준으로 부재료 점검표를 확인할 수 있습니다.</span>
+            <span class="journals-help">선택한 기간 동안 생산에 사용된 날짜 기준으로 부재료 점검표를 확인할 수 있습니다.</span>
         </div>
         <div class="journals-material-scopes">
             <button type="button" class="journals-material-scope-btn {% if material_scope != 'sinan' %}active{% endif %}" id="materialSubtabYemat" onclick="switchMaterialScope('yemat')">
@@ -352,10 +361,10 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
             <div class="journals-calendar-head">
                 <div>
                     <div class="journals-calendar-title">부재료 점검표 날짜 선택</div>
-                    <div class="journals-help">선택한 작업장 기준 점검표 이력이 있는 날짜만 선택할 수 있습니다.</div>
+                    <div class="journals-help">선택한 작업장 기준으로 점검표 이력이 있는 날짜만 선택할 수 있습니다.</div>
                 </div>
                 <div class="journals-calendar-nav">
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('material', -1)">◀</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('material', -1)">이전</button>
                     <div class="journals-calendar-picker">
                         <button type="button" class="journals-calendar-label-btn" id="materialCalendarPickerBtn" onclick="toggleJournalCalendarPicker('material')">
                             <strong id="materialCalendarLabel" style="min-width:110px;text-align:center;"></strong>
@@ -364,7 +373,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                         <div class="journals-calendar-picker-panel" id="materialCalendarPickerPanel" onclick="event.stopPropagation()">
                             <div class="journals-calendar-picker-grid">
                                 <div>
-                                    <label class="journals-calendar-picker-label" for="materialCalendarYear">년</label>
+                                    <label class="journals-calendar-picker-label" for="materialCalendarYear">연도</label>
                                     <select id="materialCalendarYear" class="journals-calendar-picker-select"></select>
                                 </div>
                                 <div>
@@ -378,7 +387,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('material', 1)">▶</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('material', 1)">다음</button>
                     <a href="/journals?tab=material&material_scope={{ material_scope or 'yemat' }}" class="btn btn-small btn-secondary">전체</a>
                 </div>
             </div>
@@ -390,7 +399,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                     <thead>
                         <tr>
                             <th>일자</th>
-                            <th>사용 품목 수</th>
+                            <th>사용 항목 수</th>
                             <th>당일 출고 합계</th>
                             <th>출력</th>
                         </tr>
@@ -407,7 +416,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4" class="journals-empty">선택한 기간에 표시할 예맛 부재료 점검표 데이터가 없습니다.</td></tr>
+                        <tr><td colspan="4" class="journals-empty">선택한 기간에 예맛 부재료 점검표 데이터가 없습니다.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -419,7 +428,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                     <thead>
                         <tr>
                             <th>일자</th>
-                            <th>사용 품목 수</th>
+                            <th>사용 항목 수</th>
                             <th>당일 출고 합계</th>
                             <th>출력</th>
                         </tr>
@@ -436,7 +445,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4" class="journals-empty">선택한 기간에 표시할 신안 부재료 점검표 데이터가 없습니다.</td></tr>
+                        <tr><td colspan="4" class="journals-empty">선택한 기간에 신안 부재료 점검표 데이터가 없습니다.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -452,7 +461,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                     <div class="journals-help">포장재 입고 또는 출고 이력이 있는 날짜만 선택할 수 있습니다.</div>
                 </div>
                 <div class="journals-calendar-nav">
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('packaging', -1)">◀</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('packaging', -1)">이전</button>
                     <div class="journals-calendar-picker">
                         <button type="button" class="journals-calendar-label-btn" id="packagingCalendarPickerBtn" onclick="toggleJournalCalendarPicker('packaging')">
                             <strong id="packagingCalendarLabel" style="min-width:110px;text-align:center;"></strong>
@@ -461,7 +470,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                         <div class="journals-calendar-picker-panel" id="packagingCalendarPickerPanel" onclick="event.stopPropagation()">
                             <div class="journals-calendar-picker-grid">
                                 <div>
-                                    <label class="journals-calendar-picker-label" for="packagingCalendarYear">년</label>
+                                    <label class="journals-calendar-picker-label" for="packagingCalendarYear">연도</label>
                                     <select id="packagingCalendarYear" class="journals-calendar-picker-select"></select>
                                 </div>
                                 <div>
@@ -475,7 +484,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('packaging', 1)">▶</button>
+                    <button type="button" class="btn btn-small btn-secondary" onclick="moveJournalCalendar('packaging', 1)">다음</button>
                     <a href="/journals?tab=packaging" class="btn btn-small btn-secondary">전체</a>
                 </div>
             </div>
@@ -486,7 +495,7 @@ html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgb
                 <thead>
                     <tr>
                         <th>일자</th>
-                        <th>기재 품목 수</th>
+                        <th>기재 항목 수</th>
                         <th>입고 합계</th>
                         <th>출고 합계</th>
                         <th>출력</th>
@@ -526,14 +535,14 @@ const journalCalendarConfigs = {
         extra: { tab: 'production' },
     },
     raw: {
-        dates: {{ (raw_active_available_dates if raw_status == 'active' else raw_done_available_dates)|tojson }},
+        dates: {{ (raw_done_available_dates if raw_status == 'done' else [])|tojson }},
         selected: {{ selected_raw_date|tojson }},
         month: {{ selected_raw_month|tojson }},
         gridId: 'rawCalendarGrid',
         labelId: 'rawCalendarLabel',
         param: 'raw_date',
         monthParam: 'raw_month',
-        extra: { tab: 'raw', raw_status: {{ raw_status|tojson }}, raw_filter: {{ raw_filter|tojson }}, raw_q: {{ raw_query|tojson }} },
+        extra: { tab: 'raw', raw_status: {{ raw_status|tojson }}, raw_scope: {{ raw_scope|tojson }}, raw_filter: {{ raw_filter|tojson }}, raw_q: {{ raw_query|tojson }} },
     },
     material: {
         dates: {{ (material_available_dates_sinan if material_scope == 'sinan' else material_available_dates_yemat)|tojson }},
@@ -620,6 +629,9 @@ function applyJournalCalendarPicker(key){
     Object.entries(config.extra || {}).forEach(([param, value]) => {
         url.searchParams.set(param, value);
     });
+    if(key === 'raw'){
+        url.searchParams.set('raw_scope', 'month');
+    }
     if(config.monthParam){
         url.searchParams.set(config.monthParam, monthValue);
     }
@@ -653,11 +665,22 @@ function switchRawStatus(status){
     url.searchParams.set('raw_status', status);
     url.searchParams.set('tab', 'raw');
     url.searchParams.delete('raw_date');
-    if(journalCalendarConfigs.raw && journalCalendarConfigs.raw.month){
-        url.searchParams.set('raw_month', journalCalendarConfigs.raw.month);
+    if(status === 'done'){
+        url.searchParams.set('raw_scope', 'month');
+        if(journalCalendarConfigs.raw && journalCalendarConfigs.raw.month){
+            url.searchParams.set('raw_month', journalCalendarConfigs.raw.month);
+        } else {
+            const today = new Date();
+            url.searchParams.set('raw_month', `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
+        }
+    } else {
+        url.searchParams.set('raw_scope', 'all');
+        url.searchParams.delete('raw_month');
     }
     const rawFilterStatus = document.getElementById('rawFilterStatus');
     if(rawFilterStatus) rawFilterStatus.value = status;
+    const rawFilterScope = document.getElementById('rawFilterScope');
+    if(rawFilterScope) rawFilterScope.value = status === 'done' ? 'month' : 'all';
     window.location.href = url.toString();
 }
 
@@ -696,6 +719,9 @@ function buildJournalCalendarUrl(key, dateStr){
     Object.entries(config.extra || {}).forEach(([param, value]) => {
         url.searchParams.set(param, value);
     });
+    if(key === 'raw'){
+        url.searchParams.set('raw_scope', 'month');
+    }
     if(config.monthParam){
         const monthValue = dateStr ? dateStr.slice(0, 7) : config.month;
         if(monthValue){
@@ -722,6 +748,9 @@ function moveJournalCalendar(key, delta){
     Object.entries(config.extra || {}).forEach(([param, value]) => {
         url.searchParams.set(param, value);
     });
+    if(key === 'raw'){
+        url.searchParams.set('raw_scope', 'month');
+    }
     if(config.monthParam){
         url.searchParams.set(config.monthParam, nextMonth);
     }
@@ -778,3 +807,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 {% endblock %}
+
