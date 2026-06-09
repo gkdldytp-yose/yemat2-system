@@ -286,6 +286,7 @@ def journals():
     workplace = get_workplace()
     selected_tab = (request.args.get('tab') or 'production').strip()
     raw_status = (request.args.get('raw_status') or 'active').strip()
+    raw_scope = (request.args.get('raw_scope') or '').strip().lower()
     raw_query = (request.args.get('raw_q') or '').strip()
     raw_filter = (request.args.get('raw_filter') or 'all').strip()
     material_scope = (request.args.get('material_scope') or 'yemat').strip().lower()
@@ -299,6 +300,8 @@ def journals():
     selected_packaging_month = _normalize_calendar_month(request.args.get('packaging_month'))
     if raw_status not in ('active', 'done'):
         raw_status = 'active'
+    if raw_scope not in ('all', 'month'):
+        raw_scope = ''
     if raw_filter not in ('all', 'code', 'car_number', 'done_date', 'receiving_date'):
         raw_filter = 'all'
     if material_scope not in ('yemat', 'sinan'):
@@ -420,22 +423,28 @@ def journals():
         raw_available_dates = raw_active_available_dates if raw_status == 'active' else raw_done_available_dates
         if selected_raw_date and selected_raw_date not in raw_available_dates:
             selected_raw_date = ''
-        if selected_raw_date:
-            if raw_status == 'active':
-                raw_active_items = [
-                    row for row in raw_active_items
-                    if (row.get('journal_date') or '') == selected_raw_date
-                ]
+        current_raw_month = datetime.now().strftime('%Y-%m')
+        if raw_status == 'active':
+            raw_scope = 'all'
+            selected_raw_date = ''
+            selected_raw_month = ''
+        else:
+            if selected_raw_date and len(selected_raw_date) >= 7:
+                selected_raw_month = selected_raw_date[:7]
+                raw_scope = 'month'
+            elif raw_scope == '':
+                raw_scope = 'month'
+            if raw_scope == 'month':
+                selected_raw_month = selected_raw_month or _resolve_default_calendar_month(raw_done_available_dates) or current_raw_month
             else:
+                selected_raw_month = ''
+
+            if selected_raw_date:
                 raw_done_items = [
                     row for row in raw_done_items
                     if (row.get('journal_date') or '') == selected_raw_date
                 ]
-        else:
-            selected_raw_month = selected_raw_month or _resolve_default_calendar_month(raw_available_dates)
-            if raw_status == 'active':
-                raw_active_items = _filter_rows_to_calendar_month(raw_active_items, 'journal_date', selected_raw_month)
-            else:
+            elif raw_scope == 'month':
                 raw_done_items = _filter_rows_to_calendar_month(raw_done_items, 'journal_date', selected_raw_month)
         if raw_query:
             raw_query_lower = raw_query.lower()
@@ -777,6 +786,7 @@ def journals():
             raw_done_available_dates=raw_done_available_dates,
             selected_raw_date=selected_raw_date,
             selected_raw_month=selected_raw_month,
+            raw_scope=raw_scope,
             raw_query=raw_query,
             raw_filter=raw_filter,
             material_scope=material_scope,
