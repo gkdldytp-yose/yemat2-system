@@ -6437,7 +6437,8 @@ def update_completed_issue_request(req_id):
             cursor.execute('DELETE FROM logistics_issue_receipt_lots WHERE request_id = ?', (req_id,))
 
             created_receipt_rows = []
-            for row in split_rows:
+            for index, row in enumerate(split_rows):
+                before_row = detail_rows[index] if index < len(detail_rows) else None
                 lot_id, _lot_name = _create_request_receipt_lot(
                     cursor,
                     int(req_row['material_id']),

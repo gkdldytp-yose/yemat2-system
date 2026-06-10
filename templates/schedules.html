@@ -1510,6 +1510,285 @@
     color: #64748b;
     font-size: 0.82rem;
 }
+.export-topbar {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:0.75rem;
+    padding:1.2rem 1.4rem 0;
+    flex-wrap:wrap;
+}
+.export-summary-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:0.8rem;
+    padding:1rem 1.4rem 0;
+}
+.export-summary-card {
+    border:1px solid #dbe7f3;
+    border-radius:14px;
+    padding:0.95rem 1rem;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+}
+.export-summary-label {
+    color:#64748b;
+    font-size:0.8rem;
+    margin-bottom:0.25rem;
+}
+.export-summary-value {
+    font-size:1.5rem;
+    font-weight:800;
+    color:#0f172a;
+}
+.export-section {
+    margin:1rem 1.4rem 1.25rem;
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    background:#fff;
+    overflow:hidden;
+}
+.export-section-head {
+    padding:0.9rem 1rem;
+    background:#f8fafc;
+    border-bottom:1px solid #e2e8f0;
+}
+.export-section-head h3 {
+    margin:0;
+    font-size:0.98rem;
+}
+.export-table th,
+.export-table td {
+    vertical-align:middle;
+}
+.export-actions {
+    display:flex;
+    align-items:center;
+    gap:0.4rem;
+    flex-wrap:wrap;
+}
+.export-mini-btn {
+    min-height:auto !important;
+    padding:0.38rem 0.72rem !important;
+    font-size:0.82rem !important;
+}
+.export-delete-btn {
+    min-height:auto !important;
+    padding:0.38rem 0.72rem !important;
+    font-size:0.82rem !important;
+    border-radius:12px !important;
+    border:1px solid rgba(220,38,38,0.24) !important;
+    background:linear-gradient(180deg,#fff5f5 0%,#fee2e2 100%) !important;
+    color:#b91c1c !important;
+    font-weight:700 !important;
+    cursor:pointer;
+    transition:background 0.18s ease,border-color 0.18s ease,color 0.18s ease,transform 0.18s ease;
+}
+.export-delete-btn:hover {
+    background:linear-gradient(180deg,#fee2e2 0%,#fecaca 100%) !important;
+    border-color:rgba(220,38,38,0.38) !important;
+    color:#991b1b !important;
+    transform:translateY(-1px);
+}
+.export-delete-btn:disabled {
+    opacity:0.6;
+    cursor:not-allowed;
+    transform:none;
+}
+.export-excluded-wrap {
+    margin-top:0.45rem;
+}
+.export-excluded-label {
+    color:#64748b;
+    font-size:0.76rem;
+    font-weight:700;
+    margin-bottom:0.28rem;
+}
+.export-excluded-list {
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.42rem;
+}
+.export-excluded-chip-form {
+    display:inline-flex;
+    align-items:center;
+    gap:0.35rem;
+    padding:0.3rem 0.48rem;
+    border-radius:999px;
+    border:1px solid #dbe7f3;
+    background:#f8fafc;
+}
+.export-excluded-chip-date {
+    color:#475569;
+    font-size:0.76rem;
+    font-weight:700;
+}
+.export-restore-btn {
+    border:none;
+    background:#dbeafe;
+    color:#1d4ed8;
+    border-radius:999px;
+    padding:0.18rem 0.45rem;
+    font-size:0.72rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.export-restore-btn:hover {
+    background:#bfdbfe;
+    color:#1e3a8a;
+}
+.export-progress-track {
+    width:140px;
+    max-width:100%;
+    height:8px;
+    border-radius:999px;
+    background:#e2e8f0;
+    overflow:hidden;
+    margin:0.25rem 0;
+}
+.export-progress-bar {
+    height:100%;
+    background:linear-gradient(90deg,#16a34a,#2563eb);
+}
+.export-empty {
+    padding:1.1rem 1rem;
+    color:#64748b;
+}
+.export-active-card {
+    border-top:1px solid #edf2f7;
+    padding:1rem;
+}
+.export-active-card:first-of-type {
+    border-top:none;
+}
+.export-active-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:0.75rem;
+    margin-bottom:0.85rem;
+    flex-wrap:wrap;
+}
+.export-active-metrics {
+    display:flex;
+    gap:0.45rem;
+    flex-wrap:wrap;
+}
+.export-active-metrics span {
+    background:#eff6ff;
+    color:#1d4ed8;
+    padding:0.3rem 0.6rem;
+    border-radius:999px;
+    font-size:0.8rem;
+    font-weight:700;
+}
+.export-active-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0.9rem;
+}
+.export-active-pane {
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    padding:0.85rem;
+    background:#fbfdff;
+}
+.export-active-pane h4 {
+    margin:0 0 0.65rem;
+    font-size:0.88rem;
+}
+.export-container-row,
+.export-daily-row {
+    display:flex;
+    justify-content:space-between;
+    gap:0.6rem;
+    padding:0.42rem 0;
+    border-top:1px solid #edf2f7;
+    font-size:0.84rem;
+}
+.export-container-row:first-of-type,
+.export-daily-row:first-of-type {
+    border-top:none;
+}
+.export-container-label {
+    font-weight:800;
+    color:#0f172a;
+    min-width:44px;
+}
+.export-container-math,
+.export-daily-row span {
+    color:#334155;
+}
+.export-container-remaining,
+.export-daily-row strong {
+    font-weight:800;
+    color:#b91c1c;
+}
+.export-form-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0.9rem 1rem;
+}
+.export-form-grid .form-group.full {
+    grid-column:1 / -1;
+}
+.export-po-list {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0.7rem 0.9rem;
+}
+.export-po-row {
+    border:1px solid #dbe3f0;
+    border-radius:12px;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+    padding:0.75rem 0.85rem;
+}
+.export-po-row label {
+    margin-bottom:0.35rem;
+    font-size:0.82rem;
+}
+.export-po-row input {
+    width:100%;
+}
+.export-po-toggle-btn {
+    min-height:auto !important;
+    padding:0.42rem 0.82rem !important;
+    font-size:0.8rem !important;
+}
+.export-unit-toggle-btn {
+    width:100%;
+    text-align:left;
+    min-height:auto !important;
+    padding:0 !important;
+    border:none !important;
+    background:transparent !important;
+    color:inherit !important;
+    font:inherit !important;
+    font-weight:700 !important;
+    cursor:pointer;
+}
+.export-unit-toggle-btn:hover {
+    color:#2563eb !important;
+}
+.export-po-toggle-btn.is-active {
+    background:linear-gradient(135deg,#059669,#047857) !important;
+    border-color:#065f46 !important;
+}
+@media (max-width: 768px) {
+    .export-active-grid,
+    .export-form-grid,
+    .export-po-list {
+        grid-template-columns:1fr;
+    }
+    .export-topbar,
+    .export-summary-grid {
+        padding-left:1rem;
+        padding-right:1rem;
+    }
+    .export-section {
+        margin-left:1rem;
+        margin-right:1rem;
+    }
+}
 html[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
 html[data-theme="dark"] .schedule-page-sub{color:#8ea3bd;}
 html[data-theme="dark"] .modal-content{background:linear-gradient(180deg,#121a2a,#0f1726);border:1px solid #263244;box-shadow:0 30px 70px rgba(2,6,23,.52);}
@@ -1517,7 +1796,10 @@ html[data-theme="dark"] .modal-content h2,
 html[data-theme="dark"] .calendar-month,
 html[data-theme="dark"] .req-title,
 html[data-theme="dark"] .req-section h3,
-html[data-theme="dark"] .req-product-head strong{color:#eff6ff;}
+html[data-theme="dark"] .req-product-head strong,
+html[data-theme="dark"] .export-summary-value,
+html[data-theme="dark"] .export-section-head h3,
+html[data-theme="dark"] .export-container-label{color:#eff6ff;}
 html[data-theme="dark"] .close{color:#8ea3bd;}
 html[data-theme="dark"] .close:hover{color:#eff6ff;}
 html[data-theme="dark"] .calendar{background:linear-gradient(180deg,#121a2a 0%,#0f1726 100%);border:1px solid #263244;box-shadow:0 18px 40px rgba(2,6,23,.34);}
@@ -1530,6 +1812,57 @@ html[data-theme="dark"] .calendar-header a,
 html[data-theme="dark"] .calendar-action-btn{background:#152033 !important;border:1px solid #2b3648 !important;color:#e5eefc !important;box-shadow:none !important;}
 html[data-theme="dark"] .calendar-header a:hover,
 html[data-theme="dark"] .calendar-action-btn:hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
+html[data-theme="dark"] .export-summary-card,
+html[data-theme="dark"] .export-section,
+html[data-theme="dark"] .export-active-pane{background:#121a2a;border-color:#263244;}
+html[data-theme="dark"] .export-section-head{background:#162133;border-bottom-color:#263244;}
+html[data-theme="dark"] .export-po-row{
+    background:linear-gradient(180deg,#162133 0%,#121a2a 100%);
+    border-color:#314155;
+}
+html[data-theme="dark"] .export-po-row label{
+    color:#c7d3e3;
+}
+html[data-theme="dark"] .export-po-row input{
+    background:#0f1726;
+    border-color:#314155;
+    color:#eff6ff;
+}
+html[data-theme="dark"] .export-po-row input::placeholder{
+    color:#8ea3bd;
+}
+html[data-theme="dark"] .export-delete-btn{
+    background:linear-gradient(180deg,rgba(127,29,29,.52) 0%,rgba(69,10,10,.76) 100%) !important;
+    border-color:rgba(248,113,113,.26) !important;
+    color:#fecaca !important;
+}
+html[data-theme="dark"] .export-delete-btn:hover{
+    background:linear-gradient(180deg,rgba(153,27,27,.62) 0%,rgba(69,10,10,.9) 100%) !important;
+    border-color:rgba(252,165,165,.38) !important;
+    color:#fee2e2 !important;
+}
+html[data-theme="dark"] .export-excluded-label,
+html[data-theme="dark"] .export-excluded-chip-date{
+    color:#c7d3e3;
+}
+html[data-theme="dark"] .export-excluded-chip-form{
+    background:#162133;
+    border-color:#314155;
+}
+html[data-theme="dark"] .export-restore-btn{
+    background:rgba(37,99,235,.22);
+    color:#bfdbfe;
+}
+html[data-theme="dark"] .export-restore-btn:hover{
+    background:rgba(59,130,246,.3);
+    color:#dbeafe;
+}
+html[data-theme="dark"] .export-summary-label,
+html[data-theme="dark"] .export-empty,
+html[data-theme="dark"] .export-container-math,
+html[data-theme="dark"] .export-daily-row span{color:#8ea3bd;}
+html[data-theme="dark"] .export-active-metrics span{background:rgba(37,99,235,.18);color:#bfdbfe;}
+html[data-theme="dark"] .export-progress-track{background:#314155;}
 html[data-theme="dark"] .calendar-weekdays{background:#182234;border-bottom-color:#253246;}
 html[data-theme="dark"] .calendar-days{background:#263244;}
 html[data-theme="dark"] .calendar-day{background:#121a2a;border-color:#263244;}
@@ -2208,6 +2541,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
         <button data-view="list" onclick="switchView('list')">📋 목록</button>
         <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
+        <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
     </div>
     {% if can_prod %}
     <button class="btn" onclick="openAddModal()">+ 스케줄 추가</button>
@@ -2291,6 +2625,181 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div id="reqProductsPanel" style="display:none;">
         <div id="reqProductTabs" class="req-product-tabs"></div>
         <div id="reqProductsWrap"></div>
+    </div>
+</div>
+
+{% macro export_box(value) -%}
+{{ "{:,}".format((value or 0)|int) }}
+{%- endmacro %}
+
+<div id="exportView" class="card" style="display: none;">
+    <div class="export-topbar">
+        <div>
+            <h2 style="margin:0;">수출 일정표</h2>
+            <div class="req-muted">수출 일정 등록 시 생산 시작일부터 생산 종료일까지 영업일 기준으로 생산 캘린더에 자동 배분됩니다.</div>
+        </div>
+        {% if can_prod %}
+        <button type="button" class="req-refresh-btn" onclick="openExportModal()">+ 수출 일정 추가</button>
+        {% endif %}
+    </div>
+
+    <div class="export-summary-grid">
+        <div class="export-summary-card">
+            <div class="export-summary-label">등록 일정</div>
+            <div class="export-summary-value">{{ export_schedules|length }}</div>
+        </div>
+        <div class="export-summary-card">
+            <div class="export-summary-label">생산 시작 일정</div>
+            <div class="export-summary-value">{{ export_active_schedules|length }}</div>
+        </div>
+    </div>
+
+    <div class="export-section">
+        <div class="export-section-head">
+            <h3>등록된 수출 일정</h3>
+        </div>
+        {% if export_schedules %}
+        <div class="table-container">
+            <table class="export-table">
+                <thead>
+                    <tr>
+                        <th>제품</th>
+                        <th>단위 박스</th>
+                        <th>단위 수</th>
+                        <th>총수량</th>
+                        <th>생산 시작일</th>
+                        <th>생산 종료일</th>
+                        <th>컷오프</th>
+                        <th>라인</th>
+                        <th>진행</th>
+                        <th>남은 수량</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for export in export_schedules %}
+                    <tr>
+                        <td>
+                            <strong>{{ export.product_name or '-' }}</strong>
+                            {% if export.note %}
+                            <div class="req-muted" style="margin-top:.2rem;">{{ export.note }}</div>
+                            {% endif %}
+                            {% if export.excluded_dates %}
+                            <div class="export-excluded-wrap">
+                                <div class="export-excluded-label">제외된 일정</div>
+                                <div class="export-excluded-list">
+                                    {% for excluded_date in export.excluded_dates %}
+                                    <form method="POST" action="/schedules/export/{{ export.id }}/restore-date" class="export-excluded-chip-form" onsubmit="return confirm('{{ excluded_date }} 일정을 다시 추가하시겠습니까?');">
+                                        <input type="hidden" name="scheduled_date" value="{{ excluded_date }}">
+                                        <span class="export-excluded-chip-date">{{ excluded_date }}</span>
+                                        {% if can_prod %}
+                                        <button type="submit" class="export-restore-btn">복구</button>
+                                        {% endif %}
+                                    </form>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box</td>
+                        <td>{{ export.container_count }}{{ export.unit_label_short }}</td>
+                        <td>{{ export_box(export.export_quantity) }} box</td>
+                        <td>{{ export.production_start_date }}</td>
+                        <td>{{ export.production_end_date or '-' }}</td>
+                        <td>{{ export.cutoff_date or '-' }}</td>
+                        <td>
+                            {% if export.line %}
+                                {% for line_num in export.line.split(',') %}
+                                <span class="line-badge">L{{ line_num.strip() }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="req-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>{{ export_box(export.produced_total) }} / {{ export_box(export.export_quantity) }} box</div>
+                            <div class="export-progress-track">
+                                <div class="export-progress-bar" style="width: {{ export.completion_rate }}%;"></div>
+                            </div>
+                            <div class="req-muted">{{ export.completion_rate }}%{% if export.external_completed_count %} · 기존 완료 {{ export.external_completed_count }}건 포함{% endif %}</div>
+                        </td>
+                        <td><strong style="color:#b91c1c;">{{ export_box(export.remaining_total) }} box</strong></td>
+                        <td>
+                            <div class="export-actions">
+                                {% if can_prod %}
+                                <button type="button" class="calendar-action-btn export-mini-btn" onclick="openExportModal({{ export.id }})">수정</button>
+                                <form method="POST" action="/schedules/export/delete/{{ export.id }}" onsubmit="return confirm('이 수출 일정을 삭제하시겠습니까?');">
+                                    <button type="submit" class="export-delete-btn">삭제</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="export-empty">등록된 수출 일정이 없습니다.</div>
+        {% endif %}
+    </div>
+
+    <div class="export-section">
+        <div class="export-section-head">
+            <h3>생산 시작 일정 리스트</h3>
+        </div>
+        {% if export_active_schedules %}
+            {% for export in export_active_schedules %}
+            <div class="export-active-card">
+                <div class="export-active-head">
+                    <div>
+                        <strong>{{ export.product_name or '-' }}</strong>
+                        <div class="req-muted">{{ export.production_start_date }} 시작 / 종료 {{ export.production_end_date or '-' }} / 컷오프 {{ export.cutoff_date or '-' }}</div>
+                    </div>
+                    <div class="export-active-metrics">
+                        <span>총 필요 {{ export_box(export.export_quantity) }} box</span>
+                        <span>생산 {{ export_box(export.produced_total) }} box</span>
+                        <span>남은 {{ export_box(export.remaining_total) }} box</span>
+                        {% if export.external_completed_count %}
+                        <span>기존 완료 {{ export.external_completed_count }}건 포함</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="export-active-grid">
+                    <div class="export-active-pane">
+                        <h4>{{ export.unit_label_name }}별 진행</h4>
+                        {% for container in export.container_rows %}
+                        <div class="export-container-row">
+                            <div class="export-container-label">
+                                {{ container.container_label }}
+                                {% if container.po_number %}
+                                <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">PO {{ container.po_number }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="export-container-math">{{ export_box(container.target_boxes) }} box - 생산 {{ export_box(container.produced_boxes) }} box</div>
+                            <div class="export-container-remaining">남은 {{ export_box(container.remaining_boxes) }} box</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="export-active-pane">
+                        <h4>생산일자별 생산량</h4>
+                        {% if export.daily_actuals %}
+                            {% for daily in export.daily_actuals %}
+                            <div class="export-daily-row">
+                                <span>{{ daily.date }}</span>
+                                <strong>{{ export_box(daily.actual_boxes) }} box</strong>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="req-muted">아직 실제 생산량이 없습니다.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="export-empty">생산이 시작된 수출 일정이 아직 없습니다.</div>
+        {% endif %}
     </div>
 </div>
 
@@ -2384,8 +2893,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 <td>
                     <span class="list-mobile-card-label">작업</span>
                     <form method="POST" action="{{ url_for('production.delete_schedule', schedule_id=schedule.id) }}" 
-                          onsubmit="return confirm('정말 삭제하시겠습니까?');" style="display: inline;">
-                        <button type="submit" class="btn-delete" {% if schedule.status == '완료' %}disabled title="완료 건은 삭제할 수 없습니다."{% endif %}>삭제</button>
+                          onsubmit="return confirm('{% if schedule.schedule_source == 'export' %}이 날짜를 수출 일정에서 제외하시겠습니까?{% else %}정말 삭제하시겠습니까?{% endif %}');" style="display: inline;">
+                        <button type="submit" class="btn-delete" {% if schedule.status == '완료' %}disabled title="완료 건은 삭제할 수 없습니다."{% elif schedule.schedule_source == 'export' %}title="수출 일정에서 이 날짜를 제외합니다."{% endif %}>{% if schedule.schedule_source == 'export' %}제외{% else %}삭제{% endif %}</button>
                     </form>
                 </td>
             </tr>
@@ -2566,6 +3075,98 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     </div>
 </div>
 
+<div id="exportModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeExportModal()">&times;</span>
+        <h2 id="exportModalTitle" style="margin-bottom: 1.5rem;">수출 일정 추가</h2>
+
+        <form method="POST" action="/schedules/export/add" id="exportScheduleForm" class="schedule-add-form">
+            <input type="hidden" name="product_id" id="exportProductId" required>
+
+            <div class="form-group">
+                <label>수출 제품 *</label>
+                <div class="search-box">
+                    <input type="text" id="exportProductSearch"
+                           placeholder="🔍 수출 제품명 검색"
+                           autocomplete="off"
+                           oninput="searchExportProducts()"
+                           onfocus="showAllExportProducts()">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="product-list" id="exportProductList" style="display:none;"></div>
+                <div id="exportSelectedProduct" class="schedule-selected-product">
+                    <div class="schedule-selected-product-head">
+                        <div>
+                            <strong class="schedule-selected-product-title">✓ 선택된 제품:</strong>
+                            <span id="exportSelectedProductName" class="schedule-selected-product-name"></span>
+                        </div>
+                        <button type="button" onclick="clearExportSelection()" class="schedule-selected-product-cancel">취소</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="export-form-grid">
+                <div class="form-group">
+                    <button type="button" id="exportBoxesUnitToggleBtn" class="export-unit-toggle-btn" onclick="toggleExportUnitMode()">1C 박스 수량 *</button>
+                    <input type="number" name="boxes_per_container" id="exportBoxesPerContainerInput" min="1" required placeholder="예: 8064">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="exportCountUnitToggleBtn" class="export-unit-toggle-btn" onclick="toggleExportUnitMode()">생산 필요 컨테이너 수 *</button>
+                    <input type="number" name="container_count" id="exportContainerCountInput" min="1" required placeholder="예: 4">
+                    <input type="hidden" name="unit_mode" id="exportUnitModeInput" value="container">
+                </div>
+                <div class="form-group">
+                    <label>총수량</label>
+                    <input type="text" id="exportQuantityDisplay" readonly placeholder="자동 계산">
+                    <input type="hidden" name="export_quantity" id="exportQuantityInput">
+                </div>
+                <div class="form-group">
+                    <label>생산 시작일 *</label>
+                    <input type="date" name="production_start_date" id="exportStartDateInput" required>
+                </div>
+                <div class="form-group">
+                    <label>생산 종료일 *</label>
+                    <input type="date" name="production_end_date" id="exportEndDateInput" required>
+                </div>
+                <div class="form-group">
+                    <label>컷오프</label>
+                    <input type="date" name="cutoff_date" id="exportCutoffDateInput">
+                </div>
+                <div class="form-group full">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;">
+                        <label id="exportPoSectionLabel" style="margin:0;">컨테이너별 PO 번호</label>
+                        <button type="button" id="exportPoToggleBtn" class="req-refresh-btn export-po-toggle-btn" onclick="toggleExportPoInputs()">PO 넘버 입력</button>
+                    </div>
+                    <input type="hidden" name="use_po_numbers" id="exportUsePoNumbers" value="0">
+                    <div id="exportContainerPoWrap" style="display:none;margin-top:.75rem;">
+                        <div id="exportContainerPoList" class="export-po-list"></div>
+                    </div>
+                </div>
+                <div class="form-group full">
+                    <label>생산 라인 * (여러 개 선택 가능)</label>
+                    <div class="schedule-line-grid">
+                        {% for line in range(1, 13) %}
+                        <label class="schedule-line-option">
+                            <input type="checkbox" name="production_lines" value="{{ line }}" class="export-line-checkbox">
+                            <span>라인 {{ line }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-group full">
+                    <label>비고</label>
+                    <textarea name="note" id="exportNoteInput" rows="2" placeholder="수출 일정 메모"></textarea>
+                </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeExportModal()">취소</button>
+                <button type="submit" class="btn" id="exportSubmitBtn">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -2574,6 +3175,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 const schedules = {{ schedules_json|safe }};
 const allProducts = {{ products_json|safe }};
 const workDays = {{ work_days_json|safe }};
+const exportSchedules = {{ export_schedules_json|safe }};
+let exportUnitMode = 'container';
 let currentYear = {{ month_start.year }};
 let currentMonth = {{ month_start.month }};
 let currentListStatusFilter = 'all';
@@ -2587,6 +3190,7 @@ function getActiveView() {
     const view = (params.get('view') || 'calendar').toLowerCase();
     if (view === 'list') return 'list';
     if (view === 'requirements') return 'requirements';
+    if (view === 'export') return 'export';
     return 'calendar';
 }
 
@@ -2690,6 +3294,9 @@ function renderMobileScheduleList() {
             const actualBoxes = isCompleted ? formatQuantity(schedule.actual_boxes) : '-';
             const plannedBoxes = formatQuantity(schedule.planned_boxes);
             const lineText = schedule.line ? `라인 ${escapeHtml(schedule.line)}` : '-';
+            const exportBadge = schedule.source === 'export'
+                ? `<div class="req-muted" style="margin-top:0.2rem;color:#1d4ed8;font-weight:700;">수출 ${escapeHtml(schedule.export_container_label || '')}</div>`
+                : '';
             const dateValue = `${dateMeta.dateText}`;
             const weekdayValue = dateMeta.weekdayText;
             const detailUrl = schedule.production_id
@@ -2699,7 +3306,7 @@ function renderMobileScheduleList() {
             return `
                 <div class="mobile-schedule-card ${isCompleted ? 'done' : ''}" data-detail-url="${detailUrl}">
                     <div class="mobile-schedule-top">
-                        <div class="mobile-schedule-name">${escapeHtml(schedule.product_name || '')}</div>
+                        <div class="mobile-schedule-name">${escapeHtml(schedule.product_name || '')}${exportBadge}</div>
                         <span class="mobile-status-badge ${statusClass}">${statusText}</span>
                     </div>
                     <div class="mobile-schedule-meta">
@@ -2757,9 +3364,9 @@ function renderMobileScheduleList() {
     });
 }
 
-function deleteScheduleFromCalendar(scheduleId, isCompleted) {
+function deleteScheduleFromCalendar(scheduleId, isCompleted, isExport = false) {
     if (isCompleted) return;
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+    if (!confirm(isExport ? '이 날짜를 수출 일정에서 제외하시겠습니까?' : '정말 삭제하시겠습니까?')) return;
 
     const form = document.createElement('form');
     form.method = 'POST';
@@ -2912,6 +3519,14 @@ function renderCalendar() {
     nameDiv.className = 'schedule-name';
     nameDiv.textContent = schedule.product_name;
     scheduleItem.appendChild(nameDiv);
+    if (schedule.source === 'export') {
+        const exportBadge = document.createElement('span');
+        exportBadge.className = 'done-badge';
+        exportBadge.style.background = '#dbeafe';
+        exportBadge.style.color = '#1d4ed8';
+        exportBadge.textContent = schedule.export_container_label ? `수출 ${schedule.export_container_label}` : '수출';
+        scheduleItem.appendChild(exportBadge);
+    }
     if (schedule.is_completed) {
         const doneBadge = document.createElement('span');
         doneBadge.className = 'done-badge';
@@ -2969,10 +3584,10 @@ function renderCalendar() {
     deleteBtn.innerHTML = '🗑';
     deleteBtn.className = 'calendar-delete-btn';
     deleteBtn.disabled = isCompleted;
-    deleteBtn.title = isCompleted ? '완료 건은 삭제할 수 없습니다.' : '삭제';
+    deleteBtn.title = isCompleted ? '완료 건은 삭제할 수 없습니다.' : (schedule.source === 'export' ? '수출 일정에서 이 날짜를 제외합니다.' : '삭제');
     deleteBtn.onclick = function(e) {
         e.stopPropagation();
-        deleteScheduleFromCalendar(schedule.id, isCompleted);
+        deleteScheduleFromCalendar(schedule.id, isCompleted, schedule.source === 'export');
     };
 
     scheduleItem.style.position = 'relative';
@@ -3089,6 +3704,7 @@ function switchView(view) {
     const calendarView = document.getElementById('calendarView');
     const listView = document.getElementById('listView');
     const requirementsView = document.getElementById('requirementsView');
+    const exportView = document.getElementById('exportView');
     const buttons = document.querySelectorAll('.view-toggle button[data-view]');
 
     buttons.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
@@ -3096,6 +3712,7 @@ function switchView(view) {
     calendarView.style.display = 'none';
     listView.style.display = 'none';
     if (requirementsView) requirementsView.style.display = 'none';
+    if (exportView) exportView.style.display = 'none';
 
     if (view === 'calendar') {
         calendarView.style.display = 'block';
@@ -3104,6 +3721,8 @@ function switchView(view) {
     } else if (view === 'requirements') {
         if (requirementsView) requirementsView.style.display = 'block';
         loadRequirementsData();
+    } else if (view === 'export') {
+        if (exportView) exportView.style.display = 'block';
     }
     setViewQuery(view);
 }
@@ -3423,12 +4042,50 @@ document.getElementById('scheduleForm').addEventListener('submit', function(even
     }
 });
 
+document.getElementById('exportScheduleForm').addEventListener('submit', function(event) {
+    const productId = document.getElementById('exportProductId').value.trim();
+    if (!productId) {
+        event.preventDefault();
+        alert('수출 제품을 선택해 주세요.');
+        document.getElementById('exportProductSearch').focus();
+        return;
+    }
+    const checkedLines = Array.from(document.querySelectorAll('.export-line-checkbox')).some((checkbox) => checkbox.checked);
+    if (!checkedLines) {
+        event.preventDefault();
+        alert('생산 라인을 1개 이상 선택해 주세요.');
+        return;
+    }
+    const usePoNumbers = document.getElementById('exportUsePoNumbers').value === '1';
+    if (usePoNumbers) {
+        const poInputs = Array.from(document.querySelectorAll('#exportContainerPoList input[name="container_po_numbers"]'));
+        const emptyIndex = poInputs.findIndex((input) => !String(input.value || '').trim());
+        if (emptyIndex >= 0) {
+            event.preventDefault();
+            alert(`${emptyIndex + 1}${getExportUnitTerms().poItemSuffix}의 PO 번호를 입력해 주세요.`);
+            poInputs[emptyIndex].focus();
+            return;
+        }
+    }
+});
+
+document.getElementById('exportBoxesPerContainerInput').addEventListener('input', function() {
+    calculateExportTotal();
+});
+document.getElementById('exportContainerCountInput').addEventListener('input', function() {
+    calculateExportTotal();
+    if (document.getElementById('exportUsePoNumbers').value === '1') {
+        renderExportContainerPoInputs();
+    }
+});
+
 // 페이지 로드 시 캘린더 렌더링
 document.addEventListener('DOMContentLoaded', function() {
     renderCalendar();
     setListStatusFilter('all');
-    if (getActiveView() === 'list') {
-        switchView('list');
+    const activeView = getActiveView();
+    if (activeView !== 'calendar') {
+        switchView(activeView);
     }
 });
 
@@ -3436,12 +4093,16 @@ document.addEventListener('DOMContentLoaded', function() {
 window.onclick = function(event) {
     const addModal = document.getElementById('addModal');
     const copyModal = document.getElementById('copyModal');
+    const exportModal = document.getElementById('exportModal');
     
     if (event.target == addModal) {
         closeModal();
     }
     if (event.target == copyModal) {
         closeCopyModal();
+    }
+    if (event.target == exportModal) {
+        closeExportModal();
     }
 }
 
@@ -3676,6 +4337,208 @@ function changeCopyMonth(delta) {
         copyYear++;
     }
     renderCopyCalendar();
+}
+
+function renderExportProductList(products) {
+    const productList = document.getElementById('exportProductList');
+    if (!productList) return;
+    productList.innerHTML = '';
+    if (!products.length) {
+        productList.innerHTML = '<div class="schedule-product-empty">검색 결과가 없습니다.</div>';
+        productList.style.display = 'block';
+        return;
+    }
+    products.forEach((product) => {
+        const item = document.createElement('div');
+        item.className = 'product-item';
+        item.innerHTML = `<strong>${product.name}</strong> <span class="schedule-product-id">(ID: ${product.id})</span>`;
+        item.onclick = function() {
+            selectExportProduct(product.id, product.name);
+        };
+        productList.appendChild(item);
+    });
+    productList.style.display = 'block';
+}
+
+function showAllExportProducts() {
+    const searchInput = document.getElementById('exportProductSearch');
+    if (searchInput && !searchInput.value.trim()) {
+        renderExportProductList(allProducts);
+    }
+}
+
+function searchExportProducts() {
+    const searchInput = document.getElementById('exportProductSearch');
+    const keyword = String(searchInput ? searchInput.value : '').trim().toLowerCase();
+    if (!keyword) {
+        renderExportProductList(allProducts);
+        return;
+    }
+    renderExportProductList(allProducts.filter((product) => String(product.name || '').toLowerCase().includes(keyword)));
+}
+
+function selectExportProduct(id, name) {
+    document.getElementById('exportProductId').value = id;
+    document.getElementById('exportSelectedProductName').textContent = name;
+    document.getElementById('exportSelectedProduct').style.display = 'block';
+    document.getElementById('exportProductList').style.display = 'none';
+    document.getElementById('exportProductSearch').value = '';
+}
+
+function clearExportSelection() {
+    document.getElementById('exportProductId').value = '';
+    document.getElementById('exportSelectedProductName').textContent = '';
+    document.getElementById('exportSelectedProduct').style.display = 'none';
+    document.getElementById('exportProductList').style.display = 'none';
+    document.getElementById('exportProductSearch').value = '';
+}
+
+function calculateExportTotal() {
+    const boxesPerContainer = Number(document.getElementById('exportBoxesPerContainerInput').value || 0);
+    const containerCount = Number(document.getElementById('exportContainerCountInput').value || 0);
+    const total = boxesPerContainer > 0 && containerCount > 0 ? boxesPerContainer * containerCount : 0;
+    document.getElementById('exportQuantityInput').value = total > 0 ? String(total) : '';
+    document.getElementById('exportQuantityDisplay').value = total > 0 ? `${total.toLocaleString('ko-KR')} box` : '';
+    return total;
+}
+
+function getExportUnitTerms() {
+    return exportUnitMode === 'pallet'
+        ? {
+            itemShort: '1P',
+            countLabel: '생산 필요 파렛트 수 *',
+            itemLabel: '1P 박스 수량 *',
+            poLabel: '파렛트별 PO 번호',
+            poItemSuffix: 'P',
+            emptyCountMessage: '파렛트 수를 먼저 입력해주세요.',
+        }
+        : {
+            itemShort: '1C',
+            countLabel: '생산 필요 컨테이너 수 *',
+            itemLabel: '1C 박스 수량 *',
+            poLabel: '컨테이너별 PO 번호',
+            poItemSuffix: 'C',
+            emptyCountMessage: '컨테이너 수를 먼저 입력해주세요.',
+        };
+}
+
+function applyExportUnitMode() {
+    const terms = getExportUnitTerms();
+    const boxesBtn = document.getElementById('exportBoxesUnitToggleBtn');
+    const countBtn = document.getElementById('exportCountUnitToggleBtn');
+    const poSectionLabel = document.getElementById('exportPoSectionLabel');
+    const unitModeInput = document.getElementById('exportUnitModeInput');
+    if (boxesBtn) boxesBtn.textContent = terms.itemLabel;
+    if (countBtn) countBtn.textContent = terms.countLabel;
+    if (poSectionLabel) poSectionLabel.textContent = terms.poLabel;
+    if (unitModeInput) unitModeInput.value = exportUnitMode;
+    const usePo = document.getElementById('exportUsePoNumbers');
+    if (usePo && usePo.value === '1') {
+        renderExportContainerPoInputs(
+            Array.from(document.querySelectorAll('#exportContainerPoList input[name="container_po_numbers"]')).map((input) => input.value)
+        );
+    }
+}
+
+function toggleExportUnitMode() {
+    exportUnitMode = exportUnitMode === 'container' ? 'pallet' : 'container';
+    applyExportUnitMode();
+}
+
+function renderExportContainerPoInputs(poNumbers = []) {
+    const count = Number(document.getElementById('exportContainerCountInput').value || 0);
+    const wrap = document.getElementById('exportContainerPoList');
+    const terms = getExportUnitTerms();
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    if (count <= 0) {
+        wrap.innerHTML = `<div class="req-muted">${terms.emptyCountMessage}</div>`;
+        return;
+    }
+    for (let index = 1; index <= count; index += 1) {
+        const value = poNumbers[index - 1] || '';
+        const row = document.createElement('div');
+        row.className = 'export-po-row';
+        row.innerHTML = `
+            <label>${index}${terms.poItemSuffix} PO 번호</label>
+            <input type="text" name="container_po_numbers" value="${escapeHtml(value)}" placeholder="예: PO-2026-001">
+        `;
+        wrap.appendChild(row);
+    }
+}
+
+function setExportPoInputsVisible(visible, poNumbers = null) {
+    const wrap = document.getElementById('exportContainerPoWrap');
+    const hidden = document.getElementById('exportUsePoNumbers');
+    const btn = document.getElementById('exportPoToggleBtn');
+    if (!wrap || !hidden || !btn) return;
+    hidden.value = visible ? '1' : '0';
+    wrap.style.display = visible ? 'block' : 'none';
+    btn.classList.toggle('is-active', visible);
+    btn.textContent = visible ? 'PO 넘버 입력 닫기' : 'PO 넘버 입력';
+    if (visible) {
+        renderExportContainerPoInputs(Array.isArray(poNumbers) ? poNumbers : []);
+    } else {
+        document.getElementById('exportContainerPoList').innerHTML = '';
+    }
+}
+
+function toggleExportPoInputs() {
+    const visible = document.getElementById('exportUsePoNumbers').value === '1';
+    setExportPoInputsVisible(!visible);
+}
+
+function resetExportForm() {
+    const form = document.getElementById('exportScheduleForm');
+    if (form) {
+        form.reset();
+        form.action = '/schedules/export/add';
+    }
+    clearExportSelection();
+    exportUnitMode = 'container';
+    applyExportUnitMode();
+    document.querySelectorAll('.export-line-checkbox').forEach((checkbox) => {
+        checkbox.checked = false;
+    });
+    calculateExportTotal();
+    setExportPoInputsVisible(false);
+    document.getElementById('exportModalTitle').textContent = '수출 일정 추가';
+    document.getElementById('exportSubmitBtn').textContent = '저장';
+}
+
+function openExportModal(exportScheduleId = null) {
+    resetExportForm();
+    if (exportScheduleId != null) {
+        const target = exportSchedules.find((row) => Number(row.id) === Number(exportScheduleId));
+        if (!target) return;
+        document.getElementById('exportScheduleForm').action = `/schedules/export/update/${target.id}`;
+        document.getElementById('exportModalTitle').textContent = '수출 일정 수정';
+        document.getElementById('exportSubmitBtn').textContent = '수정 저장';
+        selectExportProduct(target.product_id, target.product_name || '');
+        document.getElementById('exportBoxesPerContainerInput').value = target.boxes_per_container || '';
+        document.getElementById('exportContainerCountInput').value = target.container_count || '';
+        exportUnitMode = target.unit_mode === 'pallet' ? 'pallet' : 'container';
+        applyExportUnitMode();
+        calculateExportTotal();
+        const hasPoNumbers = Array.isArray(target.po_numbers) && target.po_numbers.some((value) => String(value || '').trim());
+        setExportPoInputsVisible(hasPoNumbers, target.po_numbers || []);
+        document.getElementById('exportStartDateInput').value = target.production_start_date || '';
+        document.getElementById('exportEndDateInput').value = target.production_end_date || '';
+        document.getElementById('exportCutoffDateInput').value = target.cutoff_date || '';
+        document.getElementById('exportNoteInput').value = target.note || '';
+        const selectedLines = String(target.line || '').split(',').map((value) => value.trim()).filter(Boolean);
+        document.querySelectorAll('.export-line-checkbox').forEach((checkbox) => {
+            checkbox.checked = selectedLines.includes(String(checkbox.value));
+        });
+    } else {
+        setExportPoInputsVisible(false);
+    }
+    document.getElementById('exportModal').style.display = 'block';
+}
+
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+    resetExportForm();
 }
 </script>
 {% endblock %}

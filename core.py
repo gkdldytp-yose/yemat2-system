@@ -866,7 +866,117 @@ def _ensure_production_schema(conn):
     if _production_schema_checked:
         return
     try:
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS export_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workplace TEXT NOT NULL,
+                product_id INTEGER NOT NULL,
+                export_quantity INTEGER NOT NULL DEFAULT 0,
+                boxes_per_container INTEGER NOT NULL DEFAULT 0,
+                container_count INTEGER NOT NULL DEFAULT 0,
+                unit_mode TEXT NOT NULL DEFAULT 'container',
+                production_start_date TEXT NOT NULL,
+                production_end_date TEXT,
+                cutoff_date TEXT NOT NULL,
+                line TEXT,
+                note TEXT,
+                created_by TEXT,
+                updated_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS export_schedule_containers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                export_schedule_id INTEGER NOT NULL,
+                container_no INTEGER NOT NULL,
+                po_number TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(export_schedule_id, container_no)
+            )
+            '''
+        )
+        export_cols = [row['name'] for row in conn.execute("PRAGMA table_info(export_schedules)").fetchall()]
+        if 'workplace' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN workplace TEXT NOT NULL DEFAULT ''")
+        if 'product_id' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN product_id INTEGER NOT NULL DEFAULT 0")
+        if 'export_quantity' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN export_quantity INTEGER NOT NULL DEFAULT 0")
+        if 'boxes_per_container' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN boxes_per_container INTEGER NOT NULL DEFAULT 0")
+        if 'container_count' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN container_count INTEGER NOT NULL DEFAULT 0")
+        if 'unit_mode' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN unit_mode TEXT NOT NULL DEFAULT 'container'")
+        if 'production_start_date' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN production_start_date TEXT")
+        if 'production_end_date' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN production_end_date TEXT")
+        if 'cutoff_date' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN cutoff_date TEXT")
+        if 'line' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN line TEXT")
+        if 'note' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN note TEXT")
+        if 'excluded_dates' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN excluded_dates TEXT NOT NULL DEFAULT ''")
+        if 'created_by' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN created_by TEXT")
+        if 'updated_by' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN updated_by TEXT")
+        if 'created_at' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if 'updated_at' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        conn.execute(
+            "UPDATE export_schedules SET production_end_date = COALESCE(NULLIF(production_end_date, ''), cutoff_date) "
+            "WHERE COALESCE(NULLIF(production_end_date, ''), '') = ''"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_export_schedules_workplace_dates ON export_schedules(workplace, production_start_date, cutoff_date)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_export_schedules_workplace_product ON export_schedules(workplace, product_id, cutoff_date)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_export_schedule_containers_schedule ON export_schedule_containers(export_schedule_id, container_no)"
+        )
+
+        schedule_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_schedules)").fetchall()]
+        if 'line' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN line TEXT")
+        if 'workplace' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN workplace TEXT")
+        if 'production_id' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN production_id INTEGER")
+        if 'schedule_source' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN schedule_source TEXT DEFAULT 'manual'")
+        if 'export_schedule_id' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN export_schedule_id INTEGER")
+        if 'export_container_no' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN export_container_no INTEGER")
+        if 'export_container_label' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN export_container_label TEXT")
+        conn.execute("UPDATE production_schedules SET schedule_source = 'manual' WHERE schedule_source IS NULL OR TRIM(schedule_source) = ''")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_production_schedules_export_schedule ON production_schedules(export_schedule_id, scheduled_date)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_production_schedules_workplace_date ON production_schedules(workplace, scheduled_date)"
+        )
+
         cols = [row['name'] for row in conn.execute("PRAGMA table_info(productions)").fetchall()]
+        if 'schedule_id' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN schedule_id INTEGER")
+        if 'workplace' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN workplace TEXT")
+        if 'export_schedule_id' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN export_schedule_id INTEGER")
         if 'supply_line' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN supply_line TEXT")
         if 'supply_people' not in cols:
@@ -898,6 +1008,9 @@ def _ensure_production_schema(conn):
         if 'raw_sok_mode' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN raw_sok_mode INTEGER DEFAULT 1")
         conn.execute("UPDATE productions SET raw_sok_mode = 1 WHERE raw_sok_mode IS NULL OR raw_sok_mode < 1")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_productions_export_schedule ON productions(export_schedule_id, production_date)"
+        )
         conn.execute(
             '''
             CREATE TABLE IF NOT EXISTS production_personnel_note_hidden (

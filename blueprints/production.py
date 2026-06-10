@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
 from datetime import datetime, date, timedelta
+from collections import defaultdict
 import calendar
 import json
 import math
@@ -191,6 +192,567 @@ def _ensure_auto_work_days_for_month(conn, cursor, year, month):
 
     if inserted:
         conn.commit()
+
+
+def _parse_iso_date(raw_value):
+    text = (raw_value or '').strip()
+    if not text:
+        return None
+    return datetime.strptime(text, '%Y-%m-%d').date()
+
+
+def _parse_positive_int(raw_value, label):
+    text = str(raw_value or '').strip()
+    if not text:
+        raise ValueError(f'{label}을(를) 입력해주세요.')
+    try:
+        value = int(float(text))
+    except ValueError as exc:
+        raise ValueError(f'{label}은(는) 숫자로 입력해주세요.') from exc
+    if value <= 0:
+        raise ValueError(f'{label}은(는) 1 이상이어야 합니다.')
+    return value
+
+
+def _normalize_line_values(raw_lines):
+    cleaned = []
+    seen = set()
+    for raw in raw_lines or []:
+        value = str(raw or '').strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        cleaned.append(value)
+    return cleaned
+
+
+def _normalize_po_values(raw_values):
+    return [str(raw or '').strip() for raw in (raw_values or [])]
+
+
+def _normalize_export_unit_mode(raw_value):
+    return 'pallet' if str(raw_value or '').strip().lower() == 'pallet' else 'container'
+
+
+def _get_export_unit_suffix(unit_mode):
+    return 'P' if _normalize_export_unit_mode(unit_mode) == 'pallet' else 'C'
+
+
+def _get_export_unit_name(unit_mode):
+    return '파렛트' if _normalize_export_unit_mode(unit_mode) == 'pallet' else '컨테이너'
+
+
+def _build_export_unit_label(start_no, end_no, unit_mode):
+    if start_no <= 0 or end_no <= 0 or end_no < start_no:
+        return ''
+    suffix = _get_export_unit_suffix(unit_mode)
+    return ','.join(f'{number}{suffix}' for number in range(start_no, end_no + 1))
+
+
+def _get_export_unit_span(boxes_before, planned_boxes, boxes_per_unit):
+    if planned_boxes <= 0 or boxes_per_unit <= 0:
+        return None, None
+    start_no = (boxes_before // boxes_per_unit) + 1
+    end_no = ((boxes_before + planned_boxes - 1) // boxes_per_unit) + 1
+    return int(start_no), int(end_no)
+
+
+def _parse_export_excluded_dates(raw_value):
+    cleaned = []
+    seen = set()
+    for raw_item in str(raw_value or '').split(','):
+        value = raw_item.strip()
+        if not value or value in seen:
+            continue
+        try:
+            _parse_iso_date(value)
+        except Exception:
+            continue
+        seen.add(value)
+        cleaned.append(value)
+    return sorted(cleaned)
+
+
+def _serialize_export_excluded_dates(raw_dates):
+    return ','.join(_parse_export_excluded_dates(','.join(str(item or '').strip() for item in (raw_dates or []))))
+
+
+def _ensure_auto_work_days_for_range(conn, cursor, start_date, end_date):
+    month_cursor = date(start_date.year, start_date.month, 1)
+    end_month = date(end_date.year, end_date.month, 1)
+    while month_cursor <= end_month:
+        _ensure_auto_work_days_for_month(conn, cursor, month_cursor.year, month_cursor.month)
+        if month_cursor.month == 12:
+            month_cursor = date(month_cursor.year + 1, 1, 1)
+        else:
+            month_cursor = date(month_cursor.year, month_cursor.month + 1, 1)
+
+
+def _get_business_schedule_dates(conn, cursor, start_date, production_end_date):
+    if start_date > production_end_date:
+        raise ValueError('생산 종료일은 생산 시작일보다 빠를 수 없습니다.')
+    end_date = production_end_date
+    _ensure_auto_work_days_for_range(conn, cursor, start_date, end_date)
+    rows = cursor.execute(
+        '''
+        SELECT date, type
+        FROM work_days
+        WHERE date BETWEEN ? AND ?
+        ''',
+        (start_date.isoformat(), end_date.isoformat()),
+    ).fetchall()
+    work_type_map = {str(row['date']): (row['type'] or '').strip() for row in rows}
+
+    business_dates = []
+    current_day = start_date
+    while current_day <= end_date:
+        iso_date = current_day.isoformat()
+        if work_type_map.get(iso_date) != 'holiday':
+            business_dates.append(iso_date)
+        current_day += timedelta(days=1)
+    return business_dates
+
+
+def _split_integer_quantity(total_quantity, slots):
+    if slots <= 0:
+        return []
+    base_qty = total_quantity // slots
+    remainder = total_quantity % slots
+    quantities = [base_qty for _ in range(slots)]
+    if quantities:
+        quantities[-1] += remainder
+    return quantities
+
+
+def _load_export_container_po_map(cursor, export_schedule_id):
+    rows = cursor.execute(
+        '''
+        SELECT container_no, po_number
+        FROM export_schedule_containers
+        WHERE export_schedule_id = ?
+        ORDER BY container_no
+        ''',
+        (export_schedule_id,),
+    ).fetchall()
+    return {int(row['container_no']): str(row['po_number'] or '').strip() for row in rows}
+
+
+def _replace_export_container_po_rows(cursor, export_schedule_id, po_numbers):
+    cursor.execute('DELETE FROM export_schedule_containers WHERE export_schedule_id = ?', (export_schedule_id,))
+    for index, po_number in enumerate(po_numbers, start=1):
+        cursor.execute(
+            '''
+            INSERT INTO export_schedule_containers (export_schedule_id, container_no, po_number)
+            VALUES (?, ?, ?)
+            ''',
+            (export_schedule_id, index, po_number),
+        )
+
+
+def _normalize_schedule_state(status_value):
+    return _normalize_production_status(status_value)
+
+
+def _is_started_export_row(row):
+    actual_boxes = float(row.get('actual_boxes') or 0)
+    status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
+    return actual_boxes > 0 or status_value in {'진행중', '완료'}
+
+
+def _build_export_schedule_note(export_schedule_id, container_label, note=''):
+    prefix = f'[수출일정 #{export_schedule_id}'
+    if container_label:
+        prefix += f' / {container_label}'
+    prefix += ']'
+    extra = (note or '').strip()
+    return f'{prefix} {extra}'.strip()
+
+
+def _create_schedule_with_production(
+    conn,
+    cursor,
+    *,
+    product_id,
+    scheduled_date,
+    planned_boxes,
+    note,
+    production_lines_str,
+    workplace,
+    schedule_source='manual',
+    export_schedule_id=None,
+    export_container_no=None,
+    export_container_label=None,
+):
+    cursor.execute(
+        '''
+        INSERT INTO production_schedules (
+            product_id, scheduled_date, planned_boxes, note, status, line, workplace,
+            production_id, schedule_source, export_schedule_id, export_container_no, export_container_label
+        )
+        VALUES (?, ?, ?, ?, '예정', ?, ?, NULL, ?, ?, ?, ?)
+        ''',
+        (
+            product_id,
+            scheduled_date,
+            planned_boxes,
+            note,
+            production_lines_str,
+            workplace,
+            schedule_source,
+            export_schedule_id,
+            export_container_no,
+            export_container_label,
+        ),
+    )
+    schedule_id = cursor.lastrowid
+    cursor.execute(
+        '''
+        INSERT INTO productions (
+            product_id, production_date, planned_boxes, status, note, schedule_id, workplace, export_schedule_id
+        )
+        VALUES (?, ?, ?, '예정', ?, ?, ?, ?)
+        ''',
+        (
+            product_id,
+            scheduled_date,
+            planned_boxes,
+            note,
+            schedule_id,
+            workplace,
+            export_schedule_id,
+        ),
+    )
+    production_id = cursor.lastrowid
+    cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
+    return schedule_id, production_id
+
+
+def _load_export_linked_rows(cursor, export_schedule_id):
+    rows = cursor.execute(
+        '''
+        SELECT
+            ps.id as schedule_id,
+            ps.scheduled_date,
+            ps.planned_boxes,
+            ps.status as schedule_status,
+            ps.line,
+            ps.note,
+            ps.production_id,
+            ps.export_container_no,
+            ps.export_container_label,
+            pr.id as linked_production_id,
+            pr.actual_boxes,
+            pr.status as production_status
+        FROM production_schedules ps
+        LEFT JOIN productions pr ON pr.id = ps.production_id
+        WHERE ps.export_schedule_id = ?
+        ORDER BY ps.scheduled_date, ps.id
+        ''',
+        (export_schedule_id,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _load_existing_export_completed_rows(cursor, workplace, product_id, start_date, production_end_date, export_schedule_id):
+    rows = cursor.execute(
+        '''
+        SELECT
+            pr.id as production_id,
+            pr.production_date as scheduled_date,
+            pr.actual_boxes,
+            pr.status as production_status,
+            ps.id as schedule_id,
+            ps.status as schedule_status
+        FROM productions pr
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        WHERE pr.workplace = ?
+          AND pr.product_id = ?
+          AND pr.production_date >= ?
+          AND pr.production_date <= ?
+          AND COALESCE(pr.actual_boxes, 0) > 0
+          AND COALESCE(ps.export_schedule_id, pr.export_schedule_id, 0) = 0
+        ORDER BY pr.production_date, pr.id
+        ''',
+        (
+            workplace,
+            product_id,
+            start_date.isoformat(),
+            production_end_date.isoformat(),
+        ),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _delete_export_generated_rows(cursor, export_schedule_id, schedule_ids):
+    if not schedule_ids:
+        return
+    placeholders = ','.join(['?'] * len(schedule_ids))
+    production_rows = cursor.execute(
+        f'''
+        SELECT id
+        FROM productions
+        WHERE schedule_id IN ({placeholders})
+        ''',
+        schedule_ids,
+    ).fetchall()
+    production_ids = [int(row['id']) for row in production_rows if row['id']]
+    if production_ids:
+        prod_placeholders = ','.join(['?'] * len(production_ids))
+        cursor.execute(
+            f'DELETE FROM production_material_usage WHERE production_id IN ({prod_placeholders})',
+            production_ids,
+        )
+        cursor.execute(
+            f'DELETE FROM productions WHERE id IN ({prod_placeholders})',
+            production_ids,
+        )
+    cursor.execute(
+        f'DELETE FROM production_schedules WHERE id IN ({placeholders})',
+        schedule_ids,
+    )
+
+
+def _container_target_rows(total_quantity, boxes_per_container, container_count, produced_total, po_number_map=None, unit_mode='container'):
+    rows = []
+    remaining_total = total_quantity
+    produced_cursor = produced_total
+    po_number_map = po_number_map or {}
+    suffix = _get_export_unit_suffix(unit_mode)
+    for index in range(1, container_count + 1):
+        target_boxes = min(boxes_per_container, max(remaining_total, 0))
+        produced_boxes = min(target_boxes, max(produced_cursor, 0))
+        remaining_boxes = max(target_boxes - produced_boxes, 0)
+        rows.append(
+            {
+                'container_no': index,
+                'container_label': f'{index}{suffix}',
+                'po_number': po_number_map.get(index, ''),
+                'target_boxes': int(target_boxes),
+                'produced_boxes': int(produced_boxes),
+                'remaining_boxes': int(remaining_boxes),
+            }
+        )
+        remaining_total -= target_boxes
+        produced_cursor -= produced_boxes
+    return rows
+
+
+def _get_export_row_locked_boxes(row):
+    actual_boxes = int(float(row.get('actual_boxes') or 0))
+    if actual_boxes > 0:
+        return actual_boxes
+    return int(float(row.get('planned_boxes') or 0))
+
+
+def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=None, preserve_schedule_ids=None):
+    export_schedule_id = int(export_row['id'])
+    product_id = int(export_row['product_id'])
+    workplace = (export_row.get('workplace') or '').strip()
+    export_quantity = int(export_row.get('export_quantity') or 0)
+    boxes_per_container = int(export_row.get('boxes_per_container') or 0)
+    container_count = int(export_row.get('container_count') or 0)
+    unit_mode = _normalize_export_unit_mode(export_row.get('unit_mode'))
+    start_date = _parse_iso_date(export_row.get('production_start_date'))
+    production_end_date = _parse_iso_date(export_row.get('production_end_date') or export_row.get('cutoff_date'))
+    if not start_date or not production_end_date:
+        raise ValueError('생산 시작일과 생산 종료일을 확인해주세요.')
+
+    excluded_date_set = set(_parse_export_excluded_dates(export_row.get('excluded_dates')))
+    preserve_schedule_ids = {int(schedule_id) for schedule_id in (preserve_schedule_ids or []) if schedule_id}
+    linked_rows = _load_export_linked_rows(cursor, export_schedule_id)
+    external_completed_rows = _load_existing_export_completed_rows(
+        cursor,
+        workplace,
+        product_id,
+        start_date,
+        production_end_date,
+        export_schedule_id,
+    )
+    started_rows = [row for row in linked_rows if _is_started_export_row(row)]
+    preserved_rows = [
+        row
+        for row in linked_rows
+        if not _is_started_export_row(row) and int(row.get('schedule_id') or 0) in preserve_schedule_ids
+    ]
+    untouched_rows = [
+        row
+        for row in linked_rows
+        if not _is_started_export_row(row) and int(row.get('schedule_id') or 0) not in preserve_schedule_ids
+    ]
+    completed_rows = started_rows + external_completed_rows
+    fixed_rows = completed_rows + preserved_rows
+
+    if fixed_rows:
+        started_dates = sorted(str(row['scheduled_date']) for row in fixed_rows if row.get('scheduled_date'))
+        earliest_started = _parse_iso_date(started_dates[0])
+        latest_started = _parse_iso_date(started_dates[-1])
+        if original_product_id and int(original_product_id) != product_id:
+            raise ValueError('생산이 시작된 수출 일정은 제품을 변경할 수 없습니다.')
+        if earliest_started and start_date > earliest_started:
+            raise ValueError('생산이 시작된 일정보다 늦은 시작일로는 수정할 수 없습니다.')
+        if latest_started and production_end_date < latest_started:
+            raise ValueError('생산이 시작된 일정 이전으로 생산 종료일을 앞당길 수 없습니다.')
+
+    if untouched_rows:
+        _delete_export_generated_rows(cursor, export_schedule_id, [int(row['schedule_id']) for row in untouched_rows])
+
+    fixed_date_set = {str(row['scheduled_date']) for row in fixed_rows if row.get('scheduled_date')}
+    business_dates = [
+        scheduled_date
+        for scheduled_date in _get_business_schedule_dates(conn, cursor, start_date, production_end_date)
+        if scheduled_date not in excluded_date_set or scheduled_date in fixed_date_set
+    ]
+    available_dates = [scheduled_date for scheduled_date in business_dates if scheduled_date not in fixed_date_set]
+    produced_total = int(sum(float(row.get('actual_boxes') or 0) for row in completed_rows))
+    locked_planned_total = int(sum(_get_export_row_locked_boxes(row) for row in preserved_rows))
+    locked_total = produced_total + locked_planned_total
+    if export_quantity < locked_total:
+        raise ValueError('이미 생산된 수량보다 적게 수출 수량을 수정할 수 없습니다.')
+    remaining_total = max(export_quantity - locked_total, 0)
+
+    if remaining_total > 0 and not available_dates:
+        raise ValueError('남은 수량을 배정할 영업일이 없습니다. 시작일 또는 생산 종료일을 확인해주세요.')
+
+    line_text = (export_row.get('line') or '').strip()
+    note_text = (export_row.get('note') or '').strip()
+    line_values = _normalize_line_values(line_text.split(','))
+    production_lines_str = ','.join(line_values)
+    daily_quantities = _split_integer_quantity(remaining_total, len(available_dates))
+    fixed_rows_by_date = {}
+    for row in started_rows + preserved_rows:
+        scheduled_date = str(row.get('scheduled_date') or '')
+        if scheduled_date:
+            fixed_rows_by_date[scheduled_date] = row
+    generated_quantity_by_date = {
+        scheduled_date: int(daily_quantities[index] or 0) for index, scheduled_date in enumerate(available_dates)
+    }
+    daily_cursor_total = 0
+    schedule_rows_for_audit = []
+
+    for scheduled_date in business_dates:
+        fixed_row = fixed_rows_by_date.get(scheduled_date)
+        if fixed_row:
+            planned_boxes = _get_export_row_locked_boxes(fixed_row)
+            if planned_boxes <= 0:
+                continue
+            day_total_before = daily_cursor_total
+            unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, boxes_per_container)
+            container_no = unit_start_no if unit_start_no else None
+            container_label = _build_export_unit_label(unit_start_no, unit_end_no, unit_mode)
+            daily_cursor_total += planned_boxes
+            if fixed_row.get('schedule_id'):
+                cursor.execute(
+                    '''
+                    UPDATE production_schedules
+                    SET export_container_no = ?,
+                        export_container_label = ?
+                    WHERE id = ?
+                    ''',
+                    (container_no, container_label, fixed_row['schedule_id']),
+                )
+            continue
+
+        planned_boxes = int(generated_quantity_by_date.get(scheduled_date) or 0)
+        if planned_boxes <= 0:
+            continue
+        day_total_before = daily_cursor_total
+        unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, boxes_per_container)
+        container_no = unit_start_no if unit_start_no else None
+        container_label = _build_export_unit_label(unit_start_no, unit_end_no, unit_mode)
+        daily_cursor_total += planned_boxes
+
+        schedule_note = _build_export_schedule_note(export_schedule_id, container_label, note_text)
+        schedule_id, production_id = _create_schedule_with_production(
+            conn,
+            cursor,
+            product_id=product_id,
+            scheduled_date=scheduled_date,
+            planned_boxes=planned_boxes,
+            note=schedule_note,
+            production_lines_str=production_lines_str,
+            workplace=workplace,
+            schedule_source='export',
+            export_schedule_id=export_schedule_id,
+            export_container_no=container_no,
+            export_container_label=container_label,
+        )
+        schedule_rows_for_audit.append(
+            {
+                'schedule_id': schedule_id,
+                'production_id': production_id,
+                'scheduled_date': scheduled_date,
+                'planned_boxes': planned_boxes,
+                'container_label': container_label,
+                'line': production_lines_str,
+            }
+        )
+
+    return {
+        'started_count': len(completed_rows),
+        'started_dates': sorted(fixed_date_set),
+        'produced_total': produced_total,
+        'remaining_total': remaining_total,
+        'generated_count': len(schedule_rows_for_audit),
+        'generated_rows': schedule_rows_for_audit,
+        'external_completed_count': len(external_completed_rows),
+    }
+
+
+def _resync_export_schedule_for_production(conn, cursor, production_id, preserve_current_plan=False):
+    production_row = cursor.execute(
+        '''
+        SELECT
+            pr.id,
+            pr.product_id,
+            pr.schedule_id,
+            COALESCE(ps.export_schedule_id, pr.export_schedule_id, 0) as export_schedule_id
+        FROM productions pr
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        WHERE pr.id = ?
+        ''',
+        (production_id,),
+    ).fetchone()
+    if not production_row:
+        return None
+
+    export_schedule_id = int(production_row['export_schedule_id'] or 0)
+    if export_schedule_id <= 0:
+        return None
+
+    export_row = cursor.execute('SELECT * FROM export_schedules WHERE id = ?', (export_schedule_id,)).fetchone()
+    if not export_row:
+        return None
+
+    preserve_schedule_ids = []
+    if preserve_current_plan and production_row['schedule_id']:
+        preserve_schedule_ids.append(int(production_row['schedule_id']))
+
+    return _sync_export_schedule_rows(
+        conn,
+        cursor,
+        dict(export_row),
+        original_product_id=production_row['product_id'],
+        preserve_schedule_ids=preserve_schedule_ids,
+    )
+
+
+def _save_export_excluded_dates(cursor, export_schedule_id, excluded_dates):
+    serialized_dates = _serialize_export_excluded_dates(excluded_dates)
+    cursor.execute(
+        '''
+        UPDATE export_schedules
+        SET excluded_dates = ?,
+            updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        ''',
+        (
+            serialized_dates,
+            session.get('user', {}).get('username'),
+            export_schedule_id,
+        ),
+    )
+    return serialized_dates
 
 
 def _get_production_material_section(row):
@@ -904,6 +1466,17 @@ def schedules():
         cursor = conn.cursor()
         cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
         products = cursor.fetchall()
+        cursor.execute(
+            '''
+            SELECT es.*, p.name as product_name
+            FROM export_schedules es
+            LEFT JOIN products p ON p.id = es.product_id
+            WHERE es.workplace = ?
+            ORDER BY COALESCE(NULLIF(es.production_end_date, ''), es.cutoff_date) ASC, es.id DESC
+            ''',
+            (workplace,),
+        )
+        export_schedule_rows = cursor.fetchall()
 
         _ensure_auto_work_days_for_month(conn, cursor, year, month)
 
@@ -943,6 +1516,102 @@ def schedules():
             }
             for row in cursor.fetchall()
         }
+
+        export_rows_view = []
+        export_rows_json = []
+        export_active_rows = []
+        for raw_export_row in export_schedule_rows:
+            export_row = dict(raw_export_row)
+            linked_rows = _load_export_linked_rows(cursor, int(export_row['id']))
+            po_number_map = _load_export_container_po_map(cursor, int(export_row['id']))
+            excluded_dates = _parse_export_excluded_dates(export_row.get('excluded_dates'))
+            unit_mode = _normalize_export_unit_mode(export_row.get('unit_mode'))
+            start_date = _parse_iso_date(export_row.get('production_start_date'))
+            production_end_date = _parse_iso_date(export_row.get('production_end_date') or export_row.get('cutoff_date'))
+            external_completed_rows = []
+            if start_date and production_end_date:
+                external_completed_rows = _load_existing_export_completed_rows(
+                    cursor,
+                    workplace,
+                    int(export_row.get('product_id') or 0),
+                    start_date,
+                    production_end_date,
+                    int(export_row['id']),
+                )
+            completed_rows = [row for row in linked_rows if _is_started_export_row(row)] + external_completed_rows
+            produced_total = int(sum(float(row.get('actual_boxes') or 0) for row in completed_rows))
+            started_count = len(completed_rows)
+            export_quantity = int(export_row.get('export_quantity') or 0)
+            boxes_per_container = int(export_row.get('boxes_per_container') or 0)
+            container_count = int(export_row.get('container_count') or 0)
+            remaining_total = max(export_quantity - produced_total, 0)
+            daily_actual_map = defaultdict(int)
+            for linked_row in completed_rows:
+                actual_boxes = int(float(linked_row.get('actual_boxes') or 0))
+                if actual_boxes <= 0:
+                    continue
+                date_key = str(linked_row.get('scheduled_date') or '')
+                if date_key:
+                    daily_actual_map[date_key] += actual_boxes
+            container_rows = _container_target_rows(
+                export_quantity,
+                boxes_per_container,
+                container_count,
+                produced_total,
+                po_number_map,
+                unit_mode=unit_mode,
+            )
+            export_view = {
+                **export_row,
+                'unit_mode': unit_mode,
+                'unit_label_short': _get_export_unit_suffix(unit_mode),
+                'unit_label_name': _get_export_unit_name(unit_mode),
+                'produced_total': produced_total,
+                'remaining_total': remaining_total,
+                'started_count': started_count,
+                'generated_count': len(linked_rows),
+                'external_completed_count': len(external_completed_rows),
+                'completion_rate': round((produced_total / export_quantity) * 100, 1) if export_quantity > 0 else 0.0,
+                'container_rows': container_rows,
+                'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
+                'daily_actuals': [
+                    {'date': key, 'actual_boxes': value}
+                    for key, value in sorted(daily_actual_map.items())
+                ],
+                'excluded_dates': excluded_dates,
+                'excluded_date_count': len(excluded_dates),
+                'has_started': started_count > 0 or produced_total > 0,
+            }
+            export_rows_view.append(export_view)
+            export_rows_json.append(
+                {
+                    'id': int(export_row['id']),
+                    'product_id': int(export_row['product_id']),
+                    'product_name': export_row.get('product_name') or '',
+                    'export_quantity': export_quantity,
+                    'boxes_per_container': boxes_per_container,
+                    'container_count': container_count,
+                    'unit_mode': unit_mode,
+                    'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
+                    'production_start_date': export_row.get('production_start_date') or '',
+                    'production_end_date': export_row.get('production_end_date') or export_row.get('cutoff_date') or '',
+                    'cutoff_date': export_row.get('cutoff_date') or '',
+                    'line': export_row.get('line') or '',
+                    'note': export_row.get('note') or '',
+                    'produced_total': produced_total,
+                    'remaining_total': remaining_total,
+                    'started_count': started_count,
+                    'generated_count': len(linked_rows),
+                    'external_completed_count': len(external_completed_rows),
+                    'has_started': export_view['has_started'],
+                    'container_rows': container_rows,
+                    'daily_actuals': export_view['daily_actuals'],
+                    'excluded_dates': excluded_dates,
+                    'excluded_date_count': len(excluded_dates),
+                }
+            )
+            if export_view['has_started']:
+                export_active_rows.append(export_view)
 
     # ?ㅼ?以??곗씠?곕? JSON?쇰줈 蹂??(JavaScript?먯꽌 ?ъ슜)
     schedules_view = []
@@ -987,6 +1656,9 @@ def schedules():
                 'production_id': s['linked_production_id'],
                 'actual_boxes': s['prod_actual_boxes'],
                 'is_completed': status_value == '완료',
+                'source': s['schedule_source'] if 'schedule_source' in s.keys() and s['schedule_source'] else 'manual',
+                'export_schedule_id': s['export_schedule_id'] if 'export_schedule_id' in s.keys() else None,
+                'export_container_label': s['export_container_label'] if 'export_container_label' in s.keys() and s['export_container_label'] else '',
                 'weekday': weekday_text,
                 'work_type': work_type_text,
                 'overtime_hours': overtime_hours,
@@ -1002,6 +1674,7 @@ def schedules():
 
     # 洹쇰Т???곗씠?곕룄 JSON?쇰줈 蹂??
     work_days_json = json.dumps(work_days_data, ensure_ascii=False)
+    export_schedules_json = json.dumps(export_rows_json, ensure_ascii=False)
 
     return render_template(
         'schedules.html',
@@ -1012,6 +1685,9 @@ def schedules():
         products=products,
         products_json=products_json,
         work_days_json=work_days_json,
+        export_schedules=export_rows_view,
+        export_active_schedules=export_active_rows,
+        export_schedules_json=export_schedules_json,
         month_start=month_start,
         month_end=month_end,
     )
@@ -1629,81 +2305,164 @@ def copy_schedule():
 @role_required('production')
 def delete_schedule(schedule_id):
     """Auto-generated docstring."""
-    with db_transaction() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM production_schedules WHERE id = ?', (schedule_id,))
-        schedule_before = cursor.fetchone()
-        if not schedule_before:
-            return redirect(request.referrer or url_for('production.schedules'))
+    try:
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM production_schedules WHERE id = ?', (schedule_id,))
+            schedule_before = cursor.fetchone()
+            if not schedule_before:
+                return redirect(request.referrer or url_for('production.schedules'))
 
-        if _normalize_production_status(schedule_before['status']) == '완료':
-            return redirect(request.referrer or url_for('production.schedules'))
+            if _normalize_production_status(schedule_before['status']) == '완료':
+                return redirect(request.referrer or url_for('production.schedules'))
 
-        row = schedule_before
+            row = schedule_before
+            export_schedule_before = None
+            excluded_dates_before = []
+            if int(row['export_schedule_id'] or 0) > 0:
+                export_schedule_before = cursor.execute(
+                    'SELECT * FROM export_schedules WHERE id = ?',
+                    (int(row['export_schedule_id']),),
+                ).fetchone()
+                if export_schedule_before and row['scheduled_date']:
+                    excluded_dates_before = _parse_export_excluded_dates(export_schedule_before['excluded_dates'])
+                    excluded_dates_after = sorted(set(excluded_dates_before + [str(row['scheduled_date'])]))
+                    _save_export_excluded_dates(cursor, int(row['export_schedule_id']), excluded_dates_after)
 
-        if row and row['production_id']:
-            production_id = row['production_id']
-            cursor.execute('SELECT status FROM productions WHERE id = ?', (production_id,))
-            prod = cursor.fetchone()
+            if row and row['production_id']:
+                production_id = row['production_id']
+                cursor.execute('SELECT status FROM productions WHERE id = ?', (production_id,))
+                prod = cursor.fetchone()
 
-            if prod and _normalize_production_status(prod['status']) == '완료':
-                cursor.execute(
-                    '''
-                    SELECT pmu.actual_quantity, pmu.material_id,
-                           pmu.raw_material_id, pmu.raw_material_name
-                    FROM production_material_usage pmu
-                    WHERE pmu.production_id = ? AND pmu.actual_quantity > 0
-                ''',
-                    (production_id,),
-                )
-                usages = cursor.fetchall()
-                legacy_material_rollbacks = []
+                if prod and _normalize_production_status(prod['status']) == '완료':
+                    cursor.execute(
+                        '''
+                        SELECT pmu.actual_quantity, pmu.material_id,
+                               pmu.raw_material_id, pmu.raw_material_name
+                        FROM production_material_usage pmu
+                        WHERE pmu.production_id = ? AND pmu.actual_quantity > 0
+                    ''',
+                        (production_id,),
+                    )
+                    usages = cursor.fetchall()
+                    legacy_material_rollbacks = []
 
-                for usage in usages:
-                    actual_qty = usage['actual_quantity']
-                    material_id = usage['material_id']
-                    raw_material_id = usage['raw_material_id']
-                    raw_material_name = usage['raw_material_name']
+                    for usage in usages:
+                        actual_qty = usage['actual_quantity']
+                        material_id = usage['material_id']
+                        raw_material_id = usage['raw_material_id']
+                        raw_material_name = usage['raw_material_name']
 
-                    if raw_material_name and not material_id:
-                        rm_id = raw_material_id
-                        if not rm_id:
-                            cursor.execute('SELECT id FROM raw_materials WHERE name = ?', (raw_material_name,))
-                            r = cursor.fetchone()
-                            rm_id = r['id'] if r else None
-                        if rm_id:
-                            cursor.execute(
-                                '''
-                                UPDATE raw_materials
-                                SET current_stock = current_stock + ?,
-                                    used_quantity = MAX(0, used_quantity - ?)
-                                WHERE id = ?
-                            ''',
-                                (actual_qty, actual_qty, rm_id),
-                            )
-                    elif material_id:
-                        legacy_material_rollbacks.append((material_id, actual_qty))
+                        if raw_material_name and not material_id:
+                            rm_id = raw_material_id
+                            if not rm_id:
+                                cursor.execute('SELECT id FROM raw_materials WHERE name = ?', (raw_material_name,))
+                                r = cursor.fetchone()
+                                rm_id = r['id'] if r else None
+                            if rm_id:
+                                cursor.execute(
+                                    '''
+                                    UPDATE raw_materials
+                                    SET current_stock = current_stock + ?,
+                                        used_quantity = MAX(0, used_quantity - ?)
+                                    WHERE id = ?
+                                ''',
+                                    (actual_qty, actual_qty, rm_id),
+                                )
+                        elif material_id:
+                            legacy_material_rollbacks.append((material_id, actual_qty))
 
-                touched = _rollback_material_lot_usage_for_production(cursor, production_id, 'schedule_delete')
-                for mid in touched:
-                    _sync_material_stock_with_lots(conn, mid)
-                if not touched:
-                    for mat_id, qty in legacy_material_rollbacks:
-                        cursor.execute('UPDATE materials SET current_stock = current_stock + ? WHERE id = ?', (qty, mat_id))
+                    touched = _rollback_material_lot_usage_for_production(cursor, production_id, 'schedule_delete')
+                    for mid in touched:
+                        _sync_material_stock_with_lots(conn, mid)
+                    if not touched:
+                        for mat_id, qty in legacy_material_rollbacks:
+                            cursor.execute('UPDATE materials SET current_stock = current_stock + ? WHERE id = ?', (qty, mat_id))
 
-            cursor.execute('DELETE FROM production_material_usage WHERE production_id = ?', (production_id,))
-            cursor.execute('DELETE FROM productions WHERE id = ?', (production_id,))
+                cursor.execute('DELETE FROM production_material_usage WHERE production_id = ?', (production_id,))
+                cursor.execute('DELETE FROM productions WHERE id = ?', (production_id,))
 
-        cursor.execute('DELETE FROM production_schedules WHERE id = ?', (schedule_id,))
-        audit_log(
-            conn,
-            'delete',
-            'production_schedule',
-            schedule_id,
-            {'before': dict(schedule_before) if schedule_before else None},
-        )
+            cursor.execute('DELETE FROM production_schedules WHERE id = ?', (schedule_id,))
 
-    return redirect(request.referrer or url_for('production.schedules'))
+            sync_result = None
+            if export_schedule_before:
+                export_row = cursor.execute(
+                    'SELECT * FROM export_schedules WHERE id = ?',
+                    (int(row['export_schedule_id']),),
+                ).fetchone()
+                if export_row:
+                    sync_result = _sync_export_schedule_rows(
+                        conn,
+                        cursor,
+                        dict(export_row),
+                        original_product_id=export_row['product_id'],
+                    )
+
+            audit_log(
+                conn,
+                'delete',
+                'production_schedule',
+                schedule_id,
+                {
+                    'before': dict(schedule_before) if schedule_before else None,
+                    'export_excluded_dates_before': excluded_dates_before,
+                    'export_sync_result': sync_result,
+                },
+            )
+
+        return redirect(request.referrer or url_for('production.schedules'))
+    except ValueError as exc:
+        return _schedule_error_response(str(exc), view=request.args.get('view') or request.form.get('view') or 'calendar')
+
+
+@bp.route('/schedules/export/<int:export_schedule_id>/restore-date', methods=['POST'])
+@role_required('production')
+def restore_export_schedule_date(export_schedule_id):
+    try:
+        workplace = get_workplace()
+        scheduled_date = (request.form.get('scheduled_date') or '').strip()
+        if not scheduled_date:
+            raise ValueError('복구할 날짜를 확인해주세요.')
+
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            export_row = cursor.execute(
+                'SELECT * FROM export_schedules WHERE id = ? AND workplace = ?',
+                (export_schedule_id, workplace),
+            ).fetchone()
+            if not export_row:
+                raise ValueError('복구할 수출 일정이 없습니다.')
+            export_row = dict(export_row)
+
+            excluded_dates_before = _parse_export_excluded_dates(export_row.get('excluded_dates'))
+            if scheduled_date not in excluded_dates_before:
+                raise ValueError('이미 복구된 일정입니다.')
+
+            excluded_dates_after = [value for value in excluded_dates_before if value != scheduled_date]
+            _save_export_excluded_dates(cursor, export_schedule_id, excluded_dates_after)
+            export_row = cursor.execute('SELECT * FROM export_schedules WHERE id = ?', (export_schedule_id,)).fetchone()
+            sync_result = _sync_export_schedule_rows(
+                conn,
+                cursor,
+                dict(export_row),
+                original_product_id=export_row['product_id'],
+            )
+            audit_log(
+                conn,
+                'update',
+                'export_schedule',
+                export_schedule_id,
+                {
+                    'action': 'restore_excluded_schedule_date',
+                    'scheduled_date': scheduled_date,
+                    'excluded_dates_before': excluded_dates_before,
+                    'excluded_dates_after': excluded_dates_after,
+                    'sync_result': sync_result,
+                },
+            )
+        return _redirect_schedule_view('export')
+    except ValueError as exc:
+        return _schedule_error_response(str(exc))
 
 
 @bp.route('/schedules/<date>')
@@ -1781,6 +2540,220 @@ def add_schedule_to_date(date):
         )
 
     return redirect(url_for('production.schedule_detail', date=date))
+
+
+def _redirect_schedule_view(view='export'):
+    return redirect(url_for('production.schedules', view=view))
+
+
+def _schedule_error_response(message, view='export'):
+    safe_message = json.dumps(str(message), ensure_ascii=False)
+    redirect_url = json.dumps(url_for('production.schedules', view=view), ensure_ascii=False)
+    return f"<script>alert({safe_message}); location.href={redirect_url};</script>", 400
+
+
+def _parse_export_container_inputs(form):
+    boxes_per_container = _parse_positive_int(form.get('boxes_per_container'), '1C 박스 수량')
+    container_count = _parse_positive_int(form.get('container_count'), '생산 필요 컨테이너 수')
+    export_quantity = boxes_per_container * container_count
+    use_po_numbers = str(form.get('use_po_numbers') or '').strip() in {'1', 'true', 'on', 'yes'}
+    po_numbers = _normalize_po_values(form.getlist('container_po_numbers'))
+    if use_po_numbers:
+        if len(po_numbers) < container_count:
+            po_numbers.extend([''] * (container_count - len(po_numbers)))
+        po_numbers = po_numbers[:container_count]
+        for index, po_number in enumerate(po_numbers, start=1):
+            if not po_number:
+                raise ValueError(f'{index}C의 PO 번호를 입력해주세요.')
+    else:
+        po_numbers = []
+    return boxes_per_container, container_count, export_quantity, po_numbers
+
+
+@bp.route('/schedules/export/add', methods=['POST'])
+@role_required('production')
+def add_export_schedule():
+    try:
+        workplace = get_workplace()
+        product_id = _parse_positive_int(request.form.get('product_id'), '수출 제품')
+        boxes_per_container, container_count, export_quantity, po_numbers = _parse_export_container_inputs(request.form)
+        unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
+        start_date = (request.form.get('production_start_date') or '').strip()
+        production_end_date = (request.form.get('production_end_date') or '').strip()
+        cutoff_date = (request.form.get('cutoff_date') or '').strip()
+        note = (request.form.get('note') or '').strip()
+        line_values = _normalize_line_values(request.form.getlist('production_lines'))
+        if not line_values:
+            raise ValueError('생산 라인을 1개 이상 선택해주세요.')
+
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            product_row = cursor.execute(
+                'SELECT id, name FROM products WHERE id = ? AND workplace = ?',
+                (product_id, workplace),
+            ).fetchone()
+            if not product_row:
+                raise ValueError('선택한 수출 제품을 찾을 수 없습니다.')
+
+            cursor.execute(
+                '''
+                INSERT INTO export_schedules (
+                    workplace, product_id, export_quantity, boxes_per_container, container_count, unit_mode,
+                    production_start_date, production_end_date, cutoff_date, line, note, created_by, updated_by
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    workplace,
+                    product_id,
+                    export_quantity,
+                    boxes_per_container,
+                    container_count,
+                    unit_mode,
+                    start_date,
+                    production_end_date,
+                    cutoff_date,
+                    ','.join(line_values),
+                    note,
+                    session.get('user', {}).get('username'),
+                    session.get('user', {}).get('username'),
+                ),
+            )
+            export_schedule_id = cursor.lastrowid
+            _replace_export_container_po_rows(cursor, export_schedule_id, po_numbers)
+            export_row = cursor.execute('SELECT * FROM export_schedules WHERE id = ?', (export_schedule_id,)).fetchone()
+            sync_result = _sync_export_schedule_rows(conn, cursor, dict(export_row))
+            audit_log(
+                conn,
+                'create',
+                'export_schedule',
+                export_schedule_id,
+                {
+                    'product_id': product_id,
+                    'product_name': product_row['name'],
+                    'export_quantity': export_quantity,
+                    'boxes_per_container': boxes_per_container,
+                    'container_count': container_count,
+                    'unit_mode': unit_mode,
+                    'po_numbers': po_numbers,
+                    'production_start_date': start_date,
+                    'production_end_date': production_end_date,
+                    'cutoff_date': cutoff_date,
+                    'line': ','.join(line_values),
+                    'note': note,
+                    'sync_result': sync_result,
+                },
+            )
+        return _redirect_schedule_view('export')
+    except ValueError as exc:
+        return _schedule_error_response(str(exc))
+
+
+@bp.route('/schedules/export/update/<int:export_schedule_id>', methods=['POST'])
+@role_required('production')
+def update_export_schedule(export_schedule_id):
+    try:
+        workplace = get_workplace()
+        product_id = _parse_positive_int(request.form.get('product_id'), '수출 제품')
+        boxes_per_container, container_count, export_quantity, po_numbers = _parse_export_container_inputs(request.form)
+        unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
+        start_date = (request.form.get('production_start_date') or '').strip()
+        production_end_date = (request.form.get('production_end_date') or '').strip()
+        cutoff_date = (request.form.get('cutoff_date') or '').strip()
+        note = (request.form.get('note') or '').strip()
+        line_values = _normalize_line_values(request.form.getlist('production_lines'))
+        if not line_values:
+            raise ValueError('생산 라인을 1개 이상 선택해주세요.')
+
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            before_row = cursor.execute(
+                'SELECT * FROM export_schedules WHERE id = ? AND workplace = ?',
+                (export_schedule_id, workplace),
+            ).fetchone()
+            if not before_row:
+                raise ValueError('수정할 수출 일정이 없습니다.')
+            product_row = cursor.execute(
+                'SELECT id, name FROM products WHERE id = ? AND workplace = ?',
+                (product_id, workplace),
+            ).fetchone()
+            if not product_row:
+                raise ValueError('선택한 수출 제품을 찾을 수 없습니다.')
+
+            cursor.execute(
+                '''
+                UPDATE export_schedules
+                SET product_id = ?, export_quantity = ?, boxes_per_container = ?, container_count = ?, unit_mode = ?,
+                    production_start_date = ?, production_end_date = ?, cutoff_date = ?, line = ?, note = ?, updated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND workplace = ?
+                ''',
+                (
+                    product_id,
+                    export_quantity,
+                    boxes_per_container,
+                    container_count,
+                    unit_mode,
+                    start_date,
+                    production_end_date,
+                    cutoff_date,
+                    ','.join(line_values),
+                    note,
+                    session.get('user', {}).get('username'),
+                    export_schedule_id,
+                    workplace,
+                ),
+            )
+            _replace_export_container_po_rows(cursor, export_schedule_id, po_numbers)
+            export_row = cursor.execute('SELECT * FROM export_schedules WHERE id = ?', (export_schedule_id,)).fetchone()
+            sync_result = _sync_export_schedule_rows(conn, cursor, dict(export_row), original_product_id=before_row['product_id'])
+            audit_log(
+                conn,
+                'update',
+                'export_schedule',
+                export_schedule_id,
+                {
+                    'before': dict(before_row),
+                    'after': dict(export_row),
+                    'product_name': product_row['name'],
+                    'po_numbers': po_numbers,
+                    'sync_result': sync_result,
+                },
+            )
+        return _redirect_schedule_view('export')
+    except ValueError as exc:
+        return _schedule_error_response(str(exc))
+
+
+@bp.route('/schedules/export/delete/<int:export_schedule_id>', methods=['POST'])
+@role_required('production')
+def delete_export_schedule(export_schedule_id):
+    try:
+        workplace = get_workplace()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            export_row = cursor.execute(
+                'SELECT * FROM export_schedules WHERE id = ? AND workplace = ?',
+                (export_schedule_id, workplace),
+            ).fetchone()
+            if not export_row:
+                raise ValueError('삭제할 수출 일정이 없습니다.')
+            linked_rows = _load_export_linked_rows(cursor, export_schedule_id)
+            started_rows = [row for row in linked_rows if _is_started_export_row(row)]
+            if started_rows:
+                raise ValueError('생산이 시작된 수출 일정은 삭제할 수 없습니다.')
+            _delete_export_generated_rows(cursor, export_schedule_id, [int(row['schedule_id']) for row in linked_rows])
+            cursor.execute('DELETE FROM export_schedules WHERE id = ? AND workplace = ?', (export_schedule_id, workplace))
+            audit_log(
+                conn,
+                'delete',
+                'export_schedule',
+                export_schedule_id,
+                {'before': dict(export_row)},
+            )
+        return _redirect_schedule_view('export')
+    except ValueError as exc:
+        return _schedule_error_response(str(exc))
 
 
 @bp.route('/work-days')
@@ -2865,6 +3838,7 @@ def edit_production_plan(production_id):
                 },
             )
 
+        _resync_export_schedule_for_production(conn, cursor, production_id, preserve_current_plan=True)
         conn.commit()
         conn.close()
         return redirect(url_for('production.production_detail', production_id=production_id))
@@ -3577,6 +4551,7 @@ def update_production_usage(production_id):
             },
         )
 
+        _resync_export_schedule_for_production(conn, cursor, production_id)
         commit_db(conn)
 
     except ValueError as e:
