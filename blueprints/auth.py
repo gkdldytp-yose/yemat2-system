@@ -58,7 +58,7 @@ def login():
             user = cursor.fetchone()
 
             if not user or not verify_password(user['password_hash'], password):
-                return render_template('login.html', error='?꾩씠???먮뒗 鍮꾨?踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.')
+                return render_template('login.html', error='아이디 또는 비밀번호가 올바르지 않습니다.')
 
             user = dict(user)
 
@@ -70,12 +70,12 @@ def login():
                 commit_db(conn)
 
             if user['status'] != 'approved':
-                msg = '?뱀씤 ?湲?以묒엯?덈떎. 理쒓퀬 愿由ъ옄 ?뱀씤 ??濡쒓렇??媛?ν빀?덈떎.'
+                msg = '계정이 아직 승인되지 않았습니다. 관리자 승인 후 로그인할 수 있습니다.'
                 if user['status'] == 'rejected':
-                    msg = '媛???붿껌??諛섎젮?섏뿀?듬땲?? 愿由ъ옄?먭쾶 臾몄쓽??二쇱꽭??'
+                    msg = '회원가입 요청이 반려되었습니다. 관리자에게 문의해주세요.'
                 return render_template('login.html', error=msg)
 
-        workplaces = user['workplaces'].split(',') if user['workplaces'] else ['1??議곕?']
+        workplaces = user['workplaces'].split(',') if user['workplaces'] else [WORKPLACES[0]]
         user['workplaces'] = workplaces
         session['user'] = build_session_user(user, workplaces[0] if len(workplaces) == 1 else None)
         if len(workplaces) == 1:
@@ -90,7 +90,7 @@ def login():
         return redirect(url_for('main.index'))
 
     if notice == 'pending_signup':
-        return render_template('login.html', error='媛???붿껌???묒닔?섏뿀?듬땲?? 理쒓퀬 愿由ъ옄 ?뱀씤 ??濡쒓렇??媛?ν빀?덈떎.')
+        return render_template('login.html', error='회원가입 요청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다.')
     return render_template('login.html')
 
 
@@ -125,13 +125,13 @@ def register():
         workplace2 = request.form.get('workplace2')
 
         if password != password_confirm:
-            return render_template('register.html', error='鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎')
+            return render_template('register.html', error='비밀번호가 일치하지 않습니다.')
 
         with db_transaction() as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
             if cursor.fetchone():
-                return render_template('register.html', error='?대? 議댁옱?섎뒗 ?꾩씠?붿엯?덈떎')
+                return render_template('register.html', error='이미 존재하는 아이디입니다.')
 
             cursor.execute(
                 '''
@@ -166,16 +166,16 @@ def register():
             add_user_notification(
                 conn,
                 admin_users[0] if admin_users else None,
-                f'?좉퇋 ?뚯썝媛???붿껌: {name or username}',
-                f'{department or "-"} / ?묒뾽??{workplace_text}',
+                f'신규 회원가입 요청: {name or username}',
+                f'{department or "-"} / 작업장: {workplace_text}',
                 '/users',
             )
             for admin_username in admin_users[1:]:
                 add_user_notification(
                     conn,
                     admin_username,
-                    f'?좉퇋 ?뚯썝媛???붿껌: {name or username}',
-                    f'{department or "-"} / ?묒뾽??{workplace_text}',
+                    f'신규 회원가입 요청: {name or username}',
+                    f'{department or "-"} / 작업장: {workplace_text}',
                     '/users',
                 )
 
