@@ -442,7 +442,10 @@ def _load_export_linked_rows(cursor, export_schedule_id):
             ps.export_container_label,
             pr.id as linked_production_id,
             pr.actual_boxes,
-            pr.status as production_status
+            pr.status as production_status,
+            pr.expiry_date,
+            pr.expiry_date_2,
+            pr.expiry_date_3
         FROM production_schedules ps
         LEFT JOIN productions pr ON pr.id = ps.production_id
         WHERE ps.export_schedule_id = ?
@@ -461,6 +464,9 @@ def _load_existing_export_completed_rows(cursor, workplace, product_id, start_da
             pr.production_date as scheduled_date,
             pr.actual_boxes,
             pr.status as production_status,
+            pr.expiry_date,
+            pr.expiry_date_2,
+            pr.expiry_date_3,
             ps.id as schedule_id,
             ps.status as schedule_status
         FROM productions pr
@@ -1545,14 +1551,22 @@ def schedules():
             boxes_per_container = int(export_row.get('boxes_per_container') or 0)
             container_count = int(export_row.get('container_count') or 0)
             remaining_total = max(export_quantity - produced_total, 0)
-            daily_actual_map = defaultdict(int)
+            daily_actual_map = {}
             for linked_row in completed_rows:
                 actual_boxes = int(float(linked_row.get('actual_boxes') or 0))
                 if actual_boxes <= 0:
                     continue
                 date_key = str(linked_row.get('scheduled_date') or '')
                 if date_key:
-                    daily_actual_map[date_key] += actual_boxes
+                    bucket = daily_actual_map.setdefault(
+                        date_key,
+                        {'actual_boxes': 0, 'expiry_dates': set()},
+                    )
+                    bucket['actual_boxes'] += actual_boxes
+                    for expiry_key in ('expiry_date', 'expiry_date_2', 'expiry_date_3'):
+                        expiry_value = str(linked_row.get(expiry_key) or '').strip()
+                        if expiry_value:
+                            bucket['expiry_dates'].add(expiry_value)
             container_rows = _container_target_rows(
                 export_quantity,
                 boxes_per_container,
@@ -1575,7 +1589,11 @@ def schedules():
                 'container_rows': container_rows,
                 'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
                 'daily_actuals': [
-                    {'date': key, 'actual_boxes': value}
+                    {
+                        'date': key,
+                        'actual_boxes': value['actual_boxes'],
+                        'expiry_dates': sorted(value['expiry_dates']),
+                    }
                     for key, value in sorted(daily_actual_map.items())
                 ],
                 'excluded_dates': excluded_dates,
@@ -3328,13 +3346,17 @@ def production_detail(production_id):
                         )
                      )
                 LEFT JOIN old_usage ou ON ou.raw_material_id = src.id
-                WHERE COALESCE(src.current_stock, 0) > 0 OR COALESCE(ou.rolled_back_qty, 0) > 0
+                WHERE src.workplace = ?
+                  AND (
+                        COALESCE(src.current_stock, 0) > 0
+                        OR COALESCE(ou.rolled_back_qty, 0) > 0
+                  )
                 ORDER BY
                     CASE WHEN src.receiving_date IS NULL OR TRIM(src.receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production_id, production['product_id'], production['active_sok_per_box']),
+                (production_id, production['product_id'], production['active_sok_per_box'], production['workplace']),
             )
         else:
             cursor.execute(
@@ -3371,13 +3393,14 @@ def production_detail(production_id):
                             AND COALESCE(NULLIF(TRIM(src.name), ''), '') = COALESCE(NULLIF(TRIM(br.raw_name), ''), '')
                         )
                      )
-                WHERE COALESCE(src.current_stock, 0) > 0
+                WHERE src.workplace = ?
+                  AND COALESCE(src.current_stock, 0) > 0
                 ORDER BY
                     CASE WHEN src.receiving_date IS NULL OR TRIM(src.receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     src.receiving_date ASC,
                     src.id ASC
             ''',
-                (production['product_id'], production['active_sok_per_box']),
+                (production['product_id'], production['active_sok_per_box'], production['workplace']),
             )
 
 
@@ -3869,6 +3892,7 @@ def update_production_usage(production_id):
         cursor.execute(
             '''
             SELECT pr.planned_boxes, pr.product_id, pr.production_date, pr.status, pr.raw_sok_mode,
+                   pr.workplace,
                    p.expiry_months, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
                    p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3
             FROM productions pr
@@ -3882,6 +3906,7 @@ def update_production_usage(production_id):
         product_id = prod_row['product_id'] if prod_row else None
         touched_material_ids = set()
         current_workplace = (get_workplace() or session.get('workplace') or '').strip()
+        production_workplace = (prod_row['workplace'] if prod_row and prod_row['workplace'] else current_workplace or '').strip()
         workplace_location_id = _get_inventory_location_id(cursor, current_workplace) if current_workplace else None
         production_status = _normalize_production_status(prod_row['status'] if prod_row and prod_row['status'] else '')
         is_completed_status = production_status == _normalize_production_status('\uC644\uB8CC')
@@ -4155,6 +4180,10 @@ def update_production_usage(production_id):
             rm = cursor.fetchone()
             if not rm:
                 continue
+            rm_workplace = (rm['workplace'] or '').strip()
+            if production_workplace and rm_workplace != production_workplace:
+                rollback_db(conn)
+                return "<script>alert('다른 작업장 원초는 선택할 수 없습니다.'); window.history.back();</script>"
             raw_requests.append(
                 {
                     'source_rm_id': int(rm['id']),
@@ -4193,6 +4222,7 @@ def update_production_usage(production_id):
                         name,
                         code,
                         lot,
+                        workplace,
                         COALESCE(current_stock, 0) as current_stock
                     FROM raw_materials
                     WHERE id = ?
@@ -4207,6 +4237,19 @@ def update_production_usage(production_id):
                             'name': f"id:{req['source_rm_id']}",
                             'code': '-',
                             'lot': 'ALL',
+                            'need': need_qty,
+                            'have': 0.0,
+                            'short': need_qty,
+                        }
+                    )
+                    continue
+                row_workplace = (row['workplace'] or '').strip()
+                if production_workplace and row_workplace != production_workplace:
+                    insufficient_raw.append(
+                        {
+                            'name': row['name'] or '-',
+                            'code': row['code'] or '-',
+                            'lot': row['lot'] or '-',
                             'need': need_qty,
                             'have': 0.0,
                             'short': need_qty,
