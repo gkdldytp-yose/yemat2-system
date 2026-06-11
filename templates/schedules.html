@@ -1518,6 +1518,13 @@
     padding:1.2rem 1.4rem 0;
     flex-wrap:wrap;
 }
+.export-topbar h2 {
+    font-size:1.28rem;
+}
+.export-topbar .req-muted {
+    font-size:0.9rem;
+    line-height:1.5;
+}
 .export-summary-grid {
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
@@ -1532,11 +1539,11 @@
 }
 .export-summary-label {
     color:#64748b;
-    font-size:0.8rem;
+    font-size:0.9rem;
     margin-bottom:0.25rem;
 }
 .export-summary-value {
-    font-size:1.5rem;
+    font-size:1.62rem;
     font-weight:800;
     color:#0f172a;
 }
@@ -1554,11 +1561,32 @@
 }
 .export-section-head h3 {
     margin:0;
-    font-size:0.98rem;
+    font-size:1.04rem;
 }
 .export-table th,
 .export-table td {
     vertical-align:middle;
+    font-size:0.94rem;
+}
+.export-table th:first-child,
+.export-table td:first-child {
+    min-width:180px;
+}
+.export-table td:first-child > strong {
+    display:inline-block;
+    white-space:nowrap;
+}
+.export-table th {
+    font-size:0.96rem;
+}
+.export-table td strong,
+.export-remaining-total {
+    color:#7CFF6B !important;
+    font-weight:900;
+}
+.export-section .req-muted {
+    font-size:0.86rem;
+    line-height:1.45;
 }
 .export-actions {
     display:flex;
@@ -1568,25 +1596,25 @@
 }
 .export-mini-btn {
     min-height:auto !important;
-    padding:0.38rem 0.72rem !important;
-    font-size:0.82rem !important;
+    padding:0.44rem 0.82rem !important;
+    font-size:0.88rem !important;
 }
 .export-delete-btn {
     min-height:auto !important;
-    padding:0.38rem 0.72rem !important;
-    font-size:0.82rem !important;
+    padding:0.44rem 0.82rem !important;
+    font-size:0.88rem !important;
     border-radius:12px !important;
-    border:1px solid rgba(220,38,38,0.24) !important;
-    background:linear-gradient(180deg,#fff5f5 0%,#fee2e2 100%) !important;
-    color:#b91c1c !important;
+    border:1px solid rgba(124,255,107,0.38) !important;
+    background:linear-gradient(180deg,#f3ffe9 0%,#dcfce7 100%) !important;
+    color:#2fbf2f !important;
     font-weight:700 !important;
     cursor:pointer;
     transition:background 0.18s ease,border-color 0.18s ease,color 0.18s ease,transform 0.18s ease;
 }
 .export-delete-btn:hover {
-    background:linear-gradient(180deg,#fee2e2 0%,#fecaca 100%) !important;
-    border-color:rgba(220,38,38,0.38) !important;
-    color:#991b1b !important;
+    background:linear-gradient(180deg,#dcfce7 0%,#bbf7d0 100%) !important;
+    border-color:rgba(74,222,128,0.65) !important;
+    color:#16a34a !important;
     transform:translateY(-1px);
 }
 .export-delete-btn:disabled {
@@ -1655,7 +1683,7 @@
 }
 .export-active-card {
     border-top:1px solid #edf2f7;
-    padding:1rem;
+    padding:1.2rem;
 }
 .export-active-card:first-of-type {
     border-top:none;
@@ -1675,11 +1703,13 @@
 }
 .export-active-metrics span {
     background:#eff6ff;
-    color:#1d4ed8;
-    padding:0.3rem 0.6rem;
+    color:#14532d;
+    padding:0.42rem 0.82rem;
     border-radius:999px;
-    font-size:0.8rem;
+    font-size:0.92rem;
     font-weight:700;
+    border:1px solid rgba(74,222,128,0.35);
+    background:linear-gradient(180deg,#f3ffe9 0%,#dcfce7 100%);
 }
 .export-active-grid {
     display:grid;
@@ -1689,21 +1719,21 @@
 .export-active-pane {
     border:1px solid #e2e8f0;
     border-radius:12px;
-    padding:0.85rem;
+    padding:1rem;
     background:#fbfdff;
 }
 .export-active-pane h4 {
     margin:0 0 0.65rem;
-    font-size:0.88rem;
+    font-size:1rem;
 }
 .export-container-row,
 .export-daily-row {
     display:flex;
     justify-content:space-between;
     gap:0.6rem;
-    padding:0.42rem 0;
+    padding:0.56rem 0;
     border-top:1px solid #edf2f7;
-    font-size:0.84rem;
+    font-size:0.92rem;
 }
 .export-container-row:first-of-type,
 .export-daily-row:first-of-type {
@@ -1713,15 +1743,18 @@
     font-weight:800;
     color:#0f172a;
     min-width:44px;
+    font-size:0.96rem;
 }
 .export-container-math,
 .export-daily-row span {
     color:#334155;
+    font-size:0.92rem;
 }
 .export-container-remaining,
 .export-daily-row strong {
     font-weight:800;
-    color:#b91c1c;
+    color:#7CFF6B;
+    font-size:0.98rem;
 }
 .export-form-grid {
     display:grid;
@@ -1774,6 +1807,18 @@
     border-color:#065f46 !important;
 }
 @media (max-width: 768px) {
+    .export-table {
+        width:max-content;
+        min-width:1120px;
+    }
+    .export-table th:first-child,
+    .export-table td:first-child {
+        min-width:220px;
+        width:220px;
+    }
+    .export-table td:first-child > strong {
+        white-space:nowrap;
+    }
     .export-active-grid,
     .export-form-grid,
     .export-po-list {
@@ -1832,14 +1877,14 @@ html[data-theme="dark"] .export-po-row input::placeholder{
     color:#8ea3bd;
 }
 html[data-theme="dark"] .export-delete-btn{
-    background:linear-gradient(180deg,rgba(127,29,29,.52) 0%,rgba(69,10,10,.76) 100%) !important;
-    border-color:rgba(248,113,113,.26) !important;
-    color:#fecaca !important;
+    background:linear-gradient(180deg,rgba(20,83,45,.68) 0%,rgba(5,46,22,.9) 100%) !important;
+    border-color:rgba(74,222,128,.3) !important;
+    color:#bbf7d0 !important;
 }
 html[data-theme="dark"] .export-delete-btn:hover{
-    background:linear-gradient(180deg,rgba(153,27,27,.62) 0%,rgba(69,10,10,.9) 100%) !important;
-    border-color:rgba(252,165,165,.38) !important;
-    color:#fee2e2 !important;
+    background:linear-gradient(180deg,rgba(22,101,52,.82) 0%,rgba(5,46,22,.98) 100%) !important;
+    border-color:rgba(134,239,172,.45) !important;
+    color:#dcfce7 !important;
 }
 html[data-theme="dark"] .export-excluded-label,
 html[data-theme="dark"] .export-excluded-chip-date{
@@ -2723,7 +2768,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             </div>
                             <div class="req-muted">{{ export.completion_rate }}%{% if export.external_completed_count %} · 기존 완료 {{ export.external_completed_count }}건 포함{% endif %}</div>
                         </td>
-                        <td><strong style="color:#b91c1c;">{{ export_box(export.remaining_total) }} box</strong></td>
+                        <td><strong class="export-remaining-total">{{ export_box(export.remaining_total) }} box</strong></td>
                         <td>
                             <div class="export-actions">
                                 {% if can_prod %}
@@ -2786,7 +2831,14 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% if export.daily_actuals %}
                             {% for daily in export.daily_actuals %}
                             <div class="export-daily-row">
-                                <span>{{ daily.date }}</span>
+                                <div>
+                                    <span>{{ daily.date }}</span>
+                                    {% if daily.expiry_dates %}
+                                    <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
+                                        소비기한 {{ daily.expiry_dates | join(', ') }}
+                                    </div>
+                                    {% endif %}
+                                </div>
                                 <strong>{{ export_box(daily.actual_boxes) }} box</strong>
                             </div>
                             {% endfor %}
