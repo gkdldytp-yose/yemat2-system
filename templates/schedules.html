@@ -1045,6 +1045,11 @@
     color: #1d4ed8;
     transform: translateY(-1px);
 }
+.schedule-date-cell.has-items {
+    border-color:#22c55e;
+    color:#166534;
+    background:#f0fdf4;
+}
 .schedule-date-cell.is-selected {
     background: linear-gradient(135deg, #2563eb, #3b82f6);
     color: #fff;
@@ -1531,6 +1536,38 @@
     gap:0.8rem;
     padding:1rem 1.4rem 0;
 }
+.export-tabs {
+    display:flex;
+    gap:0.8rem;
+    padding:1rem 1.4rem 0;
+    flex-wrap:wrap;
+}
+.export-tab-btn {
+    border:1px solid #bfdbfe;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    color:#1e3a8a;
+    border-radius:999px;
+    min-width:112px;
+    min-height:52px;
+    padding:0.72rem 1.28rem;
+    font-size:1rem;
+    font-weight:900;
+    letter-spacing:-0.01em;
+    cursor:pointer;
+    box-shadow:0 10px 24px rgba(37,99,235,0.12);
+    transition:all 0.18s ease;
+}
+.export-tab-btn:hover {
+    border-color:#60a5fa;
+    color:#1d4ed8;
+    transform:translateY(-1px);
+}
+.export-tab-btn.active {
+    background:linear-gradient(135deg,#1d4ed8,#2563eb);
+    border-color:#2563eb;
+    color:#fff;
+    box-shadow:0 14px 28px rgba(37,99,235,0.24);
+}
 .export-summary-card {
     border:1px solid #dbe7f3;
     border-radius:14px;
@@ -1563,6 +1600,92 @@
     margin:0;
     font-size:1.04rem;
 }
+.export-filter-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:0.75rem;
+    flex-wrap:wrap;
+    cursor:pointer;
+}
+.export-completed-filter-toggle {
+    border:1px solid #bfdbfe;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    color:#1e3a8a;
+    border-radius:999px;
+    padding:0.5rem 0.98rem;
+    font-size:0.9rem;
+    font-weight:900;
+    cursor:pointer;
+    box-shadow:0 8px 18px rgba(37,99,235,0.12);
+}
+.export-completed-filter-wrap {
+    padding:1rem;
+    display:grid;
+    grid-template-columns:minmax(320px,420px) minmax(260px,1fr);
+    gap:1rem;
+    align-items:start;
+}
+.export-completed-picker {
+    max-width:420px;
+    display:block;
+}
+.export-completed-search-panel {
+    border:1px solid #dbe7f3;
+    border-radius:18px;
+    background:linear-gradient(180deg,#ffffff 0%,#f6faff 100%);
+    padding:1rem 1.05rem 1.05rem;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7), 0 14px 28px rgba(15,23,42,0.06);
+}
+.export-completed-search-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0.95rem 0.95rem;
+}
+.export-completed-search-field label {
+    display:block;
+    font-size:0.78rem;
+    font-weight:800;
+    color:#64748b;
+    margin-bottom:0.38rem;
+    letter-spacing:0.01em;
+}
+.export-completed-search-field input {
+    width:100%;
+    height:44px;
+    padding:0.72rem 0.85rem;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+    background:#fff;
+    color:#0f172a;
+    font-size:0.92rem;
+    box-shadow:inset 0 1px 2px rgba(15,23,42,0.04);
+    transition:border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.export-completed-search-field input::placeholder {
+    color:#94a3b8;
+}
+.export-completed-search-field input:focus {
+    outline:none;
+    border-color:#60a5fa;
+    box-shadow:0 0 0 4px rgba(96,165,250,0.18);
+    background:#fcfeff;
+}
+.export-completed-search-actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:0.55rem;
+    margin-top:0.95rem;
+    flex-wrap:wrap;
+}
+.export-daily-date-link {
+    color:#60a5fa;
+    font-weight:800;
+    text-decoration:none;
+}
+.export-daily-date-link:hover {
+    text-decoration:underline;
+}
 .export-table th,
 .export-table td {
     vertical-align:middle;
@@ -1581,7 +1704,7 @@
 }
 .export-table td strong,
 .export-remaining-total {
-    color:#7CFF6B !important;
+    color:#ff3b30 !important;
     font-weight:900;
 }
 .export-section .req-muted {
@@ -1753,7 +1876,7 @@
 .export-container-remaining,
 .export-daily-row strong {
     font-weight:800;
-    color:#7CFF6B;
+    color:#ff3b30;
     font-size:0.98rem;
 }
 .export-form-grid {
@@ -1824,11 +1947,20 @@
     .export-po-list {
         grid-template-columns:1fr;
     }
+    .export-completed-filter-wrap,
+    .export-completed-search-grid {
+        grid-template-columns:1fr;
+    }
+    .export-tabs,
     .export-topbar,
     .export-summary-grid {
         padding-left:1rem;
         padding-right:1rem;
     }
+    .export-completed-picker {
+        max-width:none;
+    }
+    .export-topbar,
     .export-section {
         margin-left:1rem;
         margin-right:1rem;
@@ -1857,10 +1989,28 @@ html[data-theme="dark"] .calendar-header a,
 html[data-theme="dark"] .calendar-action-btn{background:#152033 !important;border:1px solid #2b3648 !important;color:#e5eefc !important;box-shadow:none !important;}
 html[data-theme="dark"] .calendar-header a:hover,
 html[data-theme="dark"] .calendar-action-btn:hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
+html[data-theme="dark"] .export-tab-btn{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
+html[data-theme="dark"] .export-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 14px 28px rgba(37,99,235,0.2);}
+html[data-theme="dark"] .export-completed-filter-toggle{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
+html[data-theme="dark"] .export-completed-search-panel{background:linear-gradient(180deg,#162133 0%,#121a2a 100%);border-color:#314155;box-shadow:none;}
+html[data-theme="dark"] .export-completed-search-field label{color:#8ea3bd;}
+html[data-theme="dark"] .export-completed-search-field input{
+    background:#0f1726;
+    border-color:#334155;
+    color:#eff6ff;
+    box-shadow:inset 0 1px 2px rgba(2,6,23,0.45);
+}
+html[data-theme="dark"] .export-completed-search-field input::placeholder{color:#64748b;}
+html[data-theme="dark"] .export-completed-search-field input:focus{
+    border-color:#60a5fa;
+    box-shadow:0 0 0 4px rgba(37,99,235,0.22);
+    background:#111c2e;
+}
 html[data-theme="dark"] .export-summary-card,
 html[data-theme="dark"] .export-section,
 html[data-theme="dark"] .export-active-pane{background:#121a2a;border-color:#263244;}
 html[data-theme="dark"] .export-section-head{background:#162133;border-bottom-color:#263244;}
+html[data-theme="dark"] .export-daily-date-link{color:#93c5fd;}
 html[data-theme="dark"] .export-po-row{
     background:linear-gradient(180deg,#162133 0%,#121a2a 100%);
     border-color:#314155;
@@ -2108,10 +2258,23 @@ html[data-theme="dark"] .schedule-date-cell:hover {
     border-color: #60a5fa;
     color: #eff6ff;
 }
+html[data-theme="dark"] .schedule-date-cell.has-items {
+    background:#102418;
+    border-color:#22c55e;
+    color:#86efac;
+}
 html[data-theme="dark"] .schedule-date-cell.is-selected {
     background: linear-gradient(135deg, #2563eb, #1d4ed8);
     color: #fff;
     border-color: #3b82f6;
+}
+html[data-theme="dark"] .export-table td strong,
+html[data-theme="dark"] .export-remaining-total {
+    color:#7CFF6B !important;
+}
+html[data-theme="dark"] .export-container-remaining,
+html[data-theme="dark"] .export-daily-row strong {
+    color:#7CFF6B;
 }
 html[data-theme="dark"] .schedule-line-option {
     background: linear-gradient(180deg, #152033 0%, #101827 100%);
@@ -2677,6 +2840,185 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 {{ "{:,}".format((value or 0)|int) }}
 {%- endmacro %}
 
+{% macro render_export_table(rows, empty_message, item_class='') -%}
+    {% if rows %}
+    <div class="table-container">
+        <table class="export-table">
+            <thead>
+                <tr>
+                    <th>제품</th>
+                    <th>단위 박스</th>
+                    <th>단위 수</th>
+                    <th>총수량</th>
+                    <th>생산 시작일</th>
+                    <th>생산 종료일</th>
+                    <th>컷오프</th>
+                    <th>라인</th>
+                    <th>진행</th>
+                    <th>남은 수량</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for export in rows %}
+                <tr class="{{ item_class }}"
+                    data-product-name="{{ export.product_name or '' }}"
+                    data-po-numbers="{{ (export.po_numbers or []) | join(' ') }}"
+                    data-start-date="{{ export.production_start_date or '' }}"
+                    data-end-date="{{ export.production_end_date or '' }}"
+                    data-cutoff-date="{{ export.cutoff_date or '' }}"
+                    data-production-dates="{{ export.daily_actuals | map(attribute='date') | join(',') }}"
+                    {% if export.completed_date %}data-completed-date="{{ export.completed_date }}"{% endif %}>
+                    <td>
+                        <strong>{{ export.product_name or '-' }}</strong>
+                        {% if export.completed_date %}
+                        <div class="req-muted" style="margin-top:.18rem;">완료일 {{ export.completed_date }}</div>
+                        {% endif %}
+                        {% if export.note %}
+                        <div class="req-muted" style="margin-top:.2rem;">{{ export.note }}</div>
+                        {% endif %}
+                        {% if export.excluded_dates %}
+                        <div class="export-excluded-wrap">
+                            <div class="export-excluded-label">제외된 일정</div>
+                            <div class="export-excluded-list">
+                                {% for excluded_date in export.excluded_dates %}
+                                <form method="POST" action="/schedules/export/{{ export.id }}/restore-date" class="export-excluded-chip-form" onsubmit="return confirm('{{ excluded_date }} 일정을 다시 추가하시겠습니까?');">
+                                    <input type="hidden" name="scheduled_date" value="{{ excluded_date }}">
+                                    <span class="export-excluded-chip-date">{{ excluded_date }}</span>
+                                    {% if can_prod %}
+                                    <button type="submit" class="export-restore-btn">복구</button>
+                                    {% endif %}
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box</td>
+                    <td>{{ export.container_count }}{{ export.unit_label_short }}</td>
+                    <td>{{ export_box(export.export_quantity) }} box</td>
+                    <td>{{ export.production_start_date }}</td>
+                    <td>{{ export.production_end_date or '-' }}</td>
+                    <td>{{ export.cutoff_date or '-' }}</td>
+                    <td>
+                        {% if export.line %}
+                            {% for line_num in export.line.split(',') %}
+                            <span class="line-badge">L{{ line_num.strip() }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="req-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>{{ export_box(export.produced_total) }} / {{ export_box(export.export_quantity) }} box</div>
+                        <div class="export-progress-track">
+                            <div class="export-progress-bar" style="width: {{ export.completion_rate }}%;"></div>
+                        </div>
+                        <div class="req-muted">{{ export.completion_rate }}%{% if export.external_completed_count %} · 기존 완료 {{ export.external_completed_count }}건 포함{% endif %}</div>
+                    </td>
+                    <td><strong class="export-remaining-total">남은 수량 {{ export_box(export.remaining_total) }} box</strong></td>
+                    <td>
+                        <div class="export-actions">
+                            {% if can_prod %}
+                            <button type="button" class="calendar-action-btn export-mini-btn" onclick="openExportModal({{ export.id }})">수정</button>
+                            <form method="POST" action="/schedules/export/delete/{{ export.id }}" onsubmit="return confirm('이 수출 일정을 삭제하시겠습니까?');">
+                                <button type="submit" class="export-delete-btn">삭제</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="export-empty">{{ empty_message }}</div>
+    {% endif %}
+{%- endmacro %}
+
+{% macro render_export_cards(rows, empty_message, item_class='') -%}
+    {% if rows %}
+        {% for export in rows %}
+        <div class="export-active-card {{ item_class }}"
+            data-product-name="{{ export.product_name or '' }}"
+            data-po-numbers="{{ (export.po_numbers or []) | join(' ') }}"
+            data-start-date="{{ export.production_start_date or '' }}"
+            data-end-date="{{ export.production_end_date or '' }}"
+            data-cutoff-date="{{ export.cutoff_date or '' }}"
+            data-production-dates="{{ export.daily_actuals | map(attribute='date') | join(',') }}"
+            {% if export.completed_date %}data-completed-date="{{ export.completed_date }}"{% endif %}>
+            <div class="export-active-head">
+                <div>
+                    <strong>{{ export.product_name or '-' }}</strong>
+                    <div class="req-muted">
+                        {{ export.production_start_date }} 시작 / 종료 {{ export.production_end_date or '-' }} / 컷오프 {{ export.cutoff_date or '-' }}
+                        {% if export.completed_date %} / 완료 {{ export.completed_date }}{% endif %}
+                    </div>
+                </div>
+                <div class="export-active-metrics">
+                    <span>총 필요 {{ export_box(export.export_quantity) }} box</span>
+                    <span>생산 {{ export_box(export.produced_total) }} box</span>
+                    <span>남은 수량 {{ export_box(export.remaining_total) }} box</span>
+                    {% if export.external_completed_count %}
+                    <span>기존 완료 {{ export.external_completed_count }}건 포함</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="export-active-grid">
+                <div class="export-active-pane">
+                    <h4>{{ export.unit_label_name }}별 진행</h4>
+                    {% for container in export.container_rows %}
+                    <div class="export-container-row">
+                        <div class="export-container-label">
+                            {{ container.container_label }}
+                            {% if container.po_number %}
+                            <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">PO {{ container.po_number }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="export-container-math">{{ export_box(container.target_boxes) }} box - 생산 {{ export_box(container.produced_boxes) }} box</div>
+                        <div class="export-container-remaining">
+                            {% if container.is_completed %}
+                            완료
+                            {% else %}
+                            남은 수량 {{ export_box(container.remaining_boxes) }} box
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="export-active-pane">
+                    <h4>생산일자별 생산량</h4>
+                    {% if export.daily_actuals %}
+                        {% for daily in export.daily_actuals %}
+                        <div class="export-daily-row">
+                            <div>
+                                {% if daily.detail_url %}
+                                <a href="{{ daily.detail_url }}" class="export-daily-date-link">{{ daily.date }}</a>
+                                {% else %}
+                                <span>{{ daily.date }}</span>
+                                {% endif %}
+                                {% if daily.expiry_dates %}
+                                <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
+                                    소비기한 {{ daily.expiry_dates | join(', ') }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <strong>{{ export_box(daily.actual_boxes) }} box</strong>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="req-muted">아직 실제 생산량이 없습니다.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="export-empty">{{ empty_message }}</div>
+    {% endif %}
+{%- endmacro %}
+
 <div id="exportView" class="card" style="display: none;">
     <div class="export-topbar">
         <div>
@@ -2694,164 +3036,102 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <div class="export-summary-value">{{ export_schedules|length }}</div>
         </div>
         <div class="export-summary-card">
-            <div class="export-summary-label">생산 시작 일정</div>
+            <div class="export-summary-label">생산중 일정</div>
             <div class="export-summary-value">{{ export_active_schedules|length }}</div>
         </div>
+        <div class="export-summary-card">
+            <div class="export-summary-label">완료 일정</div>
+            <div class="export-summary-value">{{ export_completed_schedules|length }}</div>
+        </div>
     </div>
 
-    <div class="export-section">
-        <div class="export-section-head">
-            <h3>등록된 수출 일정</h3>
-        </div>
-        {% if export_schedules %}
-        <div class="table-container">
-            <table class="export-table">
-                <thead>
-                    <tr>
-                        <th>제품</th>
-                        <th>단위 박스</th>
-                        <th>단위 수</th>
-                        <th>총수량</th>
-                        <th>생산 시작일</th>
-                        <th>생산 종료일</th>
-                        <th>컷오프</th>
-                        <th>라인</th>
-                        <th>진행</th>
-                        <th>남은 수량</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for export in export_schedules %}
-                    <tr>
-                        <td>
-                            <strong>{{ export.product_name or '-' }}</strong>
-                            {% if export.note %}
-                            <div class="req-muted" style="margin-top:.2rem;">{{ export.note }}</div>
-                            {% endif %}
-                            {% if export.excluded_dates %}
-                            <div class="export-excluded-wrap">
-                                <div class="export-excluded-label">제외된 일정</div>
-                                <div class="export-excluded-list">
-                                    {% for excluded_date in export.excluded_dates %}
-                                    <form method="POST" action="/schedules/export/{{ export.id }}/restore-date" class="export-excluded-chip-form" onsubmit="return confirm('{{ excluded_date }} 일정을 다시 추가하시겠습니까?');">
-                                        <input type="hidden" name="scheduled_date" value="{{ excluded_date }}">
-                                        <span class="export-excluded-chip-date">{{ excluded_date }}</span>
-                                        {% if can_prod %}
-                                        <button type="submit" class="export-restore-btn">복구</button>
-                                        {% endif %}
-                                    </form>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td>1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box</td>
-                        <td>{{ export.container_count }}{{ export.unit_label_short }}</td>
-                        <td>{{ export_box(export.export_quantity) }} box</td>
-                        <td>{{ export.production_start_date }}</td>
-                        <td>{{ export.production_end_date or '-' }}</td>
-                        <td>{{ export.cutoff_date or '-' }}</td>
-                        <td>
-                            {% if export.line %}
-                                {% for line_num in export.line.split(',') %}
-                                <span class="line-badge">L{{ line_num.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                <span class="req-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div>{{ export_box(export.produced_total) }} / {{ export_box(export.export_quantity) }} box</div>
-                            <div class="export-progress-track">
-                                <div class="export-progress-bar" style="width: {{ export.completion_rate }}%;"></div>
-                            </div>
-                            <div class="req-muted">{{ export.completion_rate }}%{% if export.external_completed_count %} · 기존 완료 {{ export.external_completed_count }}건 포함{% endif %}</div>
-                        </td>
-                        <td><strong class="export-remaining-total">{{ export_box(export.remaining_total) }} box</strong></td>
-                        <td>
-                            <div class="export-actions">
-                                {% if can_prod %}
-                                <button type="button" class="calendar-action-btn export-mini-btn" onclick="openExportModal({{ export.id }})">수정</button>
-                                <form method="POST" action="/schedules/export/delete/{{ export.id }}" onsubmit="return confirm('이 수출 일정을 삭제하시겠습니까?');">
-                                    <button type="submit" class="export-delete-btn">삭제</button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="export-empty">등록된 수출 일정이 없습니다.</div>
-        {% endif %}
+    <div class="export-tabs">
+        <button type="button" class="export-tab-btn active" data-export-tab="active" onclick="switchExportScheduleTab('active')">생산중</button>
+        <button type="button" class="export-tab-btn" data-export-tab="completed" onclick="switchExportScheduleTab('completed')">완료</button>
     </div>
 
-    <div class="export-section">
-        <div class="export-section-head">
-            <h3>생산 시작 일정 리스트</h3>
+    <div id="exportTabActivePane">
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>등록된 수출 일정</h3>
+            </div>
+            {{ render_export_table(export_in_progress_schedules, '등록된 생산중 수출 일정이 없습니다.') }}
         </div>
-        {% if export_active_schedules %}
-            {% for export in export_active_schedules %}
-            <div class="export-active-card">
-                <div class="export-active-head">
-                    <div>
-                        <strong>{{ export.product_name or '-' }}</strong>
-                        <div class="req-muted">{{ export.production_start_date }} 시작 / 종료 {{ export.production_end_date or '-' }} / 컷오프 {{ export.cutoff_date or '-' }}</div>
+
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>생산중 일정 리스트</h3>
+            </div>
+            {{ render_export_cards(export_active_schedules, '생산중인 수출 일정이 아직 없습니다.') }}
+        </div>
+    </div>
+
+    <div id="exportTabCompletedPane" style="display:none;">
+        <div class="export-section">
+            <div class="export-section-head export-filter-head" onclick="toggleExportCompletedSearchPanel()">
+                <h3>완료 일정 검색</h3>
+                <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                    <div class="req-muted" id="exportCompletedFilterSummary"></div>
+                    <button type="button" class="export-completed-filter-toggle" id="exportCompletedFilterToggleBtn" onclick="event.stopPropagation(); toggleExportCompletedSearchPanel()">검색 열기</button>
+                </div>
+            </div>
+            <div class="export-completed-filter-wrap" id="exportCompletedFilterBody" style="display:none;">
+                <div class="schedule-date-picker export-completed-picker">
+                    <div class="schedule-date-picker-head">
+                        <button type="button" onclick="changeExportCompletedMonth(-1)" class="schedule-date-nav-btn">◀</button>
+                        <span id="exportCompletedMonthLabel" class="schedule-date-picker-month"></span>
+                        <button type="button" onclick="changeExportCompletedMonth(1)" class="schedule-date-nav-btn">▶</button>
                     </div>
-                    <div class="export-active-metrics">
-                        <span>총 필요 {{ export_box(export.export_quantity) }} box</span>
-                        <span>생산 {{ export_box(export.produced_total) }} box</span>
-                        <span>남은 {{ export_box(export.remaining_total) }} box</span>
-                        {% if export.external_completed_count %}
-                        <span>기존 완료 {{ export.external_completed_count }}건 포함</span>
-                        {% endif %}
+                    <div class="schedule-date-weekdays">
+                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                    </div>
+                    <div id="exportCompletedDays" class="schedule-date-days"></div>
+                    <div class="schedule-date-picker-actions">
+                        <button type="button" class="calendar-action-btn" onclick="resetExportCompletedMonthFilter()">이번달 완료건</button>
+                        <button type="button" class="calendar-action-btn" onclick="clearExportCompletedDateFilter()">선택 해제</button>
                     </div>
                 </div>
-                <div class="export-active-grid">
-                    <div class="export-active-pane">
-                        <h4>{{ export.unit_label_name }}별 진행</h4>
-                        {% for container in export.container_rows %}
-                        <div class="export-container-row">
-                            <div class="export-container-label">
-                                {{ container.container_label }}
-                                {% if container.po_number %}
-                                <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">PO {{ container.po_number }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="export-container-math">{{ export_box(container.target_boxes) }} box - 생산 {{ export_box(container.produced_boxes) }} box</div>
-                            <div class="export-container-remaining">남은 {{ export_box(container.remaining_boxes) }} box</div>
+                <div class="export-completed-search-panel">
+                    <div class="export-completed-search-grid">
+                        <div class="export-completed-search-field">
+                            <label for="exportCompletedProductFilter">상품명</label>
+                            <input type="text" id="exportCompletedProductFilter" placeholder="상품명 검색" oninput="applyExportCompletedFilter()">
                         </div>
-                        {% endfor %}
+                        <div class="export-completed-search-field">
+                            <label for="exportCompletedPoFilter">PO 넘버</label>
+                            <input type="text" id="exportCompletedPoFilter" placeholder="PO 넘버 검색" oninput="applyExportCompletedFilter()">
+                        </div>
+                        <div class="export-completed-search-field">
+                            <label for="exportCompletedDateFilter">완료일</label>
+                            <input type="date" id="exportCompletedDateFilter" onchange="handleExportCompletedDateInputChange()">
+                        </div>
+                        <div class="export-completed-search-field">
+                            <label for="exportCompletedProductionDateFilter">생산일자</label>
+                            <input type="date" id="exportCompletedProductionDateFilter" onchange="applyExportCompletedFilter()">
+                        </div>
                     </div>
-                    <div class="export-active-pane">
-                        <h4>생산일자별 생산량</h4>
-                        {% if export.daily_actuals %}
-                            {% for daily in export.daily_actuals %}
-                            <div class="export-daily-row">
-                                <div>
-                                    <span>{{ daily.date }}</span>
-                                    {% if daily.expiry_dates %}
-                                    <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
-                                        소비기한 {{ daily.expiry_dates | join(', ') }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                <strong>{{ export_box(daily.actual_boxes) }} box</strong>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="req-muted">아직 실제 생산량이 없습니다.</div>
-                        {% endif %}
+                    <div class="export-completed-search-actions">
+                        <button type="button" class="calendar-action-btn" onclick="clearExportCompletedSearchFilters()">검색 초기화</button>
                     </div>
                 </div>
             </div>
-            {% endfor %}
-        {% else %}
-        <div class="export-empty">생산이 시작된 수출 일정이 아직 없습니다.</div>
-        {% endif %}
+        </div>
+
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>완료된 수출 일정</h3>
+            </div>
+            {{ render_export_table(export_completed_schedules, '완료된 수출 일정이 없습니다.', 'export-completed-table-row') }}
+            <div id="exportCompletedTableEmpty" class="export-empty" style="display:none;">선택한 조건에 맞는 완료 일정이 없습니다.</div>
+        </div>
+
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>생산 완료 일정 리스트</h3>
+            </div>
+            {{ render_export_cards(export_completed_schedules, '완료된 수출 일정이 없습니다.', 'export-completed-card') }}
+            <div id="exportCompletedCardEmpty" class="export-empty" style="display:none;">선택한 조건에 맞는 완료 일정이 없습니다.</div>
+        </div>
     </div>
 </div>
 
@@ -3228,6 +3508,7 @@ const schedules = {{ schedules_json|safe }};
 const allProducts = {{ products_json|safe }};
 const workDays = {{ work_days_json|safe }};
 const exportSchedules = {{ export_schedules_json|safe }};
+const exportCompletedSchedules = exportSchedules.filter((row) => Boolean(row.is_completed) && String(row.completed_date || '').trim());
 let exportUnitMode = 'container';
 let currentYear = {{ month_start.year }};
 let currentMonth = {{ month_start.month }};
@@ -3236,6 +3517,12 @@ let requirementsLoadedKey = '';
 let requirementsProductsCache = [];
 let currentReqProductId = null;
 const CURRENT_SCHEDULE_WORKPLACE = {{ (current_workplace or '')|tojson }};
+const exportToday = new Date();
+let currentExportScheduleTab = 'active';
+let exportCompletedFilterYear = exportToday.getFullYear();
+let exportCompletedFilterMonth = exportToday.getMonth() + 1;
+let exportCompletedSelectedDate = '';
+let exportCompletedSearchOpen = false;
 
 function getActiveView() {
     const params = new URLSearchParams(window.location.search);
@@ -3305,6 +3592,192 @@ function openScheduleDetail(schedule) {
     } else {
         window.location.href = `/schedules/${schedule.scheduled_date}`;
     }
+}
+
+function switchExportScheduleTab(tab) {
+    currentExportScheduleTab = tab === 'completed' ? 'completed' : 'active';
+    const activePane = document.getElementById('exportTabActivePane');
+    const completedPane = document.getElementById('exportTabCompletedPane');
+    if (activePane) activePane.style.display = currentExportScheduleTab === 'active' ? '' : 'none';
+    if (completedPane) completedPane.style.display = currentExportScheduleTab === 'completed' ? '' : 'none';
+    document.querySelectorAll('.export-tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.exportTab === currentExportScheduleTab);
+    });
+    if (currentExportScheduleTab === 'completed') {
+        renderExportCompletedCalendar();
+        applyExportCompletedFilter();
+    }
+}
+
+function toggleExportCompletedSearchPanel(forceOpen = null) {
+    exportCompletedSearchOpen = typeof forceOpen === 'boolean' ? forceOpen : !exportCompletedSearchOpen;
+    const body = document.getElementById('exportCompletedFilterBody');
+    const btn = document.getElementById('exportCompletedFilterToggleBtn');
+    if (body) body.style.display = exportCompletedSearchOpen ? 'grid' : 'none';
+    if (btn) btn.textContent = exportCompletedSearchOpen ? '검색 닫기' : '검색 열기';
+}
+
+function resetExportCompletedMonthFilter() {
+    exportCompletedFilterYear = exportToday.getFullYear();
+    exportCompletedFilterMonth = exportToday.getMonth() + 1;
+    exportCompletedSelectedDate = '';
+    const completedInput = document.getElementById('exportCompletedDateFilter');
+    if (completedInput) completedInput.value = '';
+    renderExportCompletedCalendar();
+    applyExportCompletedFilter();
+}
+
+function clearExportCompletedDateFilter() {
+    exportCompletedSelectedDate = '';
+    const completedInput = document.getElementById('exportCompletedDateFilter');
+    if (completedInput) completedInput.value = '';
+    renderExportCompletedCalendar();
+    applyExportCompletedFilter();
+}
+
+function clearExportCompletedSearchFilters() {
+    const productInput = document.getElementById('exportCompletedProductFilter');
+    const poInput = document.getElementById('exportCompletedPoFilter');
+    const completedInput = document.getElementById('exportCompletedDateFilter');
+    const productionDateInput = document.getElementById('exportCompletedProductionDateFilter');
+    if (productInput) productInput.value = '';
+    if (poInput) poInput.value = '';
+    if (productionDateInput) productionDateInput.value = '';
+    if (completedInput) completedInput.value = '';
+    resetExportCompletedMonthFilter();
+}
+
+function handleExportCompletedDateInputChange() {
+    const completedInput = document.getElementById('exportCompletedDateFilter');
+    const value = String(completedInput?.value || '').trim();
+    if (value) {
+        const [year, month] = value.split('-');
+        if (year && month) {
+            exportCompletedFilterYear = Number(year);
+            exportCompletedFilterMonth = Number(month);
+        }
+        exportCompletedSelectedDate = value;
+    } else {
+        exportCompletedSelectedDate = '';
+    }
+    renderExportCompletedCalendar();
+    applyExportCompletedFilter();
+}
+
+function changeExportCompletedMonth(delta) {
+    exportCompletedFilterMonth += delta;
+    if (exportCompletedFilterMonth < 1) {
+        exportCompletedFilterMonth = 12;
+        exportCompletedFilterYear -= 1;
+    } else if (exportCompletedFilterMonth > 12) {
+        exportCompletedFilterMonth = 1;
+        exportCompletedFilterYear += 1;
+    }
+    exportCompletedSelectedDate = '';
+    renderExportCompletedCalendar();
+    applyExportCompletedFilter();
+}
+
+function renderExportCompletedCalendar() {
+    const monthLabel = document.getElementById('exportCompletedMonthLabel');
+    const daysWrap = document.getElementById('exportCompletedDays');
+    if (!monthLabel || !daysWrap) return;
+
+    monthLabel.textContent = `${exportCompletedFilterYear}년 ${exportCompletedFilterMonth}월`;
+    daysWrap.innerHTML = '';
+
+    const firstDay = new Date(exportCompletedFilterYear, exportCompletedFilterMonth - 1, 1);
+    const lastDay = new Date(exportCompletedFilterYear, exportCompletedFilterMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startWeekday = firstDay.getDay();
+    const monthPrefix = `${exportCompletedFilterYear}-${String(exportCompletedFilterMonth).padStart(2, '0')}`;
+    const dateCountMap = exportCompletedSchedules.reduce((acc, row) => {
+        const completedDate = String(row.completed_date || '').trim();
+        if (completedDate.startsWith(monthPrefix)) {
+            acc[completedDate] = (acc[completedDate] || 0) + 1;
+        }
+        return acc;
+    }, {});
+
+    for (let i = 0; i < startWeekday; i += 1) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'schedule-date-empty';
+        daysWrap.appendChild(emptyDay);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+        const dayElement = document.createElement('div');
+        dayElement.className = 'schedule-date-cell';
+        dayElement.textContent = day;
+        if (exportCompletedSelectedDate === dateStr) {
+            dayElement.classList.add('is-selected');
+        }
+        if (dateCountMap[dateStr]) {
+            dayElement.classList.add('has-items');
+            dayElement.title = `완료 일정 ${dateCountMap[dateStr]}건`;
+        }
+        dayElement.onclick = function() {
+            exportCompletedSelectedDate = exportCompletedSelectedDate === dateStr ? '' : dateStr;
+            renderExportCompletedCalendar();
+            applyExportCompletedFilter();
+        };
+        daysWrap.appendChild(dayElement);
+    }
+}
+
+function applyExportCompletedFilter() {
+    const productKeyword = String(document.getElementById('exportCompletedProductFilter')?.value || '').trim().toLowerCase();
+    const poKeyword = String(document.getElementById('exportCompletedPoFilter')?.value || '').trim().toLowerCase();
+    const completedDateInput = String(document.getElementById('exportCompletedDateFilter')?.value || '').trim();
+    const productionDateInput = String(document.getElementById('exportCompletedProductionDateFilter')?.value || '').trim();
+    const monthPrefix = `${exportCompletedFilterYear}-${String(exportCompletedFilterMonth).padStart(2, '0')}`;
+    const matchesFilter = (node) => {
+        const value = String(node.dataset.completedDate || '').trim();
+        if (!value.startsWith(monthPrefix)) return false;
+        if (exportCompletedSelectedDate && value !== exportCompletedSelectedDate) return false;
+        if (completedDateInput && value !== completedDateInput) return false;
+        if (productKeyword && !String(node.dataset.productName || '').toLowerCase().includes(productKeyword)) return false;
+        if (poKeyword && !String(node.dataset.poNumbers || '').toLowerCase().includes(poKeyword)) return false;
+        if (productionDateInput) {
+            const productionDates = String(node.dataset.productionDates || '')
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean);
+            if (!productionDates.includes(productionDateInput)) return false;
+        }
+        return true;
+    };
+
+    let visibleTableCount = 0;
+    document.querySelectorAll('.export-completed-table-row').forEach((row) => {
+        const show = matchesFilter(row);
+        row.style.display = show ? '' : 'none';
+        if (show) visibleTableCount += 1;
+    });
+
+    let visibleCardCount = 0;
+    document.querySelectorAll('.export-completed-card').forEach((card) => {
+        const show = matchesFilter(card);
+        card.style.display = show ? '' : 'none';
+        if (show) visibleCardCount += 1;
+    });
+
+    const summary = document.getElementById('exportCompletedFilterSummary');
+    if (summary) {
+        if (completedDateInput) {
+            summary.textContent = `${completedDateInput} 완료 일정 ${visibleCardCount}건`;
+        } else if (exportCompletedSelectedDate) {
+            summary.textContent = `${exportCompletedSelectedDate} 완료 일정 ${visibleCardCount}건`;
+        } else {
+            summary.textContent = `${monthPrefix} 완료 일정 ${visibleCardCount}건`;
+        }
+    }
+
+    const tableEmpty = document.getElementById('exportCompletedTableEmpty');
+    if (tableEmpty) tableEmpty.style.display = visibleTableCount > 0 ? 'none' : '';
+    const cardEmpty = document.getElementById('exportCompletedCardEmpty');
+    if (cardEmpty) cardEmpty.style.display = visibleCardCount > 0 ? 'none' : '';
 }
 
 function renderMobileScheduleList() {
@@ -4135,6 +4608,8 @@ document.getElementById('exportContainerCountInput').addEventListener('input', f
 document.addEventListener('DOMContentLoaded', function() {
     renderCalendar();
     setListStatusFilter('all');
+    resetExportCompletedMonthFilter();
+    switchExportScheduleTab('active');
     const activeView = getActiveView();
     if (activeView !== 'calendar') {
         switchView(activeView);

@@ -536,6 +536,7 @@ def _container_target_rows(total_quantity, boxes_per_container, container_count,
                 'target_boxes': int(target_boxes),
                 'produced_boxes': int(produced_boxes),
                 'remaining_boxes': int(remaining_boxes),
+                'is_completed': int(remaining_boxes) <= 0 and int(target_boxes) > 0,
             }
         )
         remaining_total -= target_boxes
@@ -1560,13 +1561,29 @@ def schedules():
                 if date_key:
                     bucket = daily_actual_map.setdefault(
                         date_key,
-                        {'actual_boxes': 0, 'expiry_dates': set()},
+                        {'actual_boxes': 0, 'expiry_dates': set(), 'production_ids': set()},
                     )
                     bucket['actual_boxes'] += actual_boxes
+                    production_id = int(
+                        linked_row.get('linked_production_id')
+                        or linked_row.get('production_id')
+                        or 0
+                    )
+                    if production_id > 0:
+                        bucket['production_ids'].add(production_id)
                     for expiry_key in ('expiry_date', 'expiry_date_2', 'expiry_date_3'):
                         expiry_value = str(linked_row.get(expiry_key) or '').strip()
                         if expiry_value:
                             bucket['expiry_dates'].add(expiry_value)
+            completed_dates = sorted(
+                {
+                    str(row.get('scheduled_date') or '').strip()
+                    for row in completed_rows
+                    if str(row.get('scheduled_date') or '').strip()
+                }
+            )
+            is_completed = export_quantity > 0 and remaining_total <= 0
+            completed_date = completed_dates[-1] if is_completed and completed_dates else ''
             container_rows = _container_target_rows(
                 export_quantity,
                 boxes_per_container,
@@ -1593,12 +1610,16 @@ def schedules():
                         'date': key,
                         'actual_boxes': value['actual_boxes'],
                         'expiry_dates': sorted(value['expiry_dates']),
+                        'production_id': sorted(value['production_ids'])[0] if value['production_ids'] else 0,
+                        'detail_url': f"/production/{sorted(value['production_ids'])[0]}" if value['production_ids'] else '',
                     }
                     for key, value in sorted(daily_actual_map.items())
                 ],
                 'excluded_dates': excluded_dates,
                 'excluded_date_count': len(excluded_dates),
                 'has_started': started_count > 0 or produced_total > 0,
+                'is_completed': is_completed,
+                'completed_date': completed_date,
             }
             export_rows_view.append(export_view)
             export_rows_json.append(
@@ -1622,14 +1643,22 @@ def schedules():
                     'generated_count': len(linked_rows),
                     'external_completed_count': len(external_completed_rows),
                     'has_started': export_view['has_started'],
+                    'is_completed': is_completed,
+                    'completed_date': completed_date,
                     'container_rows': container_rows,
                     'daily_actuals': export_view['daily_actuals'],
                     'excluded_dates': excluded_dates,
                     'excluded_date_count': len(excluded_dates),
                 }
             )
-            if export_view['has_started']:
+            if export_view['has_started'] and not is_completed:
                 export_active_rows.append(export_view)
+        export_completed_rows = sorted(
+            [row for row in export_rows_view if row.get('is_completed')],
+            key=lambda row: (str(row.get('completed_date') or ''), int(row.get('id') or 0)),
+            reverse=True,
+        )
+        export_in_progress_rows = [row for row in export_rows_view if not row.get('is_completed')]
 
     # ?ㅼ?以??곗씠?곕? JSON?쇰줈 蹂??(JavaScript?먯꽌 ?ъ슜)
     schedules_view = []
@@ -1704,7 +1733,9 @@ def schedules():
         products_json=products_json,
         work_days_json=work_days_json,
         export_schedules=export_rows_view,
+        export_in_progress_schedules=export_in_progress_rows,
         export_active_schedules=export_active_rows,
+        export_completed_schedules=export_completed_rows,
         export_schedules_json=export_schedules_json,
         month_start=month_start,
         month_end=month_end,
