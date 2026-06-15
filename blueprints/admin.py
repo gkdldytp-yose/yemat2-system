@@ -144,6 +144,10 @@ def _round_to_1_decimal(value):
     return round(float(value or 0) + 1e-9, 1)
 
 
+def _round_to_4_decimal(value):
+    return round(float(value or 0) + 1e-9, 4)
+
+
 def _subcontract_row_sort_key(row):
     item = row or {}
     item_type = (item.get('item_type') or '').strip()
@@ -6359,7 +6363,7 @@ def integrated_update_product():
     category = (request.form.get('category') or '기타').strip() or '기타'
     sheets_per_pack = request.form.get('sheets_per_pack')
     cuts_per_sheet = request.form.get('cuts_per_sheet')
-    sok_per_box = _round_to_1_decimal(request.form.get('sok_per_box') or 0)
+    sok_per_box = _round_to_4_decimal(request.form.get('sok_per_box') or 0)
     expiry_months = request.form.get('expiry_months', 12)
 
     try:

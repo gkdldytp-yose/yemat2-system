@@ -76,6 +76,13 @@ def _format_packaging_export_note(note, workplace_prefix=''):
     return f'{note_text} 반출 완료'.strip() if note_text else '반출 완료'
 
 
+def _resolve_packaging_incoming_action_date(row, action):
+    action_name = (action or '').strip()
+    if action_name in {'issue_request_complete', 'issue_request_update', 'issue_request_cancel'}:
+        return _get_print_workday(row.get('created_at'))
+    return (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+
+
 def _build_production_expiry_rows(production_row, default_expiry_date=''):
     rows = []
     raw_dates = [
@@ -718,16 +725,16 @@ def journals():
                 action_date = ''
                 if action == 'create':
                     incoming_qty = abs(qty)
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     incoming_qty = abs(qty)
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'issue_request_update' and workplace_prefix and note.startswith(workplace_prefix):
                     incoming_qty = abs(qty)
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action in ('issue_request_cancel', 'delete'):
                     incoming_qty = -abs(qty)
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     outgoing_qty = abs(qty)
                     action_date = _get_print_workday(row.get('created_at'))
@@ -941,11 +948,11 @@ def material_checksheet_preview():
                 note = (row.get('note') or '').strip()
                 action_date = ''
                 if action == 'create':
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'issue_request_update' and workplace_prefix and note.startswith(workplace_prefix):
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     action_date = _get_print_workday(row.get('created_at'))
                 elif action == 'adjustment' and note in ('inventory_audit_apply_workplace_plus', 'inventory_audit_apply_workplace_minus'):
@@ -1330,19 +1337,19 @@ def packaging_checksheet_preview():
                 if action == 'create':
                     received_qty = abs(qty)
                     note_text = '신규 로트 입고'
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'issue_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     received_qty = abs(qty)
                     note_text = '불출 입고'
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'issue_request_update' and workplace_prefix and note.startswith(workplace_prefix):
                     received_qty = abs(qty)
                     note_text = '불출 입고'
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action in ('issue_request_cancel', 'delete'):
                     received_qty = -abs(qty)
                     note_text = '불출 입고'
-                    action_date = (row.get('receiving_date') or '').strip() or _get_print_workday(row.get('created_at'))
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
                 elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
                     outgoing_qty = abs(qty)
                     note_text = _format_packaging_export_note(note, workplace_prefix)

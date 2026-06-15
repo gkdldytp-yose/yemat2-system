@@ -445,7 +445,10 @@ def _load_export_linked_rows(cursor, export_schedule_id):
             pr.status as production_status,
             pr.expiry_date,
             pr.expiry_date_2,
-            pr.expiry_date_3
+            pr.expiry_date_3,
+            pr.expiry_boxes_1,
+            pr.expiry_boxes_2,
+            pr.expiry_boxes_3
         FROM production_schedules ps
         LEFT JOIN productions pr ON pr.id = ps.production_id
         WHERE ps.export_schedule_id = ?
@@ -467,6 +470,9 @@ def _load_existing_export_completed_rows(cursor, workplace, product_id, start_da
             pr.expiry_date,
             pr.expiry_date_2,
             pr.expiry_date_3,
+            pr.expiry_boxes_1,
+            pr.expiry_boxes_2,
+            pr.expiry_boxes_3,
             ps.id as schedule_id,
             ps.status as schedule_status
         FROM productions pr
@@ -1561,7 +1567,12 @@ def schedules():
                 if date_key:
                     bucket = daily_actual_map.setdefault(
                         date_key,
-                        {'actual_boxes': 0, 'expiry_dates': set(), 'production_ids': set()},
+                        {
+                            'actual_boxes': 0,
+                            'expiry_dates': set(),
+                            'expiry_box_map': {},
+                            'production_ids': set(),
+                        },
                     )
                     bucket['actual_boxes'] += actual_boxes
                     production_id = int(
@@ -1571,10 +1582,22 @@ def schedules():
                     )
                     if production_id > 0:
                         bucket['production_ids'].add(production_id)
-                    for expiry_key in ('expiry_date', 'expiry_date_2', 'expiry_date_3'):
-                        expiry_value = str(linked_row.get(expiry_key) or '').strip()
-                        if expiry_value:
-                            bucket['expiry_dates'].add(expiry_value)
+                    expiry_rows, _visible_expiry_count = _build_production_expiry_rows(
+                        linked_row,
+                        str(linked_row.get('expiry_date') or '').strip(),
+                    )
+                    for expiry_row in expiry_rows:
+                        expiry_value = str(expiry_row.get('date') or '').strip()
+                        if not expiry_value:
+                            continue
+                        try:
+                            expiry_boxes = float(expiry_row.get('boxes') or 0)
+                        except (TypeError, ValueError):
+                            expiry_boxes = 0.0
+                        if expiry_boxes <= 0:
+                            continue
+                        bucket['expiry_dates'].add(expiry_value)
+                        bucket['expiry_box_map'][expiry_value] = float(bucket['expiry_box_map'].get(expiry_value) or 0) + expiry_boxes
             completed_dates = sorted(
                 {
                     str(row.get('scheduled_date') or '').strip()
@@ -1610,6 +1633,14 @@ def schedules():
                         'date': key,
                         'actual_boxes': value['actual_boxes'],
                         'expiry_dates': sorted(value['expiry_dates']),
+                        'expiry_breakdowns': [
+                            {
+                                'date': expiry_date,
+                                'boxes': int(round(float(expiry_boxes or 0))),
+                            }
+                            for expiry_date, expiry_boxes in sorted(value['expiry_box_map'].items())
+                            if float(expiry_boxes or 0) > 0
+                        ],
                         'production_id': sorted(value['production_ids'])[0] if value['production_ids'] else 0,
                         'detail_url': f"/production/{sorted(value['production_ids'])[0]}" if value['production_ids'] else '',
                     }

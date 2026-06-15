@@ -2519,7 +2519,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                                 data-box_quantity="{{ item.box_quantity }}"
                                  data-sheets_per_pack="{{ item.sheets_per_pack or 24 }}"
                                  data-cuts_per_sheet="{{ item.cuts_per_sheet or 9 }}"
-                                 data-sok_per_box="{{ '%.1f'|format(item.sok_per_box) if item.sok_per_box or item.sok_per_box == 0 else '' }}"
+                                 data-sok_per_box="{{ '%.4f'|format(item.sok_per_box) if item.sok_per_box or item.sok_per_box == 0 else '' }}"
                                  data-expiry_months="{{ item.expiry_months or 12 }}"
                                  >수정</button>
                         {% if wp_filter == 'unassigned' %}
@@ -2706,7 +2706,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
             <div class="form-group"><label>박스당 수량</label><input type="number" name="box_quantity" id="edit_product_box_quantity" value="1"></div>
             <div class="form-group"><label>매수</label><input type="number" name="sheets_per_pack" id="edit_product_sheets_per_pack" value="24"></div>
             <div class="form-group"><label>절단</label><input type="number" name="cuts_per_sheet" id="edit_product_cuts_per_sheet" value="9"></div>
-            <div class="form-group"><label>한 박스당 원초(속)</label><input type="number" name="sok_per_box" id="edit_product_sok_per_box" step="0.1" min="0"></div>
+            <div class="form-group"><label>한 박스당 원초(속)</label><input type="number" name="sok_per_box" id="edit_product_sok_per_box" step="0.0001" min="0"></div>
             <div class="form-group">
                 <label>소비기한(개월)</label>
                 <select name="expiry_months" id="edit_product_expiry_months">
@@ -3211,7 +3211,7 @@ function openEditModal(btn){
         document.getElementById('edit_product_sheets_per_pack').value = btn.dataset.sheets_per_pack || 24;
         document.getElementById('edit_product_cuts_per_sheet').value = btn.dataset.cuts_per_sheet || 9;
         const sokPerBox = parseFloat(btn.dataset.sok_per_box || 0);
-        document.getElementById('edit_product_sok_per_box').value = Number.isFinite(sokPerBox) ? sokPerBox.toFixed(1) : '';
+        document.getElementById('edit_product_sok_per_box').value = Number.isFinite(sokPerBox) ? sokPerBox.toFixed(4) : '';
         document.getElementById('edit_product_expiry_months').value = btn.dataset.expiry_months || 12;
     } else if(tab === 'raw_materials'){
         document.getElementById('edit_raw_id').value = btn.dataset.id || '';

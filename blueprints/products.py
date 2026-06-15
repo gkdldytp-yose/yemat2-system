@@ -46,6 +46,13 @@ def _round_to_2_decimal(value, default=0.0):
         return float(default or 0)
 
 
+def _round_to_4_decimal(value, default=0.0):
+    try:
+        return round(float(value or 0) + 1e-9, 4)
+    except (TypeError, ValueError):
+        return float(default or 0)
+
+
 def _parse_bom_quantity_input(raw_value):
     text = str(raw_value or '').strip()
     if not text:
@@ -73,7 +80,7 @@ def _parse_raw_option_values(form):
         if not sok_raw:
             continue
         try:
-            sok_num = round(float(sok_raw) + 1e-9, 2)
+            sok_num = _round_to_4_decimal(sok_raw)
         except (TypeError, ValueError):
             continue
         try:
