@@ -2998,7 +2998,18 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                 {% else %}
                                 <span>{{ daily.date }}</span>
                                 {% endif %}
-                                {% if daily.expiry_dates %}
+                                {% if daily.expiry_breakdowns %}
+                                <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
+                                    {% if daily.expiry_breakdowns|length > 1 %}
+                                        {% for expiry in daily.expiry_breakdowns %}
+                                        <div>소비기한 {{ expiry.date }} · {{ export_box(expiry.boxes) }} box</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% set expiry = daily.expiry_breakdowns[0] %}
+                                        소비기한 {{ expiry.date }} · {{ export_box(expiry.boxes) }} box
+                                    {% endif %}
+                                </div>
+                                {% elif daily.expiry_dates %}
                                 <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
                                     소비기한 {{ daily.expiry_dates | join(', ') }}
                                 </div>

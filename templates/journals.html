@@ -52,6 +52,8 @@
 .journals-material-scope-btn.active{background:linear-gradient(180deg,#1d4ed8 0%,#1e40af 100%);border-color:#1d4ed8;color:#fff;box-shadow:0 10px 24px rgba(29,78,216,0.24);}
 .journals-material-scope-btn .scope-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 .45rem;border-radius:999px;background:rgba(255,255,255,0.82);color:#1d4ed8;font-size:.76rem;font-weight:900;}
 .journals-material-scope-btn.active .scope-badge{background:rgba(255,255,255,0.18);color:#fff;}
+.journals-link{color:#2563eb;font-weight:800;text-decoration:none;}
+.journals-link:hover{text-decoration:underline;}
 html[data-theme="dark"] .journals-hero p,
 html[data-theme="dark"] .journals-help{color:var(--text-muted);}
 html[data-theme="dark"] .journals-panel{background:var(--panel-bg);border-color:var(--panel-border);box-shadow:0 12px 32px rgba(2,6,23,0.45);}
@@ -80,6 +82,7 @@ html[data-theme="dark"] .journals-material-scope-btn{background:linear-gradient(
 html[data-theme="dark"] .journals-material-scope-btn:hover{background:rgba(37,99,235,0.16);border-color:rgba(96,165,250,0.42);color:#dbeafe;}
 html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgba(15,23,42,0.78);color:#bfdbfe;}
 html[data-theme="dark"] .journals-inline-notice{background:rgba(15,23,42,0.82);border-color:rgba(96,165,250,0.28);color:var(--text-secondary);}
+html[data-theme="dark"] .journals-link{color:#93c5fd;}
 @media (max-width:768px){
   .journals-table{font-size:.8rem;}
   .journals-table th,.journals-table td{padding:.55rem .45rem;}
@@ -176,7 +179,7 @@ html[data-theme="dark"] .journals-inline-notice{background:rgba(15,23,42,0.82);b
                     {% for row in production_rows %}
                     <tr>
                         <td>{{ row.production_date or '' }}</td>
-                        <td>PROD-{{ row.id }}</td>
+                        <td><a class="journals-link" href="{{ url_for('production.production_detail', production_id=row.id) }}">PROD-{{ row.id }}</a></td>
                         <td>{{ row.product_code or '' }}</td>
                         <td>{{ row.product_name or '' }}</td>
                         <td>{{ row.actual_boxes or row.planned_boxes or '' }}</td>
