@@ -92,6 +92,14 @@
             padding-top: 8px;
             padding-bottom: 8px;
         }
+        .intake-head-tight {
+            white-space: nowrap;
+            font-size: 12.5px;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+            padding-left: 4px;
+            padding-right: 4px;
+        }
         .left { text-align: left; }
         .right { text-align: right; }
         .header-table,
@@ -99,6 +107,19 @@
         .usage-table,
         .footer-table {
             margin: 0;
+        }
+        .cycle-head,
+        .cycle-body {
+            white-space: nowrap;
+            letter-spacing: -0.04em;
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+        .cycle-head {
+            font-size: 12.5px;
+        }
+        .cycle-body {
+            font-size: 12px;
         }
         .meta-table {
             margin: 0;
@@ -448,16 +469,16 @@
 
         <table class="header-table">
         <colgroup>
-            <col style="width:9%">
+            <col style="width:10.523%">
             <col style="width:21%">
-            <col style="width:20.5%">
+            <col style="width:18.977%">
             <col style="width:4%">
             <col style="width:15.166%">
             <col style="width:15.167%">
             <col style="width:15.167%">
         </colgroup>
         <tr>
-            <td class="head-fill">작성주기</td>
+            <td class="head-fill cycle-head">작성주기</td>
             <td class="title-cell" colspan="2" rowspan="2">
                 <div class="title">원재료 입·출고 점검표</div>
                 <div class="subtitle">[{{ workplace_title }}]</div>
@@ -468,7 +489,7 @@
             <td class="head-fill">승 인</td>
         </tr>
         <tr>
-            <td>입 · 출고시</td>
+            <td class="cycle-body">입 · 출고시</td>
             <td class="approval-sign"></td>
             <td class="approval-sign"></td>
             <td class="approval-sign"></td>
@@ -494,8 +515,8 @@
             <col style="width:15%">
             <col style="width:14%">
             <col style="width:21%">
-            <col style="width:10%">
-            <col style="width:14%">
+            <col style="width:12.6%">
+            <col style="width:11.4%">
         </colgroup>
         <tr>
             <td class="head-fill">입고일자</td>
@@ -510,7 +531,7 @@
             <td>{{ intake.sheets_per_sok_text }}</td>
             <td class="head-fill">수량(Box)</td>
             <td>{{ intake.box_quantity_text }}</td>
-            <td class="head-fill">총 입고속수</td>
+            <td class="head-fill intake-head-tight">총 입고속수</td>
             <td>{{ intake.total_stock_text }}</td>
         </tr>
     </table>

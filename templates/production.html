@@ -204,6 +204,190 @@
     background:#eff6ff !important;
     transition:background 0.25s ease;
 }
+.production-groups{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+    margin-top:1rem;
+}
+.production-day-card{
+    border:1px solid #e2e8f0;
+    border-radius:18px;
+    overflow:hidden;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    box-shadow:0 12px 28px rgba(15,23,42,0.06);
+    transition:border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.production-day-card:hover{
+    border-color:#bfdbfe;
+    box-shadow:0 16px 34px rgba(37,99,235,0.10);
+}
+.production-day-card.prod-date-focus{
+    border-color:#60a5fa;
+    box-shadow:0 0 0 3px rgba(96,165,250,0.18), 0 18px 36px rgba(37,99,235,0.16);
+}
+.production-day-card.is-completed{
+    border-color:#d1fae5;
+    box-shadow:0 12px 28px rgba(16,185,129,0.08);
+}
+.production-day-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:1rem;
+    padding:1rem 1.15rem 0.95rem;
+    background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);
+    color:#eff6ff;
+}
+.production-day-card.is-completed .production-day-head{
+    background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 52%,#a7f3d0 100%);
+    color:#14532d;
+}
+.production-day-card.is-completed .production-day-subtitle{
+    color:#047857;
+}
+.production-day-card.is-completed .production-day-chip{
+    background:rgba(255,255,255,0.56);
+    border-color:rgba(16,185,129,0.18);
+    color:#166534;
+}
+.production-day-card.is-completed .production-day-chip strong{
+    color:#14532d;
+}
+.production-day-title{
+    display:flex;
+    flex-direction:column;
+    gap:0.18rem;
+}
+.production-day-date{
+    font-size:1.2rem;
+    font-weight:900;
+    letter-spacing:-0.03em;
+}
+.production-day-subtitle{
+    font-size:0.82rem;
+    color:#cbd5f5;
+    font-weight:700;
+}
+.production-day-summary{
+    display:flex;
+    align-items:center;
+    gap:0.55rem;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+}
+.production-day-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:0.38rem;
+    padding:0.42rem 0.72rem;
+    border-radius:999px;
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.14);
+    font-size:0.8rem;
+    font-weight:800;
+    white-space:nowrap;
+}
+.production-day-chip strong{
+    font-size:0.82rem;
+    color:#fff;
+}
+.production-day-list{
+    display:flex;
+    flex-direction:column;
+}
+.production-day-item{
+    display:grid;
+    grid-template-columns:minmax(0,2.2fr) minmax(280px,1.35fr) auto auto;
+    gap:1rem;
+    align-items:center;
+    padding:0.95rem 1.15rem;
+    border-top:1px solid #e5edf6;
+}
+.production-day-item:first-child{
+    border-top:none;
+}
+.production-day-item:hover{
+    background:#f8fbff;
+}
+.production-item-main{
+    min-width:0;
+}
+.production-item-top{
+    display:flex;
+    align-items:center;
+    gap:0.55rem;
+    flex-wrap:wrap;
+    margin-bottom:0.42rem;
+}
+.production-item-name{
+    font-size:1rem;
+    font-weight:900;
+    color:#0f172a;
+    letter-spacing:-0.02em;
+}
+.production-item-id{
+    display:inline-flex;
+    align-items:center;
+    padding:0.18rem 0.48rem;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-size:0.72rem;
+    font-weight:800;
+    border:1px solid #dbeafe;
+}
+.production-item-meta{
+    display:flex;
+    align-items:center;
+    gap:0.45rem;
+    flex-wrap:wrap;
+    color:#64748b;
+    font-size:0.82rem;
+    font-weight:700;
+}
+.production-item-lines{
+    display:flex;
+    align-items:center;
+    gap:0.4rem;
+    flex-wrap:wrap;
+}
+.production-item-stats{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:0.6rem;
+}
+.production-stat{
+    padding:0.55rem 0.7rem;
+    border-radius:14px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+}
+.production-stat-label{
+    display:block;
+    font-size:0.72rem;
+    font-weight:800;
+    color:#64748b;
+    margin-bottom:0.22rem;
+}
+.production-stat-value{
+    display:block;
+    font-size:1rem;
+    font-weight:900;
+    color:#0f172a;
+    letter-spacing:-0.02em;
+}
+.production-item-status{
+    justify-self:center;
+}
+.production-item-actions{
+    display:flex;
+    align-items:center;
+    gap:0.45rem;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    white-space:nowrap;
+}
 .status-tabs{display:flex;gap:0.6rem;margin-top:1.35rem;margin-bottom:1rem;}
 .status-tab{flex:1;padding:0.8rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:white;cursor:pointer;font-weight:700;font-size:0.9rem;text-align:center;transition:all 0.2s;text-decoration:none;color:#374151;box-shadow:0 6px 14px rgba(15,23,42,0.06);}
 .status-tab:hover{border-color:#c7d2fe;background:#f8fafc;}
@@ -236,6 +420,55 @@ html[data-theme="dark"] .production-calendar-day{background:#121a2a;color:#5f749
 html[data-theme="dark"] .production-calendar-day.available{background:rgba(37,99,235,.18);color:#bfdbfe;}
 html[data-theme="dark"] .production-calendar-day.available:hover{background:rgba(37,99,235,.28);}
 html[data-theme="dark"] .table-container tr.prod-date-focus td{background:#162133 !important;}
+html[data-theme="dark"] .production-day-card{
+    background:linear-gradient(180deg,#121a2a 0%,#101827 100%);
+    border-color:#263244;
+    box-shadow:0 18px 40px rgba(2,6,23,.28);
+}
+html[data-theme="dark"] .production-day-card.is-completed{
+    border-color:#1f6f57;
+    box-shadow:0 18px 40px rgba(6,78,59,.18);
+}
+html[data-theme="dark"] .production-day-card:hover{
+    border-color:#3b82f6;
+}
+html[data-theme="dark"] .production-day-card.is-completed:hover{
+    border-color:#34d399;
+}
+html[data-theme="dark"] .production-day-card.is-completed .production-day-head{
+    background:linear-gradient(135deg,#0f2f28 0%,#134e4a 55%,#0f766e 100%);
+    color:#ecfdf5;
+}
+html[data-theme="dark"] .production-day-card.is-completed .production-day-subtitle{
+    color:#a7f3d0;
+}
+html[data-theme="dark"] .production-day-card.is-completed .production-day-chip{
+    background:rgba(255,255,255,0.08);
+    border-color:rgba(167,243,208,0.16);
+    color:#d1fae5;
+}
+html[data-theme="dark"] .production-day-card.is-completed .production-day-chip strong{
+    color:#f0fdf4;
+}
+html[data-theme="dark"] .production-day-item{
+    border-top-color:#263244;
+}
+html[data-theme="dark"] .production-day-item:hover{
+    background:#162133;
+}
+html[data-theme="dark"] .production-item-name,
+html[data-theme="dark"] .production-stat-value{color:#eff6ff;}
+html[data-theme="dark"] .production-item-id{
+    background:#152033;
+    border-color:#2f4058;
+    color:#93c5fd;
+}
+html[data-theme="dark"] .production-item-meta,
+html[data-theme="dark"] .production-stat-label{color:#8ea3bd;}
+html[data-theme="dark"] .production-stat{
+    background:#152033;
+    border-color:#2b3648;
+}
 html[data-theme="dark"] .status-tab{background:#152033;border-color:#2b3648;color:#dbe7f5;}
 html[data-theme="dark"] .status-tab:hover{background:#1a2436;border-color:#3b82f6;}
 html[data-theme="dark"] .search-results{border-top-color:#263244;}
@@ -260,6 +493,23 @@ html[data-theme="dark"] .search-empty{color:#8ea3bd;}
     .status-tab .count{font-size:1.25rem;}
     .modal-box{padding:1rem;border-radius:12px;}
     .search-grid{grid-template-columns:1fr;}
+    .production-day-head{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+    .production-day-summary{
+        justify-content:flex-start;
+    }
+    .production-day-item{
+        grid-template-columns:1fr;
+        gap:0.75rem;
+    }
+    .production-item-status{
+        justify-self:start;
+    }
+    .production-item-actions{
+        justify-content:flex-start;
+    }
 }
 </style>
 {% endblock %}
@@ -329,49 +579,79 @@ html[data-theme="dark"] .search-empty{color:#8ea3bd;}
 <div class="card">
     <h2>{{ current_year }}년 {{ current_month_num }}월 생산</h2>
     {% if productions %}
-    <div class="table-container">
-    <table>
-        <thead>
-            <tr><th>일자</th><th>상품</th><th>라인</th><th>계획</th><th>실제</th><th>상태</th><th>관리</th></tr>
-        </thead>
-        <tbody>
-        {% for prod in productions %}
-        <tr data-production-date="{{ prod.production_date }}">
-            <td style="white-space:nowrap;">{{ prod.production_date[5:] }}</td>
-            <td><strong style="font-size:0.85rem;">{{ prod.product_name }}</strong></td>
-            <td>
-                {% if prod.display_line %}
-                    {% for line_num in prod.display_line.split(',') %}
-                    <span class="badge badge-info">라인 {{ line_num.strip() }}</span>
-                    {% endfor %}
-                {% else %}
-                    <span style="color:#94a3b8;">-</span>
-                {% endif %}
-            </td>
-            <td>{{ prod.planned_boxes }}</td>
-            <td>{{ prod.actual_boxes or '-' }}</td>
-            <td>
-                {% if prod.status == '계획' %}<span class="badge badge-info">계획</span>
-                {% elif prod.status == '진행중' %}<span class="badge badge-warning">진행</span>
-                {% elif prod.status == '완료' %}<span class="badge badge-success">완료</span>
-                {% else %}<span class="badge badge-info">{{ prod.status }}</span>{% endif %}
-            </td>
-            <td style="white-space:nowrap;">
-                <a href="/production/{{ prod.id }}" class="btn btn-small" style="background:#6c757d;">조회</a>
-                {% if current_tab == 'done' or prod.status == '완료' %}
-                <a href="/production/{{ prod.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ prod.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">출력</a>
-                {% endif %}
-                {% if can_prod %}
-                <form method="POST" action="/production/{{ prod.id }}/delete" style="display:inline;"
-                      onsubmit="return confirm('삭제?')">
-                    <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
-                </form>
-                {% endif %}
-            </td>
-        </tr>
+    <div class="production-groups">
+        {% for date_value, day_items in productions|groupby('production_date') %}
+        {% set ns = namespace(planned_total=0, actual_total=0) %}
+        {% for prod in day_items %}
+            {% set ns.planned_total = ns.planned_total + (prod.planned_boxes or 0) %}
+            {% set ns.actual_total = ns.actual_total + (prod.actual_boxes or 0) %}
         {% endfor %}
-        </tbody>
-    </table>
+        <section class="production-day-card {% if current_tab == 'done' %}is-completed{% endif %}" id="date-{{ date_value }}" data-production-date="{{ date_value }}">
+            <div class="production-day-head">
+                <div class="production-day-title">
+                    <div class="production-day-date">{{ date_value[5:] }}</div>
+                    <div class="production-day-subtitle">{{ date_value }} · 생산 {{ day_items|length }}건</div>
+                </div>
+                <div class="production-day-summary">
+                    <span class="production-day-chip">건수 <strong>{{ day_items|length }}건</strong></span>
+                    <span class="production-day-chip">계획 <strong>{{ ns.planned_total }}</strong></span>
+                    <span class="production-day-chip">실제 <strong>{{ ns.actual_total if current_tab == 'done' else '-' }}</strong></span>
+                </div>
+            </div>
+            <div class="production-day-list">
+                {% for prod in day_items %}
+                <article class="production-day-item">
+                    <div class="production-item-main">
+                        <div class="production-item-top">
+                            <strong class="production-item-name">{{ prod.product_name }}</strong>
+                            <span class="production-item-id">PROD-{{ prod.id }}</span>
+                        </div>
+                        <div class="production-item-meta">
+                            <span>{{ prod.production_date }}</span>
+                            {% if prod.display_line %}
+                            <div class="production-item-lines">
+                                {% for line_num in prod.display_line.split(',') %}
+                                <span class="badge badge-info">라인 {{ line_num.strip() }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span style="color:#94a3b8;">라인 미지정</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="production-item-stats">
+                        <div class="production-stat">
+                            <span class="production-stat-label">계획 박스</span>
+                            <span class="production-stat-value">{{ prod.planned_boxes }}</span>
+                        </div>
+                        <div class="production-stat">
+                            <span class="production-stat-label">실제 박스</span>
+                            <span class="production-stat-value">{{ prod.actual_boxes or '-' }}</span>
+                        </div>
+                    </div>
+                    <div class="production-item-status">
+                        {% if prod.status == '계획' %}<span class="badge badge-info">계획</span>
+                        {% elif prod.status == '진행중' %}<span class="badge badge-warning">진행</span>
+                        {% elif prod.status == '완료' %}<span class="badge badge-success">완료</span>
+                        {% else %}<span class="badge badge-info">{{ prod.status }}</span>{% endif %}
+                    </div>
+                    <div class="production-item-actions">
+                        <a href="/production/{{ prod.id }}" class="btn btn-small" style="background:#6c757d;">조회</a>
+                        {% if current_tab == 'done' or prod.status == '완료' %}
+                        <a href="/production/{{ prod.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ prod.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">출력</a>
+                        {% endif %}
+                        {% if can_prod %}
+                        <form method="POST" action="/production/{{ prod.id }}/delete" style="display:inline;"
+                              onsubmit="return confirm('삭제?')">
+                            <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
     </div>
     {% else %}
     <p style="color:#999;padding:2rem;text-align:center;font-size:0.85rem;">
@@ -538,7 +818,7 @@ window.addEventListener('load', function() {
     const hash = window.location.hash || '';
     if (!hash.startsWith('#date-')) return;
     const targetDate = hash.replace('#date-', '');
-    const targetEl = document.querySelector(`[data-production-date="${targetDate}"]`);
+    const targetEl = document.querySelector(`.production-day-card[data-production-date="${targetDate}"]`);
     if (!targetEl) return;
     window.setTimeout(() => {
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
