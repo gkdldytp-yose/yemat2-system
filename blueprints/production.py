@@ -632,10 +632,11 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
     production_lines_str = ','.join(line_values)
     daily_quantities = _split_integer_quantity(remaining_total, len(available_dates))
     fixed_rows_by_date = {}
-    for row in started_rows + preserved_rows:
+    for row in fixed_rows:
         scheduled_date = str(row.get('scheduled_date') or '')
-        if scheduled_date:
-            fixed_rows_by_date[scheduled_date] = row
+        if not scheduled_date:
+            continue
+        fixed_rows_by_date.setdefault(scheduled_date, []).append(row)
     generated_quantity_by_date = {
         scheduled_date: int(daily_quantities[index] or 0) for index, scheduled_date in enumerate(available_dates)
     }
@@ -643,26 +644,27 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
     schedule_rows_for_audit = []
 
     for scheduled_date in business_dates:
-        fixed_row = fixed_rows_by_date.get(scheduled_date)
-        if fixed_row:
-            planned_boxes = _get_export_row_locked_boxes(fixed_row)
-            if planned_boxes <= 0:
-                continue
-            day_total_before = daily_cursor_total
-            unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, boxes_per_container)
-            container_no = unit_start_no if unit_start_no else None
-            container_label = _build_export_unit_label(unit_start_no, unit_end_no, unit_mode)
-            daily_cursor_total += planned_boxes
-            if fixed_row.get('schedule_id'):
-                cursor.execute(
-                    '''
-                    UPDATE production_schedules
-                    SET export_container_no = ?,
-                        export_container_label = ?
-                    WHERE id = ?
-                    ''',
-                    (container_no, container_label, fixed_row['schedule_id']),
-                )
+        fixed_rows_for_date = fixed_rows_by_date.get(scheduled_date) or []
+        if fixed_rows_for_date:
+            for fixed_row in fixed_rows_for_date:
+                planned_boxes = _get_export_row_locked_boxes(fixed_row)
+                if planned_boxes <= 0:
+                    continue
+                day_total_before = daily_cursor_total
+                unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, boxes_per_container)
+                container_no = unit_start_no if unit_start_no else None
+                container_label = _build_export_unit_label(unit_start_no, unit_end_no, unit_mode)
+                daily_cursor_total += planned_boxes
+                if fixed_row.get('schedule_id'):
+                    cursor.execute(
+                        '''
+                        UPDATE production_schedules
+                        SET export_container_no = ?,
+                            export_container_label = ?
+                        WHERE id = ?
+                        ''',
+                        (container_no, container_label, fixed_row['schedule_id']),
+                    )
             continue
 
         planned_boxes = int(generated_quantity_by_date.get(scheduled_date) or 0)
