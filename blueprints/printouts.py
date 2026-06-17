@@ -1177,33 +1177,205 @@ def material_checksheet_preview():
                 future_production_outgoing_map[material_id] += float(row['qty'] or 0)
 
         rows = []
-        for item in materials:
-            material_id = int(item['id'])
-            current_workplace_stock = float(workplace_stock_map.get(material_id, 0.0) or 0.0)
-            production_outgoing_today = float(item.get('outgoing_today') or 0.0)
-            received_today = float(received_today_map.get(material_id, 0.0) or 0.0)
-            outgoing_today = production_outgoing_today + float(non_production_outgoing_today_map.get(material_id, 0.0) or 0.0)
-            future_net_delta = float(future_net_delta_map.get(material_id, 0.0) or 0.0) - float(future_production_outgoing_map.get(material_id, 0.0) or 0.0)
-            closing_stock = current_workplace_stock - future_net_delta
-            opening_stock = closing_stock - received_today + outgoing_today
-            has_activity_today = abs(received_today) > 1e-6 or abs(outgoing_today) > 1e-6
+        material_info_by_id = {int(item['id']): item for item in materials if int(item.get('id') or 0) > 0}
+        lot_row_map = {}
 
+        def ensure_lot_row(material_id, lot_id):
+            if material_id not in material_info_by_id or lot_id <= 0:
+                return None
+            bucket = lot_row_map.get(lot_id)
+            if bucket is None:
+                item = material_info_by_id[material_id]
+                bucket = {
+                    'material_id': material_id,
+                    'lot_id': lot_id,
+                    'code': item.get('code') or '',
+                    'name': item.get('name') or '',
+                    'category': item.get('category') or '',
+                    'unit': item.get('unit') or '',
+                    'supplier_name': item.get('supplier_name') or '',
+                    'receiving_date': '',
+                    'manufacture_date': '',
+                    'expiry_date': '',
+                    'current_stock': 0.0,
+                    'received_today': 0.0,
+                    'nonprod_out_today': 0.0,
+                    'prod_out_today': 0.0,
+                    'future_log_net': 0.0,
+                    'future_prod_out': 0.0,
+                }
+                lot_row_map[lot_id] = bucket
+            return bucket
+
+        if material_ids:
+            placeholders = ','.join(['?'] * len(material_ids))
+            cursor.execute(
+                f'''
+                SELECT
+                    ml.id as material_lot_id,
+                    ml.material_id,
+                    ml.receiving_date,
+                    ml.manufacture_date,
+                    ml.expiry_date
+                FROM material_lots ml
+                WHERE ml.material_id IN ({placeholders})
+                  AND COALESCE(ml.is_disposed, 0) = 0
+                ORDER BY ml.material_id, ml.receiving_date ASC, ml.id ASC
+                ''',
+                material_ids,
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                bucket = ensure_lot_row(int(row.get('material_id') or 0), int(row.get('material_lot_id') or 0))
+                if not bucket:
+                    continue
+                bucket['receiving_date'] = (row.get('receiving_date') or '').strip()
+                bucket['manufacture_date'] = (row.get('manufacture_date') or '').strip()
+                bucket['expiry_date'] = (row.get('expiry_date') or '').strip()
+
+            if location_ids:
+                loc_placeholders = ','.join(['?'] * len(location_ids))
+                cursor.execute(
+                    f'''
+                    SELECT
+                        ml.material_id,
+                        ml.id as material_lot_id,
+                        COALESCE(SUM(b.qty), 0) as workplace_stock
+                    FROM material_lots ml
+                    JOIN inv_material_lot_balances b
+                      ON b.material_lot_id = ml.id
+                    WHERE ml.material_id IN ({placeholders})
+                      AND COALESCE(ml.is_disposed, 0) = 0
+                      AND b.location_id IN ({loc_placeholders})
+                    GROUP BY ml.material_id, ml.id
+                    ''',
+                    [*material_ids, *location_ids],
+                )
+                for row in cursor.fetchall():
+                    bucket = ensure_lot_row(int(row['material_id'] or 0), int(row['material_lot_id'] or 0))
+                    if not bucket:
+                        continue
+                    bucket['current_stock'] = float(row['workplace_stock'] or 0.0)
+
+            cursor.execute(
+                f'''
+                SELECT
+                    mll.material_id,
+                    mll.material_lot_id,
+                    COALESCE(mll.action, '') as action,
+                    COALESCE(mll.quantity, 0) as quantity,
+                    COALESCE(mll.note, '') as note,
+                    COALESCE(mll.created_at, '') as created_at
+                FROM material_lot_logs mll
+                WHERE mll.material_id IN ({placeholders})
+                  AND mll.material_lot_id IS NOT NULL
+                ORDER BY mll.id
+                ''',
+                material_ids,
+            )
+            for row in cursor.fetchall():
+                row = dict(row)
+                bucket = ensure_lot_row(int(row.get('material_id') or 0), int(row.get('material_lot_id') or 0))
+                if not bucket:
+                    continue
+                action = (row.get('action') or '').strip()
+                note = (row.get('note') or '').strip()
+                qty = float(row.get('quantity') or 0.0)
+
+                incoming_qty = 0.0
+                outgoing_qty = 0.0
+                action_date = ''
+                if action == 'create':
+                    if (material_info_by_id.get(int(row.get('material_id') or 0), {}).get('workplace') or '').strip() != workplace:
+                        continue
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
+                    incoming_qty = abs(qty)
+                elif action in {'issue_request_complete', 'issue_request_update'} and workplace_prefix and note.startswith(workplace_prefix):
+                    action_date = _resolve_packaging_incoming_action_date(row, action)
+                    incoming_qty = abs(qty)
+                elif action == 'issue_request_cancel' and workplace_prefix and note.startswith(workplace_prefix):
+                    action_date = _get_print_workday(row.get('created_at'))
+                    incoming_qty = -abs(qty)
+                elif action == 'export_request_complete' and workplace_prefix and note.startswith(workplace_prefix):
+                    action_date = _get_print_workday(row.get('created_at'))
+                    outgoing_qty = abs(qty)
+                elif action == 'export_request_cancel' and workplace_prefix and note.startswith(workplace_prefix):
+                    action_date = _get_print_workday(row.get('created_at'))
+                    outgoing_qty = -abs(qty)
+                elif action == 'adjustment' and note in ('inventory_audit_apply_workplace_plus', 'inventory_audit_apply_workplace_minus'):
+                    action_date = _get_print_workday(row.get('created_at'))
+                    if qty >= 0:
+                        incoming_qty = qty
+                    else:
+                        outgoing_qty = abs(qty)
+                else:
+                    continue
+
+                if not action_date:
+                    continue
+                if action_date == selected_date:
+                    bucket['received_today'] += incoming_qty
+                    bucket['nonprod_out_today'] += outgoing_qty
+                elif action_date > selected_date:
+                    bucket['future_log_net'] += (incoming_qty - outgoing_qty)
+
+            production_query = '''
+                SELECT
+                    p.status,
+                    pmu.material_id,
+                    pmlu.material_lot_id,
+                    p.production_date,
+                    COALESCE(pmlu.quantity, 0) as qty
+                FROM production_material_lot_usage pmlu
+                JOIN production_material_usage pmu ON pmu.id = pmlu.production_usage_id
+                JOIN productions p ON p.id = pmu.production_id
+                WHERE p.workplace = ?
+                  AND pmu.material_id IN ({placeholders})
+            '''
+            production_params = [workplace, *material_ids]
+            if location_ids:
+                loc_placeholders = ','.join(['?'] * len(location_ids))
+                production_query += f' AND pmlu.location_id IN ({loc_placeholders})'
+                production_params.extend(location_ids)
+            production_query += ' ORDER BY pmlu.material_id, pmlu.id'
+            cursor.execute(production_query.format(placeholders=placeholders), production_params)
+            for row in cursor.fetchall():
+                row = dict(row)
+                if not _normalize_completed_status(row.get('status')):
+                    continue
+                bucket = ensure_lot_row(int(row.get('material_id') or 0), int(row.get('material_lot_id') or 0))
+                if not bucket:
+                    continue
+                prod_date = (row.get('production_date') or '').strip()
+                qty = float(row.get('qty') or 0.0)
+                if prod_date == selected_date:
+                    bucket['prod_out_today'] += qty
+                elif prod_date > selected_date:
+                    bucket['future_prod_out'] += qty
+
+        lot_items = sorted(
+            lot_row_map.values(),
+            key=lambda item: (
+                _get_production_material_sort_key({'category': item.get('category'), 'material_name': item.get('name')}) or '',
+                item.get('name') or '',
+                item.get('receiving_date') or '',
+                int(item.get('lot_id') or 0),
+            ),
+        )
+        for item in lot_items:
+            closing_stock = float(item.get('current_stock') or 0.0) - float(item.get('future_log_net') or 0.0) + float(item.get('future_prod_out') or 0.0)
+            received_today = float(item.get('received_today') or 0.0)
+            outgoing_today = float(item.get('nonprod_out_today') or 0.0) + float(item.get('prod_out_today') or 0.0)
+            opening_stock = closing_stock - received_today + outgoing_today
             if abs(closing_stock) < 1e-6:
                 closing_stock = 0.0
             if abs(opening_stock) < 1e-6:
                 opening_stock = 0.0
-            if closing_stock < 0:
-                closing_stock = 0.0
-            if opening_stock < 0:
-                opening_stock = 0.0
-
-            current_workplace_stock = workplace_stock_map.get(material_id, 0.0)
-
-            if current_workplace_stock <= 0 and closing_stock <= 0 and not has_activity_today:
+            if closing_stock <= 0 and received_today <= 0 and outgoing_today <= 0:
                 continue
-            lot_info = primary_lot_map.get(material_id, {})
-            expiry_date = (lot_info.get('expiry_date') or '').strip()
-            manufacture_date = (lot_info.get('manufacture_date') or '').strip()
+
+            expiry_date = (item.get('expiry_date') or '').strip()
+            manufacture_date = (item.get('manufacture_date') or '').strip()
             expiry_or_mfg = f'(\uc18c) {expiry_date}' if expiry_date else (f'(\uc81c) {manufacture_date}' if manufacture_date else '')
             rows.append({
                 'code': item.get('code') or '',
@@ -1211,7 +1383,7 @@ def material_checksheet_preview():
                 'category': item.get('category') or '',
                 'unit': item.get('unit') or '',
                 'supplier_name': item.get('supplier_name') or '',
-                'receiving_date': (lot_info.get('receiving_date') or '').strip(),
+                'receiving_date': (item.get('receiving_date') or '').strip(),
                 'expiry_or_mfg': expiry_or_mfg,
                 'opening_stock': _round_1(opening_stock),
                 'received_today': _round_1(received_today),
