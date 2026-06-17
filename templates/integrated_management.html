@@ -2220,9 +2220,9 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                     <td><span class="inventory-wp-badge {{ wp_class }}">{{ wp_name }}</span></td>
                     <td><span class="inventory-cat-badge {{ cat_class }}">{{ cat_name }}</span></td>
                     <td><span class="inventory-code">{{ item.code or '-' }}</span></td>
-                    <td class="material-name-cell" {% if item.inv_type == 'raw_material' %}onclick="openRawLotModal({{ item.inv_id }})"{% else %}onclick="openMaterialDetailModal({{ item.inv_id }})"{% endif %}>
+                    <td class="material-name-cell" {% if item.inv_type == 'raw_material' %}onclick="openRawLotModal({{ item.inv_id }})"{% else %}onclick="openMaterialDetailModal({{ item.inv_id }}, '{{ item.workplace|e }}')"{% endif %}>
                         <div class="inventory-item-main">
-                            <a href="#" class="material-name-link inventory-item-name" {% if item.inv_type == 'raw_material' %}onclick="openRawLotModal({{ item.inv_id }}); return false;"{% else %}onclick="openMaterialDetailModal({{ item.inv_id }}); return false;"{% endif %}>{{ item.item_name }}</a>
+                            <a href="#" class="material-name-link inventory-item-name" {% if item.inv_type == 'raw_material' %}onclick="openRawLotModal({{ item.inv_id }}); return false;"{% else %}onclick="openMaterialDetailModal({{ item.inv_id }}, '{{ item.workplace|e }}'); return false;"{% endif %}>{{ item.item_name }}</a>
                         </div>
                         <div class="inventory-item-sub">{{ item.inv_type == 'raw_material' and '원초 재고' or '부자재 재고' }}</div>
                     </td>
@@ -2454,7 +2454,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                     <td>{{ item.car_number or '-' }}</td>
                     <td>{{ item.receiving_date or '-' }}</td>
                     {% elif tab == 'materials' %}
-                    <td class="material-name-cell" onclick="openMaterialDetailModal({{ item.id }})"><strong><a href="#" class="material-name-link" onclick="openMaterialDetailModal({{ item.id }}); return false;">{{ item.name }}</a></strong></td>
+                    <td class="material-name-cell" onclick="openMaterialDetailModal({{ item.id }}, '{{ item.workplace|e }}')"><strong><a href="#" class="material-name-link" onclick="openMaterialDetailModal({{ item.id }}, '{{ item.workplace|e }}'); return false;">{{ item.name }}</a></strong></td>
                     <td>{{ item.category or '-' }}</td>
                     <td>{{ item.supplier_name or '-' }}</td>
                     <td>{{ item.unit or '-' }}</td>
@@ -2554,7 +2554,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                                 data-min_stock="{{ item.min_stock }}"
                                 data-moq="{{ item.moq if item.moq is not none else 0 }}">수정</button>
                         <button type="button" class="btn btn-small" style="background:#0f766e;"
-                                onclick="openMaterialDetailModal({{ item.id }})">상세</button>
+                                onclick="openMaterialDetailModal({{ item.id }}, '{{ item.workplace|e }}')">상세</button>
                         {% elif tab == 'productions' %}
                         <a href="/production/{{ item.id }}" class="btn btn-small" style="background:#2563eb;">조회</a>
                         {% elif tab == 'purchase_requests' %}
@@ -4904,14 +4904,17 @@ function syncUsageFilterControls(){
 }
 
 function getUsageLogDateKey(log){
-    const raw = log?.completed_at || log?.use_date || '';
+    const raw = log?.use_date || log?.completed_at || '';
     return String(raw).slice(0, 10);
 }
 
 function formatUsageLogDateCell(log){
-    const dateText = log?.completed_at
-        ? String(log.completed_at).slice(0,16).replace('T', ' ')
-        : String(log?.use_date || '-').slice(0,10);
+    const isProductionUsage = Number(log?.production_id || 0) > 0;
+    const dateText = isProductionUsage
+        ? String(log?.use_date || '-').slice(0,10)
+        : (log?.completed_at
+            ? String(log.completed_at).slice(0,16).replace('T', ' ')
+            : String(log?.use_date || '-').slice(0,10));
     const exportRequestId = Number(log?.export_request_id || 0);
     if(exportRequestId <= 0) return dateText;
     const targetUrl = `/materials?req_tab=export&export_status=completed&focus_export_req_id=${exportRequestId}`;
@@ -5169,10 +5172,15 @@ function switchReceiveLogTab(tab){
     applyReceiveLogFilter();
 }
 
-async function loadMaterialDetail(materialId){
+async function loadMaterialDetail(materialId, workplace=''){
     let payload;
     try{
-        const res = await fetch(`/integrated-management/materials/${materialId}/detail`);
+        const detailUrl = new URL(`/integrated-management/materials/${materialId}/detail`, window.location.origin);
+        const workplaceText = String(workplace || '').trim();
+        if(workplaceText){
+            detailUrl.searchParams.set('detail_workplace', workplaceText);
+        }
+        const res = await fetch(detailUrl.toString());
         payload = await res.json();
     } catch (err){
         alert('상세 조회 중 오류가 발생했습니다.');
@@ -5204,10 +5212,10 @@ async function loadMaterialDetail(materialId){
     switchReceiveLogTab('complete');
 }
 
-async function openMaterialDetailModal(materialId){
+async function openMaterialDetailModal(materialId, workplace=''){
     currentMaterialId = materialId;
     switchMaterialPanel('lots');
-    const ok = await loadMaterialDetail(materialId);
+    const ok = await loadMaterialDetail(materialId, workplace);
     if(ok !== false){
         document.getElementById('materialDetailModal').style.display = 'flex';
     }

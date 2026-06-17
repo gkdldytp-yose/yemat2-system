@@ -5691,8 +5691,14 @@ def integrated_material_detail(material_id):
             return jsonify({'ok': False, 'message': '부자재 정보를 찾을 수 없습니다.'}), 404
 
         can_manage_lots = _can_manage_material_lots()
+        requested_workplace = (request.args.get('detail_workplace') or '').strip()
+        current_workplace = (get_workplace() or '').strip()
+        detail_workplace = requested_workplace or current_workplace or (material['workplace'] or '').strip()
+        detail_location_ids = _get_inventory_location_ids_for_workplace(cursor, detail_workplace) if detail_workplace else []
         allowed_locations = []
-        if can_manage_lots:
+        if requested_workplace and detail_location_ids:
+            allowed_locations = list(detail_location_ids)
+        elif can_manage_lots:
             cursor.execute(
                 """
                 SELECT id
@@ -6001,6 +6007,26 @@ SELECT
             (material_id,),
         )
         material_lot_rows = [dict(row) for row in cursor.fetchall()]
+        visible_lot_ids = set()
+        if detail_location_ids:
+            placeholders = ','.join(['?'] * len(detail_location_ids))
+            cursor.execute(
+                f"""
+                SELECT DISTINCT material_lot_id
+                FROM inv_material_lot_balances
+                WHERE location_id IN ({placeholders})
+                  AND material_lot_id IS NOT NULL
+                  AND COALESCE(qty, 0) > 0
+                """,
+                detail_location_ids,
+            )
+            visible_lot_ids = {
+                int(row['material_lot_id'] or 0)
+                for row in cursor.fetchall()
+                if int(row['material_lot_id'] or 0) > 0
+            }
+        if visible_lot_ids:
+            material_lot_rows = [row for row in material_lot_rows if int(row.get('id') or 0) in visible_lot_ids]
         cursor.execute(
             """
             SELECT DISTINCT material_lot_id
@@ -6051,6 +6077,24 @@ SELECT
             for row in cursor.fetchall()
             if int(row['material_lot_id'] or 0) > 0
         }
+
+        def _receive_log_matches_current_workplace(row):
+            if not detail_workplace:
+                return True
+            action = str(row.get('action') or '').strip()
+            note = str(row.get('note') or '').strip()
+            lot_id = int(row.get('material_lot_id') or 0)
+            if action in {'issue_request_complete', 'issue_request_update', 'issue_request_cancel', 'export_request_complete', 'export_request_cancel'}:
+                if note.startswith(detail_workplace):
+                    return True
+            if visible_lot_ids and lot_id > 0 and lot_id in visible_lot_ids:
+                return True
+            return False
+
+        receive_logs = [row for row in receive_logs if _receive_log_matches_current_workplace(row)]
+        if initial_stock_log and not _receive_log_matches_current_workplace(initial_stock_log):
+            initial_stock_log = None
+
         effective_receive_logs = []
         cancel_qty_by_lot = {}
         positive_receive_logs_by_lot = {}

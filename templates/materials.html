@@ -2055,14 +2055,17 @@ function syncUsageFilterControls(){
 }
 
 function getUsageLogDateKey(log){
-    const raw = log?.completed_at || log?.use_date || '';
+    const raw = log?.use_date || log?.completed_at || '';
     return String(raw).slice(0, 10);
 }
 
 function formatUsageLogDateCell(log){
-    const dateText = log?.completed_at
-        ? String(log.completed_at).slice(0,16).replace('T', ' ')
-        : String(log?.use_date || '-').slice(0,10);
+    const isProductionUsage = Number(log?.production_id || 0) > 0;
+    const dateText = isProductionUsage
+        ? String(log?.use_date || '-').slice(0,10)
+        : (log?.completed_at
+            ? String(log.completed_at).slice(0,16).replace('T', ' ')
+            : String(log?.use_date || '-').slice(0,10));
     const targetUrl = buildUsageLogEntryUrl(log);
     if(!targetUrl) return dateText;
     return `<a href="${targetUrl}" class="receive-log-link" title="해당 반출 완료건 열기" onclick="saveMaterialsScrollPosition()">${dateText}</a>`;
