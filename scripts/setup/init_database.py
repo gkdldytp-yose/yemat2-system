@@ -103,6 +103,9 @@ def create_tables(conn):
         status TEXT DEFAULT '계획',
         note TEXT,
         raw_sok_mode INTEGER DEFAULT 1,
+        sample_excluded_boxes_1 REAL,
+        sample_excluded_boxes_2 REAL,
+        sample_excluded_boxes_3 REAL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products(id)
     )

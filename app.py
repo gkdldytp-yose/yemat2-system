@@ -348,10 +348,25 @@ def create_app():
         completed_done_by = (request.args.get('todo_completed_done_by') or '').strip()
         cursor.execute(
             """
-            SELECT id, workplace, title, detail, importance, due_date, is_done, created_by, created_at, done_by, done_at
-            FROM dashboard_todos
+            SELECT
+                t.id,
+                t.workplace,
+                t.title,
+                t.detail,
+                t.importance,
+                t.due_date,
+                t.is_done,
+                t.created_by,
+                t.created_at,
+                t.done_by,
+                t.done_at,
+                COALESCE(NULLIF(TRIM(uc.name), ''), t.created_by) AS created_by_name,
+                COALESCE(NULLIF(TRIM(ud.name), ''), t.done_by) AS done_by_name
+            FROM dashboard_todos t
+            LEFT JOIN users uc ON uc.username = t.created_by
+            LEFT JOIN users ud ON ud.username = t.done_by
             WHERE workplace = ?
-            ORDER BY COALESCE(is_done, 0) ASC, COALESCE(due_date, '') ASC, id DESC
+            ORDER BY COALESCE(t.is_done, 0) ASC, COALESCE(t.due_date, '') ASC, t.id DESC
             """,
             (workplace,),
         )
@@ -378,7 +393,8 @@ def create_app():
                         matches = False
                 if completed_importance and item['importance'] != completed_importance:
                     matches = False
-                if completed_done_by and completed_done_by.lower() not in str(item.get('done_by') or '').lower():
+                done_by_search_text = f"{item.get('done_by_name') or ''} {item.get('done_by') or ''}".lower()
+                if completed_done_by and completed_done_by.lower() not in done_by_search_text:
                     matches = False
                 if matches:
                     completed_todos.append(item)

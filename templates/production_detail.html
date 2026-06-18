@@ -76,17 +76,34 @@
 .unit-stock{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
 .unit-stock-badge{display:inline-flex;align-items:center;padding:.18rem .48rem;border-radius:999px;background:#f8fafc;border:1px solid #dbe4f0;color:#475569;font-size:.72rem;font-weight:800;line-height:1.2;}
 .unit-stock-badge.low{background:#fff1f2;border-color:#fecdd3;color:#dc2626;}
-.expiry-split-panel{display:flex;flex-direction:column;gap:.7rem;}
+.expiry-split-panel{display:flex;flex-direction:column;gap:.8rem;}
 .expiry-split-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;}
 .expiry-split-add{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .8rem;border:1px solid #667eea;border-radius:999px;background:#eef2ff;color:#3b4fd1;font-size:.8rem;font-weight:800;cursor:pointer;}
 .expiry-split-add:disabled{opacity:.45;cursor:not-allowed;}
 .expiry-split-guide{font-size:.76rem;color:#64748b;line-height:1.45;}
-.expiry-split-rows{display:flex;flex-direction:column;gap:.55rem;}
-.expiry-split-row{display:grid;grid-template-columns:minmax(160px,190px) minmax(120px,150px) 64px;gap:.5rem;align-items:end;}
+.expiry-split-rows{display:flex;flex-direction:column;gap:.7rem;}
+.expiry-split-row{display:grid;grid-template-columns:minmax(180px,2.1fr) minmax(120px,1fr) minmax(180px,1.3fr) minmax(120px,1fr) 64px;gap:.7rem;align-items:end;padding:.95rem 1rem;border:1px solid #dbe4f0;border-radius:16px;background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%);}
 .expiry-split-row[hidden]{display:none !important;}
-.expiry-split-field label{display:block;font-size:.72rem;color:#64748b;margin-bottom:.25rem;font-weight:700;}
-.expiry-split-field input{width:100%;padding:.52rem .65rem;border:2px solid #667eea;border-radius:10px;box-sizing:border-box;font-size:.9rem;}
+.expiry-split-field label{display:block;font-size:.72rem;color:#64748b;margin-bottom:.3rem;font-weight:800;}
+.expiry-split-field input{width:100%;padding:.6rem .75rem;border:2px solid #667eea;border-radius:12px;box-sizing:border-box;font-size:.95rem;font-weight:700;}
 .expiry-split-field input[readonly]{background:#f8fafc;}
+.expiry-split-field .val{min-height:44px;display:flex;align-items:center;font-size:1rem;font-weight:800;color:#0f172a;}
+.expiry-split-sample{display:flex;flex-direction:column;gap:.5rem;}
+.expiry-split-sample-btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:.58rem .8rem;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;color:#475569;font-size:.84rem;font-weight:800;cursor:pointer;line-height:1.2;transition:all .15s ease;white-space:nowrap;}
+.expiry-split-sample-btn:hover{background:#eef2ff;border-color:#93c5fd;color:#1d4ed8;}
+.expiry-split-sample-btn.active{background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border-color:#60a5fa;color:#1d4ed8;}
+.expiry-split-sample-input{min-height:46px;}
+.expiry-split-toggle-hidden{display:none !important;}
+.expiry-split-sample-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.55rem;align-items:end;}
+.expiry-split-sample-field{display:flex;flex-direction:column;gap:.3rem;}
+.expiry-split-note-row{grid-column:1 / -1;font-size:.72rem;color:#64748b;line-height:1.4;margin-top:.1rem;}
+.export-box-display{width:100%;min-height:44px;display:flex;align-items:center;padding:.6rem .75rem;border:1px solid #16a34a;border-radius:12px;background:linear-gradient(180deg,#f0fdf4 0%,#dcfce7 100%);box-sizing:border-box;font-size:.98rem;font-weight:900;color:#166534;box-shadow:inset 0 0 0 1px rgba(34,197,94,.08);}
+.export-box-display.dimmed{background:#f8fafc;border-color:#dbe4f0;color:#64748b;box-shadow:none;}
+.export-box-summary{display:flex;flex-direction:column;gap:.28rem;}
+.export-box-summary .summary-main{font-size:1.15rem;font-weight:900;color:#166534;line-height:1.15;}
+.export-box-summary .summary-sub{font-size:.78rem;color:#64748b;}
+.expiry-split-readonly-row{grid-template-columns:minmax(180px,2fr) minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr);}
+.expiry-split-readonly-row.no-sample{grid-template-columns:minmax(180px,2fr) minmax(120px,1fr);}
 .expiry-split-remove{display:inline-flex;align-items:center;justify-content:center;align-self:end;width:56px;height:32px;padding:0;border:1px solid #d7deea;border-radius:8px;background:#f8fafc;color:#64748b;font-size:.7rem;font-weight:700;cursor:pointer;line-height:1;white-space:nowrap;box-shadow:none;transition:all .15s ease;}
 .expiry-split-remove:hover{background:#eef2f7;border-color:#a8b4c7;color:#334155;}
 .expiry-split-summary{font-size:.76rem;color:#64748b;}
@@ -187,6 +204,16 @@ html[data-theme="dark"] .sec .info-item input[style*="border:2px solid #667eea"]
 html[data-theme="dark"] .note-textarea[readonly],
 html[data-theme="dark"] .actual-boxes-input[readonly],
 html[data-theme="dark"] .expiry-split-field input[readonly]{background:#162133;color:#c7d3e3;}
+html[data-theme="dark"] .expiry-split-row{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;}
+html[data-theme="dark"] .expiry-split-field .val{color:#eff6ff;}
+html[data-theme="dark"] .expiry-split-sample-btn{background:#1a2436;border-color:#334155;color:#dbe7f5;}
+html[data-theme="dark"] .expiry-split-sample-btn:hover{background:#1f2d45;border-color:#60a5fa;color:#eff6ff;}
+html[data-theme="dark"] .expiry-split-sample-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;}
+html[data-theme="dark"] .expiry-split-note-row{color:#8ea3bd;}
+html[data-theme="dark"] .export-box-display{background:linear-gradient(180deg,#123322 0%,#14532d 100%);border-color:#22c55e;color:#ecfdf5;box-shadow:inset 0 0 0 1px rgba(134,239,172,.18);}
+html[data-theme="dark"] .export-box-display.dimmed{background:#162133;border-color:#263244;color:#8ea3bd;box-shadow:none;}
+html[data-theme="dark"] .export-box-summary .summary-main{color:#ecfdf5;}
+html[data-theme="dark"] .export-box-summary .summary-sub{color:#8ea3bd;}
 html[data-theme="dark"] .raw-card,
 html[data-theme="dark"] .shortage-modal,
 html[data-theme="dark"] .journal-modal,
@@ -289,7 +316,9 @@ html[data-theme="dark"] [id^="rw_"]{color:#fda4af !important;}
     .ainput{width:100%;max-width:100%;min-width:0;min-height:38px;font-size:0.9rem;}
     .lot-gap-panel{grid-template-columns:1fr;}
     .lot-gap-fields{grid-template-columns:1fr;}
-    .expiry-split-row{grid-template-columns:1fr;}
+    .expiry-split-row,
+    .expiry-split-readonly-row,
+    .expiry-split-readonly-row.no-sample{grid-template-columns:1fr;}
     .section-head{align-items:flex-start;}
     .raw-change-btn{min-height:42px;}
     .raw-change-modal-bg{align-items:flex-end;padding:.6rem;}
@@ -428,6 +457,23 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div class="lbl" style="margin-top:0.25rem;">소비기한별 박스 수 합계가 자동 반영됩니다.</div>
             {% endif %}
         </div>
+        {% if can_edit or (production.sample_excluded_total or 0) > 0 %}
+        <div class="info-item">
+            <div class="lbl">수출 일정표 반영 박스 수</div>
+            {% if not can_edit %}
+            <div class="export-box-summary">
+                <div class="summary-main">{{ production.export_actual_boxes }} BOX</div>
+                <div class="summary-sub">샘플 제외 {{ production.sample_excluded_total }} BOX</div>
+            </div>
+            {% else %}
+            <div class="export-box-summary">
+                <input type="number" id="exportActualBoxes" value="{{ production.export_actual_boxes }}" readonly
+                       class="actual-boxes-input export-box-display">
+                <div class="summary-sub" id="sampleExcludedSummary">샘플 제외 {{ production.sample_excluded_total }} BOX</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
         <div class="info-item"><div class="lbl">박스당 수량</div><div class="val">{{ production.box_quantity }}개</div></div>
         <div class="info-item" style="grid-column:1 / -1;">
             <div class="lbl">소비기한 *</div>
@@ -435,7 +481,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div class="expiry-split-panel">
                 <div class="expiry-split-rows">
                     {% for row in expiry_rows if row.date or row.boxes %}
-                    <div class="expiry-split-row">
+                    <div class="expiry-split-row expiry-split-readonly-row {% if not row.sample_boxes %}no-sample{% endif %}">
                         <div class="expiry-split-field">
                             <label>{{ ['첫 번째', '두 번째', '세 번째'][loop.index0] }} 소비기한</label>
                             <div class="val">{{ row.date }}</div>
@@ -444,6 +490,16 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                             <label>박스 수</label>
                             <div class="val">{{ row.boxes }} BOX</div>
                         </div>
+                        {% if row.sample_boxes %}
+                        <div class="expiry-split-field">
+                            <label>샘플 제외</label>
+                            <div class="val">{{ row.sample_boxes or 0 }} BOX</div>
+                        </div>
+                        <div class="expiry-split-field">
+                            <label>수출 반영</label>
+                            <div class="val">{{ row.export_boxes }} BOX</div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -478,11 +534,38 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                                    placeholder="박스 수 입력"
                                    oninput="syncExpiryRows()">
                         </div>
+                        <div class="expiry-split-field expiry-split-sample">
+                            <button type="button"
+                                    class="expiry-split-sample-btn"
+                                    id="sampleToggleBtn{{ row.index }}"
+                                    onclick="toggleSampleBoxInput({{ row.index }})">
+                                샘플 제외
+                            </button>
+                            <div id="sampleBoxWrap{{ row.index }}" class="expiry-split-sample-controls{% if not row.sample_boxes %} expiry-split-toggle-hidden{% endif %}">
+                                <div class="expiry-split-sample-field">
+                                    <label for="sampleExcludedBoxes{{ row.index }}">샘플 제외</label>
+                                    <input type="number"
+                                           name="sample_excluded_boxes_{{ row.index }}"
+                                           id="sampleExcludedBoxes{{ row.index }}"
+                                           value="{{ row.sample_boxes or '' }}"
+                                           class="expiry-split-sample-input"
+                                           min="0"
+                                           step="0.1"
+                                           placeholder="제외 박스 수"
+                                           oninput="syncExpiryRows()">
+                                </div>
+                                <div id="expiryExportField{{ row.index }}" class="expiry-split-sample-field">
+                                    <label>수출 반영</label>
+                                    <div id="expiryExportBoxes{{ row.index }}" class="export-box-display">{{ row.export_boxes }}</div>
+                                </div>
+                            </div>
+                        </div>
                         {% if row.index > 1 %}
                         <button type="button" class="expiry-split-remove" onclick="removeExpiryRow({{ row.index }})" title="이 소비기한 행 삭제">지우기</button>
                         {% else %}
                         <div></div>
                         {% endif %}
+                        <div class="expiry-split-note-row">샘플 제외 박스는 전체 생산에는 포함되고 수출 일정표에서만 빠집니다.</div>
                     </div>
                     {% endfor %}
                 </div>
@@ -961,6 +1044,7 @@ let selectedRawChangeId = null;
 let rawChangeActiveTab = 'all';
 
 window.onload = () => {
+    initSampleBoxUi();
     syncExpiryRows();
     syncRawSokUi();
     recalcAll();
@@ -971,6 +1055,43 @@ window.onload = () => {
 function getActualBoxes(){
     const el = document.getElementById('actualBoxes');
     return parseFloat(el && el.value) || DEFAULT_BOXES;
+}
+
+function initSampleBoxUi(){
+    document.querySelectorAll('.js-expiry-row').forEach((row) => {
+        const idx = Number(row.dataset.index || 0);
+        syncSampleToggleLabel(idx);
+    });
+}
+
+function toggleSampleBoxInput(index){
+    const wrap = document.getElementById(`sampleBoxWrap${index}`);
+    const input = document.getElementById(`sampleExcludedBoxes${index}`);
+    if(!wrap || !input) return;
+    const willOpen = wrap.classList.contains('expiry-split-toggle-hidden');
+    if(!willOpen && input.value){
+        if(!confirm('샘플 제외 값을 지울까요?')){
+            return;
+        }
+        input.value = '';
+    }
+    wrap.classList.toggle('expiry-split-toggle-hidden', !willOpen);
+    if(willOpen){
+        input.focus();
+    }
+    syncSampleToggleLabel(index);
+    syncExpiryRows();
+}
+
+function syncSampleToggleLabel(index){
+    const btn = document.getElementById(`sampleToggleBtn${index}`);
+    const wrap = document.getElementById(`sampleBoxWrap${index}`);
+    const input = document.getElementById(`sampleExcludedBoxes${index}`);
+    if(!btn || !wrap || !input) return;
+    const sampleValue = parseFloat(input.value);
+    const hasSample = !Number.isNaN(sampleValue) && sampleValue > 0;
+    btn.classList.toggle('active', hasSample || !wrap.classList.contains('expiry-split-toggle-hidden'));
+    btn.textContent = hasSample ? `샘플 제외 ${sampleValue} BOX` : '샘플 제외';
 }
 
 function addExpiryRow(){
@@ -997,8 +1118,13 @@ function removeExpiryRow(index){
     if(!row || index <= 1) return;
     const dateInput = document.getElementById(`expiryDate${index}`);
     const boxInput = document.getElementById(`expiryBoxes${index}`);
+    const sampleInput = document.getElementById(`sampleExcludedBoxes${index}`);
+    const sampleWrap = document.getElementById(`sampleBoxWrap${index}`);
     if(dateInput) dateInput.value = '';
     if(boxInput) boxInput.value = '';
+    if(sampleInput) sampleInput.value = '';
+    if(sampleWrap) sampleWrap.classList.add('expiry-split-toggle-hidden');
+    syncSampleToggleLabel(index);
     row.hidden = true;
 
     while(expiryVisibleCount > 1){
@@ -1024,23 +1150,55 @@ function syncExpiryRows(){
         return;
     }
     let totalBoxes = 0;
+    let totalSampleBoxes = 0;
     let hasAnyBoxInput = false;
     rows.forEach(row => {
         const idx = Number(row.dataset.index || 0);
         const boxInput = document.getElementById(`expiryBoxes${idx}`);
         const dateInput = document.getElementById(`expiryDate${idx}`);
+        const sampleInput = document.getElementById(`sampleExcludedBoxes${idx}`);
+        const exportInput = document.getElementById(`expiryExportBoxes${idx}`);
+        const sampleWrap = document.getElementById(`sampleBoxWrap${idx}`);
         if(!boxInput) return;
         if(!row.hidden && (dateInput?.value || boxInput.value)){
             expiryVisibleCount = Math.max(expiryVisibleCount, idx);
         }
         const boxValue = parseFloat(boxInput.value);
+        const sampleValue = parseFloat(sampleInput?.value);
         if(!Number.isNaN(boxValue) && boxValue > 0){
             totalBoxes += boxValue;
             hasAnyBoxInput = true;
         }
+        let normalizedSample = !Number.isNaN(sampleValue) && sampleValue > 0 ? sampleValue : 0;
+        if(!Number.isNaN(boxValue) && normalizedSample > boxValue){
+            normalizedSample = boxValue;
+            if(sampleInput) sampleInput.value = String(boxValue);
+        }
+        totalSampleBoxes += normalizedSample;
+        if(exportInput){
+            const exportBoxes = !Number.isNaN(boxValue) && boxValue > 0 ? Math.max(boxValue - normalizedSample, 0) : 0;
+            const normalizedExportBoxes = Math.round(exportBoxes * 100) / 100;
+            const sampleEnabled = !!sampleWrap && !sampleWrap.classList.contains('expiry-split-toggle-hidden');
+            if('value' in exportInput){
+                exportInput.value = String(normalizedExportBoxes);
+            } else {
+                exportInput.textContent = String(normalizedExportBoxes);
+                exportInput.classList.toggle('dimmed', !sampleEnabled);
+            }
+        }
+        syncSampleToggleLabel(idx);
     });
     const normalizedTotal = Math.round(totalBoxes * 100) / 100;
     actualBoxesEl.value = hasAnyBoxInput ? String(normalizedTotal) : String(DEFAULT_BOXES);
+    const normalizedSampleTotal = Math.round(totalSampleBoxes * 100) / 100;
+    const exportActualBoxesEl = document.getElementById('exportActualBoxes');
+    const sampleSummaryEl = document.getElementById('sampleExcludedSummary');
+    if(exportActualBoxesEl){
+        exportActualBoxesEl.value = String(Math.max(normalizedTotal - normalizedSampleTotal, 0));
+    }
+    if(sampleSummaryEl){
+        sampleSummaryEl.textContent = `샘플 제외 ${normalizedSampleTotal} BOX`;
+    }
     rows.forEach(row => {
         const idx = Number(row.dataset.index || 0);
         row.hidden = idx > expiryVisibleCount;

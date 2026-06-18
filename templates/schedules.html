@@ -149,6 +149,252 @@
     background: white !important;
     transform: translateY(-1px);
 }
+.production-stats-view {
+    padding: 1.5rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.98));
+    border: 1px solid rgba(148,163,184,0.18);
+}
+.production-stats-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+}
+.production-stats-title h2 {
+    margin: 0;
+    font-size: 1.35rem;
+}
+.production-stats-title p {
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+.production-stats-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+.production-stats-nav .nav-btn,
+.production-stats-nav .month-pill,
+.production-stats-nav .month-picker,
+.production-stats-print-btn {
+    min-height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    color: var(--text-primary);
+    font-weight: 800;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+.production-stats-nav .nav-btn,
+.production-stats-print-btn {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+}
+.production-stats-nav .month-pill {
+    padding: 0.75rem 1.15rem;
+}
+.production-stats-nav .month-picker {
+    padding: 0.7rem 0.9rem;
+}
+.production-stats-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.2rem;
+}
+.production-stats-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(148,163,184,0.18);
+    background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92));
+    color: #fff;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+}
+.production-stats-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -20px -26px auto;
+    width: 96px;
+    height: 96px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+}
+.production-stats-card:nth-child(2) {
+    background: linear-gradient(135deg, rgba(29,78,216,0.96), rgba(14,165,233,0.9));
+}
+.production-stats-card:nth-child(3) {
+    background: linear-gradient(135deg, rgba(5,150,105,0.96), rgba(16,185,129,0.92));
+}
+.production-stats-card:nth-child(4) {
+    background: linear-gradient(135deg, rgba(180,83,9,0.96), rgba(249,115,22,0.92));
+}
+.production-stats-label {
+    font-size: 0.78rem;
+    opacity: 0.92;
+}
+.production-stats-value {
+    margin-top: 0.35rem;
+    font-size: 1.75rem;
+    font-weight: 900;
+    line-height: 1.1;
+}
+.production-stats-hint {
+    margin-top: 0.42rem;
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+.production-stats-table-wrap {
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+}
+.production-stats-table-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid var(--panel-border);
+    background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(14,165,233,0.05));
+}
+.production-stats-table-head h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+.production-stats-table-head p {
+    margin: 0.18rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+.production-stats-table-meta {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+.production-stats-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.production-stats-table th,
+.production-stats-table td {
+    padding: 0.95rem 0.9rem;
+    border-bottom: 1px solid rgba(148,163,184,0.14);
+    text-align: left;
+}
+.production-stats-table th {
+    background: var(--table-header-bg);
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    font-weight: 900;
+}
+.production-stats-table tbody tr:hover {
+    background: var(--table-row-hover);
+}
+.production-stats-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.55rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+    color: #fff;
+    font-weight: 900;
+}
+.production-stats-code {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.58rem;
+    border-radius: 999px;
+    background: rgba(37,99,235,0.08);
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+.production-stats-name {
+    display: block;
+    font-weight: 900;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.production-stats-sub {
+    margin-top: 0.22rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.production-stats-boxes {
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--text-primary);
+}
+.production-stats-empty {
+    padding: 3rem 1.2rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+html[data-theme="dark"] .production-stats-view {
+    background: linear-gradient(180deg, rgba(18,26,42,0.96), rgba(15,23,38,0.98));
+}
+html[data-theme="dark"] .production-stats-nav .nav-btn,
+html[data-theme="dark"] .production-stats-nav .month-pill,
+html[data-theme="dark"] .production-stats-nav .month-picker,
+html[data-theme="dark"] .production-stats-print-btn,
+html[data-theme="dark"] .production-stats-table-wrap {
+    background: #121a2a;
+    border-color: #263244;
+    color: #e5eefc;
+}
+html[data-theme="dark"] .production-stats-table-head {
+    background: linear-gradient(135deg, rgba(29,78,216,0.14), rgba(14,165,233,0.08));
+}
+html[data-theme="dark"] .production-stats-code {
+    background: rgba(96,165,250,0.14);
+    color: #bfdbfe;
+}
+@media (max-width: 980px) {
+    .production-stats-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 768px) {
+    .production-stats-view {
+        padding: 1rem;
+    }
+    .production-stats-head,
+    .production-stats-nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .production-stats-nav .nav-btn,
+    .production-stats-nav .month-picker,
+    .production-stats-nav .month-pill,
+    .production-stats-print-btn {
+        width: 100%;
+    }
+    .production-stats-summary {
+        grid-template-columns: 1fr;
+    }
+    .production-stats-table th,
+    .production-stats-table td {
+        padding: 0.8rem 0.65rem;
+        font-size: 0.84rem;
+    }
+    .production-stats-table th:nth-child(3),
+    .production-stats-table td:nth-child(3) {
+        min-width: 180px;
+    }
+}
 .calendar-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr); /* 7칸을 정확히 1/7씩 나눔 */
@@ -2740,14 +2986,14 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 {%- set is_admin  = _r == 'admin' -%}
 <div style="margin-bottom: 1.5rem;">
     <h1 class="schedule-page-title">📅 생산 스케줄</h1>
-    <p class="schedule-page-sub">월별 생산 계획을 캘린더 또는 목록으로 확인할 수 있습니다</p>
+    <p class="schedule-page-sub">월별 생산 계획과 완료 생산 통계를 캘린더, 통계, 수출/자재 화면에서 확인할 수 있습니다</p>
 </div>
 
 <!-- 툴바 -->
 <div class="schedule-toolbar">
     <div class="view-toggle">
         <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
-        <button data-view="list" onclick="switchView('list')">📋 목록</button>
+        <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
         <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
         <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
     </div>
@@ -2838,6 +3084,15 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 
 {% macro export_box(value) -%}
 {{ "{:,}".format((value or 0)|int) }}
+{%- endmacro %}
+
+{% macro stats_box(value) -%}
+{%- set numeric = (value or 0)|float -%}
+{%- if numeric == (numeric|int) -%}
+{{ "{:,}".format(numeric|int) }}
+{%- else -%}
+{{ "{:,.1f}".format(numeric) }}
+{%- endif -%}
 {%- endmacro %}
 
 {% macro render_export_table(rows, empty_message, item_class='') -%}
@@ -3146,110 +3401,101 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     </div>
 </div>
 
-<!-- 목록 뷰 -->
-<div id="listView" class="card" style="display: none;">
-    <div class="print-only print-header">
-        <h1 style="text-align: center; margin: 0; padding: 1rem 0;">생산 스케줄 목록</h1>
-        <h2 style="text-align: center; margin: 0; padding-bottom: 1rem;" id="printListMonth"></h2>
-    </div>
-    <h2 style="margin-bottom: 1.25rem; padding: 0 1.5rem; padding-top: 1.5rem;">{{ month_start.strftime('%Y년 %m월') }} 생산 스케줄</h2>
-    <div class="list-month-nav">
-        <div class="nav-left">
+<!-- 생산 통계 뷰 -->
+<div id="statsView" class="card production-stats-view" style="display: none;">
+    <div class="production-stats-head">
+        <div class="production-stats-title">
+            <h2>{{ month_start.strftime('%Y년 %m월') }} 생산 통계</h2>
+            <p>생산완료 처리된 상품만 집계하며, 상품별 월간 총 생산량을 한눈에 볼 수 있습니다.</p>
+        </div>
+        <div class="production-stats-nav">
             <button type="button" class="nav-btn" onclick="changeMonth(-1)">◀ 이전 달</button>
             <span class="month-pill">{{ month_start.strftime('%Y년 %m월') }}</span>
             <button type="button" class="nav-btn" onclick="changeMonth(1)">다음 달 ▶</button>
-            <div class="status-tabs">
-                <button type="button" class="status-tab-btn active" data-filter="all" onclick="setListStatusFilter('all')">전체</button>
-                <button type="button" class="status-tab-btn" data-filter="planned" onclick="setListStatusFilter('planned')">예정</button>
-                <button type="button" class="status-tab-btn" data-filter="completed" onclick="setListStatusFilter('completed')">완료</button>
+            <input type="month" class="month-picker" value="{{ month_start.strftime('%Y-%m') }}" onchange="goToStatsMonth(this.value)">
+            <button type="button" class="production-stats-print-btn" onclick="goToCurrentMonth()">이번 달</button>
+        </div>
+    </div>
+
+    <div class="production-stats-summary">
+        <div class="production-stats-card">
+            <div class="production-stats-label">집계 상품 수</div>
+            <div class="production-stats-value">{{ monthly_stats_summary.product_count }}종</div>
+            <div class="production-stats-hint">이번 달 생산완료 상품 기준</div>
+        </div>
+        <div class="production-stats-card">
+            <div class="production-stats-label">총 생산량</div>
+            <div class="production-stats-value">{{ stats_box(monthly_stats_summary.total_boxes) }} BOX</div>
+            <div class="production-stats-hint">상품별 생산완료 박스 합계</div>
+        </div>
+        <div class="production-stats-card">
+            <div class="production-stats-label">완료 생산 건수</div>
+            <div class="production-stats-value">{{ monthly_stats_summary.completed_count }}건</div>
+            <div class="production-stats-hint">생산완료 등록 기준</div>
+        </div>
+        <div class="production-stats-card">
+            <div class="production-stats-label">최다 생산 상품</div>
+            <div class="production-stats-value">
+                {% if monthly_stats_summary.top_product_name %}
+                {{ monthly_stats_summary.top_product_name }}
+                {% else %}
+                없음
+                {% endif %}
+            </div>
+            <div class="production-stats-hint">
+                {% if monthly_stats_summary.top_product_name %}
+                {{ stats_box(monthly_stats_summary.top_product_boxes) }} BOX
+                {% else %}
+                완료 생산 데이터가 없습니다.
+                {% endif %}
             </div>
         </div>
-        <div class="nav-right">
-            <input type="month" class="month-picker" value="{{ month_start.strftime('%Y-%m') }}" onchange="goToListMonth(this.value)">
-            <button type="button" class="nav-btn" onclick="goToCurrentMonth()">이번 달</button>
-            <button type="button" class="nav-btn" onclick="printListMonthly()">🖨️ 출력</button>
+    </div>
+
+    <div class="production-stats-table-wrap">
+        <div class="production-stats-table-head">
+            <div>
+                <h3>상품별 월간 생산 순위</h3>
+                <p>순번, 제품코드, 제품명, 이번 달 총 생산량을 높은 순서대로 표시합니다.</p>
+            </div>
+            <div class="production-stats-table-meta">총 {{ monthly_stats|length }}개 상품</div>
         </div>
-    </div>
-    
-    {% if schedules %}
-    <div class="table-container"><table>
-        <thead>
-            <tr>
-                <th>예정일</th>
-                <th>요일</th>
-                <th>근무</th>
-                <th>상품명</th>
-                <th>계획 박스</th>
-                <th>생산 라인</th>
-                <th>상태</th>
-                <th>비고</th>
-                <th>작업</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for schedule in schedules %}
-            <tr data-status="{{ schedule.status or '' }}">
-                <td><span class="list-mobile-card-label">예정일</span><strong>{{ schedule.scheduled_date }}</strong></td>
-                <td><span class="list-mobile-card-label">요일</span>{{ schedule.display_weekday }}</td>
-                <td>
-                    <span class="list-mobile-card-label">근무</span>
-                    {% if schedule.display_work_type == '잔업' %}
-                    <span class="badge badge-warning">잔업</span>
-                    {% elif schedule.display_work_type == '특근' %}
-                    <span class="badge badge-info">특근</span>
-                    {% elif schedule.display_work_type == '휴무' %}
-                    <span class="badge badge-danger">휴무</span>
-                    {% else %}
-                    <span class="badge badge-success">일반</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="list-mobile-card-label">상품명</span>
-                    {% if schedule.linked_production_id %}
-                    <a class="product-link" href="{{ url_for('production.production_detail', production_id=schedule.linked_production_id) }}">{{ schedule.product_name }}</a>
-                    {% else %}
-                    <a class="product-link" href="{{ url_for('production.schedule_detail', date=schedule.scheduled_date) }}">{{ schedule.product_name }}</a>
-                    {% endif %}
-                </td>
-                <td><span class="list-mobile-card-label">계획 박스</span><span style="font-weight: 600; color: #1e40af;">{{ schedule.planned_boxes }}</span> BOX</td>
-                <td>
-                    <span class="list-mobile-card-label">생산 라인</span>
-                    {% if schedule.line %}
-                    {% for line_num in schedule.line.split(',') %}
-                    <span class="line-badge">라인 {{ line_num }}</span>
+
+        {% if monthly_stats %}
+        <div class="table-container">
+            <table class="production-stats-table">
+                <thead>
+                    <tr>
+                        <th style="width:90px;">순번</th>
+                        <th style="width:170px;">제품코드</th>
+                        <th>제품명</th>
+                        <th style="width:180px;">완료 생산 건수</th>
+                        <th style="width:210px;">이번달 총 생산량</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in monthly_stats %}
+                    <tr>
+                        <td><span class="production-stats-rank">{{ item.rank }}</span></td>
+                        <td><span class="production-stats-code">{{ item.product_code }}</span></td>
+                        <td>
+                            <div class="production-stats-name">{{ item.product_name }}</div>
+                            <div class="production-stats-sub">월간 누적 생산 기준</div>
+                        </td>
+                        <td>{{ item.completed_count }}건</td>
+                        <td><span class="production-stats-boxes">{{ stats_box(item.total_production_boxes) }} BOX</span></td>
+                    </tr>
                     {% endfor %}
-                    {% else %}
-                    <span style="color: #94a3b8;">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="list-mobile-card-label">상태</span>
-                    {% if schedule.status == '예정' %}
-                    <span class="badge badge-info">{{ schedule.status }}</span>
-                    {% elif schedule.status == '진행중' %}
-                    <span class="badge badge-warning">{{ schedule.status }}</span>
-                    {% elif schedule.status == '완료' %}
-                    <span class="badge badge-success">{{ schedule.status }}</span>
-                    {% endif %}
-                </td>
-                <td style="color: #64748b;"><span class="list-mobile-card-label">비고</span>{{ schedule.note or '-' }}</td>
-                <td>
-                    <span class="list-mobile-card-label">작업</span>
-                    <form method="POST" action="{{ url_for('production.delete_schedule', schedule_id=schedule.id) }}" 
-                          onsubmit="return confirm('{% if schedule.schedule_source == 'export' %}이 날짜를 수출 일정에서 제외하시겠습니까?{% else %}정말 삭제하시겠습니까?{% endif %}');" style="display: inline;">
-                        <button type="submit" class="btn-delete" {% if schedule.status == '완료' %}disabled title="완료 건은 삭제할 수 없습니다."{% elif schedule.schedule_source == 'export' %}title="수출 일정에서 이 날짜를 제외합니다."{% endif %}>{% if schedule.schedule_source == 'export' %}제외{% else %}삭제{% endif %}</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table></div>
-    {% else %}
-    <div style="text-align: center; padding: 4rem 2rem; color: #64748b;">
-        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📭</div>
-        <p>이번 달 등록된 생산 스케줄이 없습니다.</p>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="production-stats-empty">
+            <div style="font-size:2.8rem;opacity:.55;margin-bottom:.8rem;">📊</div>
+            <div>{{ month_start.strftime('%Y년 %m월') }}에는 생산완료 데이터가 없습니다.</div>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <!-- 스케줄 추가 모달 -->
@@ -3523,7 +3769,6 @@ const exportCompletedSchedules = exportSchedules.filter((row) => Boolean(row.is_
 let exportUnitMode = 'container';
 let currentYear = {{ month_start.year }};
 let currentMonth = {{ month_start.month }};
-let currentListStatusFilter = 'all';
 let requirementsLoadedKey = '';
 let requirementsProductsCache = [];
 let currentReqProductId = null;
@@ -3538,7 +3783,7 @@ let exportCompletedSearchOpen = false;
 function getActiveView() {
     const params = new URLSearchParams(window.location.search);
     const view = (params.get('view') || 'calendar').toLowerCase();
-    if (view === 'list') return 'list';
+    if (view === 'list' || view === 'stats') return 'stats';
     if (view === 'requirements') return 'requirements';
     if (view === 'export') return 'export';
     return 'calendar';
@@ -4171,7 +4416,7 @@ function goToCurrentMonth() {
     window.location.href = buildScheduleMonthUrl(today.getFullYear(), today.getMonth() + 1);
 }
 
-function goToListMonth(monthValue) {
+function goToStatsMonth(monthValue) {
     if (!monthValue) return;
     const parts = monthValue.split('-');
     if (parts.length !== 2) return;
@@ -4190,77 +4435,33 @@ function printCalendar() {
     window.print();
 }
 
-function getPrintableListRows(filter) {
-    const rows = Array.from(document.querySelectorAll('#listView tbody tr'));
-    if (filter === 'completed') {
-        return rows.filter((r) => (r.dataset.status || '') === '완료');
-    }
-    if (filter === 'planned') {
-        return rows.filter((r) => (r.dataset.status || '').trim() === '예정');
-    }
-    return rows;
-}
-
-function setListStatusFilter(filter) {
-    currentListStatusFilter = filter;
-    const rows = Array.from(document.querySelectorAll('#listView tbody tr'));
-    rows.forEach((row) => row.classList.add('list-row-hidden'));
-    getPrintableListRows(filter).forEach((row) => row.classList.remove('list-row-hidden'));
-
-    document.querySelectorAll('#listView .status-tab-btn').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.filter === filter);
-    });
-}
-
-function printListMonthly() {
-    const listMonthEl = document.getElementById('printListMonth');
-    if (listMonthEl) {
-        listMonthEl.textContent = `${currentYear}년 ${currentMonth}월`;
-    }
-
-    const rows = getPrintableListRows(currentListStatusFilter);
-    const rowCount = rows.length;
-    if (rowCount === 0) {
-        alert('선택한 조건에 맞는 출력 대상이 없습니다.');
-        return;
-    }
-
-    // 월 스케줄 건수가 많을 때 한 페이지에 맞추기 위해 자동 축소
-    let scale = 1;
-    if (rowCount > 18) {
-        scale = Math.max(0.58, 18 / rowCount);
-    }
-    document.documentElement.style.setProperty('--list-print-scale', String(scale));
-    document.body.classList.add('printing-list');
-    window.print();
-}
-
 // 뷰 전환
 function switchView(view) {
     const calendarView = document.getElementById('calendarView');
-    const listView = document.getElementById('listView');
+    const statsView = document.getElementById('statsView');
     const requirementsView = document.getElementById('requirementsView');
     const exportView = document.getElementById('exportView');
     const buttons = document.querySelectorAll('.view-toggle button[data-view]');
+    const normalizedView = view === 'list' ? 'stats' : view;
 
-    buttons.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
+    buttons.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === normalizedView));
 
     calendarView.style.display = 'none';
-    listView.style.display = 'none';
+    if (statsView) statsView.style.display = 'none';
     if (requirementsView) requirementsView.style.display = 'none';
     if (exportView) exportView.style.display = 'none';
 
-    if (view === 'calendar') {
+    if (normalizedView === 'calendar') {
         calendarView.style.display = 'block';
-    } else if (view === 'list') {
-        listView.style.display = 'block';
-    } else if (view === 'requirements') {
+    } else if (normalizedView === 'stats') {
+        if (statsView) statsView.style.display = 'block';
+    } else if (normalizedView === 'requirements') {
         if (requirementsView) requirementsView.style.display = 'block';
         loadRequirementsData();
-    } else if (view === 'export') {
+    } else if (normalizedView === 'export') {
         if (exportView) exportView.style.display = 'block';
     }
-    setViewQuery(view);
+    setViewQuery(normalizedView);
 }
 
 function switchRequirementsTab(tab) {
@@ -4618,7 +4819,6 @@ document.getElementById('exportContainerCountInput').addEventListener('input', f
 // 페이지 로드 시 캘린더 렌더링
 document.addEventListener('DOMContentLoaded', function() {
     renderCalendar();
-    setListStatusFilter('all');
     resetExportCompletedMonthFilter();
     switchExportScheduleTab('active');
     const activeView = getActiveView();

@@ -448,7 +448,10 @@ def _load_export_linked_rows(cursor, export_schedule_id):
             pr.expiry_date_3,
             pr.expiry_boxes_1,
             pr.expiry_boxes_2,
-            pr.expiry_boxes_3
+            pr.expiry_boxes_3,
+            pr.sample_excluded_boxes_1,
+            pr.sample_excluded_boxes_2,
+            pr.sample_excluded_boxes_3
         FROM production_schedules ps
         LEFT JOIN productions pr ON pr.id = ps.production_id
         WHERE ps.export_schedule_id = ?
@@ -473,6 +476,9 @@ def _load_existing_export_completed_rows(cursor, workplace, product_id, start_da
             pr.expiry_boxes_1,
             pr.expiry_boxes_2,
             pr.expiry_boxes_3,
+            pr.sample_excluded_boxes_1,
+            pr.sample_excluded_boxes_2,
+            pr.sample_excluded_boxes_3,
             ps.id as schedule_id,
             ps.status as schedule_status
         FROM productions pr
@@ -551,9 +557,9 @@ def _container_target_rows(total_quantity, boxes_per_container, container_count,
 
 
 def _get_export_row_locked_boxes(row):
-    actual_boxes = int(float(row.get('actual_boxes') or 0))
+    actual_boxes = float(row.get('actual_boxes') or 0)
     if actual_boxes > 0:
-        return actual_boxes
+        return int(_get_production_export_box_total(row))
     return int(float(row.get('planned_boxes') or 0))
 
 
@@ -616,7 +622,7 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
         if scheduled_date not in excluded_date_set or scheduled_date in fixed_date_set
     ]
     available_dates = [scheduled_date for scheduled_date in business_dates if scheduled_date not in fixed_date_set]
-    produced_total = int(sum(float(row.get('actual_boxes') or 0) for row in completed_rows))
+    produced_total = int(sum(_get_production_export_box_total(row) for row in completed_rows))
     locked_planned_total = int(sum(_get_export_row_locked_boxes(row) for row in preserved_rows))
     locked_total = produced_total + locked_planned_total
     if export_quantity < locked_total:
@@ -829,21 +835,37 @@ def _build_production_expiry_rows(production_row, default_expiry_date=''):
         production_row.get('expiry_boxes_2'),
         production_row.get('expiry_boxes_3'),
     ]
+    raw_sample_boxes = [
+        production_row.get('sample_excluded_boxes_1'),
+        production_row.get('sample_excluded_boxes_2'),
+        production_row.get('sample_excluded_boxes_3'),
+    ]
     if raw_boxes[0] in (None, ''):
         raw_boxes[0] = production_row.get('actual_boxes') or production_row.get('planned_boxes') or ''
 
     visible_count = 1
-    for idx, (expiry_date, box_value) in enumerate(zip(raw_dates, raw_boxes), start=1):
+    for idx, (expiry_date, box_value, sample_box_value) in enumerate(zip(raw_dates, raw_boxes, raw_sample_boxes), start=1):
         has_date = bool((expiry_date or '').strip())
         has_box = box_value not in (None, '')
-        if idx > 1 and (has_date or has_box):
+        has_sample = sample_box_value not in (None, '')
+        if idx > 1 and (has_date or has_box or has_sample):
             visible_count = idx
+        try:
+            box_float = float(box_value) if box_value not in (None, '') else None
+        except (TypeError, ValueError):
+            box_float = None
+        try:
+            sample_float = float(sample_box_value) if sample_box_value not in (None, '') else 0.0
+        except (TypeError, ValueError):
+            sample_float = 0.0
         rows.append(
             {
                 'index': idx,
                 'date': expiry_date,
                 'boxes': box_value,
-                'has_value': has_date or has_box,
+                'sample_boxes': sample_box_value,
+                'export_boxes': max((box_float or 0.0) - sample_float, 0.0) if box_float is not None else 0.0,
+                'has_value': has_date or has_box or has_sample,
             }
         )
     return rows, visible_count
@@ -902,6 +924,89 @@ def _compose_raw_usage_note(user_note, raw_sok_mode, per_box_value, sheets_per_p
             return base_note
         return f"{auto_note}\n{base_note}"
     return auto_note or base_note
+
+
+def _format_box_count_text(value):
+    try:
+        number = float(value or 0)
+    except (TypeError, ValueError):
+        return '0'
+    rounded = round(number, 1)
+    if abs(rounded - round(rounded)) < 1e-9:
+        return str(int(round(rounded)))
+    return f'{rounded:.1f}'.rstrip('0').rstrip('.')
+
+
+def _build_sample_usage_auto_note(expiry_rows):
+    parts = []
+    for row in expiry_rows or []:
+        try:
+            sample_boxes = float(row.get('sample_boxes') or 0)
+        except (TypeError, ValueError, AttributeError):
+            sample_boxes = 0.0
+        if sample_boxes <= 0:
+            continue
+        label = (row.get('date') or '').strip() or f"{int(row.get('index') or 0)}차 소비기한"
+        parts.append(f'{label} {_format_box_count_text(sample_boxes)}박스')
+    if not parts:
+        return ''
+    return f"샘플 제외: {', '.join(parts)} (수출 일정표 제외)"
+
+
+def _compose_raw_usage_note(
+    user_note,
+    raw_sok_mode,
+    per_box_value,
+    sheets_per_pack=0,
+    base_sheets_per_pack=0,
+    sample_auto_note='',
+):
+    base_note = (user_note or '').strip()
+    filtered_lines = []
+    for line in base_note.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('매수 변경 적용:'):
+            continue
+        if stripped.startswith('샘플 제외:'):
+            continue
+        filtered_lines.append(line)
+    base_note = '\n'.join(filtered_lines).strip()
+
+    auto_lines = []
+    if int(raw_sok_mode or 1) > 1 and float(per_box_value or 0) > 0 and int(sheets_per_pack or 0) > 0:
+        if int(base_sheets_per_pack or 0) > 0:
+            auto_lines.append(f"매수 변경 적용: {int(base_sheets_per_pack)}매 → {int(sheets_per_pack)}매")
+        else:
+            auto_lines.append(f"매수 변경 적용: {int(sheets_per_pack)}매")
+    sample_line = (sample_auto_note or '').strip()
+    if sample_line:
+        auto_lines.append(sample_line)
+
+    if auto_lines and base_note:
+        return '\n'.join(auto_lines + [base_note])
+    if auto_lines:
+        return '\n'.join(auto_lines)
+    return base_note
+
+
+def _get_production_export_box_total(row):
+    sample_total = 0.0
+    for idx in range(1, 4):
+        try:
+            sample_total += float(row.get(f'sample_excluded_boxes_{idx}') or 0)
+        except (TypeError, ValueError, AttributeError):
+            continue
+    try:
+        actual_boxes = float(row.get('actual_boxes') or 0)
+    except (TypeError, ValueError, AttributeError):
+        actual_boxes = 0.0
+    try:
+        planned_boxes = float(row.get('planned_boxes') or 0)
+    except (TypeError, ValueError, AttributeError):
+        planned_boxes = 0.0
+    if actual_boxes > 0 or sample_total > 0:
+        return max(actual_boxes - sample_total, 0.0)
+    return max(planned_boxes - sample_total, 0.0)
 
 def _sync_material_stock_with_lots(conn, material_id=None):
     cursor = conn.cursor()
@@ -1532,6 +1637,43 @@ def schedules():
             for row in cursor.fetchall()
         }
 
+        cursor.execute(
+            '''
+            SELECT
+                pr.product_id,
+                COALESCE(NULLIF(TRIM(p.code), ''), printf('P%05d', pr.product_id)) as product_code,
+                COALESCE(NULLIF(TRIM(p.name), ''), '미등록 상품') as product_name,
+                COUNT(pr.id) as completed_count,
+                ROUND(SUM(
+                    CASE
+                        WHEN COALESCE(pr.actual_boxes, 0) > 0 THEN COALESCE(pr.actual_boxes, 0)
+                        WHEN COALESCE(ps.planned_boxes, 0) > 0 THEN COALESCE(ps.planned_boxes, 0)
+                        ELSE 0
+                    END
+                ), 1) as total_production_boxes
+            FROM productions pr
+            LEFT JOIN products p ON p.id = pr.product_id
+            LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+            WHERE COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
+              AND pr.production_date BETWEEN ? AND ?
+              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
+            GROUP BY pr.product_id, product_code, product_name
+            ORDER BY total_production_boxes DESC, product_name ASC, product_code ASC
+            ''',
+            (workplace, workplace, month_start.isoformat(), month_end.isoformat()),
+        )
+        monthly_stats_rows = [dict(row) for row in cursor.fetchall()]
+        for index, row in enumerate(monthly_stats_rows, start=1):
+            row['rank'] = index
+
+        monthly_stats_summary = {
+            'product_count': len(monthly_stats_rows),
+            'completed_count': sum(int(row.get('completed_count') or 0) for row in monthly_stats_rows),
+            'total_boxes': round(sum(float(row.get('total_production_boxes') or 0) for row in monthly_stats_rows), 1),
+            'top_product_name': monthly_stats_rows[0]['product_name'] if monthly_stats_rows else '',
+            'top_product_boxes': float(monthly_stats_rows[0]['total_production_boxes'] or 0) if monthly_stats_rows else 0.0,
+        }
+
         export_rows_view = []
         export_rows_json = []
         export_active_rows = []
@@ -1554,7 +1696,7 @@ def schedules():
                     int(export_row['id']),
                 )
             completed_rows = [row for row in linked_rows if _is_started_export_row(row)] + external_completed_rows
-            produced_total = int(sum(float(row.get('actual_boxes') or 0) for row in completed_rows))
+            produced_total = int(sum(_get_production_export_box_total(row) for row in completed_rows))
             started_count = len(completed_rows)
             export_quantity = int(export_row.get('export_quantity') or 0)
             boxes_per_container = int(export_row.get('boxes_per_container') or 0)
@@ -1562,7 +1704,7 @@ def schedules():
             remaining_total = max(export_quantity - produced_total, 0)
             daily_actual_map = {}
             for linked_row in completed_rows:
-                actual_boxes = int(float(linked_row.get('actual_boxes') or 0))
+                actual_boxes = int(_get_production_export_box_total(linked_row))
                 if actual_boxes <= 0:
                     continue
                 date_key = str(linked_row.get('scheduled_date') or '')
@@ -1593,7 +1735,7 @@ def schedules():
                         if not expiry_value:
                             continue
                         try:
-                            expiry_boxes = float(expiry_row.get('boxes') or 0)
+                            expiry_boxes = float(expiry_row.get('export_boxes') or 0)
                         except (TypeError, ValueError):
                             expiry_boxes = 0.0
                         if expiry_boxes <= 0:
@@ -1604,7 +1746,7 @@ def schedules():
                 {
                     str(row.get('scheduled_date') or '').strip()
                     for row in completed_rows
-                    if str(row.get('scheduled_date') or '').strip()
+                    if str(row.get('scheduled_date') or '').strip() and _get_production_export_box_total(row) > 0
                 }
             )
             is_completed = export_quantity > 0 and remaining_total <= 0
@@ -1770,6 +1912,8 @@ def schedules():
         export_active_schedules=export_active_rows,
         export_completed_schedules=export_completed_rows,
         export_schedules_json=export_schedules_json,
+        monthly_stats=monthly_stats_rows,
+        monthly_stats_summary=monthly_stats_summary,
         month_start=month_start,
         month_end=month_end,
     )
@@ -2933,8 +3077,13 @@ def work_days():
         )
 
     # ?듦퀎 怨꾩궛
+    excluded_work_types = {'holiday', 'overtime', 'extra'}
     stats = {
-        'work': sum(1 for d in work_days_data.values() if d['type'] == 'work'),
+        'work': sum(
+            1
+            for d in calendar_days
+            if d.get('current_month') and (d.get('type') or '').strip() not in excluded_work_types
+        ),
         'holiday': sum(1 for d in work_days_data.values() if d['type'] == 'holiday'),
         'overtime': sum(1 for d in work_days_data.values() if d['type'] == 'overtime'),
         'extra': sum(1 for d in work_days_data.values() if d['type'] == 'extra'),
@@ -3332,6 +3481,11 @@ def production_detail(production_id):
     except Exception:
         calculated_expiry_date = production['production_date'] or ''
     expiry_rows, expiry_visible_count = _build_production_expiry_rows(production, calculated_expiry_date)
+    production['sample_excluded_total'] = round(
+        sum(float(row.get('sample_boxes') or 0) for row in expiry_rows),
+        1,
+    )
+    production['export_actual_boxes'] = round(_get_production_export_box_total(production), 1)
 
     # ???곹뭹??BOM ?먯큹 紐⑸줉
     # - 완료???앹궛: ?ㅼ젣 ?ъ슜???먯큹留??쒖떆 (production_material_usage 湲곗?)
@@ -4046,6 +4200,7 @@ def update_production_usage(production_id):
             return "<script>alert('?뚮퉬湲고븳 ?뺤떇? YYYY-MM-DD ?먮뒗 YYYY-MM-DDA ?뺥깭濡??낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
         expiry_box_inputs = [(request.form.get(f'expiry_boxes_{idx}') or '').strip() for idx in range(1, 4)]
+        sample_box_inputs = [(request.form.get(f'sample_excluded_boxes_{idx}') or '').strip() for idx in range(1, 4)]
         parsed_expiry_boxes = []
         for idx, raw_box in enumerate(expiry_box_inputs, start=1):
             if not raw_box:
@@ -4060,6 +4215,21 @@ def update_production_usage(production_id):
                 rollback_db(conn)
                 return f"<script>alert('{idx}번째 소비기한 박스 수는 0보다 커야 합니다.'); window.history.back();</script>"
             parsed_expiry_boxes.append(box_value)
+
+        parsed_sample_boxes = []
+        for idx, raw_sample_box in enumerate(sample_box_inputs, start=1):
+            if not raw_sample_box:
+                parsed_sample_boxes.append(None)
+                continue
+            try:
+                sample_box_value = float(raw_sample_box)
+            except ValueError:
+                rollback_db(conn)
+                return f"<script>alert('{idx}번째 샘플 제외 박스 수는 숫자로 입력해주세요.'); window.history.back();</script>"
+            if sample_box_value < 0:
+                rollback_db(conn)
+                return f"<script>alert('{idx}번째 샘플 제외 박스 수는 0 이상이어야 합니다.'); window.history.back();</script>"
+            parsed_sample_boxes.append(sample_box_value if sample_box_value > 0 else None)
 
         has_secondary_expiry = bool(expiry_date_2_input or expiry_date_3_input or expiry_box_inputs[1] or expiry_box_inputs[2])
         if parsed_expiry_boxes[0] is None:
@@ -4093,6 +4263,26 @@ def update_production_usage(production_id):
             actual_boxes = computed_actual_boxes
         else:
             parsed_expiry_boxes[0] = actual_boxes if actual_boxes > 0 else planned_boxes
+        for idx, sample_box_value in enumerate(parsed_sample_boxes, start=1):
+            if sample_box_value is None:
+                continue
+            expiry_box_value = parsed_expiry_boxes[idx - 1]
+            if expiry_box_value is None or float(expiry_box_value or 0) <= 0:
+                rollback_db(conn)
+                return f"<script>alert('{idx}번째 샘플 제외는 해당 소비기한 박스 수를 먼저 입력해야 합니다.'); window.history.back();</script>"
+            if float(sample_box_value) > float(expiry_box_value):
+                rollback_db(conn)
+                return f"<script>alert('{idx}번째 샘플 제외 박스 수는 소비기한 박스 수를 초과할 수 없습니다.'); window.history.back();</script>"
+        expiry_rows_for_note = [
+            {
+                'index': idx,
+                'date': expiry_value,
+                'boxes': parsed_expiry_boxes[idx - 1],
+                'sample_boxes': parsed_sample_boxes[idx - 1],
+            }
+            for idx, expiry_value in enumerate((expiry_date, expiry_date_2, expiry_date_3), start=1)
+        ]
+        sample_usage_auto_note = _build_sample_usage_auto_note(expiry_rows_for_note)
 
         missing = []
         if supply_people is None:
@@ -4130,7 +4320,9 @@ def update_production_usage(production_id):
                 packing_line = ?, packing_people = ?,
                 outer_packing_line = ?, outer_packing_people = ?,
                 work_time = ?, personnel_note = ?, expiry_date = ?, expiry_date_2 = ?, expiry_date_3 = ?,
-                expiry_boxes_1 = ?, expiry_boxes_2 = ?, expiry_boxes_3 = ?, raw_sok_mode = ?
+                expiry_boxes_1 = ?, expiry_boxes_2 = ?, expiry_boxes_3 = ?,
+                sample_excluded_boxes_1 = ?, sample_excluded_boxes_2 = ?, sample_excluded_boxes_3 = ?,
+                raw_sok_mode = ?
             WHERE id = ?
             ''',
             (
@@ -4148,6 +4340,9 @@ def update_production_usage(production_id):
                 parsed_expiry_boxes[0],
                 parsed_expiry_boxes[1],
                 parsed_expiry_boxes[2],
+                parsed_sample_boxes[0],
+                parsed_sample_boxes[1],
+                parsed_sample_boxes[2],
                 raw_sok_mode,
                 production_id,
             ),
@@ -4196,7 +4391,14 @@ def update_production_usage(production_id):
                 raw_entries[idx] = {
                     'rm_id': rm_id,
                     'qty': qty,
-                    'note': (request.form.get(f'raw_note_{idx}') or '').strip(),
+                    'note': _compose_raw_usage_note(
+                        (request.form.get(f'raw_note_{idx}') or '').strip(),
+                        raw_sok_mode,
+                        active_per_box,
+                        active_sheets_per_pack,
+                        base_sheets_per_pack,
+                        sample_auto_note=sample_usage_auto_note,
+                    ),
                 }
 
         if save_action == 'temp':

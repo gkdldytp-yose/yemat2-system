@@ -711,8 +711,8 @@
                             <div class="todo-detail">{{ todo.detail or '상세 내용 없음' }}</div>
                             <div class="todo-meta">
                                 <span class="todo-chip">등록 {{ (todo.created_at or '')[:10] or '-' }}</span>
-                                {% if todo.created_by %}
-                                <span class="todo-chip">작성 {{ todo.created_by }}</span>
+                                {% if todo.created_by or todo.created_by_name %}
+                                <span class="todo-chip">작성 {{ todo.created_by_name or todo.created_by }}</span>
                                 {% endif %}
                                 {% if todo.importance %}
                                 <span class="todo-chip priority-{{ todo.importance }}">
@@ -836,8 +836,8 @@
                         </td>
                         <td>
                             <strong>{{ todo.title }}</strong>
-                            {% if todo.done_by %}
-                            <div style="margin-top:0.2rem;color:#64748b;font-size:0.78rem;">완료자 {{ todo.done_by }}</div>
+                            {% if todo.done_by or todo.done_by_name %}
+                            <div style="margin-top:0.2rem;color:#64748b;font-size:0.78rem;">완료자 {{ todo.done_by_name or todo.done_by }}</div>
                             {% endif %}
                             {% if todo.importance %}
                             <div style="margin-top:0.3rem;">
