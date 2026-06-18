@@ -3553,6 +3553,33 @@ def raw_materials():
     if not is_logistics:
         done_query += ' AND workplace = ?'
         done_params.append(workplace)
+    if selected_raw_name:
+        done_query += " AND COALESCE(name, '') = ?"
+        done_params.append(selected_raw_name)
+    if raw_search_keyword:
+        like_q = f'%{raw_search_keyword}%'
+        if selected_raw_search_field == 'code':
+            done_query += " AND COALESCE(code, '') LIKE ?"
+            done_params.append(like_q)
+        elif selected_raw_search_field == 'name':
+            done_query += " AND COALESCE(name, '') LIKE ?"
+            done_params.append(like_q)
+        elif selected_raw_search_field == 'car_number':
+            done_query += " AND COALESCE(COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')), '') LIKE ?"
+            done_params.append(like_q)
+        elif selected_raw_search_field == 'receiving_date':
+            done_query += " AND COALESCE(receiving_date, '') LIKE ?"
+            done_params.append(like_q)
+        else:
+            done_query += '''
+                AND (
+                    COALESCE(name, '') LIKE ?
+                    OR COALESCE(code, '') LIKE ?
+                    OR COALESCE(COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')), '') LIKE ?
+                    OR COALESCE(receiving_date, '') LIKE ?
+                )
+            '''
+            done_params.extend([like_q, like_q, like_q, like_q])
     done_query += '''
         AND COALESCE(current_stock, 0) <= 0
         ORDER BY

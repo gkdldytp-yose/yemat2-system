@@ -275,7 +275,7 @@
   {% set packaging_row_count = 8 %}
   {% set raw_notes = [] %}
   {% for r in raw_usages[:raw_row_count] %}
-    {% if r.usage_note %}
+    {% if r.usage_note and r.usage_note not in raw_notes %}
       {% set _ = raw_notes.append(r.usage_note) %}
     {% endif %}
   {% endfor %}
