@@ -1919,6 +1919,158 @@ def schedules():
     )
 
 
+@bp.route('/schedules/stats-product-data')
+@login_required
+def schedule_stats_product_data():
+    """생산 통계 모달용 상품별 생산 이력 데이터."""
+    workplace = (request.args.get('workplace') or get_workplace() or '').strip()
+    product_id = request.args.get('product_id', type=int)
+    date_from_raw = (request.args.get('date_from') or '').strip()
+    date_to_raw = (request.args.get('date_to') or '').strip()
+
+    if not product_id:
+        return jsonify({'ok': False, 'message': '상품 정보가 올바르지 않습니다.'}), 400
+
+    try:
+        date_from = _parse_iso_date(date_from_raw) if date_from_raw else None
+        date_to = _parse_iso_date(date_to_raw) if date_to_raw else None
+    except ValueError:
+        return jsonify({'ok': False, 'message': '날짜 형식이 올바르지 않습니다.'}), 400
+
+    today = today_local()
+    if not date_from or not date_to:
+        default_start = date(today.year, today.month, 1)
+        if today.month == 12:
+            default_end = date(today.year + 1, 1, 1) - timedelta(days=1)
+        else:
+            default_end = date(today.year, today.month + 1, 1) - timedelta(days=1)
+        date_from = date_from or default_start
+        date_to = date_to or default_end
+
+    if date_from > date_to:
+        return jsonify({'ok': False, 'message': '조회 시작일이 종료일보다 늦을 수 없습니다.'}), 400
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT id, name
+            FROM products
+            WHERE id = ?
+              AND workplace = ?
+            ''',
+            (product_id, workplace),
+        )
+        product_row = cursor.fetchone()
+        if not product_row:
+            return jsonify({'ok': False, 'message': '해당 상품을 찾을 수 없습니다.'}), 404
+
+        cursor.execute(
+            '''
+            SELECT
+                pr.id as production_id,
+                pr.production_date,
+                COALESCE(pr.actual_boxes, ps.planned_boxes, pr.planned_boxes, 0) as production_boxes,
+                CASE
+                    WHEN COALESCE(pr.raw_sok_mode, 1) = 2 THEN COALESCE(p.sok_per_box_2, p.sok_per_box, 0)
+                    WHEN COALESCE(pr.raw_sok_mode, 1) = 3 THEN COALESCE(p.sok_per_box_3, p.sok_per_box, 0)
+                    ELSE COALESCE(p.sok_per_box, 0)
+                END as active_sok_per_box,
+                GROUP_CONCAT(
+                    DISTINCT COALESCE(rm.name, NULLIF(TRIM(pmu.raw_material_name), ''))
+                ) as raw_material_names,
+                GROUP_CONCAT(
+                    DISTINCT COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''))
+                ) as raw_car_numbers,
+                TRIM(
+                    COALESCE(NULLIF(pr.expiry_date, ''), '')
+                    || CASE WHEN COALESCE(NULLIF(pr.expiry_date_2, ''), '') != '' THEN ', ' || pr.expiry_date_2 ELSE '' END
+                    || CASE WHEN COALESCE(NULLIF(pr.expiry_date_3, ''), '') != '' THEN ', ' || pr.expiry_date_3 ELSE '' END
+                ) as expiry_dates,
+                ROUND(
+                    CASE
+                        WHEN SUM(CASE WHEN pmu.raw_material_id IS NOT NULL THEN COALESCE(pmu.actual_quantity, 0) ELSE 0 END) > 0
+                         AND (
+                            CASE
+                                WHEN COALESCE(pr.raw_sok_mode, 1) = 2 THEN COALESCE(p.sok_per_box_2, p.sok_per_box, 0)
+                                WHEN COALESCE(pr.raw_sok_mode, 1) = 3 THEN COALESCE(p.sok_per_box_3, p.sok_per_box, 0)
+                                ELSE COALESCE(p.sok_per_box, 0)
+                            END
+                         ) > 0
+                        THEN (
+                            (
+                                CASE
+                                    WHEN COALESCE(pr.raw_sok_mode, 1) = 2 THEN COALESCE(p.sok_per_box_2, p.sok_per_box, 0)
+                                    WHEN COALESCE(pr.raw_sok_mode, 1) = 3 THEN COALESCE(p.sok_per_box_3, p.sok_per_box, 0)
+                                    ELSE COALESCE(p.sok_per_box, 0)
+                                END
+                            ) * COALESCE(pr.actual_boxes, ps.planned_boxes, pr.planned_boxes, 0) * 100.0
+                        ) / SUM(CASE WHEN pmu.raw_material_id IS NOT NULL THEN COALESCE(pmu.actual_quantity, 0) ELSE 0 END)
+                        ELSE NULL
+                    END,
+                    1
+                ) as yield_rate
+            FROM productions pr
+            LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+            LEFT JOIN products p ON p.id = pr.product_id
+            LEFT JOIN production_material_usage pmu ON pmu.production_id = pr.id
+            LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+            WHERE pr.product_id = ?
+              AND pr.production_date BETWEEN ? AND ?
+              AND COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
+              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
+            GROUP BY
+                pr.id, pr.production_date, pr.actual_boxes, ps.planned_boxes, pr.planned_boxes,
+                pr.raw_sok_mode, p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3
+            ORDER BY pr.production_date DESC, pr.id DESC
+            ''',
+            (
+                product_id,
+                date_from.isoformat(),
+                date_to.isoformat(),
+                workplace,
+                workplace,
+            ),
+        )
+
+        rows = []
+        total_boxes = 0.0
+        for row in cursor.fetchall():
+            item = dict(row)
+            production_boxes = float(item.get('production_boxes') or 0)
+            total_boxes += production_boxes
+            rows.append(
+                {
+                    'production_id': int(item['production_id']),
+                    'production_no': f"PROD-{int(item['production_id'])}",
+                    'production_date': item.get('production_date') or '',
+                    'raw_material_name': item.get('raw_material_names') or '-',
+                    'car_number': item.get('raw_car_numbers') or '-',
+                    'yield_rate': float(item['yield_rate']) if item.get('yield_rate') is not None else None,
+                    'expiry_date': item.get('expiry_dates') or '-',
+                    'production_boxes': round(production_boxes, 1),
+                    'journal_url': url_for('printouts.production_print', production_id=int(item['production_id'])),
+                }
+            )
+
+    return jsonify(
+        {
+            'ok': True,
+            'product': {
+                'id': int(product_row['id']),
+                'name': product_row['name'] or '',
+            },
+            'date_from': date_from.isoformat(),
+            'date_to': date_to.isoformat(),
+            'rows': rows,
+            'summary': {
+                'count': len(rows),
+                'total_boxes': round(total_boxes, 1),
+            },
+        }
+    )
+
+
 @bp.route('/schedules/requirements-data')
 @login_required
 def schedule_requirements_data():
