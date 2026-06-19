@@ -36,6 +36,33 @@
     gap: 1rem;
     margin-bottom: 1.5rem;
 }
+.dashboard-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 0.9rem;
+}
+.dashboard-card-head h2 {
+    margin: 0;
+}
+.dashboard-shortcut-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0.5rem 0.95rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #0ea5e9, #2563eb);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
+}
+.dashboard-shortcut-btn:hover {
+    filter: brightness(1.04);
+}
 .dashboard-empty {
     color: #16a34a;
     text-align: center;
@@ -341,6 +368,7 @@
 }
 html[data-theme="dark"] .dashboard-empty{color:#86efac;}
 html[data-theme="dark"] .dashboard-muted-empty{color:#8ea3bd;}
+html[data-theme="dark"] .dashboard-shortcut-btn{color:#eff6ff;}
 html[data-theme="dark"] #raw-shortage-card{background:linear-gradient(180deg,#121a2a,#101827);}
 html[data-theme="dark"] .raw-shortage-item,
 html[data-theme="dark"] .raw-shortage-meta-box,
@@ -398,6 +426,13 @@ html[data-theme="dark"] .todo-message-bubble.is-overdue{background:linear-gradie
     }
 }
 @media (max-width: 640px) {
+    .dashboard-card-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .dashboard-shortcut-btn {
+        width: 100%;
+    }
     .todo-quick-stats {
         grid-template-columns: 1fr;
     }
@@ -600,7 +635,10 @@ html[data-theme="dark"] .todo-message-bubble.is-overdue{background:linear-gradie
 
 <div class="dashboard-section-grid">
     <div class="card">
-        <h2>최근 30일 생산</h2>
+        <div class="dashboard-card-head">
+            <h2>최근 30일 생산</h2>
+            <a class="dashboard-shortcut-btn" href="/schedules?view=stats">생산통계</a>
+        </div>
         {% if production_stats %}
         <div class="table-container">
             <table>

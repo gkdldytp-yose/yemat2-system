@@ -28,6 +28,9 @@
     background: rgba(0,0,0,0.4);
     backdrop-filter: blur(4px);
 }
+body.modal-open {
+    overflow: hidden;
+}
 .modal-content {
     background: white;
     margin: 4% auto;
@@ -279,6 +282,30 @@
     font-size: 0.82rem;
     font-weight: 800;
 }
+.production-stats-table-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.production-stats-search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0.68rem 1rem;
+    border: 1px solid rgba(59,130,246,0.24);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(37,99,235,0.95), rgba(14,165,233,0.92));
+    color: #fff;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 12px 24px rgba(37,99,235,0.18);
+}
+.production-stats-search-btn:hover {
+    filter: brightness(1.04);
+}
 .production-stats-table {
     width: 100%;
     border-collapse: collapse;
@@ -297,6 +324,14 @@
 }
 .production-stats-table tbody tr:hover {
     background: var(--table-row-hover);
+}
+.production-stats-row {
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+.production-stats-row:focus-visible {
+    outline: 3px solid rgba(14, 165, 233, 0.32);
+    outline-offset: -3px;
 }
 .production-stats-rank {
     display: inline-flex;
@@ -343,6 +378,375 @@
     text-align: center;
     color: var(--text-muted);
 }
+.stats-detail-modal .modal-content {
+    max-width: 1120px;
+    width: min(1120px, calc(100% - 2rem));
+    margin: 1.25rem auto;
+    height: calc(100vh - 2.5rem);
+    max-height: calc(100vh - 2.5rem);
+    padding: 0;
+    overflow: hidden;
+    border-radius: 24px;
+}
+.stats-detail-modal {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+}
+.stats-detail-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+.stats-detail-head {
+    padding: 1.35rem 1.5rem 1.1rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 52%, #0ea5e9 160%);
+    color: #fff;
+}
+.stats-detail-head-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+.stats-detail-copy {
+    min-width: 0;
+}
+.stats-detail-title {
+    font-size: 1.45rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+.stats-detail-sub {
+    margin-top: 0.35rem;
+    color: rgba(255,255,255,0.82);
+    font-size: 0.92rem;
+}
+.stats-detail-close {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 1.4rem;
+    cursor: pointer;
+}
+.stats-detail-controls {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(148,163,184,0.2);
+    background: rgba(255,255,255,0.84);
+}
+.stats-detail-filters {
+    display: grid;
+    grid-template-columns: minmax(560px, 1.5fr) minmax(430px, 0.95fr);
+    align-items: stretch;
+    gap: 0.9rem;
+}
+.stats-detail-filters.has-selected-product {
+    grid-template-columns: minmax(190px, 0.78fr) minmax(360px, 1.2fr) minmax(320px, 0.82fr);
+}
+.stats-detail-filter-inline,
+.stats-detail-search-panel {
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(148,163,184,0.2);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(15,23,42,0.03), rgba(14,165,233,0.06));
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+.stats-detail-filter-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+.stats-detail-search-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+.stats-detail-product-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+    width: 100%;
+}
+.stats-detail-product-search {
+    width: 100%;
+    min-height: 42px;
+    padding: 0.72rem 0.85rem;
+    box-sizing: border-box;
+    border: 1px solid rgba(148,163,184,0.28);
+    border-radius: 12px;
+    background: #fff;
+    font-size: 0.9rem;
+    color: #0f172a;
+}
+.stats-detail-product-results {
+    display: none;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid rgba(148,163,184,0.18);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 14px 28px rgba(15,23,42,0.08);
+}
+.stats-detail-product-option {
+    width: 100%;
+    padding: 0.78rem 0.9rem;
+    border: none;
+    border-bottom: 1px solid rgba(226,232,240,0.9);
+    background: transparent;
+    text-align: left;
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.stats-detail-product-option:last-child {
+    border-bottom: none;
+}
+.stats-detail-product-option:hover {
+    background: rgba(14,165,233,0.08);
+}
+.stats-detail-product-empty {
+    padding: 0.9rem;
+    color: #64748b;
+    font-size: 0.84rem;
+    text-align: center;
+}
+.stats-detail-selected-product {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 0.8rem 0.95rem;
+    border: 1px solid rgba(16,185,129,0.22);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(45,212,191,0.08));
+}
+.stats-detail-selected-product-name {
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.4;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+.stats-detail-selected-product-clear {
+    border: none;
+    background: transparent;
+    color: #0f766e;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+.stats-detail-selected-product-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.stats-detail-selected-product-label {
+    color: #0f766e;
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+.stats-detail-filter-title {
+    flex: 0 0 auto;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #475569;
+    margin-right: 0.15rem;
+}
+.stats-detail-date-panel {
+    display: grid;
+    grid-template-rows: auto auto;
+    align-content: start;
+    gap: 0.75rem;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.stats-detail-date-row {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-width: 0;
+}
+.stats-detail-date-row input {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 0.68rem 0.8rem;
+    box-sizing: border-box;
+    border: 1px solid rgba(148,163,184,0.28);
+    border-radius: 12px;
+    background: #fff;
+    font-size: 0.9rem;
+    color: #0f172a;
+}
+.stats-detail-date-sep {
+    color: #64748b;
+    font-weight: 800;
+}
+.stats-detail-search-btn {
+    min-height: 42px;
+    padding: 0.72rem 1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 10px 20px rgba(15, 118, 110, 0.18);
+}
+.stats-detail-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    width: 100%;
+    min-width: 0;
+    max-width: 320px;
+    align-self: stretch;
+    justify-self: end;
+}
+.stats-detail-search-panel .stats-detail-filter-title {
+    margin-right: 0;
+}
+@media (max-width: 1280px) {
+    .stats-detail-filters {
+        grid-template-columns: minmax(520px, 1.45fr) minmax(410px, 0.95fr);
+    }
+    .stats-detail-filters.has-selected-product {
+        grid-template-columns: minmax(170px, 0.72fr) minmax(320px, 1.05fr) minmax(280px, 0.78fr);
+    }
+    .stats-detail-filters:not(.has-selected-product) .stats-detail-metrics {
+        grid-column: 1 / -1;
+        max-width: none;
+        justify-self: stretch;
+    }
+}
+@media (max-width: 1180px) {
+    .stats-detail-filters.has-selected-product {
+        grid-template-columns: minmax(160px, 0.7fr) minmax(300px, 1fr) minmax(240px, 0.72fr);
+    }
+    .stats-detail-filters.has-selected-product .stats-detail-metrics {
+        max-width: 240px;
+    }
+    .stats-detail-filters.has-selected-product .stats-detail-date-row {
+        grid-template-columns: minmax(124px, 1fr) auto minmax(124px, 1fr) auto;
+    }
+}
+.stats-detail-metric {
+    border-radius: 16px;
+    padding: 0.95rem 1rem;
+    background: linear-gradient(135deg, rgba(15,23,42,0.05), rgba(14,165,233,0.08));
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.stats-detail-metric .label {
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 800;
+}
+.stats-detail-metric .value {
+    margin-top: 0.28rem;
+    font-size: 1.15rem;
+    color: #0f172a;
+    font-weight: 900;
+}
+.stats-detail-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 1rem 1.5rem 1.5rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+.stats-detail-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+.stats-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+.stats-detail-table th,
+.stats-detail-table td {
+    padding: 0.95rem 0.9rem;
+    border-bottom: 1px solid rgba(226,232,240,0.95);
+    text-align: left;
+    vertical-align: middle;
+}
+.stats-detail-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+.stats-detail-table tbody tr:hover {
+    background: rgba(14,165,233,0.05);
+}
+.stats-detail-production-link {
+    color: #0284c7;
+    text-decoration: none;
+    font-weight: 800;
+}
+.stats-detail-production-link:hover {
+    text-decoration: underline;
+}
+.stats-detail-journal-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid rgba(2,132,199,0.22);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(2,132,199,0.1), rgba(14,165,233,0.18));
+    color: #0369a1;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.stats-detail-journal-btn:hover {
+    background: linear-gradient(135deg, rgba(2,132,199,0.16), rgba(14,165,233,0.22));
+}
+.stats-detail-yield {
+    font-weight: 800;
+    color: #0f766e;
+}
+.stats-detail-empty,
+.stats-detail-loading {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: #64748b;
+}
+.stats-detail-loading {
+    color: #0369a1;
+}
 html[data-theme="dark"] .production-stats-view {
     background: linear-gradient(180deg, rgba(18,26,42,0.96), rgba(15,23,38,0.98));
 }
@@ -362,9 +766,90 @@ html[data-theme="dark"] .production-stats-code {
     background: rgba(96,165,250,0.14);
     color: #bfdbfe;
 }
+html[data-theme="dark"] .production-stats-search-btn {
+    color: #eff6ff;
+}
+html[data-theme="dark"] .stats-detail-shell,
+html[data-theme="dark"] .stats-detail-table th {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+html[data-theme="dark"] .stats-detail-filter-inline,
+html[data-theme="dark"] .stats-detail-search-panel {
+    background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(14,165,233,0.12));
+    border-color: rgba(148,163,184,0.22);
+}
+html[data-theme="dark"] .stats-detail-controls,
+html[data-theme="dark"] .stats-detail-filters,
+html[data-theme="dark"] .stats-detail-table tbody tr:hover {
+    background: rgba(15,23,42,0.82);
+}
+html[data-theme="dark"] .stats-detail-metric {
+    background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(14,165,233,0.12));
+}
+html[data-theme="dark"] .stats-detail-filter-title,
+html[data-theme="dark"] .stats-detail-date-sep {
+    color: #cbd5e1;
+}
+html[data-theme="dark"] .stats-detail-date-row input {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: rgba(148,163,184,0.28);
+}
+html[data-theme="dark"] .stats-detail-product-search {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: rgba(148,163,184,0.28);
+}
+html[data-theme="dark"] .stats-detail-product-results {
+    background: rgba(15,23,42,0.96);
+    border-color: rgba(148,163,184,0.2);
+}
+html[data-theme="dark"] .stats-detail-product-option {
+    color: #e2e8f0;
+    border-bottom-color: rgba(148,163,184,0.12);
+}
+html[data-theme="dark"] .stats-detail-product-option:hover {
+    background: rgba(37,99,235,0.18);
+}
+html[data-theme="dark"] .stats-detail-selected-product {
+    background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(45,212,191,0.08));
+    border-color: rgba(45,212,191,0.22);
+}
+html[data-theme="dark"] .stats-detail-selected-product-name {
+    color: #ecfeff;
+}
+html[data-theme="dark"] .stats-detail-selected-product-label {
+    color: #67e8f9;
+}
+html[data-theme="dark"] .stats-detail-selected-product-clear {
+    color: #7dd3fc;
+}
+html[data-theme="dark"] .stats-detail-metric .label,
+html[data-theme="dark"] .stats-detail-empty {
+    color: #94a3b8;
+}
+html[data-theme="dark"] .stats-detail-metric .value,
+html[data-theme="dark"] .stats-detail-production-link {
+    color: #f8fafc;
+}
+html[data-theme="dark"] .stats-detail-journal-btn {
+    border-color: rgba(125,211,252,0.22);
+    background: linear-gradient(135deg, rgba(14,165,233,0.16), rgba(56,189,248,0.22));
+    color: #e0f2fe;
+}
 @media (max-width: 980px) {
     .production-stats-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .stats-detail-filters {
+        grid-template-columns: 1fr;
+    }
+    .stats-detail-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-column: auto;
+        max-width: none;
+        justify-self: stretch;
     }
 }
 @media (max-width: 768px) {
@@ -382,6 +867,14 @@ html[data-theme="dark"] .production-stats-code {
     .production-stats-print-btn {
         width: 100%;
     }
+    .production-stats-table-tools {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .production-stats-search-btn {
+        width: 100%;
+    }
     .production-stats-summary {
         grid-template-columns: 1fr;
     }
@@ -393,6 +886,259 @@ html[data-theme="dark"] .production-stats-code {
     .production-stats-table th:nth-child(3),
     .production-stats-table td:nth-child(3) {
         min-width: 180px;
+    }
+    .stats-detail-head,
+    .stats-detail-controls,
+    .stats-detail-body {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+    .stats-detail-head {
+        padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+        padding-bottom: 1rem;
+    }
+    .stats-detail-head-top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 0.9rem;
+    }
+    .stats-detail-copy {
+        padding-top: 0.15rem;
+    }
+    .stats-detail-title {
+        font-size: 1.1rem;
+        line-height: 1.3;
+        word-break: keep-all;
+    }
+    .stats-detail-sub {
+        margin-top: 0.4rem;
+        font-size: 0.84rem;
+        line-height: 1.5;
+    }
+    .stats-detail-close {
+        align-self: start;
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
+    }
+    .stats-detail-controls {
+        gap: 0.8rem;
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+    }
+    .stats-detail-search-panel,
+    .stats-detail-filter-inline,
+    .stats-detail-selected-product,
+    .stats-detail-metric {
+        border-radius: 18px;
+    }
+    .stats-detail-search-panel,
+    .stats-detail-filter-inline {
+        padding: 0.9rem;
+    }
+    .stats-detail-search-panel {
+        gap: 0.7rem;
+    }
+    .stats-detail-filter-inline,
+    .stats-detail-date-row {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+    .stats-detail-product-box {
+        min-width: 0;
+        width: 100%;
+    }
+    .stats-detail-product-search {
+        min-height: 46px;
+        padding: 0.78rem 0.9rem;
+        font-size: 0.95rem;
+    }
+    .stats-detail-product-results {
+        max-height: 188px;
+        border-radius: 16px;
+    }
+    .stats-detail-product-option {
+        padding: 0.9rem;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+    .stats-detail-selected-product {
+        gap: 0.7rem;
+        padding: 0.9rem;
+    }
+    .stats-detail-selected-product-name {
+        font-size: 0.98rem;
+        line-height: 1.45;
+    }
+    .stats-detail-selected-product-clear {
+        min-height: 38px;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        background: rgba(15,118,110,0.12);
+    }
+    .stats-detail-filter-title {
+        font-size: 0.78rem;
+    }
+    .stats-detail-date-row input,
+    .stats-detail-search-btn {
+        width: 100%;
+    }
+    .stats-detail-date-row input {
+        min-height: 46px;
+        font-size: 0.95rem;
+    }
+    .stats-detail-search-btn {
+        min-height: 46px;
+        font-size: 0.95rem;
+    }
+    .stats-detail-filter-inline {
+        box-sizing: border-box;
+        width: 100%;
+    }
+    .stats-detail-date-sep {
+        display: none;
+    }
+    .stats-detail-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+    }
+    .stats-detail-metric {
+        min-height: 86px;
+        padding: 0.85rem 0.9rem;
+    }
+    .stats-detail-metric .label {
+        font-size: 0.74rem;
+    }
+    .stats-detail-metric .value {
+        font-size: 1.05rem;
+    }
+    .stats-detail-modal {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0;
+        background: rgba(2, 6, 23, 0.6);
+        backdrop-filter: blur(8px);
+    }
+    .stats-detail-modal .modal-content {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .stats-detail-shell {
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+    .stats-detail-body {
+        flex: 1 1 auto;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-top: 0.9rem;
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    }
+    .stats-detail-table-wrap {
+        overflow: visible;
+    }
+    .stats-detail-table {
+        min-width: 0;
+        width: 100%;
+    }
+    .stats-detail-table thead {
+        display: none;
+    }
+    .stats-detail-table,
+    .stats-detail-table tbody,
+    .stats-detail-table tr,
+    .stats-detail-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .stats-detail-table tbody {
+        display: grid;
+        gap: 0.75rem;
+    }
+    .stats-detail-table tr {
+        padding: 1rem;
+        border: 1px solid rgba(148,163,184,0.16);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(15,23,42,0.18), rgba(15,23,42,0.08));
+        box-shadow: 0 12px 28px rgba(15,23,42,0.08);
+    }
+    .stats-detail-table td {
+        display: flex;
+        flex-direction: column;
+        gap: 0.28rem;
+        padding: 0.56rem 0;
+        border-bottom: 1px solid rgba(148,163,184,0.12);
+        text-align: left;
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
+    .stats-detail-table td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .stats-detail-table td::before {
+        content: attr(data-label);
+        color: #94a3b8;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+    .stats-detail-table td:nth-child(2) .stats-detail-production-link {
+        font-size: 1rem;
+    }
+    .stats-detail-table td:nth-child(3),
+    .stats-detail-table td:nth-child(6) {
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+    .stats-detail-journal-btn {
+        width: 100%;
+        justify-content: center;
+        min-height: 42px;
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 430px) {
+    .stats-detail-head,
+    .stats-detail-controls,
+    .stats-detail-body {
+        padding-left: 0.8rem;
+        padding-right: 0.8rem;
+    }
+    .stats-detail-title {
+        font-size: 1.02rem;
+    }
+    .stats-detail-sub {
+        font-size: 0.8rem;
+    }
+    .stats-detail-close {
+        width: 40px;
+        height: 40px;
+        font-size: 1.15rem;
+    }
+    .stats-detail-search-panel,
+    .stats-detail-filter-inline,
+    .stats-detail-selected-product,
+    .stats-detail-metric,
+    .stats-detail-table tr {
+        border-radius: 16px;
+    }
+    .stats-detail-metrics {
+        grid-template-columns: 1fr;
+    }
+    .stats-detail-table td {
+        font-size: 0.9rem;
+    }
+    .stats-detail-table td::before {
+        font-size: 0.74rem;
     }
 }
 .calendar-weekdays {
@@ -3458,7 +4204,10 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 <h3>상품별 월간 생산 순위</h3>
                 <p>순번, 제품코드, 제품명, 이번 달 총 생산량을 높은 순서대로 표시합니다.</p>
             </div>
-            <div class="production-stats-table-meta">총 {{ monthly_stats|length }}개 상품</div>
+            <div class="production-stats-table-tools">
+                <button type="button" class="production-stats-search-btn" onclick="openStatsSearchModal()">제품검색</button>
+                <div class="production-stats-table-meta">총 {{ monthly_stats|length }}개 상품</div>
+            </div>
         </div>
 
         {% if monthly_stats %}
@@ -3475,7 +4224,12 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 </thead>
                 <tbody>
                     {% for item in monthly_stats %}
-                    <tr>
+                    <tr class="production-stats-row"
+                        tabindex="0"
+                        data-product-id="{{ item.product_id }}"
+                        data-product-name="{{ item.product_name|e }}"
+                        onclick="openStatsDetailModalFromRow(this)"
+                        onkeydown="handleStatsRowKeydown(event, this)">
                         <td><span class="production-stats-rank">{{ item.rank }}</span></td>
                         <td><span class="production-stats-code">{{ item.product_code }}</span></td>
                         <td>
@@ -3495,6 +4249,63 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <div>{{ month_start.strftime('%Y년 %m월') }}에는 생산완료 데이터가 없습니다.</div>
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- 생산 통계 상세 모달 -->
+<div id="statsDetailModal" class="modal stats-detail-modal" aria-hidden="true">
+    <div class="modal-content">
+        <div class="stats-detail-shell">
+            <div class="stats-detail-head">
+                <div class="stats-detail-head-top">
+                    <div class="stats-detail-copy">
+                        <div id="statsDetailProductName" class="stats-detail-title">상품별 생산 이력</div>
+                        <div class="stats-detail-sub">선택한 제품의 생산 일자, 생산번호, 원초, 수율, 생산량을 확인할 수 있습니다.</div>
+                    </div>
+                    <button type="button" class="stats-detail-close" onclick="closeStatsDetailModal()" aria-label="닫기">&times;</button>
+                </div>
+            </div>
+            <div class="stats-detail-controls">
+                <div class="stats-detail-search-panel">
+                    <div class="stats-detail-filter-title">제품 검색</div>
+                    <div class="stats-detail-product-box">
+                        <input type="text" id="statsDetailProductSearch" class="stats-detail-product-search" placeholder="제품명을 입력해 검색하세요" oninput="filterStatsProducts()" onfocus="showAllStatsProducts()">
+                        <div id="statsDetailProductResults" class="stats-detail-product-results"></div>
+                    </div>
+                </div>
+                <div id="statsDetailFilters" class="stats-detail-filters">
+                    <div id="statsDetailSelectedProduct" class="stats-detail-selected-product">
+                        <div class="stats-detail-selected-product-copy">
+                            <div class="stats-detail-selected-product-label">선택된 제품</div>
+                            <div id="statsDetailSelectedProductName" class="stats-detail-selected-product-name"></div>
+                        </div>
+                        <button type="button" class="stats-detail-selected-product-clear" onclick="clearStatsSelectedProduct()">변경</button>
+                    </div>
+                    <div class="stats-detail-filter-inline stats-detail-date-panel">
+                        <div class="stats-detail-filter-title">조회 기간</div>
+                        <div class="stats-detail-date-row">
+                            <input type="date" id="statsDetailDateFrom" value="{{ month_start.strftime('%Y-%m-%d') }}">
+                            <span class="stats-detail-date-sep">~</span>
+                            <input type="date" id="statsDetailDateTo" value="{{ month_end.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <button type="button" class="stats-detail-search-btn" onclick="loadStatsDetailData()">조회</button>
+                    </div>
+                    <div class="stats-detail-metrics">
+                        <div class="stats-detail-metric">
+                            <div class="label">생산 건수</div>
+                            <div id="statsDetailCount" class="value">0건</div>
+                        </div>
+                        <div class="stats-detail-metric">
+                            <div class="label">총 생산량</div>
+                            <div id="statsDetailBoxes" class="value">0 BOX</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-detail-body">
+                <div id="statsDetailContent" class="stats-detail-loading">생산 이력을 불러오는 중입니다...</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -3769,6 +4580,8 @@ const exportCompletedSchedules = exportSchedules.filter((row) => Boolean(row.is_
 let exportUnitMode = 'container';
 let currentYear = {{ month_start.year }};
 let currentMonth = {{ month_start.month }};
+const statsDetailDefaultDateFrom = {{ month_start.strftime('%Y-%m-%d')|tojson }};
+const statsDetailDefaultDateTo = {{ month_end.strftime('%Y-%m-%d')|tojson }};
 let requirementsLoadedKey = '';
 let requirementsProductsCache = [];
 let currentReqProductId = null;
@@ -3779,6 +4592,10 @@ let exportCompletedFilterYear = exportToday.getFullYear();
 let exportCompletedFilterMonth = exportToday.getMonth() + 1;
 let exportCompletedSelectedDate = '';
 let exportCompletedSearchOpen = false;
+let currentStatsDetailProductId = null;
+let currentStatsDetailProductName = '';
+let statsDetailRequestSeq = 0;
+let statsProductSearchOpenMode = false;
 
 function getActiveView() {
     const params = new URLSearchParams(window.location.search);
@@ -4660,6 +5477,243 @@ async function loadRequirementsData(forceReload = false) {
     }
 }
 
+function formatStatsNumber(value) {
+    const num = Number(value || 0);
+    if (Number.isInteger(num)) return num.toLocaleString('ko-KR');
+    return num.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+
+function updateStatsDetailSummary(payload) {
+    document.getElementById('statsDetailCount').textContent = `${formatStatsNumber(payload.summary?.count || 0)}건`;
+    document.getElementById('statsDetailBoxes').textContent = `${formatStatsNumber(payload.summary?.total_boxes || 0)} BOX`;
+}
+
+function renderStatsProductResults(products) {
+    const wrap = document.getElementById('statsDetailProductResults');
+    if (!wrap) return;
+    if (!products || products.length === 0) {
+        wrap.innerHTML = '<div class="stats-detail-product-empty">검색 결과가 없습니다.</div>';
+        wrap.style.display = 'block';
+        return;
+    }
+    wrap.innerHTML = products.map((product) => `
+        <button type="button"
+                class="stats-detail-product-option"
+                data-product-id="${Number(product.id)}"
+                data-product-name="${escapeHtml(product.name || '')}"
+                onclick="selectStatsProductFromButton(this)">
+            ${escapeHtml(product.name || '')}
+        </button>
+    `).join('');
+    wrap.style.display = 'block';
+}
+
+function showAllStatsProducts() {
+    const search = document.getElementById('statsDetailProductSearch');
+    const selected = document.getElementById('statsDetailSelectedProduct');
+    if (selected && selected.style.display === 'flex') return;
+    if (search && !String(search.value || '').trim()) {
+        renderStatsProductResults(allProducts || []);
+    }
+}
+
+function filterStatsProducts() {
+    const search = document.getElementById('statsDetailProductSearch');
+    if (!search) return;
+    const keyword = String(search.value || '').trim().toLowerCase();
+    if (!keyword) {
+        renderStatsProductResults(allProducts || []);
+        return;
+    }
+    const filtered = (allProducts || []).filter((product) => String(product.name || '').toLowerCase().includes(keyword));
+    renderStatsProductResults(filtered);
+}
+
+function updateStatsSelectedProductUi() {
+    const filtersWrap = document.getElementById('statsDetailFilters');
+    const selectedWrap = document.getElementById('statsDetailSelectedProduct');
+    const selectedName = document.getElementById('statsDetailSelectedProductName');
+    const resultsWrap = document.getElementById('statsDetailProductResults');
+    const search = document.getElementById('statsDetailProductSearch');
+    if (!filtersWrap || !selectedWrap || !selectedName || !resultsWrap || !search) return;
+
+    if (currentStatsDetailProductId) {
+        filtersWrap.classList.add('has-selected-product');
+        selectedName.textContent = currentStatsDetailProductName || '선택된 제품';
+        selectedWrap.style.display = 'flex';
+        resultsWrap.style.display = 'none';
+        search.value = '';
+        search.placeholder = '제품명을 입력해 검색하세요';
+    } else {
+        filtersWrap.classList.remove('has-selected-product');
+        selectedWrap.style.display = 'none';
+        search.placeholder = '제품명을 입력해 검색하세요';
+    }
+}
+
+function selectStatsProduct(productId, productName) {
+    currentStatsDetailProductId = Number(productId || 0);
+    currentStatsDetailProductName = productName || '';
+    document.getElementById('statsDetailProductName').textContent = currentStatsDetailProductName || '상품별 생산 이력';
+    updateStatsSelectedProductUi();
+    loadStatsDetailData();
+}
+
+function selectStatsProductFromButton(button) {
+    if (!button) return;
+    const productId = Number(button.dataset.productId || 0);
+    const productName = button.dataset.productName || '';
+    selectStatsProduct(productId, productName);
+}
+
+function clearStatsSelectedProduct() {
+    currentStatsDetailProductId = null;
+    currentStatsDetailProductName = '';
+    document.getElementById('statsDetailProductName').textContent = '상품별 생산 이력';
+    document.getElementById('statsDetailContent').innerHTML = '<div class="stats-detail-empty">제품을 선택한 뒤 일자를 조회해 주세요.</div>';
+    updateStatsSelectedProductUi();
+    showAllStatsProducts();
+    const search = document.getElementById('statsDetailProductSearch');
+    if (search) search.focus();
+}
+
+function renderStatsDetailRows(rows) {
+    if (!rows || rows.length === 0) {
+        return '<div class="stats-detail-empty">선택한 기간에 완료된 생산 이력이 없습니다.</div>';
+    }
+    return `
+        <div class="stats-detail-table-wrap">
+            <table class="stats-detail-table">
+                <thead>
+                    <tr>
+                        <th style="width:130px;">생산일</th>
+                        <th style="width:150px;">생산번호</th>
+                        <th style="min-width:180px;">원초명</th>
+                        <th style="width:120px;">자호</th>
+                        <th style="width:110px;">수율</th>
+                        <th style="min-width:150px;">소비기한</th>
+                        <th style="width:140px;">생산량 (BOX)</th>
+                        <th style="width:140px;">생산일지</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map((row) => `
+                        <tr>
+                            <td data-label="생산일">${escapeHtml(row.production_date || '-')}</td>
+                            <td data-label="생산번호"><a class="stats-detail-production-link" href="/production/${row.production_id}">${escapeHtml(row.production_no || '-')}</a></td>
+                            <td data-label="원초명">${escapeHtml(row.raw_material_name || '-')}</td>
+                            <td data-label="자호">${escapeHtml(row.car_number || '-')}</td>
+                            <td data-label="수율"><span class="stats-detail-yield">${row.yield_rate == null ? '-' : `${formatStatsNumber(row.yield_rate)}%`}</span></td>
+                            <td data-label="소비기한">${escapeHtml(row.expiry_date || '-')}</td>
+                            <td data-label="생산량">${formatStatsNumber(row.production_boxes || 0)} BOX</td>
+                            <td data-label="생산일지"><a class="stats-detail-journal-btn" href="${escapeHtml(row.journal_url || '#')}" onclick="window.open(this.href, 'production_print_${row.production_id}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">미리보기</a></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function openStatsDetailModal(productId, productName) {
+    statsProductSearchOpenMode = false;
+    currentStatsDetailProductId = Number(productId || 0);
+    currentStatsDetailProductName = productName || '';
+    document.getElementById('statsDetailProductName').textContent = currentStatsDetailProductName || '상품별 생산 이력';
+    const dateFromInput = document.getElementById('statsDetailDateFrom');
+    const dateToInput = document.getElementById('statsDetailDateTo');
+    if (dateFromInput) dateFromInput.value = statsDetailDefaultDateFrom;
+    if (dateToInput) dateToInput.value = statsDetailDefaultDateTo;
+    document.getElementById('statsDetailContent').innerHTML = '<div class="stats-detail-loading">생산 이력을 불러오는 중입니다...</div>';
+    updateStatsSelectedProductUi();
+    document.body.classList.add('modal-open');
+    document.getElementById('statsDetailModal').style.display = 'block';
+    document.getElementById('statsDetailModal').setAttribute('aria-hidden', 'false');
+    loadStatsDetailData();
+}
+
+function openStatsSearchModal() {
+    statsProductSearchOpenMode = true;
+    currentStatsDetailProductId = null;
+    currentStatsDetailProductName = '';
+    document.getElementById('statsDetailProductName').textContent = '상품별 생산 이력';
+    const dateFromInput = document.getElementById('statsDetailDateFrom');
+    const dateToInput = document.getElementById('statsDetailDateTo');
+    if (dateFromInput) dateFromInput.value = statsDetailDefaultDateFrom;
+    if (dateToInput) dateToInput.value = statsDetailDefaultDateTo;
+    document.getElementById('statsDetailContent').innerHTML = '<div class="stats-detail-empty">제품을 선택한 뒤 일자를 조회해 주세요.</div>';
+    updateStatsSelectedProductUi();
+    document.body.classList.add('modal-open');
+    document.getElementById('statsDetailModal').style.display = 'block';
+    document.getElementById('statsDetailModal').setAttribute('aria-hidden', 'false');
+    showAllStatsProducts();
+    setTimeout(() => {
+        const search = document.getElementById('statsDetailProductSearch');
+        if (search) search.focus();
+    }, 50);
+}
+
+function openStatsDetailModalFromRow(rowElement) {
+    if (!rowElement) return;
+    const productId = Number(rowElement.dataset.productId || 0);
+    const productName = rowElement.dataset.productName || '';
+    openStatsDetailModal(productId, productName);
+}
+
+function closeStatsDetailModal() {
+    const modal = document.getElementById('statsDetailModal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+}
+
+function handleStatsRowKeydown(event, rowElement) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openStatsDetailModalFromRow(rowElement);
+    }
+}
+
+async function loadStatsDetailData() {
+    if (!currentStatsDetailProductId) {
+        document.getElementById('statsDetailContent').innerHTML = '<div class="stats-detail-empty">제품을 선택한 뒤 일자를 조회해 주세요.</div>';
+        return;
+    }
+    const dateFrom = document.getElementById('statsDetailDateFrom')?.value || statsDetailDefaultDateFrom;
+    const dateTo = document.getElementById('statsDetailDateTo')?.value || statsDetailDefaultDateTo;
+    const content = document.getElementById('statsDetailContent');
+    const requestId = ++statsDetailRequestSeq;
+
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+        content.innerHTML = '<div class="stats-detail-empty" style="color:#dc2626;">시작일이 종료일보다 늦을 수 없습니다.</div>';
+        return;
+    }
+
+    content.innerHTML = '<div class="stats-detail-loading">생산 이력을 불러오는 중입니다...</div>';
+
+    try {
+        const params = new URLSearchParams({
+            product_id: String(currentStatsDetailProductId),
+            date_from: dateFrom,
+            date_to: dateTo,
+            workplace: CURRENT_SCHEDULE_WORKPLACE || '',
+        });
+        const response = await fetch(`/schedules/stats-product-data?${params.toString()}`);
+        const payload = await response.json();
+        if (requestId !== statsDetailRequestSeq) return;
+        if (!response.ok || !payload.ok) {
+            throw new Error(payload.message || '생산 이력을 불러오지 못했습니다.');
+        }
+
+        document.getElementById('statsDetailProductName').textContent = payload.product?.name || currentStatsDetailProductName || '상품별 생산 이력';
+        updateStatsDetailSummary(payload);
+        content.innerHTML = renderStatsDetailRows(payload.rows || []);
+    } catch (error) {
+        if (requestId !== statsDetailRequestSeq) return;
+        content.innerHTML = `<div class="stats-detail-empty" style="color:#dc2626;">${escapeHtml(error.message || '오류가 발생했습니다.')}</div>`;
+    }
+}
+
 // 모달 관리
 function openAddModal(selectedDate = null) {
     document.getElementById('addModal').style.display = 'block';
@@ -4832,6 +5886,7 @@ window.onclick = function(event) {
     const addModal = document.getElementById('addModal');
     const copyModal = document.getElementById('copyModal');
     const exportModal = document.getElementById('exportModal');
+    const statsDetailModal = document.getElementById('statsDetailModal');
     
     if (event.target == addModal) {
         closeModal();
@@ -4842,7 +5897,18 @@ window.onclick = function(event) {
     if (event.target == exportModal) {
         closeExportModal();
     }
+    if (event.target == statsDetailModal) {
+        closeStatsDetailModal();
+    }
 }
+
+document.addEventListener('keydown', function(event) {
+    if (event.key !== 'Escape') return;
+    const statsDetailModal = document.getElementById('statsDetailModal');
+    if (statsDetailModal && statsDetailModal.style.display === 'block') {
+        closeStatsDetailModal();
+    }
+});
 
 window.addEventListener('afterprint', function() {
     document.body.classList.remove('printing-list');

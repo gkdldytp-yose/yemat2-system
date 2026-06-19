@@ -8,6 +8,30 @@
 .info-item .lbl{font-size:0.78rem;color:#999;margin-bottom:0.2rem;}
 .info-item .val{font-weight:600;font-size:0.95rem;white-space:normal;word-break:break-word;line-height:1.35;}
 .note-textarea{width:100%;padding:0.55rem 0.65rem;border:2px solid #667eea;border-radius:8px;box-sizing:border-box;font-size:0.9rem;line-height:1.45;resize:vertical;min-height:74px;font-family:inherit;}
+.ainput,
+.note-textarea:not([readonly]),
+.info-item input:not([type="hidden"]):not([readonly]),
+.info-item select:not([disabled]),
+.raw-input-row input:not([type="hidden"]):not([readonly]),
+.raw-input-row textarea:not([readonly]),
+.expiry-split-field input:not([readonly]),
+.expiry-split-sample-field input:not([readonly]){
+    border-color:rgba(248,113,113,.72) !important;
+    box-shadow:0 0 0 1px rgba(248,113,113,.16), 0 0 14px rgba(248,113,113,.12);
+    transition:border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+.ainput:focus,
+.note-textarea:not([readonly]):focus,
+.info-item input:not([type="hidden"]):not([readonly]):focus,
+.info-item select:not([disabled]):focus,
+.raw-input-row input:not([type="hidden"]):not([readonly]):focus,
+.raw-input-row textarea:not([readonly]):focus,
+.expiry-split-field input:not([readonly]):focus,
+.expiry-split-sample-field input:not([readonly]):focus{
+    outline:none;
+    border-color:rgba(239,68,68,.95) !important;
+    box-shadow:0 0 0 3px rgba(248,113,113,.18), 0 0 18px rgba(248,113,113,.18);
+}
 .note-textarea[readonly]{background:#f8fafc;color:#475569;}
 .note-textarea.auto-grow{min-height:42px;height:42px;max-height:112px;resize:none;overflow-y:auto;}
 .note-suggestion-row{margin-top:0.45rem;}
@@ -16,6 +40,22 @@
 .note-suggestion-select:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.2);}
 .note-suggestion-remove{position:absolute;top:50%;right:5px;transform:translateY(-50%);width:24px;height:24px;border:none;border-radius:6px;background:#fff1f2;color:#dc2626;font-size:0.95rem;font-weight:900;cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
 .note-suggestion-remove:hover{background:#ffe4e6;border-color:#fda4af;}
+.personnel-input-highlight{
+    border:2px solid rgba(248,113,113,.88) !important;
+    box-shadow:0 0 0 1px rgba(248,113,113,.2), 0 0 18px rgba(248,113,113,.16) !important;
+    background:#ffffff !important;
+    color:#0f172a !important;
+    }
+.personnel-input-highlight:focus{
+    border-color:rgba(239,68,68,.98) !important;
+    box-shadow:0 0 0 3px rgba(248,113,113,.22), 0 0 22px rgba(248,113,113,.2) !important;
+    background:#ffffff !important;
+    color:#0f172a !important;
+}
+.personnel-input-highlight::placeholder{
+    color:#64748b !important;
+    opacity:1;
+}
 .raw-card{border:2px solid #e1e8ed;border-radius:8px;padding:1rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.2s;}
 .raw-card:hover{border-color:#667eea;background:#f8f9ff;}
 .raw-card.active{border-color:#27ae60;background:#f0fff4;}
@@ -73,6 +113,10 @@
 .ainfo{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
 .ainfo .ainput{flex:0 0 110px;}
 .actual-boxes-input[readonly]{background:#f8fafc;color:#1e293b;font-weight:700;}
+.display-readonly-value{display:inline-flex;align-items:center;min-height:44px;padding:.62rem .78rem;border-radius:12px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.18);box-sizing:border-box;font-size:1rem;font-weight:900;color:#e2e8f0;line-height:1.2;}
+.display-readonly-value.compact{min-width:120px;justify-content:flex-start;}
+.display-readonly-value.success{background:linear-gradient(180deg,#f0fdf4 0%,#dcfce7 100%);border-color:#86efac;color:#166534;}
+.display-readonly-hint{margin-top:0.35rem;font-size:.76rem;color:#94a3b8;line-height:1.45;}
 .unit-stock{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
 .unit-stock-badge{display:inline-flex;align-items:center;padding:.18rem .48rem;border-radius:999px;background:#f8fafc;border:1px solid #dbe4f0;color:#475569;font-size:.72rem;font-weight:800;line-height:1.2;}
 .unit-stock-badge.low{background:#fff1f2;border-color:#fecdd3;color:#dc2626;}
@@ -204,6 +248,41 @@ html[data-theme="dark"] .sec .info-item input[style*="border:2px solid #667eea"]
 html[data-theme="dark"] .note-textarea[readonly],
 html[data-theme="dark"] .actual-boxes-input[readonly],
 html[data-theme="dark"] .expiry-split-field input[readonly]{background:#162133;color:#c7d3e3;}
+html[data-theme="dark"] .ainput,
+html[data-theme="dark"] .note-textarea:not([readonly]),
+html[data-theme="dark"] .info-item input:not([type="hidden"]):not([readonly]),
+html[data-theme="dark"] .info-item select:not([disabled]),
+html[data-theme="dark"] .raw-input-row input:not([type="hidden"]):not([readonly]),
+html[data-theme="dark"] .raw-input-row textarea:not([readonly]),
+html[data-theme="dark"] .expiry-split-field input:not([readonly]),
+html[data-theme="dark"] .expiry-split-sample-field input:not([readonly]){
+    box-shadow:0 0 0 1px rgba(248,113,113,.2), 0 0 16px rgba(248,113,113,.16);
+}
+html[data-theme="dark"] .ainput:focus,
+html[data-theme="dark"] .note-textarea:not([readonly]):focus,
+html[data-theme="dark"] .info-item input:not([type="hidden"]):not([readonly]):focus,
+html[data-theme="dark"] .info-item select:not([disabled]):focus,
+html[data-theme="dark"] .raw-input-row input:not([type="hidden"]):not([readonly]):focus,
+html[data-theme="dark"] .raw-input-row textarea:not([readonly]):focus,
+html[data-theme="dark"] .expiry-split-field input:not([readonly]):focus,
+html[data-theme="dark"] .expiry-split-sample-field input:not([readonly]):focus{
+    box-shadow:0 0 0 3px rgba(248,113,113,.2), 0 0 18px rgba(248,113,113,.2);
+}
+html[data-theme="dark"] .personnel-input-highlight{
+    border-color:rgba(248,113,113,.92) !important;
+    background:#111b2d !important;
+    color:#f8fafc !important;
+    box-shadow:0 0 0 1px rgba(248,113,113,.24), 0 0 18px rgba(248,113,113,.2) !important;
+}
+html[data-theme="dark"] .personnel-input-highlight:focus{
+    border-color:rgba(248,113,113,1) !important;
+    background:#111b2d !important;
+    color:#f8fafc !important;
+    box-shadow:0 0 0 3px rgba(248,113,113,.24), 0 0 22px rgba(248,113,113,.24) !important;
+}
+html[data-theme="dark"] .display-readonly-value{background:rgba(22,33,51,.88);border-color:rgba(148,163,184,.2);color:#f8fafc;}
+html[data-theme="dark"] .display-readonly-value.success{background:linear-gradient(180deg,rgba(20,83,45,.92) 0%,rgba(22,101,52,.9) 100%);border-color:rgba(74,222,128,.3);color:#dcfce7;}
+html[data-theme="dark"] .display-readonly-hint{color:#94a3b8;}
 html[data-theme="dark"] .expiry-split-row{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;}
 html[data-theme="dark"] .expiry-split-field .val{color:#eff6ff;}
 html[data-theme="dark"] .expiry-split-sample-btn{background:#1a2436;border-color:#334155;color:#dbe7f5;}
@@ -449,17 +528,16 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             {% if not can_edit %}
             <div class="val">{{ production.actual_boxes }} BOX</div>
             {% else %}
-            <input type="number" name="actual_boxes" id="actualBoxes"
+            <input type="hidden" name="actual_boxes" id="actualBoxes"
                    value="{{ production.actual_boxes or production.planned_boxes }}"
-                   min="1" readonly
-                   class="actual-boxes-input"
-                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:120px;">
-            <div class="lbl" style="margin-top:0.25rem;">소비기한별 박스 수 합계가 자동 반영됩니다.</div>
+                   min="1">
+            <div id="actualBoxesDisplay" class="display-readonly-value compact">{{ production.actual_boxes or production.planned_boxes }}</div>
+            <div class="display-readonly-hint">소비기한별 박스 수 합계가 자동 반영됩니다.</div>
             {% endif %}
         </div>
         {% if can_edit or (production.sample_excluded_total or 0) > 0 %}
         <div class="info-item">
-            <div class="lbl">수출 일정표 반영 박스 수</div>
+            <div class="lbl">실제 반영 박스 수</div>
             {% if not can_edit %}
             <div class="export-box-summary">
                 <div class="summary-main">{{ production.export_actual_boxes }} BOX</div>
@@ -467,8 +545,8 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             </div>
             {% else %}
             <div class="export-box-summary">
-                <input type="number" id="exportActualBoxes" value="{{ production.export_actual_boxes }}" readonly
-                       class="actual-boxes-input export-box-display">
+                <input type="hidden" id="exportActualBoxes" value="{{ production.export_actual_boxes }}">
+                <div id="exportActualBoxesDisplay" class="display-readonly-value success">{{ production.export_actual_boxes }}</div>
                 <div class="summary-sub" id="sampleExcludedSummary">샘플 제외 {{ production.sample_excluded_total }} BOX</div>
             </div>
             {% endif %}
@@ -580,27 +658,27 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     <h3>👥 인원 관리</h3>
     <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr 1.2fr 2fr;">
         <div class="info-item"><div class="lbl">공급 인원 *</div>
-            <input type="number" name="supply_people" min="0" value="{{ production.supply_people or '' }}"
+            <input type="number" name="supply_people" min="0" value="{{ production.supply_people or '' }}" class="personnel-input-highlight"
                    {% if can_edit %}required{% else %}readonly{% endif %}
-                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+                   style="padding:0.4rem;border:1px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">포장 인원 *</div>
-            <input type="number" name="packing_people" min="0" value="{{ production.packing_people or '' }}"
+            <input type="number" name="packing_people" min="0" value="{{ production.packing_people or '' }}" class="personnel-input-highlight"
                    {% if can_edit %}required{% else %}readonly{% endif %}
-                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+                   style="padding:0.4rem;border:1px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">외포장 인원 *</div>
-            <input type="number" name="outer_packing_people" min="0" value="{{ production.outer_packing_people or '' }}"
+            <input type="number" name="outer_packing_people" min="0" value="{{ production.outer_packing_people or '' }}" class="personnel-input-highlight"
                    {% if can_edit %}required{% else %}readonly{% endif %}
-                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+                   style="padding:0.4rem;border:1px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">작업시간 *</div>
-            <input type="text" name="work_time" value="{{ production.work_time or '' }}" placeholder="예: 08:30~17:30"
+            <input type="text" name="work_time" value="{{ production.work_time or '' }}" placeholder="예: 08:30~17:30" class="personnel-input-highlight"
                    {% if can_edit %}required{% else %}readonly{% endif %}
-                   style="padding:0.4rem;border:2px solid #667eea;border-radius:6px;width:100%;">
+                   style="padding:0.4rem;border:1px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">비고</div>
-            <textarea id="personnelNote" name="personnel_note" rows="1" {% if not can_edit %}readonly{% endif %} class="note-textarea auto-grow" placeholder="인원 관련 비고 입력">{{ production.personnel_note or '' }}</textarea>
+            <textarea id="personnelNote" name="personnel_note" rows="1" {% if not can_edit %}readonly{% endif %} class="note-textarea auto-grow personnel-input-highlight" placeholder="인원 관련 비고 입력">{{ production.personnel_note or '' }}</textarea>
             {% if can_edit and personnel_note_suggestions %}
             <div class="note-suggestion-row">
                 <div class="note-suggestion-wrap">
@@ -1190,11 +1268,19 @@ function syncExpiryRows(){
     });
     const normalizedTotal = Math.round(totalBoxes * 100) / 100;
     actualBoxesEl.value = hasAnyBoxInput ? String(normalizedTotal) : String(DEFAULT_BOXES);
+    const actualBoxesDisplayEl = document.getElementById('actualBoxesDisplay');
+    if(actualBoxesDisplayEl){
+        actualBoxesDisplayEl.textContent = actualBoxesEl.value;
+    }
     const normalizedSampleTotal = Math.round(totalSampleBoxes * 100) / 100;
     const exportActualBoxesEl = document.getElementById('exportActualBoxes');
+    const exportActualBoxesDisplayEl = document.getElementById('exportActualBoxesDisplay');
     const sampleSummaryEl = document.getElementById('sampleExcludedSummary');
     if(exportActualBoxesEl){
         exportActualBoxesEl.value = String(Math.max(normalizedTotal - normalizedSampleTotal, 0));
+    }
+    if(exportActualBoxesDisplayEl && exportActualBoxesEl){
+        exportActualBoxesDisplayEl.textContent = exportActualBoxesEl.value;
     }
     if(sampleSummaryEl){
         sampleSummaryEl.textContent = `샘플 제외 ${normalizedSampleTotal} BOX`;
