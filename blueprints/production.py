@@ -2347,6 +2347,193 @@ def schedule_requirements_data():
         conn_context.__exit__(None, None, None)
 
 
+@bp.route('/schedules/material-capacity-bom')
+@login_required
+def schedule_material_capacity_bom():
+    product_id = request.args.get('product_id', type=int)
+    workplace = get_workplace()
+
+    if not product_id:
+        return jsonify({'ok': False, 'message': '상품을 먼저 선택해 주세요.'}), 400
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT
+                id,
+                name,
+                COALESCE(NULLIF(TRIM(code), ''), printf('P%05d', id)) AS code,
+                COALESCE(sok_per_box, 0) AS sok_per_box
+            FROM products
+            WHERE id = ?
+              AND workplace = ?
+            ''',
+            (product_id, workplace),
+        )
+        product_row = cursor.fetchone()
+        if not product_row:
+            return jsonify({'ok': False, 'message': '선택한 상품을 찾을 수 없습니다.'}), 404
+
+        cursor.execute(
+            '''
+            SELECT
+                b.raw_material_id,
+                b.material_id,
+                COALESCE(p.sok_per_box, b.quantity_per_box, 0) AS raw_qty_per_box,
+                COALESCE(b.quantity_per_box, 0) AS quantity_per_box,
+                rm.name AS raw_name,
+                COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) AS raw_code,
+                m.name AS material_name,
+                COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) AS material_code,
+                COALESCE(m.category, '') AS material_category,
+                COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') AS material_unit
+            FROM bom b
+            LEFT JOIN products p ON p.id = b.product_id
+            LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
+            LEFT JOIN materials m ON m.id = b.material_id
+            WHERE b.product_id = ?
+            ORDER BY b.id ASC
+            ''',
+            (product_id,),
+        )
+        bom_rows = [dict(row) for row in cursor.fetchall()]
+
+        raw_codes = sorted(
+            {
+                str(row.get('raw_code') or '').strip()
+                for row in bom_rows
+                if str(row.get('raw_code') or '').strip()
+            }
+        )
+        raw_stock_map = {}
+        if raw_codes:
+            raw_placeholders = ','.join(['?'] * len(raw_codes))
+            cursor.execute(
+                f'''
+                SELECT
+                    COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) AS code,
+                    COALESCE(SUM(COALESCE(current_stock, 0)), 0) AS stock
+                FROM raw_materials
+                WHERE workplace = ?
+                  AND COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) IN ({raw_placeholders})
+                GROUP BY COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id))
+                ''',
+                [workplace, *raw_codes],
+            )
+            raw_stock_map = {
+                str(row['code'] or '').strip(): float(row['stock'] or 0)
+                for row in cursor.fetchall()
+            }
+
+        material_ids = sorted(
+            {
+                int(row.get('material_id') or 0)
+                for row in bom_rows
+                if int(row.get('material_id') or 0) > 0
+            }
+        )
+        material_stock_map = {}
+        if material_ids:
+            workplace_location = cursor.execute(
+                '''
+                SELECT id
+                FROM inv_locations
+                WHERE name = ? OR workplace_code = ?
+                ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id
+                LIMIT 1
+                ''',
+                (workplace, workplace, workplace),
+            ).fetchone()
+            if workplace_location:
+                material_placeholders = ','.join(['?'] * len(material_ids))
+                cursor.execute(
+                    f'''
+                    SELECT ml.material_id, COALESCE(SUM(b.qty), 0) AS qty
+                    FROM inv_material_lot_balances b
+                    JOIN material_lots ml ON ml.id = b.material_lot_id
+                    WHERE b.location_id = ?
+                      AND ml.material_id IN ({material_placeholders})
+                      AND COALESCE(ml.is_disposed, 0) = 0
+                    GROUP BY ml.material_id
+                    ''',
+                    [int(workplace_location['id']), *material_ids],
+                )
+                material_stock_map = {
+                    int(row['material_id']): float(row['qty'] or 0)
+                    for row in cursor.fetchall()
+                }
+
+        items = []
+        seen_raw_codes = set()
+        seen_material_ids = set()
+
+        for row in bom_rows:
+            raw_material_id = int(row.get('raw_material_id') or 0)
+            material_id = int(row.get('material_id') or 0)
+
+            if raw_material_id > 0:
+                code = str(row.get('raw_code') or '').strip()
+                if not code or code in seen_raw_codes:
+                    continue
+                seen_raw_codes.add(code)
+                per_box_qty = float(row.get('raw_qty_per_box') or row.get('quantity_per_box') or 0)
+                if per_box_qty <= 0:
+                    continue
+                items.append(
+                    {
+                        'key': f'raw:{code}',
+                        'item_type': 'raw',
+                        'group_key': 'raw',
+                        'group_label': '원초',
+                        'code': code,
+                        'name': row.get('raw_name') or code,
+                        'unit': '속',
+                        'per_box_qty': round(per_box_qty, 4),
+                        'stock': round(float(raw_stock_map.get(code, 0.0) or 0.0), 2),
+                    }
+                )
+                continue
+
+            if material_id <= 0 or material_id in seen_material_ids:
+                continue
+            seen_material_ids.add(material_id)
+            per_box_qty = float(row.get('quantity_per_box') or 0)
+            if per_box_qty <= 0:
+                continue
+            category = str(row.get('material_category') or '').strip()
+            is_base = category in ('기름', '소금')
+            items.append(
+                {
+                    'key': f'material:{material_id}',
+                    'item_type': 'material',
+                    'group_key': 'base' if is_base else 'sub',
+                    'group_label': '원자재 (기름, 소금)' if is_base else '부자재',
+                    'code': str(row.get('material_code') or f'M{material_id:05d}'),
+                    'name': row.get('material_name') or f'부자재 {material_id}',
+                    'unit': row.get('material_unit') or 'EA',
+                    'category': category,
+                    'per_box_qty': round(per_box_qty, 4),
+                    'stock': round(float(material_stock_map.get(material_id, 0.0) or 0.0), 2),
+                }
+            )
+
+        group_order = {'raw': 0, 'base': 1, 'sub': 2}
+        items.sort(key=lambda item: (group_order.get(item.get('group_key'), 9), item.get('name') or '', item.get('code') or ''))
+
+        return jsonify(
+            {
+                'ok': True,
+                'product': {
+                    'id': int(product_row['id']),
+                    'name': product_row['name'] or '',
+                    'code': product_row['code'] or '',
+                },
+                'items': items,
+            }
+        )
+
+
 @bp.route('/schedules/requirements-auto-purchase', methods=['POST'])
 @role_required('production', 'purchase')
 def schedule_requirements_auto_purchase():
@@ -3601,7 +3788,8 @@ def production_detail(production_id):
     cursor.execute(
         '''
         SELECT pr.*, p.name as product_name, p.box_quantity, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
-               p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3, p.expiry_months
+               p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3, p.expiry_months,
+               p.spec_sheet_file_name, p.spec_sheet_stored_name, p.spec_sheet_uploaded_at
                , COALESCE(ps.line, '') as line
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id

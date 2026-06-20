@@ -7,6 +7,13 @@
 .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
 .info-item .lbl{font-size:0.78rem;color:#999;margin-bottom:0.2rem;}
 .info-item .val{font-weight:600;font-size:0.95rem;white-space:normal;word-break:break-word;line-height:1.35;}
+.product-title-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.product-title-actions{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
+.product-spec-btn{display:inline-flex;align-items:center;justify-content:center;padding:.42rem .82rem;border-radius:999px;font-size:.8rem;font-weight:800;text-decoration:none;line-height:1.2;}
+.product-spec-btn.view{background:#eef2ff;border:1px solid #c7d2fe;color:#334155;}
+.product-spec-btn.view:hover{background:#e0e7ff;border-color:#a5b4fc;color:#1e3a8a;}
+.product-spec-btn.register{background:#ecfdf5;border:1px solid #86efac;color:#166534;}
+.product-spec-btn.register:hover{background:#dcfce7;border-color:#4ade80;color:#166534;}
 .note-textarea{width:100%;padding:0.55rem 0.65rem;border:2px solid #667eea;border-radius:8px;box-sizing:border-box;font-size:0.9rem;line-height:1.45;resize:vertical;min-height:74px;font-family:inherit;}
 .ainput,
 .note-textarea:not([readonly]),
@@ -354,6 +361,10 @@ html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:12px"],
 html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{background:#162133 !important;color:#dbe7f5 !important;border-color:#263244 !important;}
 html[data-theme="dark"] .section-journal-btn{background:#152033;border-color:#334155;color:#dbe7f5;}
 html[data-theme="dark"] .section-journal-btn:hover{background:#1b2940;border-color:#60a5fa;color:#eff6ff;}
+html[data-theme="dark"] .product-spec-btn.view{background:#152033;border-color:#334155;color:#dbe7f5;}
+html[data-theme="dark"] .product-spec-btn.view:hover{background:#1b2940;border-color:#60a5fa;color:#eff6ff;}
+html[data-theme="dark"] .product-spec-btn.register{background:#0f2e22;border-color:#166534;color:#bbf7d0;}
+html[data-theme="dark"] .product-spec-btn.register:hover{background:#14532d;border-color:#22c55e;color:#dcfce7;}
 html[data-theme="dark"] .raw-input-row{border-top-color:#334155;}
 html[data-theme="dark"] .raw-note-wrap label,
 html[data-theme="dark"] [id^="raw_note_wrap_"] label{color:#8ea3bd !important;}
@@ -399,6 +410,7 @@ html[data-theme="dark"] [id^="rw_"]{color:#fda4af !important;}
     .expiry-split-readonly-row,
     .expiry-split-readonly-row.no-sample{grid-template-columns:1fr;}
     .section-head{align-items:flex-start;}
+    .product-title-row{align-items:flex-start;flex-direction:column;}
     .raw-change-btn{min-height:42px;}
     .raw-change-modal-bg{align-items:flex-end;padding:.6rem;}
     .raw-change-modal{width:100%;max-height:88vh;border-radius:18px 18px 12px 12px;}
@@ -513,7 +525,21 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 <div class="sec">
     <h3>📦 생산 정보</h3>
     <div class="info-grid">
-        <div class="info-item" style="grid-column:1 / -1;"><div class="lbl">제품명</div><div class="val">{{ production.product_name }}</div></div>
+        <div class="info-item" style="grid-column:1 / -1;">
+            <div class="lbl">제품명</div>
+            <div class="val product-title-row">
+                <span>{{ production.product_name }}</span>
+                {% if production.product_id %}
+                <div class="product-title-actions">
+                    {% if production.spec_sheet_stored_name %}
+                    <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id) }}" target="_blank" rel="noopener" class="product-spec-btn view">사양서 보기</a>
+                    {% elif can_prod %}
+                    <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id) }}" target="_blank" rel="noopener" class="product-spec-btn register">사양서 등록</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
         <div class="info-item"><div class="lbl">생산번호</div><div class="val">PROD-{{ production.id }}</div></div>
         <div class="info-item"><div class="lbl">생산일</div><div class="val">{{ production.production_date }}</div></div>
         <div class="info-item"><div class="lbl">생산 라인</div><div class="val">{{ ('라인 ' ~ production.line.replace(',', ', 라인 ')) if production.line else '-' }}</div></div>
@@ -1397,6 +1423,10 @@ function recalcAll(){
         const newExp = Math.ceil(pb * boxes * 10) / 10;
         const ec = document.getElementById(`exp_${uid}`);
         if(ec) ec.textContent = newExp.toFixed(1);
+        const actualInput = document.querySelector(`input[name="actual_mat_${uid}"]`);
+        if(actualInput){
+            calcLoss(uid, actualInput.value, newExp);
+        }
     });
     updateTotal();
 }
@@ -1894,6 +1924,9 @@ function calcLoss(uid, val, expOverride){
             const col = yr>=95?'#27ae60':yr>=90?'#f39c12':'#e74c3c';
             yc.innerHTML = `<strong style="color:${col}">${yr.toFixed(1)}%</strong>`;
         }
+    }else{
+        if(lc) lc.textContent = '-';
+        if(yc) yc.textContent = '-';
     }
 }
 
