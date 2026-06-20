@@ -2288,6 +2288,9 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 #requirementsView {
     padding: 1.2rem 1.4rem 1.6rem;
 }
+#capacityView {
+    padding: 1.2rem 1.4rem 1.6rem;
+}
 .req-topbar {
     display: flex;
     justify-content: space-between;
@@ -2506,6 +2509,369 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 .req-muted {
     color: #64748b;
     font-size: 0.82rem;
+}
+.req-capacity-card {
+    border: 1px solid #dbe7f3;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+.req-capacity-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.85rem;
+}
+.req-capacity-head h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+}
+.req-capacity-toolbar {
+    display: flex;
+    gap: 0.55rem;
+    align-items: end;
+    flex-wrap: wrap;
+    margin-bottom: 0.9rem;
+}
+.req-capacity-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 220px;
+    flex: 1 1 280px;
+}
+.req-capacity-field label {
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 700;
+}
+.req-capacity-select,
+.req-capacity-qty-input {
+    width: 100%;
+    padding: 0.62rem 0.72rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 0.88rem;
+}
+.req-capacity-select:focus,
+.req-capacity-qty-input:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.req-capacity-btn {
+    border: 1px solid #0f766e;
+    background: linear-gradient(135deg, #0f766e, #115e59);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.62rem 0.95rem;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(15, 118, 110, 0.22);
+}
+.req-capacity-btn.secondary {
+    border-color: #cbd5e1;
+    background: #fff;
+    color: #334155;
+    box-shadow: none;
+}
+.req-capacity-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.req-capacity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 0.9rem;
+}
+.req-capacity-panel {
+    border: 1px solid #dbe7f3;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+}
+.req-capacity-panel h4 {
+    margin: 0;
+    padding: 0.72rem 0.85rem;
+    font-size: 0.9rem;
+    color: #0f172a;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+.req-capacity-items {
+    display: flex;
+    flex-direction: column;
+}
+.req-capacity-empty {
+    padding: 1rem 0.9rem;
+    color: #64748b;
+    font-size: 0.84rem;
+}
+.req-capacity-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(130px, 150px);
+    gap: 0.8rem;
+    padding: 0.85rem;
+    border-top: 1px solid #edf2f7;
+    align-items: center;
+}
+.req-capacity-item:first-child {
+    border-top: none;
+}
+.req-capacity-item-main {
+    min-width: 0;
+}
+.req-capacity-item-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    cursor: pointer;
+}
+.req-capacity-item-check input[type="checkbox"],
+.req-capacity-box-check input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    margin: 0.05rem 0 0;
+    flex: 0 0 22px;
+    accent-color: #0f766e;
+    cursor: pointer;
+}
+.req-capacity-item-copy {
+    min-width: 0;
+}
+.req-capacity-item:hover {
+    background: #fbfdff;
+}
+.req-capacity-item-name {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    color: #0f172a;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+.req-capacity-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+.req-capacity-chip.raw {
+    background: #ecfdf3;
+    color: #15803d;
+}
+.req-capacity-chip.base {
+    background: #fff7ed;
+    color: #c2410c;
+}
+.req-capacity-chip.sub {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+.req-capacity-item-meta {
+    margin-top: 0.3rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+.req-capacity-stock {
+    margin-top: 0.25rem;
+    font-size: 0.78rem;
+    color: #334155;
+    font-weight: 700;
+}
+.req-capacity-item-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.req-capacity-item-entry label {
+    font-size: 0.76rem;
+    color: #64748b;
+    font-weight: 700;
+}
+.req-capacity-raw-split {
+    border-top: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+}
+.req-capacity-box-zone {
+    padding: 0.95rem 0.9rem 1rem;
+}
+.req-capacity-box-zone-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.7rem;
+}
+.req-capacity-box-zone-head h5 {
+    margin: 0;
+    font-size: 0.86rem;
+    color: #0f172a;
+}
+.req-capacity-box-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    cursor: pointer;
+}
+.req-capacity-box-copy {
+    min-width: 0;
+}
+.req-capacity-box-title {
+    color: #0f172a;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+.req-capacity-box-meta {
+    margin-top: 0.25rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+.req-capacity-box-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    align-items: end;
+    margin-top: 0.75rem;
+}
+.req-capacity-box-unit {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.2rem;
+    color: #475569;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+.req-capacity-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+.req-capacity-summary-card {
+    border: 1px solid #dbe7f3;
+    border-radius: 12px;
+    background: #fff;
+    padding: 0.9rem 1rem;
+}
+.req-capacity-summary-card .label {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.req-capacity-summary-card .value {
+    margin-top: 0.28rem;
+    color: #0f172a;
+    font-size: 1.18rem;
+    font-weight: 900;
+}
+.req-capacity-summary-card .value.req-capacity-highlight-green {
+    color: #ff6b81;
+    text-shadow: 0 0 10px rgba(255, 107, 129, 0.34), 0 0 18px rgba(244, 63, 94, 0.18);
+}
+.req-capacity-summary-card .value.req-capacity-highlight-red {
+    color: #ff6b81;
+    text-shadow: 0 0 10px rgba(255, 107, 129, 0.34), 0 0 18px rgba(244, 63, 94, 0.18);
+}
+.req-capacity-result {
+    margin-top: 1rem;
+    border: 1px solid #dbe7f3;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+}
+.req-capacity-result-head {
+    padding: 0.82rem 0.95rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+.req-capacity-result-head h4 {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #0f172a;
+}
+.req-capacity-result-sub {
+    margin-top: 0.24rem;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+.req-capacity-result-empty {
+    padding: 1rem 0.95rem;
+    color: #64748b;
+    font-size: 0.84rem;
+}
+.req-capacity-result .table-container {
+    overflow-x: auto;
+}
+.req-capacity-result .req-table {
+    width: max-content;
+    min-width: 1280px;
+    table-layout: auto;
+}
+.req-capacity-result .req-table th,
+.req-capacity-result .req-table td {
+    white-space: nowrap;
+}
+.req-capacity-result .req-table th:nth-child(1),
+.req-capacity-result .req-table td:nth-child(1) {
+    min-width: 160px;
+}
+.req-capacity-result .req-table th:nth-child(2),
+.req-capacity-result .req-table td:nth-child(2) {
+    min-width: 120px;
+}
+.req-capacity-result .req-table th:nth-child(3),
+.req-capacity-result .req-table td:nth-child(3) {
+    min-width: 360px;
+}
+.req-capacity-result .req-table th:nth-child(4),
+.req-capacity-result .req-table td:nth-child(4),
+.req-capacity-result .req-table th:nth-child(5),
+.req-capacity-result .req-table td:nth-child(5),
+.req-capacity-result .req-table th:nth-child(6),
+.req-capacity-result .req-table td:nth-child(6),
+.req-capacity-result .req-table th:nth-child(7),
+.req-capacity-result .req-table td:nth-child(7) {
+    min-width: 140px;
+}
+@media (max-width: 768px) {
+    .req-capacity-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .req-capacity-field {
+        min-width: 0;
+        width: 100%;
+    }
+    .req-capacity-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .req-capacity-item {
+        grid-template-columns: 1fr;
+    }
+    .req-capacity-summary {
+        grid-template-columns: 1fr;
+    }
 }
 .export-topbar {
     display:flex;
@@ -3167,6 +3533,39 @@ html[data-theme="dark"] .req-table th:first-child,
 html[data-theme="dark"] .req-table td:first-child,
 html[data-theme="dark"] .req-muted{color:#8ea3bd;}
 html[data-theme="dark"] .req-table td.req-shortage{color:#f87171 !important;font-weight:800;}
+html[data-theme="dark"] .req-capacity-card,
+html[data-theme="dark"] .req-capacity-panel,
+html[data-theme="dark"] .req-capacity-summary-card,
+html[data-theme="dark"] .req-capacity-result{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 14px 32px rgba(2,6,23,.26);}
+html[data-theme="dark"] .req-capacity-head h3,
+html[data-theme="dark"] .req-capacity-panel h4,
+html[data-theme="dark"] .req-capacity-result-head h4,
+html[data-theme="dark"] .req-capacity-item-name,
+html[data-theme="dark"] .req-capacity-summary-card .value{color:#eff6ff;}
+html[data-theme="dark"] .req-capacity-summary-card .value.req-capacity-highlight-green{color:#d9ff57;text-shadow:0 0 12px rgba(217,255,87,.42),0 0 22px rgba(163,230,53,.26);}
+html[data-theme="dark"] .req-capacity-summary-card .value.req-capacity-highlight-red{color:#d9ff57;text-shadow:0 0 12px rgba(217,255,87,.42),0 0 22px rgba(163,230,53,.26);}
+html[data-theme="dark"] .req-capacity-panel h4,
+html[data-theme="dark"] .req-capacity-result-head{background:#182234;border-bottom-color:#263244;}
+html[data-theme="dark"] .req-capacity-item{border-top-color:#223046;}
+html[data-theme="dark"] .req-capacity-select,
+html[data-theme="dark"] .req-capacity-qty-input{background:#0f172a;border-color:#314155;color:#eff6ff;}
+html[data-theme="dark"] .req-capacity-btn.secondary{background:#152033;border-color:#334155;color:#dbe7f5;}
+html[data-theme="dark"] .req-capacity-empty,
+html[data-theme="dark"] .req-capacity-item-meta,
+html[data-theme="dark"] .req-capacity-item-entry label,
+html[data-theme="dark"] .req-capacity-summary-card .label,
+html[data-theme="dark"] .req-capacity-result-sub,
+html[data-theme="dark"] .req-capacity-result-empty,
+html[data-theme="dark"] .req-capacity-stock{color:#8ea3bd;}
+html[data-theme="dark"] .req-capacity-raw-split{border-top-color:#263244;background:linear-gradient(180deg,#101827 0%,#121a2a 100%);}
+html[data-theme="dark"] .req-capacity-box-zone-head h5,
+html[data-theme="dark"] .req-capacity-box-title{color:#eff6ff;}
+html[data-theme="dark"] .req-capacity-box-meta,
+html[data-theme="dark"] .req-capacity-box-unit{color:#8ea3bd;}
+html[data-theme="dark"] .req-capacity-item:hover{background:#162133;}
+html[data-theme="dark"] .req-capacity-chip.sub{background:rgba(37,99,235,.16);color:#bfdbfe;}
+html[data-theme="dark"] .req-capacity-chip.raw{background:rgba(22,163,74,.16);color:#bbf7d0;}
+html[data-theme="dark"] .req-capacity-chip.base{background:rgba(234,88,12,.16);color:#fdba74;}
 html[data-theme="dark"] #addModal .modal-content {
     background: linear-gradient(180deg, #121a2a 0%, #0f1726 100%);
 }
@@ -3739,9 +4138,10 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 <div class="schedule-toolbar">
     <div class="view-toggle">
         <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
-        <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
-        <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
         <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
+        <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
+        <button data-view="capacity" onclick="switchView('capacity')">📦 생산 가능량 계산기</button>
+        <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
     </div>
     {% if can_prod %}
     <button class="btn" onclick="openAddModal()">+ 스케줄 추가</button>
@@ -3825,6 +4225,73 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div id="reqProductsPanel" style="display:none;">
         <div id="reqProductTabs" class="req-product-tabs"></div>
         <div id="reqProductsWrap"></div>
+    </div>
+</div>
+
+<div id="capacityView" class="card" style="display: none;">
+    <div class="req-capacity-card" style="margin-bottom:0;">
+        <div class="req-capacity-head">
+            <div>
+                <h3>부자재 기준 생산 가능량 계산기</h3>
+                <div class="req-muted">상품을 선택한 뒤 BOM에 등록된 원초/원부자재 중 기준이 되는 품목을 체크하고 수량을 입력하면 생산 가능 BOX와 전체 BOM 필요량을 계산합니다.</div>
+            </div>
+        </div>
+        <div class="req-capacity-toolbar">
+            <div class="req-capacity-field">
+                <label for="reqCapacityProductSelect">상품 선택</label>
+                <select id="reqCapacityProductSelect" class="req-capacity-select" onchange="loadReqCapacityBomBySelection()">
+                    <option value="">상품을 선택하세요</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="button" id="reqCapacityLoadBtn" class="req-capacity-btn" onclick="loadReqCapacityBom(true)">BOM 불러오기</button>
+            <button type="button" class="req-capacity-btn secondary" onclick="resetReqCapacityCalculator(true)">초기화</button>
+        </div>
+        <div class="req-capacity-grid">
+            <div class="req-capacity-panel">
+                <h4>원초</h4>
+                <div id="reqCapacityRawItems" class="req-capacity-items">
+                    <div class="req-capacity-empty">상품을 선택하면 BOM 항목이 표시됩니다.</div>
+                </div>
+                <div class="req-capacity-raw-split">
+                    <div class="req-capacity-box-zone">
+                        <div class="req-capacity-box-zone-head">
+                            <h5>생산 박스 수 직접 입력</h5>
+                        </div>
+                        <label class="req-capacity-box-check">
+                            <input type="checkbox" id="reqCapacityBoxModeCheck" onchange="toggleReqCapacityBoxMode(this)">
+                            <div class="req-capacity-box-copy">
+                                <div class="req-capacity-box-title">박스 수를 기준으로 전체 BOM 필요량 계산</div>
+                                <div class="req-capacity-box-meta">원/부자재를 고르는 대신 목표 생산 BOX 수를 직접 입력할 수 있습니다. 원/부자재 또는 박스 수 중 하나만 선택 가능합니다.</div>
+                            </div>
+                        </label>
+                        <div class="req-capacity-box-input-row">
+                            <input type="number" id="reqCapacityBoxCountInput" min="0" step="0.1" class="req-capacity-qty-input" disabled placeholder="생산 BOX 수 입력" oninput="handleReqCapacityQtyInput()" onkeydown="handleReqCapacityQtyKeydown(event)">
+                            <span class="req-capacity-box-unit">BOX</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="req-capacity-panel">
+                <h4>원자재 (기름, 소금)</h4>
+                <div id="reqCapacityBaseItems" class="req-capacity-items">
+                    <div class="req-capacity-empty">상품을 선택하면 BOM 항목이 표시됩니다.</div>
+                </div>
+            </div>
+            <div class="req-capacity-panel">
+                <h4>부자재</h4>
+                <div id="reqCapacitySubItems" class="req-capacity-items">
+                    <div class="req-capacity-empty">상품을 선택하면 BOM 항목이 표시됩니다.</div>
+                </div>
+            </div>
+        </div>
+        <div class="req-actions" style="justify-content:flex-end;">
+            <button type="button" id="reqCapacityCalcBtn" class="req-capacity-btn" onclick="calculateReqCapacity()" disabled>생산 가능량 계산</button>
+        </div>
+        <div id="reqCapacitySummary" class="req-capacity-summary" style="display:none;"></div>
+        <div id="reqCapacityResult" class="req-capacity-result" style="display:none;"></div>
     </div>
 </div>
 
@@ -4585,6 +5052,9 @@ const statsDetailDefaultDateTo = {{ month_end.strftime('%Y-%m-%d')|tojson }};
 let requirementsLoadedKey = '';
 let requirementsProductsCache = [];
 let currentReqProductId = null;
+let reqCapacitySelectedProductId = null;
+let reqCapacityBomItems = [];
+const reqCapacityBomCache = {};
 const CURRENT_SCHEDULE_WORKPLACE = {{ (current_workplace or '')|tojson }};
 const exportToday = new Date();
 let currentExportScheduleTab = 'active';
@@ -5258,6 +5728,7 @@ function switchView(view) {
     const statsView = document.getElementById('statsView');
     const requirementsView = document.getElementById('requirementsView');
     const exportView = document.getElementById('exportView');
+    const capacityView = document.getElementById('capacityView');
     const buttons = document.querySelectorAll('.view-toggle button[data-view]');
     const normalizedView = view === 'list' ? 'stats' : view;
 
@@ -5267,6 +5738,7 @@ function switchView(view) {
     if (statsView) statsView.style.display = 'none';
     if (requirementsView) requirementsView.style.display = 'none';
     if (exportView) exportView.style.display = 'none';
+    if (capacityView) capacityView.style.display = 'none';
 
     if (normalizedView === 'calendar') {
         calendarView.style.display = 'block';
@@ -5277,6 +5749,8 @@ function switchView(view) {
         loadRequirementsData();
     } else if (normalizedView === 'export') {
         if (exportView) exportView.style.display = 'block';
+    } else if (normalizedView === 'capacity') {
+        if (capacityView) capacityView.style.display = 'block';
     }
     setViewQuery(normalizedView);
 }
@@ -5311,9 +5785,400 @@ function normalizeReqUnit(unit) {
 }
 
 function formatReqNumberWithUnit(value, unit, asInteger = false) {
-    const text = formatReqNumber(value, asInteger);
+    const text = asInteger ? formatReqDisplayNumber(Math.round(Number(value || 0)), 0) : formatReqDisplayNumber(value, 1);
     const unitText = normalizeReqUnit(unit);
     return unitText ? `${text} ${escapeHtml(unitText)}` : text;
+}
+
+function getReqCapacityDomKey(key) {
+    return String(key || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function formatReqCapacityBoxes(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return '0';
+    const floored = Math.floor(num * 100) / 100;
+    return floored.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function formatReqDisplayNumber(value, maximumFractionDigits = 1) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return '0';
+    return num.toLocaleString('ko-KR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits,
+    });
+}
+
+function resetReqCapacityPanels(message = '상품을 선택하면 BOM 항목이 표시됩니다.') {
+    const html = `<div class="req-capacity-empty">${escapeHtml(message)}</div>`;
+    const rawWrap = document.getElementById('reqCapacityRawItems');
+    const baseWrap = document.getElementById('reqCapacityBaseItems');
+    const subWrap = document.getElementById('reqCapacitySubItems');
+    if (rawWrap) rawWrap.innerHTML = html;
+    if (baseWrap) baseWrap.innerHTML = html;
+    if (subWrap) subWrap.innerHTML = html;
+}
+
+function resetReqCapacityCalculator(resetProduct = false) {
+    reqCapacitySelectedProductId = null;
+    reqCapacityBomItems = [];
+    if (resetProduct) {
+        const select = document.getElementById('reqCapacityProductSelect');
+        if (select) select.value = '';
+    }
+    resetReqCapacityPanels();
+    const calcBtn = document.getElementById('reqCapacityCalcBtn');
+    if (calcBtn) calcBtn.disabled = true;
+    const boxCheck = document.getElementById('reqCapacityBoxModeCheck');
+    const boxInput = document.getElementById('reqCapacityBoxCountInput');
+    if (boxCheck) boxCheck.checked = false;
+    if (boxInput) {
+        boxInput.disabled = true;
+        boxInput.value = '';
+    }
+    const summary = document.getElementById('reqCapacitySummary');
+    const result = document.getElementById('reqCapacityResult');
+    if (summary) {
+        summary.style.display = 'none';
+        summary.innerHTML = '';
+    }
+    if (result) {
+        result.style.display = 'none';
+        result.innerHTML = '';
+    }
+}
+
+function renderReqCapacityItem(item) {
+    const domKey = getReqCapacityDomKey(item.key);
+    const chipClass = item.group_key === 'raw' ? 'raw' : item.group_key === 'base' ? 'base' : 'sub';
+    const categoryText = item.group_key === 'sub' && item.category ? ` · ${escapeHtml(item.category)}` : '';
+    return `
+        <div class="req-capacity-item">
+            <div class="req-capacity-item-main">
+                <label class="req-capacity-item-check">
+                    <input type="checkbox" data-key="${escapeHtml(item.key)}" data-dom-key="${domKey}" onchange="toggleReqCapacityItem(this)">
+                    <div class="req-capacity-item-copy">
+                        <div class="req-capacity-item-name">
+                            <span class="req-capacity-chip ${chipClass}">${escapeHtml(item.group_label || '')}</span>
+                            <span>${escapeHtml(item.name || '-')}</span>
+                        </div>
+                        <div class="req-capacity-item-meta">
+                            ${escapeHtml(item.code || '-')} · BOX당 ${formatReqNumberWithUnit(item.per_box_qty, item.unit, item.group_key === 'raw')}${categoryText}
+                        </div>
+                        <div class="req-capacity-stock">시스템 재고 ${formatReqNumberWithUnit(item.stock, item.unit, item.group_key === 'raw')}</div>
+                    </div>
+                </label>
+            </div>
+            <div class="req-capacity-item-entry">
+                <label for="reqCapacityQty_${domKey}">입력 수량</label>
+                <input
+                    id="reqCapacityQty_${domKey}"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    class="req-capacity-qty-input"
+                    data-key="${escapeHtml(item.key)}"
+                    data-dom-key="${domKey}"
+                    data-item-type="${escapeHtml(item.group_key || '')}"
+                    disabled
+                    placeholder="${escapeHtml(item.unit || '')}"
+                    oninput="handleReqCapacityQtyInput()"
+                    onkeydown="handleReqCapacityQtyKeydown(event)">
+            </div>
+        </div>
+    `;
+}
+
+function renderReqCapacityGroup(groupKey) {
+    const rows = reqCapacityBomItems.filter((item) => item.group_key === groupKey);
+    if (!rows.length) {
+        return '<div class="req-capacity-empty">등록된 BOM 항목이 없습니다.</div>';
+    }
+    return rows.map((item) => renderReqCapacityItem(item)).join('');
+}
+
+function renderReqCapacityBomPanels() {
+    const rawWrap = document.getElementById('reqCapacityRawItems');
+    const baseWrap = document.getElementById('reqCapacityBaseItems');
+    const subWrap = document.getElementById('reqCapacitySubItems');
+    if (rawWrap) rawWrap.innerHTML = renderReqCapacityGroup('raw');
+    if (baseWrap) baseWrap.innerHTML = renderReqCapacityGroup('base');
+    if (subWrap) subWrap.innerHTML = renderReqCapacityGroup('sub');
+}
+
+function loadReqCapacityBomBySelection() {
+    loadReqCapacityBom(false);
+}
+
+async function loadReqCapacityBom(forceReload = false) {
+    const select = document.getElementById('reqCapacityProductSelect');
+    const loadBtn = document.getElementById('reqCapacityLoadBtn');
+    const calcBtn = document.getElementById('reqCapacityCalcBtn');
+    const summary = document.getElementById('reqCapacitySummary');
+    const result = document.getElementById('reqCapacityResult');
+    if (!select) return;
+    const productId = Number(select.value || 0);
+    if (!productId) {
+        resetReqCapacityCalculator(false);
+        return;
+    }
+
+    if (summary) {
+        summary.style.display = 'none';
+        summary.innerHTML = '';
+    }
+    if (result) {
+        result.style.display = 'none';
+        result.innerHTML = '';
+    }
+
+    if (!forceReload && reqCapacityBomCache[productId]) {
+        reqCapacitySelectedProductId = productId;
+        reqCapacityBomItems = reqCapacityBomCache[productId].items || [];
+        renderReqCapacityBomPanels();
+        const boxCheck = document.getElementById('reqCapacityBoxModeCheck');
+        const boxInput = document.getElementById('reqCapacityBoxCountInput');
+        if (boxCheck) boxCheck.checked = false;
+        if (boxInput) {
+            boxInput.disabled = true;
+            boxInput.value = '';
+        }
+        if (calcBtn) calcBtn.disabled = reqCapacityBomItems.length === 0;
+        return;
+    }
+
+    resetReqCapacityPanels('BOM 항목을 불러오는 중입니다...');
+    if (loadBtn) loadBtn.disabled = true;
+    if (calcBtn) calcBtn.disabled = true;
+
+    try {
+        const res = await fetch(`/schedules/material-capacity-bom?product_id=${productId}`);
+        const payload = await res.json();
+        if (!res.ok || !payload.ok) {
+            throw new Error(payload.message || 'BOM 항목을 불러오지 못했습니다.');
+        }
+        reqCapacitySelectedProductId = productId;
+        reqCapacityBomCache[productId] = payload;
+        reqCapacityBomItems = payload.items || [];
+        renderReqCapacityBomPanels();
+        const boxCheck = document.getElementById('reqCapacityBoxModeCheck');
+        const boxInput = document.getElementById('reqCapacityBoxCountInput');
+        if (boxCheck) boxCheck.checked = false;
+        if (boxInput) {
+            boxInput.disabled = true;
+            boxInput.value = '';
+        }
+        if (calcBtn) calcBtn.disabled = reqCapacityBomItems.length === 0;
+        if (!reqCapacityBomItems.length) {
+            resetReqCapacityPanels('등록된 BOM 항목이 없습니다.');
+        }
+    } catch (error) {
+        reqCapacitySelectedProductId = null;
+        reqCapacityBomItems = [];
+        resetReqCapacityPanels(error.message || 'BOM 항목을 불러오지 못했습니다.');
+    } finally {
+        if (loadBtn) loadBtn.disabled = false;
+    }
+}
+
+function toggleReqCapacityItem(checkbox) {
+    if (!checkbox) return;
+    const allBoxes = Array.from(document.querySelectorAll('#capacityView .req-capacity-item-check input[type="checkbox"]'));
+    const boxModeCheck = document.getElementById('reqCapacityBoxModeCheck');
+    const boxModeInput = document.getElementById('reqCapacityBoxCountInput');
+    const domKey = checkbox.dataset.domKey || '';
+    const input = document.getElementById(`reqCapacityQty_${domKey}`);
+    if (!input) return;
+
+    if (checkbox.checked) {
+        allBoxes.forEach((box) => {
+            if (box !== checkbox) {
+                box.checked = false;
+                const otherKey = box.dataset.domKey || '';
+                const otherInput = document.getElementById(`reqCapacityQty_${otherKey}`);
+                if (otherInput) {
+                    otherInput.disabled = true;
+                    otherInput.value = '';
+                }
+            }
+        });
+        if (boxModeCheck) boxModeCheck.checked = false;
+        if (boxModeInput) {
+            boxModeInput.disabled = true;
+            boxModeInput.value = '';
+        }
+        input.disabled = false;
+        input.focus();
+    } else {
+        input.disabled = true;
+        input.value = '';
+    }
+
+    const result = document.getElementById('reqCapacityResult');
+    if (result && result.style.display !== 'none') {
+        calculateReqCapacity(true);
+    }
+}
+
+function toggleReqCapacityBoxMode(checkbox) {
+    const boxInput = document.getElementById('reqCapacityBoxCountInput');
+    const allBoxes = Array.from(document.querySelectorAll('#capacityView .req-capacity-item-check input[type="checkbox"]'));
+    if (!checkbox || !boxInput) return;
+
+    if (checkbox.checked) {
+        allBoxes.forEach((box) => {
+            box.checked = false;
+            const domKey = box.dataset.domKey || '';
+            const input = document.getElementById(`reqCapacityQty_${domKey}`);
+            if (input) {
+                input.disabled = true;
+                input.value = '';
+            }
+        });
+        boxInput.disabled = false;
+        boxInput.focus();
+    } else {
+        boxInput.disabled = true;
+        boxInput.value = '';
+    }
+
+    const result = document.getElementById('reqCapacityResult');
+    if (result && result.style.display !== 'none') {
+        calculateReqCapacity(true);
+    }
+}
+
+function handleReqCapacityQtyInput() {
+    const result = document.getElementById('reqCapacityResult');
+    if (result && result.style.display !== 'none') {
+        calculateReqCapacity(true);
+    }
+}
+
+function handleReqCapacityQtyKeydown(event) {
+    if (!event || event.key !== 'Enter') return;
+    event.preventDefault();
+    calculateReqCapacity();
+}
+
+function collectReqCapacitySelections() {
+    return reqCapacityBomItems
+        .map((item) => {
+            const domKey = getReqCapacityDomKey(item.key);
+            const checkbox = document.querySelector(`input[type="checkbox"][data-dom-key="${domKey}"]`);
+            const input = document.getElementById(`reqCapacityQty_${domKey}`);
+            const enteredQty = Number(input ? input.value || 0 : 0);
+            return {
+                ...item,
+                checked: Boolean(checkbox && checkbox.checked),
+                entered_qty: Number.isFinite(enteredQty) ? enteredQty : 0,
+            };
+        })
+        .filter((item) => item.checked && item.entered_qty > 0 && Number(item.per_box_qty || 0) > 0);
+}
+
+function calculateReqCapacity(silent = false) {
+    if (!reqCapacitySelectedProductId || !reqCapacityBomItems.length) {
+        if (!silent) alert('상품 BOM을 먼저 불러와 주세요.');
+        return;
+    }
+
+    const boxModeCheck = document.getElementById('reqCapacityBoxModeCheck');
+    const boxCountInput = document.getElementById('reqCapacityBoxCountInput');
+    const isBoxMode = Boolean(boxModeCheck && boxModeCheck.checked);
+    const selectedItems = collectReqCapacitySelections();
+    const manualBoxes = Number(boxCountInput ? boxCountInput.value || 0 : 0);
+
+    if (!isBoxMode && !selectedItems.length) {
+        if (!silent) alert('기준이 될 원부자재 1개를 체크하고 수량을 입력하거나, 박스 수 직접 입력을 선택해 주세요.');
+        return;
+    }
+    if (isBoxMode && !(manualBoxes > 0)) {
+        if (!silent) alert('생산 BOX 수를 입력해 주세요.');
+        return;
+    }
+
+    const possibleBoxesRaw = isBoxMode
+        ? manualBoxes
+        : Math.min(...selectedItems.map((item) => Number(item.entered_qty || 0) / Number(item.per_box_qty || 1)));
+    const possibleBoxes = Math.max(Math.floor(possibleBoxesRaw * 100) / 100, 0);
+    const limitingItems = isBoxMode
+        ? []
+        : selectedItems.filter((item) => Math.abs((Number(item.entered_qty || 0) / Number(item.per_box_qty || 1)) - possibleBoxesRaw) < 0.0001);
+    const selectedMap = Object.fromEntries(selectedItems.map((item) => [item.key, item.entered_qty]));
+
+    const summary = document.getElementById('reqCapacitySummary');
+    const result = document.getElementById('reqCapacityResult');
+    if (!summary || !result) return;
+
+    const selectedOption = Array.from(document.getElementById('reqCapacityProductSelect').options).find((option) => Number(option.value || 0) === reqCapacitySelectedProductId);
+    const productName = selectedOption ? selectedOption.textContent || '' : '';
+    const limitingText = isBoxMode ? '박스 수 직접 입력' : limitingItems.map((item) => item.name || item.code || '-').join(', ');
+    const selectedCountText = isBoxMode ? '박스 수 직접 입력' : `${selectedItems.length}개`;
+
+    const possibleBoxClass = isBoxMode ? 'req-capacity-highlight-red' : 'req-capacity-highlight-green';
+
+    summary.innerHTML = `
+        <div class="req-capacity-summary-card">
+            <div class="label">생산 가능 BOX</div>
+            <div class="value ${possibleBoxClass}">${formatReqCapacityBoxes(possibleBoxes)} BOX</div>
+        </div>
+        <div class="req-capacity-summary-card">
+            <div class="label">선택 상품</div>
+            <div class="value">${escapeHtml(productName || '-')}</div>
+        </div>
+        <div class="req-capacity-summary-card">
+            <div class="label">선택 기준</div>
+            <div class="value">${escapeHtml(selectedCountText)}</div>
+        </div>
+        <div class="req-capacity-summary-card">
+            <div class="label">제한 기준 품목</div>
+            <div class="value">${escapeHtml(limitingText || '-')}</div>
+        </div>
+    `;
+    summary.style.display = 'grid';
+
+    const rowsHtml = reqCapacityBomItems.map((item) => {
+        const enteredQty = Number(selectedMap[item.key] || 0);
+        const requiredQty = Number(item.per_box_qty || 0) * possibleBoxes;
+        const additionalNeed = enteredQty > 0 ? Math.max(requiredQty - enteredQty, 0) : requiredQty;
+        return `
+            <tr>
+                <td>${escapeHtml(item.group_label || '-')}</td>
+                <td>${escapeHtml(item.code || '-')}</td>
+                <td>${escapeHtml(item.name || '-')}</td>
+                <td class="num">${formatReqNumberWithUnit(item.per_box_qty, item.unit, item.group_key === 'raw')}</td>
+                <td class="num">${enteredQty > 0 ? formatReqNumberWithUnit(enteredQty, item.unit, item.group_key === 'raw') : '-'}</td>
+                <td class="num">${formatReqNumberWithUnit(requiredQty, item.unit, item.group_key === 'raw')}</td>
+                <td class="num ${additionalNeed > 0 ? 'req-shortage' : ''}">${formatReqNumberWithUnit(additionalNeed, item.unit, item.group_key === 'raw')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    result.innerHTML = `
+        <div class="req-capacity-result-head">
+            <h4>전체 BOM 필요량</h4>
+            <div class="req-capacity-result-sub">입력한 기준 수량으로 환산한 생산 가능 BOX 기준입니다. 입력하지 않은 품목은 전체 필요량이 그대로 추가 필요량으로 표시됩니다.</div>
+        </div>
+        <div class="table-container">
+            <table class="req-table">
+                <thead>
+                    <tr>
+                        <th style="width:160px;">구분</th>
+                        <th style="width:120px;">코드</th>
+                        <th style="min-width:240px;">품목명</th>
+                        <th class="num-head" style="width:140px;">BOX당 소요</th>
+                        <th class="num-head" style="width:140px;">입력 수량</th>
+                        <th class="num-head" style="width:140px;">필요 수량</th>
+                        <th class="num-head" style="width:140px;">추가 필요량</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        </div>
+    `;
+    result.style.display = 'block';
 }
 
 function renderReqTableRows(rows, options = {}) {

@@ -671,6 +671,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
 .reqcalc-result-panel.active{display:block;}
 .reqcalc-product-card{border:1px solid #d7dee8;border-radius:12px;padding:0.9rem;margin-bottom:1rem;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,0.04);}
 .reqcalc-product-card.excel-mode{border-color:#cbd5e1;border-radius:0;box-shadow:none;background:#fff;}
+.reqcalc-product-card .table-container{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .reqcalc-table{width:100%;table-layout:fixed;border-collapse:collapse;background:#fff;}
 .reqcalc-table th:nth-child(1), .reqcalc-table td:nth-child(1){width:110px;}
 .reqcalc-table th:nth-child(2), .reqcalc-table td:nth-child(2){width:auto;}
@@ -781,6 +782,9 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
   .material-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
   .lot-inline-form{grid-template-columns:1fr 1fr;}
   .lot-inline-form .btn{width:100%;}
+  .reqcalc-product-card{padding:0.8rem;}
+  .reqcalc-product-card .table-container{margin:0 -0.15rem;padding:0 0.15rem 0.35rem;}
+  .reqcalc-table{min-width:760px;}
   .meeting-eval-table{font-size:0.82rem;}
   .meeting-eval-price-input{width:92px;}
   .meeting-calendar-popover{width:min(92vw, 320px);}
