@@ -354,9 +354,9 @@ def _normalize_schedule_state(status_value):
 
 
 def _is_started_export_row(row):
-    actual_boxes = float(row.get('actual_boxes') or 0)
     status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
-    return actual_boxes > 0 or status_value in {'진행중', '완료'}
+    # Exclude temp-saved rows that may have actual_boxes filled while status stays planned.
+    return status_value in {'진행중', '완료'}
 
 
 def _build_export_schedule_note(export_schedule_id, container_label, note=''):
@@ -2464,9 +2464,8 @@ def schedule_material_capacity_bom():
                     for row in cursor.fetchall()
                 }
 
-        items = []
-        seen_raw_codes = set()
-        seen_material_ids = set()
+        raw_items = {}
+        material_items = {}
 
         for row in bom_rows:
             raw_material_id = int(row.get('raw_material_id') or 0)
@@ -2474,14 +2473,13 @@ def schedule_material_capacity_bom():
 
             if raw_material_id > 0:
                 code = str(row.get('raw_code') or '').strip()
-                if not code or code in seen_raw_codes:
+                if not code:
                     continue
-                seen_raw_codes.add(code)
                 per_box_qty = float(row.get('raw_qty_per_box') or row.get('quantity_per_box') or 0)
                 if per_box_qty <= 0:
                     continue
-                items.append(
-                    {
+                if code not in raw_items:
+                    raw_items[code] = {
                         'key': f'raw:{code}',
                         'item_type': 'raw',
                         'group_key': 'raw',
@@ -2489,22 +2487,21 @@ def schedule_material_capacity_bom():
                         'code': code,
                         'name': row.get('raw_name') or code,
                         'unit': '속',
-                        'per_box_qty': round(per_box_qty, 4),
+                        'per_box_qty': 0.0,
                         'stock': round(float(raw_stock_map.get(code, 0.0) or 0.0), 2),
                     }
-                )
+                raw_items[code]['per_box_qty'] = round(float(raw_items[code].get('per_box_qty') or 0.0) + per_box_qty, 4)
                 continue
 
-            if material_id <= 0 or material_id in seen_material_ids:
+            if material_id <= 0:
                 continue
-            seen_material_ids.add(material_id)
             per_box_qty = float(row.get('quantity_per_box') or 0)
             if per_box_qty <= 0:
                 continue
             category = str(row.get('material_category') or '').strip()
             is_base = category in ('기름', '소금')
-            items.append(
-                {
+            if material_id not in material_items:
+                material_items[material_id] = {
                     'key': f'material:{material_id}',
                     'item_type': 'material',
                     'group_key': 'base' if is_base else 'sub',
@@ -2513,11 +2510,12 @@ def schedule_material_capacity_bom():
                     'name': row.get('material_name') or f'부자재 {material_id}',
                     'unit': row.get('material_unit') or 'EA',
                     'category': category,
-                    'per_box_qty': round(per_box_qty, 4),
+                    'per_box_qty': 0.0,
                     'stock': round(float(material_stock_map.get(material_id, 0.0) or 0.0), 2),
                 }
-            )
+            material_items[material_id]['per_box_qty'] = round(float(material_items[material_id].get('per_box_qty') or 0.0) + per_box_qty, 4)
 
+        items = [*raw_items.values(), *material_items.values()]
         group_order = {'raw': 0, 'base': 1, 'sub': 2}
         items.sort(key=lambda item: (group_order.get(item.get('group_key'), 9), item.get('name') or '', item.get('code') or ''))
 
