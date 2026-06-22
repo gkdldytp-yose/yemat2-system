@@ -2700,10 +2700,59 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     flex-direction: column;
     gap: 0.3rem;
 }
+.req-capacity-entry-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
 .req-capacity-item-entry label {
     font-size: 0.76rem;
     color: #64748b;
     font-weight: 700;
+}
+.req-capacity-yield-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-top: 0.15rem;
+}
+.req-capacity-yield-top {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.req-capacity-yield-btn {
+    min-height: auto !important;
+    padding: 0.44rem 0.68rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+    white-space: nowrap;
+}
+.req-capacity-yield-btn.active {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2) !important;
+}
+.req-capacity-yield-input-wrap {
+    display: none;
+    align-items: center;
+    gap: 0.35rem;
+}
+.req-capacity-yield-input-wrap.active {
+    display: flex;
+}
+.req-capacity-yield-input-wrap .req-capacity-qty-input {
+    min-width: 0;
+}
+.req-capacity-yield-unit {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.req-capacity-yield-help {
+    color: #64748b;
+    font-size: 0.72rem;
+    line-height: 1.35;
 }
 .req-capacity-raw-split {
     border-top: 1px solid #e2e8f0;
@@ -3207,6 +3256,42 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     margin:0 0 0.65rem;
     font-size:1rem;
 }
+.export-active-pane-head {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:0.75rem;
+    margin-bottom:0.65rem;
+}
+.export-active-pane-title {
+    display:flex;
+    flex-direction:column;
+    gap:0.2rem;
+}
+.export-active-pane-head h4 {
+    margin:0;
+}
+.export-daily-hint {
+    font-size:0.76rem;
+    color:#8fb4ff;
+    font-weight:700;
+    letter-spacing:-0.01em;
+}
+.export-daily-toggle-btn {
+    min-height:auto !important;
+    padding:0.48rem 0.92rem !important;
+    font-size:0.82rem !important;
+    line-height:1.2;
+    font-weight:900 !important;
+    color:#eff6ff !important;
+    border:1px solid rgba(96,165,250,0.72) !important;
+    background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%) !important;
+    box-shadow:0 10px 20px rgba(37,99,235,0.28) !important;
+}
+.export-daily-toggle-btn:hover {
+    transform:translateY(-1px);
+    box-shadow:0 14px 24px rgba(37,99,235,0.34) !important;
+}
 .export-container-row,
 .export-daily-row {
     display:flex;
@@ -3565,6 +3650,8 @@ html[data-theme="dark"] .req-capacity-box-unit{color:#8ea3bd;}
 html[data-theme="dark"] .req-capacity-item:hover{background:#162133;}
 html[data-theme="dark"] .req-capacity-chip.sub{background:rgba(37,99,235,.16);color:#bfdbfe;}
 html[data-theme="dark"] .req-capacity-chip.raw{background:rgba(22,163,74,.16);color:#bbf7d0;}
+html[data-theme="dark"] .req-capacity-yield-help,
+html[data-theme="dark"] .req-capacity-yield-unit{color:#8ea3bd;}
 html[data-theme="dark"] .req-capacity-chip.base{background:rgba(234,88,12,.16);color:#fdba74;}
 html[data-theme="dark"] #addModal .modal-content {
     background: linear-gradient(180deg, #121a2a 0%, #0f1726 100%);
@@ -4232,8 +4319,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div class="req-capacity-card" style="margin-bottom:0;">
         <div class="req-capacity-head">
             <div>
-                <h3>부자재 기준 생산 가능량 계산기</h3>
-                <div class="req-muted">상품을 선택한 뒤 BOM에 등록된 원초/원부자재 중 기준이 되는 품목을 체크하고 수량을 입력하면 생산 가능 BOX와 전체 BOM 필요량을 계산합니다.</div>
+                <h3>생산 가능량 계산기</h3>
+                <div class="req-muted">상품을 선택한 뒤 BOM에 등록된 원초/원부자재 중 기준 품목을 체크하고 수량을 입력하면 생산 가능 BOX와 전체 BOM 필요량을 계산합니다. 원초는 수율을 추가로 적용할 수 있습니다.</div>
             </div>
         </div>
         <div class="req-capacity-toolbar">
@@ -4456,10 +4543,36 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% endfor %}
                 </div>
                 <div class="export-active-pane">
-                    <h4>생산일자별 생산량</h4>
+                    <div class="export-active-pane-head">
+                        <div class="export-active-pane-title">
+                            <h4>생산일자별 생산량</h4>
+                            {% if export.daily_actuals and export.daily_actuals|length > 5 %}
+                            <div class="export-daily-hint" id="exportDailyHint{{ export.id }}">최근 5일자 생산건만 표시 중입니다.</div>
+                            {% endif %}
+                        </div>
+                        {% if export.daily_actuals and export.daily_actuals|length > 5 %}
+                        <button
+                            type="button"
+                            class="calendar-action-btn export-mini-btn export-daily-toggle-btn"
+                            data-target="exportDailyRows{{ export.id }}"
+                            data-hint-target="exportDailyHint{{ export.id }}"
+                            data-label-more="전체 보기"
+                            data-label-less="최근 5일만 보기"
+                            data-hint-more="최근 5일자 생산건만 표시 중입니다."
+                            data-hint-less="생산건 전체 보기 중입니다."
+                            onclick="toggleExportDailyRows(this)">
+                            전체 보기
+                        </button>
+                        {% endif %}
+                    </div>
                     {% if export.daily_actuals %}
                         {% for daily in export.daily_actuals %}
-                        <div class="export-daily-row">
+                        <div
+                            class="export-daily-row"
+                            {% if loop.revindex > 5 %}
+                            data-export-daily-group="exportDailyRows{{ export.id }}"
+                            style="display:none;"
+                            {% endif %}>
                             <div>
                                 {% if daily.detail_url %}
                                 <a href="{{ daily.detail_url }}" class="export-daily-date-link">{{ daily.date }}</a>
@@ -5152,6 +5265,25 @@ function switchExportScheduleTab(tab) {
     }
 }
 
+function toggleExportDailyRows(button) {
+    const target = button?.dataset?.target;
+    if (!target) return;
+    const rows = Array.from(document.querySelectorAll(`[data-export-daily-group="${target}"]`));
+    if (!rows.length) return;
+    const hintTarget = button.dataset.hintTarget || '';
+    const hintEl = hintTarget ? document.getElementById(hintTarget) : null;
+    const isOpening = rows.some((row) => row.style.display === 'none');
+    rows.forEach((row) => {
+        row.style.display = isOpening ? 'flex' : 'none';
+    });
+    const moreLabel = button.dataset.labelMore || '전체 보기';
+    const lessLabel = button.dataset.labelLess || '접기';
+    const moreHint = button.dataset.hintMore || '최근 5일자 생산건만 표시 중입니다.';
+    const lessHint = button.dataset.hintLess || '생산건 전체 보기 중입니다.';
+    button.textContent = isOpening ? lessLabel : moreLabel;
+    if (hintEl) hintEl.textContent = isOpening ? lessHint : moreHint;
+}
+
 function toggleExportCompletedSearchPanel(forceOpen = null) {
     exportCompletedSearchOpen = typeof forceOpen === 'boolean' ? forceOpen : !exportCompletedSearchOpen;
     const body = document.getElementById('exportCompletedFilterBody');
@@ -5784,8 +5916,10 @@ function normalizeReqUnit(unit) {
     return raw;
 }
 
-function formatReqNumberWithUnit(value, unit, asInteger = false) {
-    const text = asInteger ? formatReqDisplayNumber(Math.round(Number(value || 0)), 0) : formatReqDisplayNumber(value, 1);
+function formatReqNumberWithUnit(value, unit, asInteger = false, maximumFractionDigits = 1) {
+    const text = asInteger
+        ? formatReqDisplayNumber(Math.round(Number(value || 0)), 0)
+        : formatReqDisplayNumber(value, maximumFractionDigits);
     const unitText = normalizeReqUnit(unit);
     return unitText ? `${text} ${escapeHtml(unitText)}` : text;
 }
@@ -5853,6 +5987,7 @@ function renderReqCapacityItem(item) {
     const domKey = getReqCapacityDomKey(item.key);
     const chipClass = item.group_key === 'raw' ? 'raw' : item.group_key === 'base' ? 'base' : 'sub';
     const categoryText = item.group_key === 'sub' && item.category ? ` · ${escapeHtml(item.category)}` : '';
+    const isRaw = item.group_key === 'raw';
     return `
         <div class="req-capacity-item">
             <div class="req-capacity-item-main">
@@ -5864,7 +5999,7 @@ function renderReqCapacityItem(item) {
                             <span>${escapeHtml(item.name || '-')}</span>
                         </div>
                         <div class="req-capacity-item-meta">
-                            ${escapeHtml(item.code || '-')} · BOX당 ${formatReqNumberWithUnit(item.per_box_qty, item.unit, item.group_key === 'raw')}${categoryText}
+                            ${escapeHtml(item.code || '-')} · BOX당 ${formatReqNumberWithUnit(item.per_box_qty, item.unit, item.group_key === 'raw', 4)}${categoryText}
                         </div>
                         <div class="req-capacity-stock">시스템 재고 ${formatReqNumberWithUnit(item.stock, item.unit, item.group_key === 'raw')}</div>
                     </div>
@@ -5872,22 +6007,87 @@ function renderReqCapacityItem(item) {
             </div>
             <div class="req-capacity-item-entry">
                 <label for="reqCapacityQty_${domKey}">입력 수량</label>
-                <input
-                    id="reqCapacityQty_${domKey}"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    class="req-capacity-qty-input"
-                    data-key="${escapeHtml(item.key)}"
-                    data-dom-key="${domKey}"
-                    data-item-type="${escapeHtml(item.group_key || '')}"
-                    disabled
-                    placeholder="${escapeHtml(item.unit || '')}"
-                    oninput="handleReqCapacityQtyInput()"
-                    onkeydown="handleReqCapacityQtyKeydown(event)">
+                <div class="req-capacity-entry-row">
+                    <input
+                        id="reqCapacityQty_${domKey}"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        class="req-capacity-qty-input"
+                        data-key="${escapeHtml(item.key)}"
+                        data-dom-key="${domKey}"
+                        data-item-type="${escapeHtml(item.group_key || '')}"
+                        disabled
+                        placeholder="${escapeHtml(item.unit || '')}"
+                        oninput="handleReqCapacityQtyInput()"
+                        onkeydown="handleReqCapacityQtyKeydown(event)">
+                </div>
+                ${isRaw ? `
+                <div class="req-capacity-yield-row">
+                    <div class="req-capacity-yield-top">
+                        <button
+                            type="button"
+                            id="reqCapacityYieldBtn_${domKey}"
+                            class="req-capacity-btn secondary req-capacity-yield-btn"
+                            data-dom-key="${domKey}"
+                            disabled
+                            onclick="toggleReqCapacityYield(this)">
+                            수율 추가
+                        </button>
+                    </div>
+                    <div id="reqCapacityYieldWrap_${domKey}" class="req-capacity-yield-input-wrap">
+                        <input
+                            id="reqCapacityYield_${domKey}"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            class="req-capacity-qty-input"
+                            data-dom-key="${domKey}"
+                            placeholder="수율 입력"
+                            oninput="handleReqCapacityQtyInput()"
+                            onkeydown="handleReqCapacityQtyKeydown(event)">
+                        <span class="req-capacity-yield-unit">%</span>
+                    </div>
+                    <div class="req-capacity-yield-help">원초 선택 시 수율을 적용해 생산 가능 BOX를 다시 계산합니다.</div>
+                </div>` : ''}
             </div>
         </div>
     `;
+}
+
+function resetReqCapacityYield(domKey) {
+    if (!domKey) return;
+    const yieldBtn = document.getElementById(`reqCapacityYieldBtn_${domKey}`);
+    const yieldWrap = document.getElementById(`reqCapacityYieldWrap_${domKey}`);
+    const yieldInput = document.getElementById(`reqCapacityYield_${domKey}`);
+    if (yieldBtn) {
+        yieldBtn.classList.remove('active');
+        yieldBtn.disabled = true;
+    }
+    if (yieldWrap) {
+        yieldWrap.classList.remove('active');
+    }
+    if (yieldInput) {
+        yieldInput.value = '';
+    }
+}
+
+function toggleReqCapacityYield(button) {
+    if (!button || button.disabled) return;
+    const domKey = button.dataset.domKey || '';
+    if (!domKey) return;
+    const yieldWrap = document.getElementById(`reqCapacityYieldWrap_${domKey}`);
+    const yieldInput = document.getElementById(`reqCapacityYield_${domKey}`);
+    if (!yieldWrap || !yieldInput) return;
+    const isActive = button.classList.toggle('active');
+    yieldWrap.classList.toggle('active', isActive);
+    if (!isActive) {
+        yieldInput.value = '';
+    } else {
+        yieldInput.focus();
+    }
+    handleReqCapacityQtyInput();
 }
 
 function renderReqCapacityGroup(groupKey) {
@@ -5989,6 +6189,7 @@ function toggleReqCapacityItem(checkbox) {
     const boxModeInput = document.getElementById('reqCapacityBoxCountInput');
     const domKey = checkbox.dataset.domKey || '';
     const input = document.getElementById(`reqCapacityQty_${domKey}`);
+    const yieldBtn = document.getElementById(`reqCapacityYieldBtn_${domKey}`);
     if (!input) return;
 
     if (checkbox.checked) {
@@ -6001,6 +6202,7 @@ function toggleReqCapacityItem(checkbox) {
                     otherInput.disabled = true;
                     otherInput.value = '';
                 }
+                resetReqCapacityYield(otherKey);
             }
         });
         if (boxModeCheck) boxModeCheck.checked = false;
@@ -6009,10 +6211,12 @@ function toggleReqCapacityItem(checkbox) {
             boxModeInput.value = '';
         }
         input.disabled = false;
+        if (yieldBtn) yieldBtn.disabled = false;
         input.focus();
     } else {
         input.disabled = true;
         input.value = '';
+        resetReqCapacityYield(domKey);
     }
 
     const result = document.getElementById('reqCapacityResult');
@@ -6035,6 +6239,7 @@ function toggleReqCapacityBoxMode(checkbox) {
                 input.disabled = true;
                 input.value = '';
             }
+            resetReqCapacityYield(domKey);
         });
         boxInput.disabled = false;
         boxInput.focus();
@@ -6068,11 +6273,16 @@ function collectReqCapacitySelections() {
             const domKey = getReqCapacityDomKey(item.key);
             const checkbox = document.querySelector(`input[type="checkbox"][data-dom-key="${domKey}"]`);
             const input = document.getElementById(`reqCapacityQty_${domKey}`);
+            const yieldBtn = document.getElementById(`reqCapacityYieldBtn_${domKey}`);
+            const yieldInput = document.getElementById(`reqCapacityYield_${domKey}`);
             const enteredQty = Number(input ? input.value || 0 : 0);
+            const yieldRate = Number(yieldInput ? yieldInput.value || 0 : 0);
             return {
                 ...item,
                 checked: Boolean(checkbox && checkbox.checked),
                 entered_qty: Number.isFinite(enteredQty) ? enteredQty : 0,
+                yield_enabled: Boolean(yieldBtn && yieldBtn.classList.contains('active')),
+                yield_rate: Number.isFinite(yieldRate) ? yieldRate : 0,
             };
         })
         .filter((item) => item.checked && item.entered_qty > 0 && Number(item.per_box_qty || 0) > 0);
@@ -6089,6 +6299,9 @@ function calculateReqCapacity(silent = false) {
     const isBoxMode = Boolean(boxModeCheck && boxModeCheck.checked);
     const selectedItems = collectReqCapacitySelections();
     const manualBoxes = Number(boxCountInput ? boxCountInput.value || 0 : 0);
+    const selectedRawWithYield = !isBoxMode
+        ? selectedItems.find((item) => item.group_key === 'raw' && item.yield_enabled)
+        : null;
 
     if (!isBoxMode && !selectedItems.length) {
         if (!silent) alert('기준이 될 원부자재 1개를 체크하고 수량을 입력하거나, 박스 수 직접 입력을 선택해 주세요.');
@@ -6098,16 +6311,30 @@ function calculateReqCapacity(silent = false) {
         if (!silent) alert('생산 BOX 수를 입력해 주세요.');
         return;
     }
+    if (selectedRawWithYield && !(selectedRawWithYield.yield_rate > 0 && selectedRawWithYield.yield_rate <= 100)) {
+        if (!silent) alert('원초 수율을 0 초과 100 이하로 입력해 주세요.');
+        return;
+    }
 
     const possibleBoxesRaw = isBoxMode
         ? manualBoxes
-        : Math.min(...selectedItems.map((item) => Number(item.entered_qty || 0) / Number(item.per_box_qty || 1)));
+        : Math.min(...selectedItems.map((item) => {
+            const inputQty = Number(item.entered_qty || 0);
+            const adjustedQty = item.group_key === 'raw' && item.yield_enabled
+                ? inputQty * (Number(item.yield_rate || 0) / 100)
+                : inputQty;
+            return adjustedQty / Number(item.per_box_qty || 1);
+        }));
     const possibleBoxes = Math.max(Math.floor(possibleBoxesRaw * 100) / 100, 0);
     const limitingItems = isBoxMode
         ? []
-        : selectedItems.filter((item) => Math.abs((Number(item.entered_qty || 0) / Number(item.per_box_qty || 1)) - possibleBoxesRaw) < 0.0001);
-    const selectedMap = Object.fromEntries(selectedItems.map((item) => [item.key, item.entered_qty]));
-
+        : selectedItems.filter((item) => {
+            const inputQty = Number(item.entered_qty || 0);
+            const adjustedQty = item.group_key === 'raw' && item.yield_enabled
+                ? inputQty * (Number(item.yield_rate || 0) / 100)
+                : inputQty;
+            return Math.abs((adjustedQty / Number(item.per_box_qty || 1)) - possibleBoxesRaw) < 0.0001;
+        });
     const summary = document.getElementById('reqCapacitySummary');
     const result = document.getElementById('reqCapacityResult');
     if (!summary || !result) return;
@@ -6115,7 +6342,8 @@ function calculateReqCapacity(silent = false) {
     const selectedOption = Array.from(document.getElementById('reqCapacityProductSelect').options).find((option) => Number(option.value || 0) === reqCapacitySelectedProductId);
     const productName = selectedOption ? selectedOption.textContent || '' : '';
     const limitingText = isBoxMode ? '박스 수 직접 입력' : limitingItems.map((item) => item.name || item.code || '-').join(', ');
-    const selectedCountText = isBoxMode ? '박스 수 직접 입력' : `${selectedItems.length}개`;
+    const selectedUnitText = isBoxMode ? 'BOX' : (normalizeReqUnit(selectedItems[0]?.unit || '') || '-');
+    const yieldText = selectedRawWithYield ? `${formatReqDisplayNumber(selectedRawWithYield.yield_rate, 1)}%` : '-';
 
     const possibleBoxClass = isBoxMode ? 'req-capacity-highlight-red' : 'req-capacity-highlight-green';
 
@@ -6129,8 +6357,12 @@ function calculateReqCapacity(silent = false) {
             <div class="value">${escapeHtml(productName || '-')}</div>
         </div>
         <div class="req-capacity-summary-card">
-            <div class="label">선택 기준</div>
-            <div class="value">${escapeHtml(selectedCountText)}</div>
+            <div class="label">선택 단위</div>
+            <div class="value">${escapeHtml(selectedUnitText)}</div>
+        </div>
+        <div class="req-capacity-summary-card">
+            <div class="label">적용 수율</div>
+            <div class="value">${escapeHtml(yieldText)}</div>
         </div>
         <div class="req-capacity-summary-card">
             <div class="label">제한 기준 품목</div>
@@ -6140,18 +6372,18 @@ function calculateReqCapacity(silent = false) {
     summary.style.display = 'grid';
 
     const rowsHtml = reqCapacityBomItems.map((item) => {
-        const enteredQty = Number(selectedMap[item.key] || 0);
+        const currentStock = Number(item.stock || 0);
         const requiredQty = Number(item.per_box_qty || 0) * possibleBoxes;
-        const additionalNeed = enteredQty > 0 ? Math.max(requiredQty - enteredQty, 0) : requiredQty;
+        const additionalNeed = currentStock - requiredQty;
         return `
             <tr>
                 <td>${escapeHtml(item.group_label || '-')}</td>
                 <td>${escapeHtml(item.code || '-')}</td>
                 <td>${escapeHtml(item.name || '-')}</td>
-                <td class="num">${formatReqNumberWithUnit(item.per_box_qty, item.unit, item.group_key === 'raw')}</td>
-                <td class="num">${enteredQty > 0 ? formatReqNumberWithUnit(enteredQty, item.unit, item.group_key === 'raw') : '-'}</td>
+                <td class="num">${formatReqNumberWithUnit(item.per_box_qty, item.unit, item.group_key === 'raw', 4)}</td>
+                <td class="num">${formatReqNumberWithUnit(currentStock, item.unit, item.group_key === 'raw')}</td>
                 <td class="num">${formatReqNumberWithUnit(requiredQty, item.unit, item.group_key === 'raw')}</td>
-                <td class="num ${additionalNeed > 0 ? 'req-shortage' : ''}">${formatReqNumberWithUnit(additionalNeed, item.unit, item.group_key === 'raw')}</td>
+                <td class="num ${additionalNeed < 0 ? 'req-shortage' : ''}">${formatReqNumberWithUnit(additionalNeed, item.unit, item.group_key === 'raw')}</td>
             </tr>
         `;
     }).join('');
@@ -6159,7 +6391,7 @@ function calculateReqCapacity(silent = false) {
     result.innerHTML = `
         <div class="req-capacity-result-head">
             <h4>전체 BOM 필요량</h4>
-            <div class="req-capacity-result-sub">입력한 기준 수량으로 환산한 생산 가능 BOX 기준입니다. 입력하지 않은 품목은 전체 필요량이 그대로 추가 필요량으로 표시됩니다.</div>
+            <div class="req-capacity-result-sub">선택한 단위 수량으로 환산한 생산 가능 BOX 기준입니다. 추가 필요량은 현재고 - 필요 수량으로 계산됩니다.</div>
         </div>
         <div class="table-container">
             <table class="req-table">
@@ -6169,7 +6401,7 @@ function calculateReqCapacity(silent = false) {
                         <th style="width:120px;">코드</th>
                         <th style="min-width:240px;">품목명</th>
                         <th class="num-head" style="width:140px;">BOX당 소요</th>
-                        <th class="num-head" style="width:140px;">입력 수량</th>
+                        <th class="num-head" style="width:140px;">현재고</th>
                         <th class="num-head" style="width:140px;">필요 수량</th>
                         <th class="num-head" style="width:140px;">추가 필요량</th>
                     </tr>
