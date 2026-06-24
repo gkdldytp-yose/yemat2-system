@@ -132,7 +132,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2 id="modalTitle">날짜 설정</h2>
-            <button onclick="closeSingleModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <button onclick="closeSingleModal()" class="modal-close-btn" aria-label="닫기">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('production.manage_work_day') }}">
             <input type="hidden" name="date" id="modalDate">
@@ -140,7 +140,7 @@
             <div class="form-group">
                 <label>구분 *</label>
                 <select name="type" id="modalType" required onchange="toggleOvertimeInput()"
-                        style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+                        class="modal-field">
                     <option value="work">근무일</option>
                     <option value="holiday">휴일</option>
                     <option value="extra">특근</option>
@@ -151,13 +151,13 @@
             <div class="form-group" id="overtimeHoursGroup" style="display: none;">
                 <label>잔업 시간 (시간)</label>
                 <input type="number" name="overtime_hours" id="modalOvertimeHours" min="0" step="0.5" placeholder="예: 2.5"
-                       style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+                       class="modal-field">
             </div>
             
             <div class="form-group">
                 <label>메모</label>
                 <textarea name="note" id="modalNote" rows="3" placeholder="특이사항을 입력하세요"
-                          style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+                          class="modal-field modal-textarea"></textarea>
             </div>
             
             <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
@@ -174,18 +174,18 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2>선택한 날짜 일괄 등록</h2>
-            <button onclick="closeBatchModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <button onclick="closeBatchModal()" class="modal-close-btn" aria-label="닫기">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('production.manage_work_day') }}" id="batchForm">
-            <div style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <div class="batch-selected-dates">
                 <strong>선택된 날짜 (<span id="batchDateCount">0</span>개):</strong>
-                <div id="batchDatesList" style="margin-top: 0.5rem; max-height: 150px; overflow-y: auto; font-size: 0.9rem;"></div>
+                <div id="batchDatesList" class="batch-dates-list"></div>
             </div>
             
             <div class="form-group">
                 <label>구분 *</label>
                 <select name="type" id="batchType" required onchange="toggleBatchOvertimeInput()"
-                        style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+                        class="modal-field">
                     <option value="work">근무일</option>
                     <option value="holiday">휴일</option>
                     <option value="extra">특근</option>
@@ -196,13 +196,13 @@
             <div class="form-group" id="batchOvertimeHoursGroup" style="display: none;">
                 <label>잔업 시간 (시간)</label>
                 <input type="number" name="overtime_hours" id="batchOvertimeHours" min="0" step="0.5" placeholder="예: 2.5"
-                       style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+                       class="modal-field">
             </div>
             
             <div class="form-group">
                 <label>메모</label>
                 <textarea name="note" id="batchNote" rows="3" placeholder="모든 날짜에 동일하게 적용됩니다"
-                          style="width: 100%; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+                          class="modal-field modal-textarea"></textarea>
             </div>
             
             <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
@@ -441,6 +441,43 @@
     margin-bottom: 1.5rem;
 }
 
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #475569;
+    line-height: 1;
+}
+
+.modal-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #ffffff;
+    color: #0f172a;
+}
+
+.modal-textarea {
+    resize: vertical;
+}
+
+.batch-selected-dates {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+.batch-dates-list {
+    margin-top: 0.5rem;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+}
+
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -613,6 +650,26 @@ html[data-theme="dark"] .day-number,
 html[data-theme="dark"] .stat-value,
 html[data-theme="dark"] .form-group label {
     color: var(--text-primary);
+}
+
+html[data-theme="dark"] .modal-close-btn {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .modal-field {
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--input-border);
+}
+
+html[data-theme="dark"] .batch-selected-dates {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .batch-dates-list {
+    color: var(--text-secondary);
 }
 
 html[data-theme="dark"] .stat-label {

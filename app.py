@@ -125,6 +125,7 @@ def create_app():
         app.view_functions[endpoint_name] = _wrapped_view
 
     _wrap_exception_logging('materials.raw_materials')
+    _wrap_exception_logging('production.schedules')
 
     def _normalize_schedule_status(status_value):
         s = (status_value or '').strip()

@@ -831,7 +831,23 @@ html[data-theme="dark"] .stats-detail-empty {
 }
 html[data-theme="dark"] .stats-detail-metric .value,
 html[data-theme="dark"] .stats-detail-production-link {
-    color: #f8fafc;
+    color: #7dd3fc;
+}
+html[data-theme="dark"] .stats-detail-production-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0.28rem 0.62rem;
+    border: 1px solid rgba(56,189,248,0.32);
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(8,47,73,0.95), rgba(14,116,144,0.38));
+    box-shadow: 0 8px 18px rgba(2,6,23,0.22);
+}
+html[data-theme="dark"] .stats-detail-production-link:hover {
+    color: #e0f2fe;
+    border-color: rgba(125,211,252,0.58);
+    background: linear-gradient(135deg, rgba(12,74,110,0.98), rgba(6,182,212,0.42));
+    text-decoration: none;
 }
 html[data-theme="dark"] .stats-detail-journal-btn {
     border-color: rgba(125,211,252,0.22);
@@ -3322,6 +3338,120 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     color:#ff3b30;
     font-size:0.98rem;
 }
+.export-raw-footer {
+    margin-top:0.95rem;
+    border:1px solid #dbe7f3;
+    border-radius:14px;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    overflow:hidden;
+}
+.export-raw-footer-head {
+    padding:0.95rem 1rem 0.85rem;
+    border-bottom:1px solid #e2e8f0;
+    background:#f8fafc;
+}
+.export-raw-footer-head h4 {
+    margin:0;
+    font-size:0.96rem;
+    color:#0f172a;
+}
+.export-raw-footer-head .req-muted {
+    margin-top:0.25rem;
+    font-size:0.8rem;
+    line-height:1.45;
+}
+.export-raw-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:0.85rem;
+    padding:1rem;
+}
+.export-raw-card {
+    border:1px solid #dbe7f3;
+    border-radius:12px;
+    background:#ffffff;
+    padding:0.9rem;
+}
+.export-raw-card-head {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:0.75rem;
+    margin-bottom:0.7rem;
+}
+.export-raw-card-title {
+    color:#0f172a;
+    font-size:0.94rem;
+    font-weight:900;
+}
+.export-raw-card-meta {
+    margin-top:0.18rem;
+    color:#64748b;
+    font-size:0.76rem;
+    line-height:1.45;
+}
+.export-raw-card-total {
+    color:#1d4ed8;
+    font-size:0.84rem;
+    font-weight:900;
+    white-space:nowrap;
+}
+.export-raw-list {
+    display:flex;
+    flex-direction:column;
+}
+.export-raw-item {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:0.75rem;
+    padding:0.62rem 0;
+    border-top:1px solid #edf2f7;
+}
+.export-raw-item:first-child {
+    border-top:none;
+    padding-top:0;
+}
+.export-raw-item:last-child {
+    padding-bottom:0;
+}
+.export-raw-item-main {
+    min-width:0;
+}
+.export-raw-item-title {
+    color:#0f172a;
+    font-size:0.88rem;
+    font-weight:800;
+}
+.export-raw-item-sub {
+    margin-top:0.18rem;
+    color:#64748b;
+    font-size:0.75rem;
+    line-height:1.4;
+    word-break:keep-all;
+}
+.export-raw-item-metrics {
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:0.18rem;
+    flex-shrink:0;
+    text-align:right;
+}
+.export-raw-item-metrics strong {
+    color:#0f172a;
+    font-size:0.82rem;
+}
+.export-raw-item-metrics span {
+    color:#2563eb;
+    font-size:0.76rem;
+    font-weight:800;
+}
+.export-raw-empty {
+    color:#64748b;
+    font-size:0.82rem;
+    line-height:1.5;
+}
 .export-form-grid {
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -3451,8 +3581,15 @@ html[data-theme="dark"] .export-completed-search-field input:focus{
 }
 html[data-theme="dark"] .export-summary-card,
 html[data-theme="dark"] .export-section,
-html[data-theme="dark"] .export-active-pane{background:#121a2a;border-color:#263244;}
+html[data-theme="dark"] .export-active-pane,
+html[data-theme="dark"] .export-raw-footer,
+html[data-theme="dark"] .export-raw-card{background:#121a2a;border-color:#263244;}
 html[data-theme="dark"] .export-section-head{background:#162133;border-bottom-color:#263244;}
+html[data-theme="dark"] .export-raw-footer-head{background:#162133;border-bottom-color:#263244;}
+html[data-theme="dark"] .export-raw-footer-head h4,
+html[data-theme="dark"] .export-raw-card-title,
+html[data-theme="dark"] .export-raw-item-title,
+html[data-theme="dark"] .export-raw-item-metrics strong{color:#eff6ff;}
 html[data-theme="dark"] .export-daily-date-link{color:#93c5fd;}
 html[data-theme="dark"] .export-po-row{
     background:linear-gradient(180deg,#162133 0%,#121a2a 100%);
@@ -3498,8 +3635,14 @@ html[data-theme="dark"] .export-restore-btn:hover{
 html[data-theme="dark"] .export-summary-label,
 html[data-theme="dark"] .export-empty,
 html[data-theme="dark"] .export-container-math,
-html[data-theme="dark"] .export-daily-row span{color:#8ea3bd;}
+html[data-theme="dark"] .export-daily-row span,
+html[data-theme="dark"] .export-raw-card-meta,
+html[data-theme="dark"] .export-raw-item-sub,
+html[data-theme="dark"] .export-raw-empty{color:#8ea3bd;}
 html[data-theme="dark"] .export-active-metrics span{background:rgba(37,99,235,.18);color:#bfdbfe;}
+html[data-theme="dark"] .export-raw-card-total,
+html[data-theme="dark"] .export-raw-item-metrics span{color:#93c5fd;}
+html[data-theme="dark"] .export-raw-item{border-top-color:#223047;}
 html[data-theme="dark"] .export-progress-track{background:#314155;}
 html[data-theme="dark"] .calendar-weekdays{background:#182234;border-bottom-color:#253246;}
 html[data-theme="dark"] .calendar-days{background:#263244;}
@@ -4601,6 +4744,57 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% endfor %}
                     {% else %}
                         <div class="req-muted">아직 실제 생산량이 없습니다.</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="export-raw-footer">
+                <div class="export-raw-footer-head">
+                    <h4>{{ export.unit_label_name }}별 원초 사용 비율 / 생산량</h4>
+                    <div class="req-muted">실제 생산 완료된 원초 사용량을 자호 기준으로 묶고, 생산 박스 비율로 {{ export.unit_label_name }}에 배분한 값입니다.</div>
+                </div>
+                <div class="export-raw-grid">
+                    {% set raw_rows = export.container_raw_breakdowns or [] %}
+                    {% set ns = namespace(has_produced=false) %}
+                    {% for container in raw_rows %}
+                        {% if (container.produced_boxes or 0)|float > 0 %}
+                            {% set ns.has_produced = true %}
+                        <div class="export-raw-card">
+                            <div class="export-raw-card-head">
+                                <div>
+                                    <div class="export-raw-card-title">{{ container.container_label }}</div>
+                                    <div class="export-raw-card-meta">
+                                        생산 {{ stats_box(container.produced_boxes) }} box / 목표 {{ export_box(container.target_boxes) }} box
+                                        {% if container.po_number %}<br>PO {{ container.po_number }}{% endif %}
+                                    </div>
+                                </div>
+                                <div class="export-raw-card-total">원초 {{ stats_box(container.total_raw_qty) }}속</div>
+                            </div>
+                            {% if container.breakdown_items %}
+                            <div class="export-raw-list">
+                                {% for item in container.breakdown_items %}
+                                <div class="export-raw-item">
+                                    <div class="export-raw-item-main">
+                                        <div class="export-raw-item-title">{{ item.ja_ho }}</div>
+                                        {% if item.raw_names_text %}
+                                        <div class="export-raw-item-sub">{{ item.raw_names_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="export-raw-item-metrics">
+                                        <strong>{{ stats_box(item.production_boxes) }} box</strong>
+                                        <span>{{ stats_box(item.ratio_pct) }}%</span>
+                                        <span>{{ stats_box(item.raw_qty) }}속</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="export-raw-empty">원초 사용 내역이 아직 없습니다.</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    {% if not ns.has_produced %}
+                    <div class="export-raw-empty">생산 완료된 {{ export.unit_label_name }}가 없어 자호 기준 원초 비율을 아직 계산할 수 없습니다.</div>
                     {% endif %}
                 </div>
             </div>

@@ -4,6 +4,7 @@ from collections import defaultdict
 import calendar
 import json
 import math
+import logging
 
 from core import (
     begin_db_transaction,
@@ -25,6 +26,7 @@ from core import (
 )
 
 bp = Blueprint('production', __name__)
+logger = logging.getLogger('yemat.waitress')
 
 
 FIXED_PUBLIC_HOLIDAYS = {
@@ -499,6 +501,192 @@ def _load_existing_export_completed_rows(cursor, workplace, product_id, start_da
         ),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def _allocate_export_boxes_to_containers(boxes_before, produced_boxes, boxes_per_container, container_count=0, total_limit=0):
+    if boxes_per_container <= 0:
+        return []
+    try:
+        before_value = max(float(boxes_before or 0), 0.0)
+    except (TypeError, ValueError):
+        before_value = 0.0
+    try:
+        produced_value = max(float(produced_boxes or 0), 0.0)
+    except (TypeError, ValueError):
+        produced_value = 0.0
+    if total_limit and before_value >= float(total_limit):
+        return []
+    if total_limit:
+        produced_value = min(produced_value, max(float(total_limit) - before_value, 0.0))
+    allocations = []
+    cursor_value = before_value
+    remaining = produced_value
+    while remaining > 1e-9:
+        container_no = int(cursor_value // boxes_per_container) + 1
+        if container_count and container_no > int(container_count):
+            break
+        position_in_container = cursor_value % boxes_per_container
+        available_space = float(boxes_per_container) - position_in_container
+        if available_space <= 1e-9:
+            available_space = float(boxes_per_container)
+        allocated_boxes = min(remaining, available_space)
+        allocations.append(
+            {
+                'container_no': container_no,
+                'boxes': float(allocated_boxes),
+            }
+        )
+        remaining -= allocated_boxes
+        cursor_value += allocated_boxes
+    return allocations
+
+
+def _load_production_raw_usage_by_ja_ho(cursor, production_ids):
+    normalized_ids = [int(production_id) for production_id in (production_ids or []) if int(production_id or 0) > 0]
+    if not normalized_ids:
+        return {}
+    placeholders = ','.join(['?'] * len(normalized_ids))
+    rows = cursor.execute(
+        f'''
+        SELECT
+            pmu.production_id,
+            COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '미지정') AS ja_ho,
+            COALESCE(NULLIF(TRIM(rm.name), ''), NULLIF(TRIM(pmu.raw_material_name), ''), '원초') AS raw_name,
+            SUM(COALESCE(pmu.actual_quantity, 0)) AS raw_qty
+        FROM production_material_usage pmu
+        LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+        WHERE pmu.production_id IN ({placeholders})
+          AND pmu.raw_material_id IS NOT NULL
+          AND COALESCE(pmu.actual_quantity, 0) > 0
+        GROUP BY pmu.production_id, ja_ho, raw_name
+        ORDER BY pmu.production_id, raw_qty DESC, raw_name ASC
+        ''',
+        normalized_ids,
+    ).fetchall()
+    usage_map = defaultdict(list)
+    for row in rows:
+        usage_map[int(row['production_id'])].append(
+            {
+                'ja_ho': str(row['ja_ho'] or '미지정').strip() or '미지정',
+                'raw_name': str(row['raw_name'] or '원초').strip() or '원초',
+                'raw_qty': float(row['raw_qty'] or 0),
+            }
+        )
+    return dict(usage_map)
+
+
+def _build_export_container_raw_breakdown(cursor, completed_rows, boxes_per_container, container_count, export_quantity, po_number_map, unit_mode='container'):
+    if not completed_rows or boxes_per_container <= 0 or container_count <= 0 or export_quantity <= 0:
+        return []
+
+    sorted_rows = sorted(
+        (dict(row) for row in completed_rows),
+        key=lambda row: (
+            str(row.get('scheduled_date') or ''),
+            int(row.get('schedule_id') or 0),
+            int(row.get('linked_production_id') or row.get('production_id') or 0),
+        ),
+    )
+    production_ids = [
+        int(row.get('linked_production_id') or row.get('production_id') or 0)
+        for row in sorted_rows
+        if int(row.get('linked_production_id') or row.get('production_id') or 0) > 0
+    ]
+    raw_usage_map = _load_production_raw_usage_by_ja_ho(cursor, production_ids)
+    container_usage_map = {}
+    produced_cursor = 0.0
+
+    for row in sorted_rows:
+        actual_boxes = max(float(_get_production_export_box_total(row) or 0), 0.0)
+        if actual_boxes <= 0:
+            continue
+        allocations = _allocate_export_boxes_to_containers(
+            produced_cursor,
+            actual_boxes,
+            boxes_per_container,
+            container_count=container_count,
+            total_limit=export_quantity,
+        )
+        allocated_total = sum(float(item['boxes'] or 0) for item in allocations)
+        production_id = int(row.get('linked_production_id') or row.get('production_id') or 0)
+        raw_usage_rows = raw_usage_map.get(production_id) or []
+        production_raw_total = sum(float(item.get('raw_qty') or 0) for item in raw_usage_rows)
+
+        for allocation in allocations:
+            container_no = int(allocation['container_no'])
+            allocated_boxes = float(allocation['boxes'] or 0)
+            container_bucket = container_usage_map.setdefault(
+                container_no,
+                {
+                    'produced_boxes': 0.0,
+                    'ja_ho_map': {},
+                },
+            )
+            container_bucket['produced_boxes'] += allocated_boxes
+
+            if allocated_total <= 0 or production_raw_total <= 0:
+                continue
+
+            container_box_share = allocated_boxes / allocated_total
+            for raw_usage in raw_usage_rows:
+                raw_qty = float(raw_usage.get('raw_qty') or 0)
+                if raw_qty <= 0:
+                    continue
+                ja_ho_key = str(raw_usage.get('ja_ho') or '미지정').strip() or '미지정'
+                item_bucket = container_bucket['ja_ho_map'].setdefault(
+                    ja_ho_key,
+                    {
+                        'ja_ho': ja_ho_key,
+                        'raw_names': set(),
+                        'raw_qty': 0.0,
+                        'production_boxes': 0.0,
+                    },
+                )
+                raw_name = str(raw_usage.get('raw_name') or '원초').strip() or '원초'
+                item_bucket['raw_names'].add(raw_name)
+                item_bucket['raw_qty'] += raw_qty * container_box_share
+                item_bucket['production_boxes'] += allocated_boxes * (raw_qty / production_raw_total)
+
+        produced_cursor += allocated_total
+
+    suffix = _get_export_unit_suffix(unit_mode)
+    breakdown_rows = []
+    for container_no in range(1, int(container_count) + 1):
+        usage_bucket = container_usage_map.get(container_no) or {}
+        ja_ho_map = usage_bucket.get('ja_ho_map') or {}
+        produced_boxes = float(usage_bucket.get('produced_boxes') or 0)
+        total_raw_qty = sum(float(item.get('raw_qty') or 0) for item in ja_ho_map.values())
+        item_rows = []
+        for item in sorted(
+            ja_ho_map.values(),
+            key=lambda value: (-float(value.get('raw_qty') or 0), str(value.get('ja_ho') or '')),
+        ):
+            raw_qty = float(item.get('raw_qty') or 0)
+            production_boxes = float(item.get('production_boxes') or 0)
+            ratio_pct = round((raw_qty / total_raw_qty) * 100, 1) if total_raw_qty > 0 else 0.0
+            raw_names = sorted(name for name in item.get('raw_names', set()) if str(name or '').strip())
+            item_rows.append(
+                {
+                    'ja_ho': item.get('ja_ho') or '미지정',
+                    'raw_names': raw_names,
+                    'raw_names_text': ', '.join(raw_names),
+                    'raw_qty': round(raw_qty, 2),
+                    'ratio_pct': ratio_pct,
+                    'production_boxes': round(production_boxes, 1),
+                }
+            )
+        breakdown_rows.append(
+            {
+                'container_no': container_no,
+                'container_label': f'{container_no}{suffix}',
+                'po_number': (po_number_map or {}).get(container_no, ''),
+                'produced_boxes': round(produced_boxes, 1),
+                'target_boxes': int(min(max(export_quantity - ((container_no - 1) * boxes_per_container), 0), boxes_per_container)),
+                'total_raw_qty': round(total_raw_qty, 2),
+                'breakdown_items': item_rows,
+            }
+        )
+    return breakdown_rows
 
 
 def _delete_export_generated_rows(cursor, export_schedule_id, schedule_ids):
@@ -1759,6 +1947,24 @@ def schedules():
                 po_number_map,
                 unit_mode=unit_mode,
             )
+            try:
+                container_raw_breakdowns = _build_export_container_raw_breakdown(
+                    cursor,
+                    completed_rows,
+                    boxes_per_container,
+                    container_count,
+                    export_quantity,
+                    po_number_map,
+                    unit_mode=unit_mode,
+                )
+            except Exception:
+                logger.exception(
+                    'Failed to build export raw breakdown | export_schedule_id=%s | workplace=%r | product_id=%s',
+                    export_row.get('id'),
+                    workplace,
+                    export_row.get('product_id'),
+                )
+                container_raw_breakdowns = []
             export_view = {
                 **export_row,
                 'unit_mode': unit_mode,
@@ -1771,6 +1977,7 @@ def schedules():
                 'external_completed_count': len(external_completed_rows),
                 'completion_rate': round((produced_total / export_quantity) * 100, 1) if export_quantity > 0 else 0.0,
                 'container_rows': container_rows,
+                'container_raw_breakdowns': container_raw_breakdowns,
                 'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
                 'daily_actuals': [
                     {
@@ -1821,6 +2028,7 @@ def schedules():
                     'is_completed': is_completed,
                     'completed_date': completed_date,
                     'container_rows': container_rows,
+                    'container_raw_breakdowns': container_raw_breakdowns,
                     'daily_actuals': export_view['daily_actuals'],
                     'excluded_dates': excluded_dates,
                     'excluded_date_count': len(excluded_dates),
