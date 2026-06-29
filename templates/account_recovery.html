@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>계정/비밀번호 찾기 - 예맛</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+             background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+             min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
+        .recovery-box{background:white;border-radius:16px;padding:2rem;width:100%;max-width:540px;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+        .logo{text-align:center;margin-bottom:0.5rem;}
+        .title{text-align:center;font-size:1.45rem;font-weight:700;color:#2c3e50;margin-bottom:0.35rem;}
+        .subtitle{text-align:center;color:#7f8c8d;font-size:0.9rem;margin-bottom:1.5rem;}
+        .mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.5rem;}
+        .mode-tab{display:block;text-align:center;padding:0.8rem 1rem;border-radius:10px;text-decoration:none;font-weight:700;
+                  border:2px solid #dfe6f3;color:#667eea;background:#f8faff;}
+        .mode-tab.active{background:linear-gradient(135deg,#667eea,#764ba2);border-color:transparent;color:white;}
+        .panel{border:1px solid #eef1f6;border-radius:14px;padding:1.25rem;background:#fbfcff;}
+        .section-title{font-size:1rem;font-weight:700;color:#2c3e50;margin-bottom:0.3rem;}
+        .section-help{font-size:0.85rem;color:#6c757d;margin-bottom:1rem;line-height:1.5;}
+        .form-group{margin-bottom:1rem;}
+        .form-group label{display:block;font-weight:600;margin-bottom:0.45rem;color:#495057;font-size:0.9rem;}
+        .form-group input{width:100%;padding:0.75rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.95rem;transition:border 0.2s;}
+        .form-group input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1);}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+        .btn{width:100%;padding:0.85rem;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;
+             border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.2s;}
+        .btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(102,126,234,0.25);}
+        .btn-secondary{background:linear-gradient(135deg,#7b8794,#52606d);}
+        .message{padding:0.85rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:0.88rem;line-height:1.5;}
+        .message.error{background:#ffebee;color:#c62828;border-left:4px solid #c62828;}
+        .message.success{background:#e8f5e9;color:#2e7d32;border-left:4px solid #2e7d32;}
+        .result-box{background:#f4f7ff;border:1px solid #dbe4ff;border-radius:10px;padding:1rem;margin-bottom:1rem;}
+        .result-box strong{display:block;color:#2c3e50;margin-bottom:0.5rem;}
+        .result-item{font-size:0.9rem;color:#495057;margin-top:0.4rem;}
+        .question-box{padding:0.9rem 1rem;border-radius:10px;background:#eef3ff;border:1px solid #d4def8;color:#324563;font-weight:600;margin-bottom:1rem;}
+        .footer-link{text-align:center;margin-top:1.25rem;font-size:0.85rem;}
+        .footer-link a{color:#667eea;text-decoration:none;font-weight:600;}
+        @media (max-width: 768px) {
+            .recovery-box{padding:1.5rem;border-radius:12px;}
+            .form-grid{grid-template-columns:1fr;}
+            .title{font-size:1.2rem;}
+        }
+    </style>
+</head>
+<body>
+    <div class="recovery-box">
+        <div class="logo"><img src="/static/img/yemat_logo.svg" alt="예맛" style="height:68px;max-width:100%;"></div>
+        <h1 class="title">계정 / 비밀번호 찾기</h1>
+        <p class="subtitle">가입할 때 입력한 정보와 암호찾기 질문으로 계정을 확인할 수 있어요.</p>
+
+        <div class="mode-tabs">
+            <a href="/account-recovery?mode=username" class="mode-tab {% if mode == 'username' %}active{% endif %}">아이디 찾기</a>
+            <a href="/account-recovery?mode=password" class="mode-tab {% if mode == 'password' %}active{% endif %}">비밀번호 찾기</a>
+        </div>
+
+        {% if mode == 'username' %}
+        <div class="panel">
+            <div class="section-title">아이디 찾기</div>
+            <div class="section-help">이름과 연락처 또는 이메일을 입력하면 일치하는 아이디를 보여드립니다.</div>
+
+            {% if username_error %}
+            <div class="message error">{{ username_error }}</div>
+            {% endif %}
+
+            {% if username_result %}
+            <div class="result-box">
+                <strong>확인된 아이디</strong>
+                {% for item in username_result %}
+                <div class="result-item">아이디: {{ item.username }}{% if item.status == 'pending' %} (승인 대기){% elif item.status == 'rejected' %} (승인 반려){% endif %}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="POST">
+                <input type="hidden" name="mode" value="username">
+                <div class="form-group">
+                    <label>이름</label>
+                    <input type="text" name="name" required value="{{ username_form.name }}" placeholder="가입한 이름">
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>연락처</label>
+                        <input type="tel" name="phone" value="{{ username_form.phone }}" placeholder="010-0000-0000">
+                    </div>
+                    <div class="form-group">
+                        <label>이메일</label>
+                        <input type="email" name="email" value="{{ username_form.email }}" placeholder="example@email.com">
+                    </div>
+                </div>
+                <button type="submit" class="btn">아이디 찾기</button>
+            </form>
+        </div>
+        {% else %}
+        <div class="panel">
+            <div class="section-title">비밀번호 재설정</div>
+            <div class="section-help">아이디를 입력해 등록된 암호찾기 질문을 확인한 뒤, 답변이 맞으면 새 비밀번호를 설정할 수 있습니다.</div>
+
+            {% if password_error %}
+            <div class="message error">{{ password_error }}</div>
+            {% endif %}
+            {% if password_success %}
+            <div class="message success">{{ password_success }}</div>
+            {% endif %}
+
+            <form method="POST" autocomplete="off">
+                <input type="hidden" name="mode" value="password">
+                <input type="hidden" name="action" value="lookup">
+                <div class="form-group">
+                    <label>아이디</label>
+                    <input type="text" name="username" required value="{{ password_form.username }}" placeholder="아이디" autocomplete="username">
+                </div>
+                <button type="submit" class="btn btn-secondary">질문 불러오기</button>
+            </form>
+
+            {% if password_question_ready %}
+            <div class="question-box" style="margin-top:1rem;">질문: {{ password_question }}</div>
+            <form method="POST" autocomplete="off">
+                <input type="hidden" name="mode" value="password">
+                <input type="hidden" name="action" value="reset">
+                <input type="hidden" name="username" value="{{ password_form.username }}">
+                <input type="text" name="fake_username" autocomplete="username" style="display:none;">
+                <input type="password" name="fake_password" autocomplete="current-password" style="display:none;">
+                <div class="form-group">
+                    <label>답변</label>
+                    <input type="text" name="answer" required value="" placeholder="질문에 대한 답변" autocomplete="off" autocapitalize="off" spellcheck="false">
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>새 비밀번호</label>
+                        <input type="password" name="new_password" required value="" placeholder="4자 이상" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label>새 비밀번호 확인</label>
+                        <input type="password" name="confirm_password" required value="" placeholder="비밀번호 다시 입력" autocomplete="new-password">
+                    </div>
+                </div>
+                <button type="submit" class="btn">비밀번호 재설정</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="footer-link">
+            <a href="/login">로그인으로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -24,6 +24,9 @@
         .register-link{text-align:center;margin-top:1.5rem;font-size:0.85rem;color:#7f8c8d;}
         .register-link a{color:#667eea;text-decoration:none;font-weight:600;}
         .register-link a:hover{text-decoration:underline;}
+        .helper-links{display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;font-size:0.85rem;}
+        .helper-links a{color:#667eea;text-decoration:none;font-weight:600;}
+        .helper-links a:hover{text-decoration:underline;}
         @media (max-width: 768px) {
             .login-box{padding:1.5rem;border-radius:12px;}
             .logo{font-size:2rem;}
@@ -53,6 +56,12 @@
             </div>
             <button type="submit" class="btn">로그인</button>
         </form>
+
+        <div class="helper-links">
+            <a href="/account-recovery?mode=username">아이디 찾기</a>
+            <span style="color:#cfd4da;">|</span>
+            <a href="/account-recovery?mode=password">비밀번호 찾기</a>
+        </div>
         
         <div class="register-link">
             계정이 없으신가요? <a href="/register">회원가입</a>
