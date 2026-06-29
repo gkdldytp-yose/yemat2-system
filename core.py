@@ -737,6 +737,10 @@ def _ensure_user_schema(conn):
             conn.execute("ALTER TABLE users ADD COLUMN can_integrated_management INTEGER DEFAULT 0")
         if 'status' not in cols:
             conn.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'approved'")
+        if 'recovery_question' not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN recovery_question TEXT")
+        if 'recovery_answer_hash' not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN recovery_answer_hash TEXT")
 
         # 기존 사용자 기본값 보정
         conn.execute("UPDATE users SET status='approved' WHERE status IS NULL")

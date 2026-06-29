@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>암호찾기 질문 등록 - 예맛</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+             background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+             min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
+        .setup-box{background:white;border-radius:16px;padding:2rem;width:100%;max-width:540px;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+        .logo{text-align:center;margin-bottom:0.5rem;}
+        .title{text-align:center;font-size:1.4rem;font-weight:700;color:#2c3e50;margin-bottom:0.35rem;}
+        .subtitle{text-align:center;color:#7f8c8d;font-size:0.9rem;margin-bottom:1.5rem;line-height:1.5;}
+        .panel{border:1px solid #eef1f6;border-radius:14px;padding:1.25rem;background:#fbfcff;}
+        .message{padding:0.85rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:0.88rem;line-height:1.5;}
+        .message.error{background:#ffebee;color:#c62828;border-left:4px solid #c62828;}
+        .message.success{background:#e8f5e9;color:#2e7d32;border-left:4px solid #2e7d32;}
+        .form-group{margin-bottom:1rem;}
+        .form-group label{display:block;font-weight:600;margin-bottom:0.45rem;color:#495057;font-size:0.9rem;}
+        .form-group input,.form-group select{width:100%;padding:0.75rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.95rem;background:white;}
+        .form-group input:focus,.form-group select:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1);}
+        .help-box{padding:0.9rem 1rem;background:#eef3ff;border:1px solid #d4def8;border-radius:10px;color:#42526b;font-size:0.86rem;line-height:1.5;margin-bottom:1rem;}
+        .btn{width:100%;padding:0.85rem;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;
+             border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.2s;}
+        .btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(102,126,234,0.25);}
+        .username-badge{display:inline-block;padding:0.35rem 0.65rem;border-radius:999px;background:#edf2ff;color:#4c63d2;font-size:0.82rem;font-weight:700;margin-bottom:0.75rem;}
+        @media (max-width: 768px) {
+            .setup-box{padding:1.5rem;border-radius:12px;}
+            .title{font-size:1.2rem;}
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-box">
+        <div class="logo"><img src="/static/img/yemat_logo.svg" alt="예맛" style="height:68px;max-width:100%;"></div>
+        <h1 class="title">암호찾기 질문 등록</h1>
+        <p class="subtitle">기존 계정은 로그인 후 한 번만 질문과 답변을 등록하면 됩니다.</p>
+
+        <div class="panel">
+            {% if username %}
+            <div class="username-badge">{{ username }}</div>
+            {% endif %}
+
+            {% if error %}
+            <div class="message error">{{ error }}</div>
+            {% endif %}
+            {% if success %}
+            <div class="message success">{{ success }}</div>
+            {% endif %}
+
+            <div class="help-box">
+                비밀번호를 잊었을 때 본인 확인용으로 사용할 질문과 답변입니다.
+                답변은 오타 방지를 위해 한 번 더 확인합니다.
+            </div>
+
+            <form method="POST">
+                <div class="form-group">
+                    <label>암호찾기 질문</label>
+                    <select name="recovery_question" required>
+                        <option value="">질문을 선택해 주세요</option>
+                        {% for question in recovery_questions %}
+                        <option value="{{ question }}" {% if form_data.recovery_question == question %}selected{% endif %}>{{ question }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>답변</label>
+                    <input type="text" name="recovery_answer" required value="{{ form_data.recovery_answer or '' }}" placeholder="답변 입력">
+                </div>
+                <div class="form-group">
+                    <label>답변 확인</label>
+                    <input type="text" name="recovery_answer_confirm" required value="{{ form_data.recovery_answer_confirm or '' }}" placeholder="답변 다시 입력">
+                </div>
+                <button type="submit" class="btn">저장하고 계속하기</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

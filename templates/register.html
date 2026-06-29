@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -9,18 +9,21 @@
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
              background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
              min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
-        .register-box{background:white;border-radius:16px;padding:2rem;width:100%;max-width:500px;box-shadow:0 8px 32px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;}
+        .register-box{background:white;border-radius:16px;padding:2rem;width:100%;max-width:540px;box-shadow:0 8px 32px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;}
         .logo{text-align:center;font-size:2rem;margin-bottom:0.5rem;}
         .title{text-align:center;font-size:1.25rem;font-weight:700;color:#2c3e50;margin-bottom:1.5rem;}
         .form-group{margin-bottom:1rem;}
         .form-group label{display:block;font-weight:600;margin-bottom:0.4rem;color:#495057;font-size:0.85rem;}
-        .form-group input{width:100%;padding:0.65rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.9rem;}
-        .form-group input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1);}
+        .form-group input,.form-group select{width:100%;padding:0.65rem;border:2px solid #e1e8ed;border-radius:8px;font-size:0.9rem;background:white;}
+        .form-group input:focus,.form-group select:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1);}
+        .help-text{margin-top:0.35rem;color:#6c757d;font-size:0.78rem;line-height:1.45;}
         .btn{width:100%;padding:0.75rem;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;
              border-radius:8px;font-weight:700;font-size:0.95rem;cursor:pointer;margin-top:0.5rem;}
         .btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(102,126,234,0.3);}
         .btn-secondary{background:linear-gradient(135deg,#6c757d,#495057);}
         .error{background:#ffebee;color:#c62828;padding:0.65rem;border-radius:8px;margin-bottom:1rem;font-size:0.8rem;border-left:4px solid #c62828;}
+        .section-card{margin-top:1.25rem;padding:1rem;border:1px solid #e8ecf4;border-radius:12px;background:#fafbff;}
+        .section-card h2{font-size:0.98rem;color:#2c3e50;margin-bottom:0.45rem;}
         .login-link{text-align:center;margin-top:1rem;font-size:0.85rem;color:#7f8c8d;}
         .login-link a{color:#667eea;text-decoration:none;font-weight:600;}
         @media (max-width: 768px) {
@@ -34,15 +37,15 @@
     <div class="register-box">
         <div class="logo"><img src="/static/img/yemat_logo.svg" alt="예맛" style="height:64px;max-width:100%;"></div>
         <h1 class="title">예맛 생산관리 회원가입</h1>
-        
+
         {% if error %}
         <div class="error">❌ {{ error }}</div>
         {% endif %}
-        
+
         <form method="POST">
             <div class="form-group">
                 <label>아이디 *</label>
-                <input type="text" name="username" required placeholder="영문/숫자 조합">
+                <input type="text" name="username" required value="{{ form_data.username or '' }}" placeholder="영문/숫자 조합">
             </div>
             <div class="form-group">
                 <label>비밀번호 *</label>
@@ -54,30 +57,52 @@
             </div>
             <div class="form-group">
                 <label>이름</label>
-                <input type="text" name="name" placeholder="실명">
+                <input type="text" name="name" value="{{ form_data.name or '' }}" placeholder="실명">
             </div>
             <div class="form-group">
                 <label>연락처</label>
-                <input type="tel" name="phone" placeholder="010-0000-0000">
+                <input type="tel" name="phone" value="{{ form_data.phone or '' }}" placeholder="010-0000-0000">
             </div>
             <div class="form-group">
                 <label>이메일</label>
-                <input type="email" name="email" placeholder="example@email.com">
+                <input type="email" name="email" value="{{ form_data.email or '' }}" placeholder="example@email.com">
             </div>
             <div class="form-group">
                 <label>부서</label>
-                <input type="text" name="department" placeholder="소속 부서">
+                <input type="text" name="department" value="{{ form_data.department or '' }}" placeholder="소속 부서">
             </div>
+
+            <div class="section-card">
+                <h2>암호찾기 질문 설정</h2>
+                <div class="help-text">비밀번호를 잊었을 때 사용할 질문과 답변입니다. 답변은 오타 방지를 위해 두 번 입력해 주세요.</div>
+                <div class="form-group" style="margin-top:0.85rem;">
+                    <label>암호찾기 질문 *</label>
+                    <select name="recovery_question" required>
+                        <option value="">질문을 선택해 주세요</option>
+                        {% for question in recovery_questions %}
+                        <option value="{{ question }}" {% if form_data.recovery_question == question %}selected{% endif %}>{{ question }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>답변 *</label>
+                    <input type="text" name="recovery_answer" required value="{{ form_data.recovery_answer or '' }}" placeholder="답변 입력">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>답변 확인 *</label>
+                    <input type="text" name="recovery_answer_confirm" required value="{{ form_data.recovery_answer_confirm or '' }}" placeholder="답변 다시 입력">
+                </div>
+            </div>
+
             <div style="display:flex;gap:0.5rem;margin-top:1rem;">
                 <a href="/login" class="btn btn-secondary" style="text-decoration:none;text-align:center;">취소</a>
                 <button type="submit" class="btn">가입하기</button>
             </div>
         </form>
-        
+
         <div class="login-link">
             이미 계정이 있으신가요? <a href="/login">로그인</a>
         </div>
     </div>
 </body>
 </html>
-
