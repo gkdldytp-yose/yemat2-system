@@ -8,6 +8,24 @@
 .cat-btn:hover{border-color:#9ca3af;}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:1rem;}
 .modal-box{background:white;border-radius:12px;padding:1.5rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;}
+.material-edit-modal .form-group label{color:#0f172a;font-weight:800;}
+.material-edit-modal input,
+.material-edit-modal select{
+    background:#ffffff;
+    color:#0f172a;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+}
+.material-edit-modal input[readonly]{
+    background:#f1f5f9;
+    color:#475569;
+}
+.material-edit-modal input:focus,
+.material-edit-modal select:focus{
+    border-color:#60a5fa;
+    box-shadow:0 0 0 3px rgba(96,165,250,.18);
+    outline:none;
+}
 @media (max-width: 768px) {
     .modal-box{padding:1rem;border-radius:8px;}
     .material-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
@@ -294,6 +312,25 @@ html[data-theme="dark"] .material-modal,
 html[data-theme="dark"] .issue-status-board,
 html[data-theme="dark"] .request-builder-card,
 html[data-theme="dark"] .receipt-modal{background:linear-gradient(180deg,#121a2a 0%,#0f1726 100%);border:1px solid #263244;box-shadow:0 24px 54px rgba(2,6,23,.42);}
+html[data-theme="dark"] .material-edit-modal h3,
+html[data-theme="dark"] .material-edit-modal .form-group label{color:#eff6ff;}
+html[data-theme="dark"] .material-edit-modal input,
+html[data-theme="dark"] .material-edit-modal select{
+    background:#0f172a !important;
+    color:#e5eefc !important;
+    border-color:#314155 !important;
+}
+html[data-theme="dark"] .material-edit-modal input::placeholder{color:#8ea3bd;}
+html[data-theme="dark"] .material-edit-modal input[readonly]{
+    background:#162133 !important;
+    color:#c7d3e3 !important;
+    border-color:#314155 !important;
+}
+html[data-theme="dark"] .material-edit-modal input:focus,
+html[data-theme="dark"] .material-edit-modal select:focus{
+    border-color:#60a5fa !important;
+    box-shadow:0 0 0 3px rgba(59,130,246,.22);
+}
 html[data-theme="dark"] .material-modal,
 html[data-theme="dark"] .material-header-item,
 html[data-theme="dark"] .request-list-table tbody tr,
@@ -919,7 +956,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
 </div>
 
 <div id="editModal" class="modal-bg">
-    <div class="modal-box">
+    <div class="modal-box material-edit-modal">
         <div style="display:flex;justify-content:flex-start;margin-bottom:0.5rem;">
             <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('editModal').style.display='none'">종료</button>
         </div>

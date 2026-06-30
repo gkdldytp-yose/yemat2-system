@@ -8,11 +8,23 @@ from functools import wraps
 from flask import Flask, g, request, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from core import LOGISTICS_WORKPLACE, SHARED_WORKPLACE, get_db, get_workplace, today_local
+from core import LOGISTICS_WORKPLACE, SHARED_WORKPLACE, audit_log, db_transaction, get_db, get_workplace, today_local
 
 DEFAULT_SECRET_KEY = 'yemat-secret-key-2025'
 DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = 8080
+_AUDIT_REDACT_KEYS = {
+    'password',
+    'password_confirm',
+    'current_password',
+    'new_password',
+    'new_password_confirm',
+    'recovery_answer',
+    'recovery_answer_confirm',
+    'answer',
+    'token',
+    'secret',
+}
 
 
 def _env_flag(name, default=False):
@@ -28,6 +40,77 @@ def _resolve_secret_key():
         or os.getenv('SECRET_KEY')
         or DEFAULT_SECRET_KEY
     )
+
+
+def _sanitize_audit_value(value, depth=0):
+    if depth >= 4:
+        return '...'
+    if isinstance(value, dict):
+        sanitized = {}
+        for key, item in value.items():
+            key_text = str(key)
+            if key_text.strip().lower() in _AUDIT_REDACT_KEYS:
+                sanitized[key_text] = '***'
+            else:
+                sanitized[key_text] = _sanitize_audit_value(item, depth + 1)
+        return sanitized
+    if isinstance(value, (list, tuple, set)):
+        items = list(value)
+        sanitized_items = [_sanitize_audit_value(item, depth + 1) for item in items[:20]]
+        if len(items) > 20:
+            sanitized_items.append(f'... ({len(items) - 20} more)')
+        return sanitized_items
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        if isinstance(value, str) and len(value) > 300:
+            return f'{value[:300]}...'
+        return value
+    return str(value)
+
+
+def _request_multidict_to_dict(multidict):
+    payload = {}
+    for key in multidict.keys():
+        values = multidict.getlist(key)
+        payload[key] = values if len(values) > 1 else (values[0] if values else '')
+    return payload
+
+
+def _should_auto_audit_request():
+    if request.path.startswith('/static') or request.path == '/favicon.ico':
+        return False
+    if request.method == 'OPTIONS':
+        return False
+    if not session.get('user'):
+        return False
+    if request.endpoint in {'auth.login', 'auth.logout'}:
+        return False
+    return True
+
+
+def _build_request_audit_payload(response, elapsed_ms):
+    json_payload = None
+    try:
+        json_payload = request.get_json(silent=True)
+    except Exception:
+        json_payload = None
+
+    payload = {
+        'path': request.path,
+        'query_string': request.query_string.decode('utf-8', errors='ignore'),
+        'method': request.method,
+        'endpoint': request.endpoint or '',
+        'status_code': int(getattr(response, 'status_code', 0) or 0),
+        'elapsed_ms': int(elapsed_ms),
+        'content_type': request.content_type or '',
+        'content_length': int(request.content_length or 0),
+        'referrer': request.referrer or '',
+        'host': request.host or '',
+        'args': _sanitize_audit_value(_request_multidict_to_dict(request.args)),
+        'form': _sanitize_audit_value(_request_multidict_to_dict(request.form)),
+        'json': _sanitize_audit_value(json_payload),
+        'files': sorted(list(request.files.keys()))[:20],
+    }
+    return payload
 
 
 def register_blueprints(app):
@@ -70,9 +153,6 @@ def create_app():
         try:
             if request.path.startswith('/static') or request.path == '/favicon.ico':
                 return response
-            logger = logging.getLogger('yemat.access')
-            if not logger.handlers:
-                return response
             started_at = getattr(g, '_request_started_at', None)
             elapsed_ms = int((perf_counter() - started_at) * 1000) if started_at else 0
             user = session.get('user') or {}
@@ -83,18 +163,30 @@ def create_app():
             query = request.query_string.decode('utf-8', errors='ignore').strip()
             path = request.path if not query else f'{request.path}?{query}'
             referer = (request.referrer or '-').strip() or '-'
-            logger.info(
-                '%s | %s | %s | %s | %s | %s | %s | %sms | %s',
-                ip,
-                username,
-                workplace,
-                request.method,
-                response.status_code,
-                endpoint,
-                path,
-                elapsed_ms,
-                referer,
-            )
+            logger = logging.getLogger('yemat.access')
+            if logger.handlers:
+                logger.info(
+                    '%s | %s | %s | %s | %s | %s | %s | %sms | %s',
+                    ip,
+                    username,
+                    workplace,
+                    request.method,
+                    response.status_code,
+                    endpoint,
+                    path,
+                    elapsed_ms,
+                    referer,
+                )
+            if _should_auto_audit_request():
+                payload = _build_request_audit_payload(response, elapsed_ms)
+                with db_transaction() as audit_conn:
+                    audit_log(
+                        audit_conn,
+                        request.method.lower(),
+                        request.endpoint or 'unknown_request',
+                        None,
+                        payload,
+                    )
         except Exception:
             pass
         return response

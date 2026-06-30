@@ -4786,7 +4786,7 @@ function renderUsageRows(logs){
     tbody.innerHTML = logs.map(log => `
         <tr>
             <td>${formatUsageLogDateCell(log)}</td>
-            <td>${log.production_no || '-'}</td>
+            <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_no || '-'}</a>` : (log.production_no || '-')}</td>
             <td>${log.product_name || '-'}</td>
             <td>${log.lot || '-'}</td>
             <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
