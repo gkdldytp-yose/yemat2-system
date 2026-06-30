@@ -10,8 +10,35 @@
 .product-title-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
 .product-title-actions{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
 .product-spec-btn{display:inline-flex;align-items:center;justify-content:center;padding:.42rem .82rem;border-radius:999px;font-size:.8rem;font-weight:800;text-decoration:none;line-height:1.2;}
-.product-spec-btn.view{background:#eef2ff;border:1px solid #c7d2fe;color:#334155;}
-.product-spec-btn.view:hover{background:#e0e7ff;border-color:#a5b4fc;color:#1e3a8a;}
+.product-spec-btn.view{
+    position:relative;
+    gap:.4rem;
+    padding:.58rem 1rem;
+    background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+    border:1px solid #2563eb;
+    color:#ffffff;
+    box-shadow:0 10px 22px rgba(37,99,235,.24), inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.product-spec-btn.view::before{
+    content:"📘";
+    font-size:.95rem;
+    line-height:1;
+}
+.product-spec-btn.view::after{
+    content:"";
+    position:absolute;
+    inset:-3px;
+    border-radius:999px;
+    border:1px solid rgba(59,130,246,.34);
+    pointer-events:none;
+}
+.product-spec-btn.view:hover{
+    transform:translateY(-1px);
+    background:linear-gradient(135deg,#1d4ed8 0%,#1e40af 100%);
+    border-color:#1d4ed8;
+    color:#ffffff;
+    box-shadow:0 14px 26px rgba(37,99,235,.3), inset 0 0 0 1px rgba(255,255,255,.14);
+}
 .product-spec-btn.register{background:#ecfdf5;border:1px solid #86efac;color:#166534;}
 .product-spec-btn.register:hover{background:#dcfce7;border-color:#4ade80;color:#166534;}
 .note-textarea{width:100%;padding:0.55rem 0.65rem;border:2px solid #667eea;border-radius:8px;box-sizing:border-box;font-size:0.9rem;line-height:1.45;resize:vertical;min-height:74px;font-family:inherit;}
@@ -361,8 +388,19 @@ html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:12px"],
 html[data-theme="dark"] [style*="background:#fff"][style*="border-radius:8px"]{background:#162133 !important;color:#dbe7f5 !important;border-color:#263244 !important;}
 html[data-theme="dark"] .section-journal-btn{background:#152033;border-color:#334155;color:#dbe7f5;}
 html[data-theme="dark"] .section-journal-btn:hover{background:#1b2940;border-color:#60a5fa;color:#eff6ff;}
-html[data-theme="dark"] .product-spec-btn.view{background:#152033;border-color:#334155;color:#dbe7f5;}
-html[data-theme="dark"] .product-spec-btn.view:hover{background:#1b2940;border-color:#60a5fa;color:#eff6ff;}
+html[data-theme="dark"] .product-spec-btn.view{
+    background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);
+    border-color:#3b82f6;
+    color:#eff6ff;
+    box-shadow:0 12px 26px rgba(37,99,235,.28), inset 0 0 0 1px rgba(255,255,255,.12);
+}
+html[data-theme="dark"] .product-spec-btn.view::after{border-color:rgba(96,165,250,.32);}
+html[data-theme="dark"] .product-spec-btn.view:hover{
+    background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+    border-color:#60a5fa;
+    color:#ffffff;
+    box-shadow:0 16px 30px rgba(37,99,235,.34), inset 0 0 0 1px rgba(255,255,255,.14);
+}
 html[data-theme="dark"] .product-spec-btn.register{background:#0f2e22;border-color:#166534;color:#bbf7d0;}
 html[data-theme="dark"] .product-spec-btn.register:hover{background:#14532d;border-color:#22c55e;color:#dcfce7;}
 html[data-theme="dark"] .raw-input-row{border-top-color:#334155;}
@@ -519,7 +557,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 </div>
 {% endif %}
 
-<form method="POST" action="/production/{{ production.id }}/update-usage">
+<form method="POST" action="/production/{{ production.id }}/update-usage" id="productionUsageForm" onsubmit="return validateProductionUsageForm();">
 <input type="hidden" name="return_edit" value="{{ '1' if edit_completed else '' }}">
 
 <div class="sec">
@@ -1136,7 +1174,7 @@ const RAW_SOK_VALUES = {{ (production.raw_sok_values or [production.active_sok_p
 const RAW_SHEET_VALUES = {{ (production.raw_sheet_values or [production.active_sheets_per_pack or 0])|tojson }};
 let currentRawSokMode = {{ production.raw_sok_mode or 1 }};
 const PLANNED = {{ production.planned_boxes }};
-const DEFAULT_BOXES = {{ production.actual_boxes or production.planned_boxes }};
+const DEFAULT_BOXES = {{ production.actual_boxes or 0 }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
 const INITIAL_TOTAL_RAW_SELECTED = {{ total_raw_selected_qty or 0 }};
 const INITIAL_TOTAL_RAW_NEED = {{ total_raw_need_qty or 0 }};
@@ -1158,7 +1196,7 @@ window.onload = () => {
 
 function getActualBoxes(){
     const el = document.getElementById('actualBoxes');
-    return parseFloat(el && el.value) || DEFAULT_BOXES;
+    return parseFloat(el && el.value) || 0;
 }
 
 function initSampleBoxUi(){
@@ -1293,10 +1331,10 @@ function syncExpiryRows(){
         syncSampleToggleLabel(idx);
     });
     const normalizedTotal = Math.round(totalBoxes * 100) / 100;
-    actualBoxesEl.value = hasAnyBoxInput ? String(normalizedTotal) : String(DEFAULT_BOXES);
+    actualBoxesEl.value = hasAnyBoxInput ? String(normalizedTotal) : '';
     const actualBoxesDisplayEl = document.getElementById('actualBoxesDisplay');
     if(actualBoxesDisplayEl){
-        actualBoxesDisplayEl.textContent = actualBoxesEl.value;
+        actualBoxesDisplayEl.textContent = actualBoxesEl.value || '-';
     }
     const normalizedSampleTotal = Math.round(totalSampleBoxes * 100) / 100;
     const exportActualBoxesEl = document.getElementById('exportActualBoxes');
@@ -1320,6 +1358,29 @@ function syncExpiryRows(){
         addBtn.disabled = expiryVisibleCount >= rows.length;
     }
     recalcAll();
+}
+
+function validateProductionUsageForm(){
+    const firstBoxInput = document.getElementById('expiryBoxes1');
+    const firstDateInput = document.getElementById('expiryDate1');
+    const firstBoxRaw = (firstBoxInput?.value || '').trim();
+    if(!firstBoxRaw){
+        alert('첫 번째 소비기한의 박스 수를 입력해주세요.');
+        firstBoxInput?.focus();
+        return false;
+    }
+    const firstBoxValue = parseFloat(firstBoxRaw);
+    if(Number.isNaN(firstBoxValue) || firstBoxValue <= 0){
+        alert('첫 번째 소비기한의 박스 수는 0보다 커야 합니다.');
+        firstBoxInput?.focus();
+        return false;
+    }
+    if(!(firstDateInput?.value || '').trim()){
+        alert('첫 번째 소비기한을 입력해주세요.');
+        firstDateInput?.focus();
+        return false;
+    }
+    return true;
 }
 
 function getCurrentPerBox(){
@@ -1880,6 +1941,19 @@ function updateTotal(){
 
 function autoSelect(){
     const boxes = getActualBoxes();
+    if(!(boxes > 0)){
+        const firstBoxInput = document.getElementById('expiryBoxes1');
+        const firstDateInput = document.getElementById('expiryDate1');
+        alert('원초 자동 선택을 하려면 먼저 소비기한별 박스 수를 입력해주세요.');
+        if(firstBoxInput){
+            firstBoxInput.focus();
+            firstBoxInput.scrollIntoView({behavior:'smooth', block:'center'});
+        } else if(firstDateInput){
+            firstDateInput.focus();
+            firstDateInput.scrollIntoView({behavior:'smooth', block:'center'});
+        }
+        return;
+    }
     let remaining = getCurrentPerBox() * boxes;
 
     document.querySelectorAll('.raw-card').forEach(c => {

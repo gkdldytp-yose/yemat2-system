@@ -4390,9 +4390,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <button onclick="printCalendar()" class="calendar-action-btn">
                 🖨️ 인쇄
             </button>
+            {% if user.is_admin %}
             <a class="calendar-action-btn" href="{{ url_for('production.work_days', year=month_start.year, month=month_start.month) }}">
                 📅 근무일 관리
             </a>
+            {% endif %}
         </div>
     </div>
     

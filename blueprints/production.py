@@ -7,6 +7,7 @@ import math
 import logging
 
 from core import (
+    admin_required,
     begin_db_transaction,
     close_db,
     commit_db,
@@ -1028,9 +1029,6 @@ def _build_production_expiry_rows(production_row, default_expiry_date=''):
         production_row.get('sample_excluded_boxes_2'),
         production_row.get('sample_excluded_boxes_3'),
     ]
-    if raw_boxes[0] in (None, ''):
-        raw_boxes[0] = production_row.get('actual_boxes') or production_row.get('planned_boxes') or ''
-
     visible_count = 1
     for idx, (expiry_date, box_value, sample_box_value) in enumerate(zip(raw_dates, raw_boxes, raw_sample_boxes), start=1):
         has_date = bool((expiry_date or '').strip())
@@ -3528,7 +3526,7 @@ def delete_export_schedule(export_schedule_id):
 
 
 @bp.route('/work-days')
-@login_required
+@admin_required
 def work_days():
     """Auto-generated docstring."""
     year = request.args.get('year', type=int)
@@ -3645,7 +3643,7 @@ def work_days():
 
 
 @bp.route('/work-days/manage', methods=['POST'])
-@role_required('production')
+@admin_required
 def manage_work_day():
     """Auto-generated docstring."""
     work_date = request.form.get('date')
@@ -3696,7 +3694,7 @@ def manage_work_day():
 
 
 @bp.route('/work-days/delete', methods=['POST'])
-@role_required('production')
+@admin_required
 def delete_work_day():
     """Auto-generated docstring."""
     work_date = request.form.get('date')
@@ -4779,10 +4777,8 @@ def update_production_usage(production_id):
 
         has_secondary_expiry = bool(expiry_date_2_input or expiry_date_3_input or expiry_box_inputs[1] or expiry_box_inputs[2])
         if parsed_expiry_boxes[0] is None:
-            if has_secondary_expiry:
-                rollback_db(conn)
-                return "<script>alert('첫 번째 소비기한의 박스 수를 먼저 입력해주세요.'); window.history.back();</script>"
-            parsed_expiry_boxes[0] = actual_boxes if actual_boxes > 0 else planned_boxes
+            rollback_db(conn)
+            return "<script>alert('첫 번째 소비기한의 박스 수를 입력해주세요.'); window.history.back();</script>"
 
         for idx, (expiry_input, box_value) in enumerate(
             (
@@ -4805,10 +4801,10 @@ def update_production_usage(production_id):
                 return f"<script>alert('{idx}번째 소비기한은 YYYY-MM-DD 또는 YYYY-MM-DDA 형식으로 입력해주세요.'); window.history.back();</script>"
 
         computed_actual_boxes = sum(float(box or 0) for box in parsed_expiry_boxes if box is not None)
-        if computed_actual_boxes > 0:
-            actual_boxes = computed_actual_boxes
-        else:
-            parsed_expiry_boxes[0] = actual_boxes if actual_boxes > 0 else planned_boxes
+        if computed_actual_boxes <= 0:
+            rollback_db(conn)
+            return "<script>alert('소비기한별 박스 수를 1개 이상 입력해주세요.'); window.history.back();</script>"
+        actual_boxes = computed_actual_boxes
         for idx, sample_box_value in enumerate(parsed_sample_boxes, start=1):
             if sample_box_value is None:
                 continue

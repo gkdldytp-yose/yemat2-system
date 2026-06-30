@@ -238,7 +238,7 @@ def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', ent
     query = '''
         SELECT *
         FROM audit_logs
-        WHERE 1=1
+        WHERE COALESCE(entity, '') != 'auth_session'
     '''
     params = []
     if wp_filter != 'all':
@@ -3993,7 +3993,8 @@ def integrated_management():
             '''
             SELECT DISTINCT COALESCE(username, '') AS username
             FROM audit_logs
-            WHERE COALESCE(username, '') != ''
+            WHERE COALESCE(entity, '') != 'auth_session'
+              AND COALESCE(username, '') != ''
             ORDER BY username
             '''
         )
@@ -4003,6 +4004,7 @@ def integrated_management():
             SELECT DISTINCT COALESCE(entity, '') AS entity
             FROM audit_logs
             WHERE COALESCE(entity, '') != ''
+              AND COALESCE(entity, '') != 'auth_session'
             ORDER BY entity
             '''
         )
@@ -4011,7 +4013,8 @@ def integrated_management():
             '''
             SELECT DISTINCT COALESCE(action, '') AS action
             FROM audit_logs
-            WHERE COALESCE(action, '') != ''
+            WHERE COALESCE(entity, '') != 'auth_session'
+              AND COALESCE(action, '') != ''
             ORDER BY action
             '''
         )
@@ -4190,8 +4193,8 @@ def integrated_inventory_audit_export():
     if inventory_wp != 'all':
         selected_inventory_wps = [inventory_wp]
 
-    conn = get_db()
-    begin_db_transaction(conn)
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         rows = _query_inventory_audit_rows(
