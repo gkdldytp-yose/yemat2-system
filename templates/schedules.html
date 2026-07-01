@@ -709,9 +709,20 @@ body.modal-open {
     background: rgba(14,165,233,0.05);
 }
 .stats-detail-production-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0.28rem 0.62rem;
+    border: 1px solid rgba(14,165,233,0.24);
+    border-radius: 10px;
+    background: rgba(14,165,233,0.05);
     color: #0284c7;
     text-decoration: none;
     font-weight: 800;
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
 }
 .stats-detail-production-link:hover {
     text-decoration: underline;
@@ -6776,6 +6787,15 @@ function formatStatsNumber(value) {
     return num.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
 }
 
+function formatStatsShortDate(value) {
+    const text = String(value || '').trim();
+    if (!text) return '-';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        return text.slice(2);
+    }
+    return text;
+}
+
 function updateStatsDetailSummary(payload) {
     document.getElementById('statsDetailCount').textContent = `${formatStatsNumber(payload.summary?.count || 0)}건`;
     document.getElementById('statsDetailBoxes').textContent = `${formatStatsNumber(payload.summary?.total_boxes || 0)} BOX`;
@@ -6880,7 +6900,7 @@ function renderStatsDetailRows(rows) {
                 <thead>
                     <tr>
                         <th style="width:130px;">생산일</th>
-                        <th style="width:150px;">생산번호</th>
+                        <th style="width:170px;">생산번호</th>
                         <th style="min-width:180px;">원초명</th>
                         <th style="width:120px;">자호</th>
                         <th style="width:110px;">수율</th>
@@ -6892,7 +6912,7 @@ function renderStatsDetailRows(rows) {
                 <tbody>
                     ${rows.map((row) => `
                         <tr>
-                            <td data-label="생산일">${escapeHtml(row.production_date || '-')}</td>
+                            <td data-label="생산일" style="white-space:nowrap;">${escapeHtml(formatStatsShortDate(row.production_date || '-'))}</td>
                             <td data-label="생산번호"><a class="stats-detail-production-link" href="/production/${row.production_id}">${escapeHtml(row.production_no || '-')}</a></td>
                             <td data-label="원초명">${escapeHtml(row.raw_material_name || '-')}</td>
                             <td data-label="자호">${escapeHtml(row.car_number || '-')}</td>
