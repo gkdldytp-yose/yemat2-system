@@ -216,13 +216,13 @@
                 </div>
                 <div class="raw-code-summary">
                     <div><span>총재고</span><strong>{{ "{:,}".format(group.total_stock_sum|int) }}속</strong></div>
-                    <div><span>현재고</span><strong>{{ "{:,}".format(group.current_stock_sum|int) }}속</strong></div>
+                    <div class="is-current"><span>현재고</span><strong>{{ "{:,}".format(group.current_stock_sum|int) }}속</strong></div>
                     <div><span>사용량</span><strong>{{ "{:,}".format(group.used_quantity_sum|int) }}속</strong></div>
                 </div>
             </div>
             <div class="raw-code-items">
                 {% for rm in group['items'] %}
-                <article class="raw-code-item" onclick="showLogs({{ rm.id }},'{{ rm.name|e }}')">
+                <article class="raw-code-item stock-{{ rm.stock_color }}" onclick="showLogs({{ rm.id }},'{{ rm.name|e }}')">
                     <div class="raw-code-item-main row-layout">
                         <div class="raw-code-item-top row-layout">
                             <div class="raw-item-identity">
@@ -234,9 +234,16 @@
                                 <span class="raw-inline-meta">1박스 {{ rm.sheets_per_sok }}속</span>
                             </div>
                         </div>
-                        <div class="raw-code-metrics">
+                        <div class="raw-current-hero {{ rm.stock_color }}">
+                            <span class="raw-current-hero-label">현재고</span>
+                            <strong class="raw-current-hero-value" style="color:{{ rm.current_stock_text_color }};">{{ "{:,}".format(rm.current_stock_value|int) }}속</strong>
+                            <div class="raw-current-hero-meta">
+                                <span>잔여율 {{ rm.stock_percent }}%</span>
+                                <span>{% if rm.stock_color == 'danger' %}빠른 확인 필요{% elif rm.stock_color == 'warn' %}보충 주의{% else %}재고 여유{% endif %}</span>
+                            </div>
+                        </div>
+                        <div class="raw-code-metrics raw-code-metrics-secondary">
                             <div class="raw-metric"><span>총재고</span><strong>{{ "{:,}".format(rm.total_stock_value|int) }}속</strong></div>
-                            <div class="raw-metric"><span>현재고</span><strong style="color:{{ rm.current_stock_text_color }};">{{ "{:,}".format(rm.current_stock_value|int) }}속</strong></div>
                             <div class="raw-metric"><span>사용량</span><strong>{{ "{:,}".format(rm.used_quantity_value|int) }}속</strong></div>
                         </div>
                         <div class="raw-progress-row compact">
@@ -1430,27 +1437,42 @@ tr[onclick]:hover{background:#f8f9fa;}
 .raw-code-card-head h3{margin:0;font-size:1rem;color:#0f172a;line-height:1.2;}
 .raw-code-card-head p{margin:0;color:#64748b;font-size:.78rem;white-space:nowrap;}
 .raw-code-chip{display:inline-flex;align-items:center;padding:.3rem .6rem;border-radius:999px;background:#0f172a;color:#fff;font-size:.74rem;font-weight:800;letter-spacing:.03em;}
-.raw-code-summary{display:grid;grid-template-columns:repeat(3,minmax(72px,1fr));gap:.4rem;min-width:min(100%,274px);}
+.raw-code-summary{display:grid;grid-template-columns:repeat(3,minmax(72px,1fr));gap:.4rem;min-width:min(100%,310px);}
 .raw-code-summary div{background:#fff;border:1px solid rgba(148,163,184,.16);border-radius:10px;padding:.38rem .5rem;}
 .raw-code-summary span{display:block;font-size:.68rem;color:#64748b;margin-bottom:.08rem;}
 .raw-code-summary strong{font-size:.86rem;color:#0f172a;line-height:1.1;}
+.raw-code-summary .is-current{background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border-color:#93c5fd;box-shadow:0 10px 20px rgba(37,99,235,.14);}
+.raw-code-summary .is-current span{color:#1d4ed8;font-weight:800;}
+.raw-code-summary .is-current strong{font-size:1.02rem;color:#0f172a;}
 .raw-code-items{display:flex;flex-direction:column;gap:.45rem;padding:.6rem .7rem .7rem;}
 .raw-code-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;padding:.58rem .7rem;border:1px solid #e5edf5;border-radius:12px;background:#fff;align-items:center;}
 .raw-code-item.done{opacity:.9;}
+.raw-code-item.stock-good{border-color:rgba(34,197,94,.22);box-shadow:0 10px 22px rgba(22,163,74,.06);}
+.raw-code-item.stock-warn{border-color:rgba(245,158,11,.26);box-shadow:0 10px 22px rgba(245,158,11,.08);}
+.raw-code-item.stock-danger{border-color:rgba(239,68,68,.3);box-shadow:0 12px 24px rgba(239,68,68,.1);}
 .raw-code-item-top{display:flex;align-items:center;justify-content:space-between;gap:.7rem;margin-bottom:0;}
-.raw-code-item-top.row-layout{margin-bottom:0;}
+.raw-code-item-top.row-layout{height:100%;margin-bottom:0;align-self:stretch;align-content:center;}
 .raw-item-identity{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;min-width:0;}
 .raw-item-name{font-size:.92rem;color:#0f172a;line-height:1.2;}
-.raw-item-inline-meta{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;justify-content:flex-end;}
+.raw-item-inline-meta{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;justify-content:flex-start;}
 .raw-inline-meta{display:inline-flex;align-items:center;padding:.2rem .46rem;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:.72rem;font-weight:700;white-space:nowrap;}
-.raw-code-item-main.row-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,.9fr);gap:.35rem .8rem;align-items:center;}
+.raw-code-item-main.row-layout{display:grid;grid-template-columns:minmax(220px,.9fr) minmax(250px,1.05fr) minmax(210px,.72fr);gap:.45rem .8rem;align-items:center;}
 .raw-lot-badge{display:inline-flex;align-items:center;padding:.2rem .46rem;border-radius:999px;background:#eef2ff;color:#334155;font-size:.72rem;font-weight:700;white-space:nowrap;}
 .raw-code-meta{display:flex;flex-wrap:wrap;gap:.45rem .55rem;margin-bottom:.7rem;}
 .raw-code-meta span{display:inline-flex;align-items:center;padding:.28rem .56rem;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;font-size:.78rem;}
-.raw-code-metrics{display:grid;grid-template-columns:repeat(3,minmax(68px,1fr));gap:.35rem;align-self:stretch;}
+.raw-current-hero{display:flex;flex-direction:column;justify-content:center;gap:.2rem;padding:.6rem .8rem;border:1px solid #dbeafe;border-radius:14px;background:linear-gradient(135deg,#f8fbff 0%,#eef6ff 100%);box-shadow:0 10px 24px rgba(37,99,235,.08);align-self:stretch;min-width:0;}
+.raw-current-hero.warn{background:linear-gradient(135deg,#fffaf0 0%,#ffedd5 100%);border-color:#fdba74;box-shadow:0 10px 24px rgba(245,158,11,.12);}
+.raw-current-hero.danger{background:linear-gradient(135deg,#fff5f5 0%,#fee2e2 100%);border-color:#fca5a5;box-shadow:0 12px 26px rgba(239,68,68,.14);}
+.raw-current-hero-label{font-size:.68rem;font-weight:900;color:#2563eb;letter-spacing:.02em;}
+.raw-current-hero.warn .raw-current-hero-label{color:#c2410c;}
+.raw-current-hero.danger .raw-current-hero-label{color:#b91c1c;}
+.raw-current-hero-value{display:block;font-size:1.34rem;line-height:1.05;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.raw-current-hero-meta{display:flex;align-items:center;justify-content:space-between;gap:.45rem;flex-wrap:wrap;font-size:.72rem;font-weight:800;color:#475569;}
+.raw-code-metrics{display:grid;grid-template-columns:repeat(2,minmax(82px,1fr));gap:.35rem;align-self:stretch;}
 .raw-metric{padding:.32rem .45rem;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;}
 .raw-metric span{display:block;font-size:.64rem;color:#64748b;margin-bottom:.05rem;line-height:1.1;}
 .raw-metric strong{display:block;font-size:.82rem;color:#0f172a;line-height:1.15;}
+.raw-code-metrics-secondary .raw-metric strong{font-size:.9rem;}
 .raw-progress-row{display:flex;align-items:center;gap:.55rem;grid-column:1 / -1;}
 .raw-progress-row.compact{max-width:100%;}
 .raw-progress-row span{font-size:.76rem;font-weight:700;color:#475569;white-space:nowrap;}
@@ -1515,6 +1537,7 @@ html[data-theme="dark"] .raw-code-summary span,
 html[data-theme="dark"] .raw-inline-meta,
 html[data-theme="dark"] .raw-code-meta span,
 html[data-theme="dark"] .raw-metric span,
+html[data-theme="dark"] .raw-current-hero-meta,
 html[data-theme="dark"] .raw-progress-row span,
 html[data-theme="dark"] .raw-done-note,
 html[data-theme="dark"] .raw-lot-header-item .label{color:var(--text-muted);}
@@ -1536,6 +1559,13 @@ html[data-theme="dark"] .raw-code-summary div,
 html[data-theme="dark"] .raw-inline-meta,
 html[data-theme="dark"] .raw-code-meta span,
 html[data-theme="dark"] .raw-metric{background:rgba(15,23,42,0.78);border-color:rgba(148,163,184,0.18);}
+html[data-theme="dark"] .raw-current-hero{background:linear-gradient(135deg,rgba(30,64,175,.22) 0%,rgba(15,23,42,.88) 100%);border-color:rgba(96,165,250,.34);box-shadow:0 12px 30px rgba(2,6,23,.3);}
+html[data-theme="dark"] .raw-current-hero.warn{background:linear-gradient(135deg,rgba(180,83,9,.2) 0%,rgba(15,23,42,.9) 100%);border-color:rgba(251,191,36,.34);}
+html[data-theme="dark"] .raw-current-hero.danger{background:linear-gradient(135deg,rgba(185,28,28,.24) 0%,rgba(15,23,42,.92) 100%);border-color:rgba(248,113,113,.34);}
+html[data-theme="dark"] .raw-current-hero-label{color:#93c5fd;}
+html[data-theme="dark"] .raw-current-hero.warn .raw-current-hero-label{color:#fdba74;}
+html[data-theme="dark"] .raw-current-hero.danger .raw-current-hero-label{color:#fca5a5;}
+html[data-theme="dark"] .raw-current-hero-value{color:#eff6ff !important;}
 html[data-theme="dark"] .raw-lot-badge{background:rgba(79,70,229,0.22);color:#c7d2fe;}
 html[data-theme="dark"] .raw-progress-bar{background:rgba(51,65,85,0.9);}
 html[data-theme="dark"] .raw-done-badge.production{background:rgba(22,163,74,0.18);color:#86efac;}
@@ -1564,6 +1594,9 @@ html[data-theme="dark"] .raw-code-summary span,
 html[data-theme="dark"] .raw-metric span{color:#8ea3bd !important;}
 html[data-theme="dark"] .raw-code-summary div,
 html[data-theme="dark"] .raw-metric{background:#162133 !important;border-color:#263244 !important;}
+html[data-theme="dark"] .raw-code-summary .is-current{background:linear-gradient(135deg,rgba(37,99,235,.26) 0%,rgba(30,41,59,.94) 100%) !important;border-color:rgba(96,165,250,.36) !important;}
+html[data-theme="dark"] .raw-code-summary .is-current span{color:#93c5fd !important;}
+html[data-theme="dark"] .raw-code-summary .is-current strong{color:#eff6ff !important;}
 html[data-theme="dark"] #rawActivityModal .modal-content,
 html[data-theme="dark"] #rawBasicEditModal .modal-content,
 html[data-theme="dark"] #receiveModal .modal-content,
@@ -1617,11 +1650,14 @@ html[data-theme="dark"] #exportModal input[style*="#fff3e0"]{background:rgba(249
   .raw-code-card-head{flex-direction:column;align-items:flex-start;padding:.8rem .8rem .7rem;}
   .raw-code-heading{width:100%;}
   .raw-code-summary{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;}
+  .raw-code-summary .is-current{grid-column:1 / -1;}
   .raw-code-item{grid-template-columns:1fr;padding:.75rem;}
   .raw-code-item-main.row-layout{grid-template-columns:1fr;gap:.45rem;}
   .raw-code-item-top{flex-direction:column;align-items:flex-start;gap:.45rem;}
   .raw-item-inline-meta{justify-content:flex-start;}
   .raw-code-metrics{grid-template-columns:1fr;}
+  .raw-current-hero{padding:.72rem .8rem;}
+  .raw-current-hero-value{font-size:1.2rem;}
   .raw-progress-row{grid-column:auto;}
   .raw-code-actions{justify-content:flex-start;min-width:0;}
   .raw-code-actions .btn,

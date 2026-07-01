@@ -2,11 +2,21 @@
 {% block title %}임포트 미리보기 - 예맛 생산관리{% endblock %}
 {% block extra_css %}
 <style>
+.imports-preview-page{display:flex;flex-direction:column;gap:1rem;}
 .import-summary{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:0.75rem;margin-bottom:1rem;}
 .import-stat{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:0.9rem 1rem;box-shadow:0 8px 24px rgba(15,23,42,.06);}
 .import-stat .label{display:block;font-size:.78rem;color:#64748b;margin-bottom:.25rem;font-weight:700;}
 .import-stat .value{font-size:1.5rem;font-weight:900;color:#0f172a;}
 .mapping-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:0.8rem 0.9rem;margin-bottom:0.75rem;}
+.imports-preview-header{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;}
+.imports-preview-title{margin-bottom:.35rem;}
+.imports-preview-meta{color:#64748b;}
+.imports-preview-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
+.imports-preview-toolbar{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-bottom:1rem;}
+.imports-preview-checkbox{display:inline-flex;align-items:center;gap:.35rem;margin-right:.5rem;color:#475569;}
+.imports-preview-mapping-title{font-weight:800;margin-bottom:.4rem;}
+.imports-preview-mapping-empty,.imports-preview-empty{color:#94a3b8;}
+.imports-preview-hint{color:#64748b;margin-bottom:1rem;}
 .filter-tabs{display:flex;gap:.55rem;flex-wrap:wrap;margin-bottom:1rem;}
 .filter-tab{display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1rem;border-radius:999px;border:1px solid #d7e1f0;background:#fff;color:#0f172a;font-weight:800;text-decoration:none;box-shadow:0 8px 18px rgba(15,23,42,.04);}
 .filter-tab.active{background:linear-gradient(135deg,#1d4ed8,#0f172a);color:#fff;border-color:transparent;}
@@ -19,18 +29,74 @@
 .row-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:0.6rem;}
 .row-field small{display:block;color:#64748b;margin-bottom:0.15rem;font-weight:700;}
 .row-field strong{display:block;color:#0f172a;word-break:break-word;}
+.imports-preview-row-head{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem;}
+.imports-preview-row-title{font-weight:800;}
+.imports-preview-remap-form{margin-top:.8rem;}
+.imports-preview-remap-actions{display:flex;justify-content:flex-end;margin-top:.75rem;}
+html[data-theme="dark"] .imports-preview-page h1,
+html[data-theme="dark"] .imports-preview-page h2,
+html[data-theme="dark"] .imports-preview-page .imports-preview-row-title,
+html[data-theme="dark"] .imports-preview-page .imports-preview-mapping-title,
+html[data-theme="dark"] .imports-preview-page .row-field strong{color:#eff6ff;}
+html[data-theme="dark"] .imports-preview-meta,
+html[data-theme="dark"] .imports-preview-checkbox,
+html[data-theme="dark"] .imports-preview-hint,
+html[data-theme="dark"] .imports-preview-page .import-stat .label,
+html[data-theme="dark"] .imports-preview-page .row-field small,
+html[data-theme="dark"] .imports-preview-mapping-empty,
+html[data-theme="dark"] .imports-preview-empty{color:#8ea3bd;}
+html[data-theme="dark"] .imports-preview-page .import-stat,
+html[data-theme="dark"] .imports-preview-page .mapping-box,
+html[data-theme="dark"] .imports-preview-page .filter-tab,
+html[data-theme="dark"] .imports-preview-page .row-card{
+    background:linear-gradient(180deg,#121a2a,#101827);
+    border-color:#263244;
+    box-shadow:0 14px 30px rgba(2,6,23,.28);
+}
+html[data-theme="dark"] .imports-preview-page .import-stat .value{color:#eff6ff;}
+html[data-theme="dark"] .imports-preview-page .filter-tab{color:#dbe7f5;}
+html[data-theme="dark"] .imports-preview-page .filter-tab.active{
+    background:linear-gradient(135deg,#1d4ed8,#2563eb);
+    border-color:#2563eb;
+    color:#fff;
+}
+html[data-theme="dark"] .imports-preview-page .filter-tab .count{background:rgba(148,163,184,.16);color:#dbe7f5;}
+html[data-theme="dark"] .imports-preview-page .badge-info{
+    background:rgba(37,99,235,.18);
+    color:#93c5fd;
+    border-color:rgba(96,165,250,.3);
+}
+html[data-theme="dark"] .imports-preview-page .form-group label{color:#c7d3e3;}
+html[data-theme="dark"] .imports-preview-page input,
+html[data-theme="dark"] .imports-preview-page select{
+    background:#0f1726;
+    color:#eff6ff;
+    border-color:#314155;
+}
+html[data-theme="dark"] .imports-preview-page input::placeholder{color:#7f93ad;}
+html[data-theme="dark"] .imports-preview-page .alert-danger{
+    background:rgba(127,29,29,.25);
+    border-color:rgba(248,113,113,.32);
+    color:#fecaca;
+}
+html[data-theme="dark"] .imports-preview-page .alert-warning{
+    background:rgba(120,53,15,.24);
+    border-color:rgba(251,191,36,.34);
+    color:#fde68a;
+}
 @media (max-width: 900px){.import-summary,.row-grid{grid-template-columns:1fr 1fr;}}
 </style>
 {% endblock %}
 {% block content %}
+<div class="imports-preview-page">
 <h1>임포트 미리보기</h1>
 <div class="card">
-    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+    <div class="imports-preview-header">
         <div>
-            <h2 style="margin-bottom:.35rem;">배치 #{{ batch.id }} / {{ import_type_labels.get(batch.import_type, batch.import_type) }}</h2>
-            <div style="color:#64748b;">{{ batch.file_name }} · 상태 {{ batch.status }}</div>
+            <h2 class="imports-preview-title">배치 #{{ batch.id }} / {{ import_type_labels.get(batch.import_type, batch.import_type) }}</h2>
+            <div class="imports-preview-meta">{{ batch.file_name }} · 상태 {{ batch.status }}</div>
         </div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <div class="imports-preview-actions">
             <a href="/imports" class="btn btn-secondary">새 업로드</a>
             <a href="/imports/history" class="btn btn-secondary">이력</a>
             <a href="/imports/{{ batch.id }}/failed.csv" class="btn btn-warning">실패 CSV</a>
@@ -42,13 +108,13 @@
         <div class="import-stat"><span class="label">WARNING</span><span class="value">{{ batch.warning_rows or 0 }}</span></div>
         <div class="import-stat"><span class="label">ERROR</span><span class="value">{{ batch.error_rows or 0 }}</span></div>
     </div>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-bottom:1rem;">
+    <div class="imports-preview-toolbar">
         <form method="POST" action="/imports/{{ batch.id }}/revalidate">
             <button type="submit" class="btn btn-secondary">전체 재검증</button>
         </form>
         <form method="POST" action="/imports/{{ batch.id }}/apply" onsubmit="return confirm('검증 통과 행만 최종 반영할까요?');">
             {% if batch.import_type == 'material_stock' %}
-            <label style="display:inline-flex;align-items:center;gap:.35rem;margin-right:.5rem;color:#475569;">
+            <label class="imports-preview-checkbox">
                 <input type="checkbox" name="create_missing_materials" value="1"> 미매핑 부자재 자동 생성
             </label>
             {% endif %}
@@ -58,12 +124,12 @@
     <h2>자동 컬럼 매핑</h2>
     {% for item in mapping_summary %}
     <div class="mapping-box">
-        <div style="font-weight:800;margin-bottom:.4rem;">시트: {{ item.sheet_name }}</div>
+        <div class="imports-preview-mapping-title">시트: {{ item.sheet_name }}</div>
         <div style="display:flex;flex-wrap:wrap;gap:.45rem;">
             {% for key, value in item.mapping.items() %}
             <span class="badge badge-info">{{ key }} ← {{ value }}</span>
             {% endfor %}
-            {% if not item.mapping %}<span style="color:#94a3b8;">자동 매핑된 컬럼이 없습니다.</span>{% endif %}
+            {% if not item.mapping %}<span class="imports-preview-mapping-empty">자동 매핑된 컬럼이 없습니다.</span>{% endif %}
         </div>
     </div>
     {% endfor %}
@@ -81,7 +147,7 @@
         </a>
         {% endfor %}
     </div>
-    <div style="color:#64748b;margin-bottom:1rem;">
+    <div class="imports-preview-hint">
         {% if workplace_filter == '전체' %}
         전체 행 기준으로 검증 결과를 표시합니다.
         {% else %}
@@ -90,8 +156,8 @@
     </div>
     {% for row in rows %}
     <div class="row-card {{ row.status|lower }}">
-        <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem;">
-            <div style="font-weight:800;">{{ row.sheet_name }} / 행 {{ row.row_no }} / {{ row.target_type }}</div>
+        <div class="imports-preview-row-head">
+            <div class="imports-preview-row-title">{{ row.sheet_name }} / 행 {{ row.row_no }} / {{ row.target_type }}</div>
             <div>
                 <span class="badge {% if row.status == 'OK' %}badge-success{% elif row.status == 'WARNING' %}badge-warning{% else %}badge-danger{% endif %}">{{ row.status }}</span>
             </div>
@@ -105,7 +171,7 @@
         </div>
         {% if row.error_message %}<div class="alert alert-danger" style="margin-top:.75rem;">{{ row.error_message }}</div>{% endif %}
         {% if row.warning_message %}<div class="alert alert-warning" style="margin-top:.75rem;">{{ row.warning_message }}</div>{% endif %}
-        <form method="POST" action="/imports/{{ batch.id }}/rows/{{ row.id }}/remap" style="margin-top:.8rem;">
+        <form method="POST" action="/imports/{{ batch.id }}/rows/{{ row.id }}/remap" class="imports-preview-remap-form">
             <div class="grid grid-4">
                 {% if row.target_type == 'material' %}
                 <div class="form-group">
@@ -158,11 +224,12 @@
                 <div class="form-group"><label>작업장</label><select name="workplace">{% for wp in raw_workplaces %}<option value="{{ wp }}" {% if row.workplace == wp %}selected{% endif %}>{{ wp }}</option>{% endfor %}</select></div>
                 {% endif %}
             </div>
-            <div style="display:flex;justify-content:flex-end;margin-top:.75rem;"><button type="submit" class="btn btn-small">매핑 저장 후 재검증</button></div>
+            <div class="imports-preview-remap-actions"><button type="submit" class="btn btn-small">매핑 저장 후 재검증</button></div>
         </form>
     </div>
     {% else %}
-    <div style="text-align:center;color:#94a3b8;">표시할 행이 없습니다.</div>
+    <div class="imports-preview-empty" style="text-align:center;">표시할 행이 없습니다.</div>
     {% endfor %}
+</div>
 </div>
 {% endblock %}
