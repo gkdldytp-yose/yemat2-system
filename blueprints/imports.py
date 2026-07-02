@@ -754,6 +754,28 @@ def _raw_workplace_choices() -> list[str]:
     return [*WORKPLACES, SHARED_WORKPLACE]
 
 
+def _normalize_batch_workplace_filter(value: Any) -> str:
+    text = str(value or '').strip()
+    return text or '전체'
+
+
+def _normalize_batch_workplace_filters(values: Any) -> list[str]:
+    if values is None:
+        return ['전체']
+    if isinstance(values, (list, tuple, set)):
+        raw_values = list(values)
+    else:
+        raw_values = [values]
+    normalized = []
+    for value in raw_values:
+        text = _normalize_batch_workplace_filter(value)
+        if text == '전체':
+            return ['전체']
+        if text not in normalized:
+            normalized.append(text)
+    return normalized or ['전체']
+
+
 def _detect_column_mapping(headers: list[str], import_type: str) -> dict[str, str]:
     target_fields = MATERIAL_FIELDS if import_type == 'material_stock' else RAW_FIELDS
     normalized_headers = {_normalize_header(col): str(col) for col in headers}
@@ -1385,7 +1407,7 @@ def _sync_logistics_stock_for_material(cursor, material_id: int, updated_by: str
     logistics_qty = float((qty_row['qty'] if qty_row else 0) or 0)
     material_code = _normalize_text(material['code']) or f"M{int(material['id']):05d}"
     existing = cursor.execute(
-        'SELECT id FROM logistics_stocks WHERE material_code = ? LIMIT 1',
+        'SELECT material_code FROM logistics_stocks WHERE material_code = ? LIMIT 1',
         (material_code,),
     ).fetchone()
     if logistics_qty > 0:
@@ -1654,23 +1676,33 @@ def _apply_raw_row(cursor, batch_id: int, row: dict[str, Any], username: str) ->
     return result
 
 
-def _apply_batch(conn, batch_id: int, create_missing_materials: bool) -> dict[str, Any]:
+def _apply_batch(conn, batch_id: int, create_missing_materials: bool, workplace_filters: Any = None) -> dict[str, Any]:
     cursor = conn.cursor()
     _get_batch_or_404(cursor, batch_id)
     username = (session.get('user') or {}).get('username') or 'system'
-    rows = cursor.execute(
-        '''
-        SELECT *
-        FROM import_parsed_rows
+    workplace_filters = _normalize_batch_workplace_filters(workplace_filters)
+    where_sql = '''
         WHERE batch_id = ?
           AND status IN ('OK', 'WARNING')
           AND applied_at IS NULL
+    '''
+    params: list[Any] = [batch_id]
+    if workplace_filters != ['전체']:
+        placeholders = ','.join(['?'] * len(workplace_filters))
+        where_sql += f' AND COALESCE(workplace, "") IN ({placeholders})'
+        params.extend(workplace_filters)
+    rows = cursor.execute(
+        f'''
+        SELECT *
+        FROM import_parsed_rows
+        {where_sql}
         ORDER BY sheet_name, row_no, id
         ''',
-        (batch_id,),
+        params,
     ).fetchall()
 
     summary = {
+        'selected_workplaces': workplace_filters,
         'applied_rows': 0,
         'skipped_rows': 0,
         'materials_created': 0,
@@ -1825,7 +1857,7 @@ def batch_preview(batch_id: int):
     cursor = conn.cursor()
     try:
         batch = _get_batch_or_404(cursor, batch_id)
-        workplace_filter = (request.args.get('workplace') or '전체').strip() or '전체'
+        workplace_filter = _normalize_batch_workplace_filter(request.args.get('workplace'))
         where_sql = 'WHERE batch_id = ?'
         params: list[Any] = [batch_id]
         if workplace_filter != '전체':
@@ -1867,6 +1899,8 @@ def batch_preview(batch_id: int):
             rows=rows,
             workplace_filter=workplace_filter,
             workplace_tabs=workplace_tabs,
+            apply_workplace_options=[tab['label'] for tab in workplace_tabs],
+            apply_workplace_selected=['전체'] if workplace_filter == '전체' else [workplace_filter],
             mapping_summary=mapping_summary,
             import_type_labels=IMPORT_TYPE_LABELS,
             material_options=material_options,
@@ -1950,11 +1984,15 @@ def apply_batch(batch_id: int):
     conn = get_db()
     try:
         create_missing_materials = bool(request.form.get('create_missing_materials'))
-        _apply_batch(conn, batch_id, create_missing_materials)
+        workplace_filters = _normalize_batch_workplace_filters(request.form.getlist('apply_workplaces'))
+        _apply_batch(conn, batch_id, create_missing_materials, workplace_filters)
         flash('임포트 반영이 완료되었습니다.', 'success')
         return redirect(url_for('imports.batch_result', batch_id=batch_id))
     except Exception as exc:
         flash(f'임포트 반영 중 오류가 발생했습니다: {exc}', 'danger')
+        error_filters = _normalize_batch_workplace_filters(request.form.getlist('apply_workplaces'))
+        if len(error_filters) == 1 and error_filters[0] != '전체':
+            return redirect(url_for('imports.batch_preview', batch_id=batch_id, workplace=error_filters[0]))
         return redirect(url_for('imports.batch_preview', batch_id=batch_id))
     finally:
         conn.close()

@@ -996,6 +996,46 @@ def _get_production_material_sort_key(row):
     return f'9-0-{name}'
 
 
+def _filter_selected_silica_bom_rows(rows):
+    if not rows:
+        return []
+
+    selected_map = {}
+    silica_map = defaultdict(list)
+    for row in rows:
+        row_dict = dict(row)
+        product_id = int(row_dict.get('product_id') or 0)
+        material_id = int(row_dict.get('material_id') or 0)
+        if product_id <= 0:
+            continue
+        if product_id not in selected_map:
+            selected_map[product_id] = int(row_dict.get('selected_silica_material_id') or 0)
+        category = (row_dict.get('material_category') or row_dict.get('category') or '').strip()
+        if material_id > 0 and category == '실리카' and material_id not in silica_map[product_id]:
+            silica_map[product_id].append(material_id)
+
+    effective_map = {}
+    for product_id, material_ids in silica_map.items():
+        selected_id = int(selected_map.get(product_id) or 0)
+        if selected_id in material_ids:
+            effective_map[product_id] = selected_id
+        elif material_ids:
+            effective_map[product_id] = material_ids[0]
+
+    filtered = []
+    for row in rows:
+        row_dict = dict(row)
+        product_id = int(row_dict.get('product_id') or 0)
+        material_id = int(row_dict.get('material_id') or 0)
+        category = (row_dict.get('material_category') or row_dict.get('category') or '').strip()
+        if product_id > 0 and material_id > 0 and category == '실리카':
+            effective_id = effective_map.get(product_id)
+            if effective_id and material_id != effective_id:
+                continue
+        filtered.append(row_dict)
+    return filtered
+
+
 def _normalize_production_status(status_value):
     s = (status_value or '').strip()
     done = '\uC644\uB8CC'
@@ -1010,6 +1050,23 @@ def _normalize_production_status(status_value):
     if s == planned or s == '\uACC4\uD68D' or s == '?\ub35c\uc82d' or '\ub35c\uc82d' in s:
         return planned
     return s
+
+
+def _load_schedule_stats_products(cursor, workplace):
+    cursor.execute(
+        '''
+        SELECT DISTINCT
+            p.id,
+            p.name
+        FROM productions pr
+        JOIN products p ON p.id = pr.product_id
+        WHERE COALESCE(NULLIF(TRIM(pr.workplace), ''), '') = ?
+          AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
+        ORDER BY p.name ASC, p.id ASC
+        ''',
+        (workplace,),
+    )
+    return [dict(row) for row in cursor.fetchall()]
 
 
 def _build_production_expiry_rows(production_row, default_expiry_date=''):
@@ -1772,6 +1829,7 @@ def schedules():
         cursor = conn.cursor()
         cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
         products = cursor.fetchall()
+        stats_products = _load_schedule_stats_products(cursor, workplace)
         cursor.execute(
             '''
             SELECT es.*, p.name as product_name
@@ -2099,6 +2157,7 @@ def schedules():
     for p in products:
         products_list.append({'id': p['id'], 'name': p['name']})
     products_json = json.dumps(products_list, ensure_ascii=False)
+    stats_products_json = json.dumps(stats_products, ensure_ascii=False)
 
     # 洹쇰Т???곗씠?곕룄 JSON?쇰줈 蹂??
     work_days_json = json.dumps(work_days_data, ensure_ascii=False)
@@ -2112,6 +2171,7 @@ def schedules():
         schedules_json=schedules_json,
         products=products,
         products_json=products_json,
+        stats_products_json=stats_products_json,
         work_days_json=work_days_json,
         export_schedules=export_rows_view,
         export_in_progress_schedules=export_in_progress_rows,
@@ -2160,12 +2220,16 @@ def schedule_stats_product_data():
         cursor = conn.cursor()
         cursor.execute(
             '''
-            SELECT id, name
-            FROM products
-            WHERE id = ?
-              AND workplace = ?
+            SELECT DISTINCT
+                p.id,
+                p.name
+            FROM productions pr
+            JOIN products p ON p.id = pr.product_id
+            WHERE p.id = ?
+              AND COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
+              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
             ''',
-            (product_id, workplace),
+            (product_id, workplace, workplace),
         )
         product_row = cursor.fetchone()
         if not product_row:
@@ -2354,7 +2418,8 @@ def schedule_requirements_data():
                 m.name as material_name,
                 COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
                 COALESCE(m.category, '') as material_category,
-                COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') as material_unit
+                COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') as material_unit,
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
             FROM bom b
             LEFT JOIN products p ON p.id = b.product_id
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
@@ -2363,7 +2428,7 @@ def schedule_requirements_data():
             ''',
             product_ids,
         )
-        bom_rows = [dict(r) for r in cursor.fetchall()]
+        bom_rows = _filter_selected_silica_bom_rows(cursor.fetchall())
 
         raw_codes = sorted(
             {
@@ -2550,6 +2615,39 @@ def schedule_requirements_data():
             }
         )
     finally:
+        cursor.execute(
+            '''
+            SELECT
+                b.product_id,
+                b.quantity_per_box,
+                m.id as m_id,
+                m.name as m_name,
+                m.unit,
+                COALESCE(m.category, '') as material_category,
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
+            FROM bom b
+            JOIN materials m ON b.material_id = m.id
+            JOIN products p ON b.product_id = p.id
+            WHERE p.workplace = ?
+            ''',
+            (workplace,),
+        )
+        bom_mat = _filter_selected_silica_bom_rows(
+            [
+                {
+                    'product_id': row['product_id'],
+                    'material_id': row['m_id'],
+                    'quantity_per_box': row['quantity_per_box'],
+                    'm_id': row['m_id'],
+                    'm_name': row['m_name'],
+                    'unit': row['unit'],
+                    'material_category': row['material_category'],
+                    'selected_silica_material_id': row['selected_silica_material_id'],
+                }
+                for row in cursor.fetchall()
+            ]
+        )
+
         conn_context.__exit__(None, None, None)
 
 
@@ -2593,7 +2691,8 @@ def schedule_material_capacity_bom():
                 m.name AS material_name,
                 COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) AS material_code,
                 COALESCE(m.category, '') AS material_category,
-                COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') AS material_unit
+                COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') AS material_unit,
+                COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
             FROM bom b
             LEFT JOIN products p ON p.id = b.product_id
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
@@ -2603,7 +2702,7 @@ def schedule_material_capacity_bom():
             ''',
             (product_id,),
         )
-        bom_rows = [dict(row) for row in cursor.fetchall()]
+        bom_rows = _filter_selected_silica_bom_rows(cursor.fetchall())
 
         raw_codes = sorted(
             {
@@ -2791,15 +2890,18 @@ def schedule_requirements_auto_purchase():
                 COALESCE(b.quantity_per_box, 0) as quantity_per_box,
                 m.code as material_code,
                 m.name as material_name,
-                COALESCE(m.unit, '') as unit
+                COALESCE(m.unit, '') as unit,
+                COALESCE(m.category, '') as material_category,
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
             FROM bom b
+            JOIN products p ON p.id = b.product_id
             JOIN materials m ON m.id = b.material_id
             WHERE b.product_id IN ({placeholders})
               AND b.material_id IS NOT NULL
             ''',
             product_ids,
         )
-        bom_rows = [dict(r) for r in cursor.fetchall()]
+        bom_rows = _filter_selected_silica_bom_rows(cursor.fetchall())
 
         material_ids = sorted({int(row.get('material_id') or 0) for row in bom_rows if int(row.get('material_id') or 0) > 0})
         workplace_stock_map = {}
@@ -3857,7 +3959,9 @@ def add_production():
         cursor.execute(
             '''
             SELECT b.product_id, b.quantity_per_box,
-                   m.id as m_id, m.name as m_name, m.unit
+                   m.id as m_id, m.name as m_name, m.unit,
+                   COALESCE(m.category, '') as material_category,
+                   COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
             FROM bom b
             JOIN materials m ON b.material_id = m.id
             JOIN products p ON b.product_id = p.id
@@ -3865,7 +3969,21 @@ def add_production():
         ''',
             (workplace,),
         )
-        bom_mat = cursor.fetchall()
+        bom_mat = _filter_selected_silica_bom_rows(
+            [
+                {
+                    'product_id': row['product_id'],
+                    'material_id': row['m_id'],
+                    'quantity_per_box': row['quantity_per_box'],
+                    'm_id': row['m_id'],
+                    'm_name': row['m_name'],
+                    'unit': row['unit'],
+                    'material_category': '실리카' if '실리카' in str(row['m_name'] or '') else '',
+                    'selected_silica_material_id': 0,
+                }
+                for row in cursor.fetchall()
+            ]
+        )
 
         conn_context.__exit__(None, None, None)
 
@@ -4094,7 +4212,7 @@ def production_detail(production_id):
                     src.id as raw_material_id,
                     ? as quantity_per_box,
                     src.name as rm_name,
-                    src.car_number,
+                    COALESCE(NULLIF(TRIM(src.ja_ho), ''), NULLIF(TRIM(src.car_number), ''), '') as car_number,
                     src.receiving_date,
                     (COALESCE(src.current_stock, 0) + COALESCE(ou.rolled_back_qty, 0)) as current_stock,
                     src.id as rm_id
@@ -4109,6 +4227,7 @@ def production_detail(production_id):
                      )
                 LEFT JOIN old_usage ou ON ou.raw_material_id = src.id
                 WHERE src.workplace = ?
+                  AND COALESCE(NULLIF(TRIM(src.ja_ho), ''), NULLIF(TRIM(src.car_number), ''), '') <> ''
                   AND (
                         COALESCE(src.current_stock, 0) > 0
                         OR COALESCE(ou.rolled_back_qty, 0) > 0
@@ -4142,7 +4261,7 @@ def production_detail(production_id):
                     src.id as raw_material_id,
                     ? as quantity_per_box,
                     src.name as rm_name,
-                    src.car_number,
+                    COALESCE(NULLIF(TRIM(src.ja_ho), ''), NULLIF(TRIM(src.car_number), ''), '') as car_number,
                     src.receiving_date,
                     src.current_stock,
                     src.id as rm_id
@@ -4156,6 +4275,7 @@ def production_detail(production_id):
                         )
                      )
                 WHERE src.workplace = ?
+                  AND COALESCE(NULLIF(TRIM(src.ja_ho), ''), NULLIF(TRIM(src.car_number), ''), '') <> ''
                   AND COALESCE(src.current_stock, 0) > 0
                 ORDER BY
                     CASE WHEN src.receiving_date IS NULL OR TRIM(src.receiving_date) = '' THEN 1 ELSE 0 END ASC,
@@ -4178,7 +4298,7 @@ def production_detail(production_id):
                 pmu.raw_material_id as rm_id,
                 ? as quantity_per_box,
                 COALESCE(rm.name, pmu.raw_material_name, '(원초)') as rm_name,
-                rm.car_number,
+                COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
                 rm.receiving_date,
                 (
                     COALESCE(rm.current_stock, 0)
@@ -4202,6 +4322,8 @@ def production_detail(production_id):
             raw_id = int(row['rm_id'] or 0)
             if raw_id > 0 and raw_id not in existing_raw_ids:
                 temp_row = dict(row)
+                if not str(temp_row.get('car_number') or '').strip():
+                    continue
                 temp_row['is_temp_raw'] = 1
                 bom_raw_items.append(temp_row)
                 existing_raw_ids.add(raw_id)
@@ -4219,6 +4341,7 @@ def production_detail(production_id):
             COALESCE(sheets_per_sok, 0) as sheets_per_sok
         FROM raw_materials
         WHERE workplace = ?
+          AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') <> ''
           AND COALESCE(current_stock, 0) > 0
         ORDER BY
             name ASC,
@@ -4237,8 +4360,12 @@ def production_detail(production_id):
     if usage_count > 0 and production['status'] != '완료':
         cursor.execute(
             '''
-            SELECT b.material_id, b.quantity_per_box
+            SELECT b.product_id, b.material_id, b.quantity_per_box,
+                   COALESCE(m.category, '') AS material_category,
+                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
             FROM bom b
+            LEFT JOIN materials m ON m.id = b.material_id
+            LEFT JOIN products p ON p.id = b.product_id
             WHERE b.product_id = ?
               AND b.material_id IS NOT NULL
               AND NOT EXISTS (
@@ -4250,7 +4377,7 @@ def production_detail(production_id):
             ''',
             (production['product_id'], production_id),
         )
-        missing_bom_mats = cursor.fetchall()
+        missing_bom_mats = _filter_selected_silica_bom_rows(cursor.fetchall())
         if missing_bom_mats:
             planned = float(production['planned_boxes'] or 0)
             for bom in missing_bom_mats:
@@ -4271,14 +4398,17 @@ def production_detail(production_id):
 
         cursor.execute(
             '''
-            SELECT b.*, m.name as material_name, m.unit, m.category
+            SELECT b.*, m.name as material_name, m.unit, m.category,
+                   b.product_id,
+                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
             FROM bom b
             JOIN materials m ON b.material_id = m.id
+            JOIN products p ON p.id = b.product_id
             WHERE b.product_id = ?
         ''',
             (production['product_id'],),
         )
-        bom_mats = cursor.fetchall()
+        bom_mats = _filter_selected_silica_bom_rows(cursor.fetchall())
 
         for bom in bom_mats:
             exact_qty = float(bom['quantity_per_box']) * planned
@@ -4395,6 +4525,16 @@ def production_detail(production_id):
         (current_workplace,),
     )
     personnel_note_suggestions = [row['note_text'] for row in cursor.fetchall() if row['note_text']]
+
+    for item in bom_raw_items:
+        try:
+            item['current_stock'] = float(item.get('current_stock') or 0)
+        except (TypeError, ValueError):
+            item['current_stock'] = 0.0
+        try:
+            item['quantity_per_box'] = float(item.get('quantity_per_box') or 0)
+        except (TypeError, ValueError):
+            item['quantity_per_box'] = 0.0
 
     raw_checksheet_options = []
     seen_raw_ids = set()
@@ -4548,14 +4688,18 @@ def edit_production_plan(production_id):
 
         cursor.execute(
             '''
-            SELECT b.material_id, b.quantity_per_box
+            SELECT b.product_id, b.material_id, b.quantity_per_box,
+                   COALESCE(m.category, '') AS material_category,
+                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
             FROM bom b
+            LEFT JOIN materials m ON m.id = b.material_id
+            LEFT JOIN products p ON p.id = b.product_id
             WHERE b.product_id = ?
               AND b.material_id IS NOT NULL
             ''',
             (production['product_id'],),
         )
-        for bom in cursor.fetchall():
+        for bom in _filter_selected_silica_bom_rows(cursor.fetchall()):
             material_id = bom['material_id']
             expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned_boxes * 100) / 100
             cursor.execute(
@@ -4896,14 +5040,18 @@ def update_production_usage(production_id):
 
             cursor.execute(
                 '''
-                SELECT b.material_id, b.quantity_per_box
+                SELECT b.product_id, b.material_id, b.quantity_per_box,
+                       COALESCE(m.category, '') AS material_category,
+                       COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
                 FROM bom b
+                LEFT JOIN materials m ON m.id = b.material_id
+                LEFT JOIN products p ON p.id = b.product_id
                 WHERE b.product_id = (SELECT product_id FROM productions WHERE id = ?)
                 AND b.material_id IS NOT NULL
             ''',
                 (production_id,),
             )
-            bom_mats = cursor.fetchall()
+            bom_mats = _filter_selected_silica_bom_rows(cursor.fetchall())
 
             for bom in bom_mats:
                 exact = float(bom['quantity_per_box']) * actual_boxes

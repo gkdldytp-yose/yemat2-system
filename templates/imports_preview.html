@@ -14,6 +14,12 @@
 .imports-preview-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
 .imports-preview-toolbar{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-bottom:1rem;}
 .imports-preview-checkbox{display:inline-flex;align-items:center;gap:.35rem;margin-right:.5rem;color:#475569;}
+.imports-preview-apply-form{display:flex;align-items:flex-end;gap:.75rem;flex-wrap:wrap;justify-content:flex-end;}
+.imports-preview-apply-workplaces{display:flex;flex-direction:column;gap:.45rem;min-width:320px;}
+.imports-preview-apply-label{font-size:.78rem;font-weight:800;color:#475569;}
+.imports-preview-apply-checks{display:flex;gap:.45rem;flex-wrap:wrap;justify-content:flex-end;}
+.imports-preview-apply-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .75rem;border:1px solid #d7e1f0;border-radius:999px;background:#fff;color:#0f172a;font-size:.85rem;font-weight:700;cursor:pointer;}
+.imports-preview-apply-chip input{margin:0;}
 .imports-preview-mapping-title{font-weight:800;margin-bottom:.4rem;}
 .imports-preview-mapping-empty,.imports-preview-empty{color:#94a3b8;}
 .imports-preview-hint{color:#64748b;margin-bottom:1rem;}
@@ -66,6 +72,12 @@ html[data-theme="dark"] .imports-preview-page .badge-info{
     color:#93c5fd;
     border-color:rgba(96,165,250,.3);
 }
+html[data-theme="dark"] .imports-preview-apply-label{color:#c7d3e3;}
+html[data-theme="dark"] .imports-preview-apply-chip{
+    background:#0f1726;
+    border-color:#314155;
+    color:#eff6ff;
+}
 html[data-theme="dark"] .imports-preview-page .form-group label{color:#c7d3e3;}
 html[data-theme="dark"] .imports-preview-page input,
 html[data-theme="dark"] .imports-preview-page select{
@@ -112,7 +124,18 @@ html[data-theme="dark"] .imports-preview-page .alert-warning{
         <form method="POST" action="/imports/{{ batch.id }}/revalidate">
             <button type="submit" class="btn btn-secondary">전체 재검증</button>
         </form>
-        <form method="POST" action="/imports/{{ batch.id }}/apply" onsubmit="return confirm('검증 통과 행만 최종 반영할까요?');">
+        <form method="POST" action="/imports/{{ batch.id }}/apply" class="imports-preview-apply-form" onsubmit="return confirm('선택한 작업장 기준의 검증 통과 행만 최종 반영할까요?');">
+            <div class="imports-preview-apply-workplaces">
+                <div class="imports-preview-apply-label">반영 작업장 선택</div>
+                <div class="imports-preview-apply-checks">
+                    {% for workplace_name in apply_workplace_options %}
+                    <label class="imports-preview-apply-chip">
+                        <input type="checkbox" name="apply_workplaces" value="{{ workplace_name }}" {% if workplace_name in apply_workplace_selected %}checked{% endif %}>
+                        <span>{% if workplace_name == '전체' %}전체{% else %}{{ workplace_name }}{% endif %}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
             {% if batch.import_type == 'material_stock' %}
             <label class="imports-preview-checkbox">
                 <input type="checkbox" name="create_missing_materials" value="1"> 미매핑 부자재 자동 생성
@@ -227,9 +250,39 @@ html[data-theme="dark"] .imports-preview-page .alert-warning{
             <div class="imports-preview-remap-actions"><button type="submit" class="btn btn-small">매핑 저장 후 재검증</button></div>
         </form>
     </div>
-    {% else %}
+{% else %}
     <div class="imports-preview-empty" style="text-align:center;">표시할 행이 없습니다.</div>
     {% endfor %}
 </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = Array.from(document.querySelectorAll('input[name="apply_workplaces"]'));
+    if (!checkboxes.length) return;
+    const allBox = checkboxes.find((input) => input.value === '전체');
+    const itemBoxes = checkboxes.filter((input) => input.value !== '전체');
+
+    function syncApplyWorkplaces(changedBox) {
+        if (!allBox) return;
+        if (changedBox === allBox && allBox.checked) {
+            itemBoxes.forEach((input) => {
+                input.checked = false;
+            });
+            return;
+        }
+        if (changedBox && changedBox !== allBox && changedBox.checked) {
+            allBox.checked = false;
+        }
+        const checkedItems = itemBoxes.filter((input) => input.checked);
+        if (!allBox.checked && checkedItems.length === 0) {
+            allBox.checked = true;
+        }
+    }
+
+    checkboxes.forEach((input) => {
+        input.addEventListener('change', () => syncApplyWorkplaces(input));
+    });
+    syncApplyWorkplaces(null);
+});
+</script>
 {% endblock %}

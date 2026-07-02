@@ -89,6 +89,23 @@
 .bom-inline-edit{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;}
 .bom-inline-edit select{min-width:260px;}
 .bom-inline-edit input{width:180px;}
+.silica-choice-card{margin:0 0 2rem;border:2px solid #c4b5fd;background:linear-gradient(135deg,#fff7ed 0%,#f5f3ff 48%,#eef4ff 100%);box-shadow:0 18px 38px rgba(109,40,217,0.16),0 6px 18px rgba(37,99,235,0.12);position:relative;overflow:hidden;}
+.silica-choice-card::before{content:'';position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,#f97316 0%,#8b5cf6 52%,#2563eb 100%);}
+.silica-choice-panel{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;position:relative;z-index:1;}
+.silica-choice-copy{display:flex;flex-direction:column;gap:0.35rem;}
+.silica-choice-kicker{display:inline-flex;align-items:center;align-self:flex-start;padding:0.28rem 0.62rem;border-radius:999px;background:rgba(124,58,237,0.12);color:#6d28d9;font-size:0.74rem;font-weight:900;letter-spacing:0.01em;text-transform:uppercase;}
+.silica-choice-title{font-size:1.15rem;font-weight:900;color:#0f172a;line-height:1.3;}
+.silica-choice-help{font-size:0.9rem;color:#475569;line-height:1.6;max-width:760px;}
+.silica-choice-form{display:flex;align-items:flex-end;gap:0.7rem;flex-wrap:wrap;}
+.silica-choice-form label{display:block;font-size:0.78rem;font-weight:900;color:#4338ca;margin-bottom:0.35rem;}
+.silica-choice-form select{min-width:320px;height:48px;border:2px solid #c7d2fe;border-radius:12px;padding:0 0.9rem;background:#fff;box-shadow:0 8px 18px rgba(37,99,235,0.08);font-weight:700;}
+.silica-choice-form select:focus{outline:none;border-color:#7c3aed;box-shadow:0 0 0 4px rgba(124,58,237,0.12);}
+.silica-choice-badge{display:inline-flex;align-items:center;padding:0.22rem 0.55rem;border-radius:999px;background:#ede9fe;color:#6d28d9;font-size:0.76rem;font-weight:800;margin-left:0.45rem;}
+.silica-modal-bg{position:fixed;inset:0;background:rgba(15,23,42,0.48);display:none;align-items:center;justify-content:center;padding:1rem;z-index:1100;}
+.silica-modal{width:min(480px,100%);background:#fff;border-radius:18px;padding:1.2rem;box-shadow:0 18px 44px rgba(15,23,42,0.24);}
+.silica-modal-title{font-size:1rem;font-weight:800;color:#0f172a;margin-bottom:0.45rem;}
+.silica-modal-copy{font-size:0.9rem;color:#475569;line-height:1.6;}
+.silica-modal-actions{display:flex;justify-content:flex-end;gap:0.55rem;flex-wrap:wrap;margin-top:1rem;}
 @media (max-width: 900px){
   .product-info-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
@@ -117,6 +134,12 @@
   .bom-inline-edit select,
   .bom-inline-edit input{width:100% !important;min-width:0;}
   .bom-inline-edit button{width:100%;}
+  .silica-choice-form,
+  .silica-modal-actions{width:100%;}
+  .silica-choice-form > div,
+  .silica-choice-form select,
+  .silica-choice-form button,
+  .silica-modal-actions button{width:100%;}
 }
 html[data-theme="dark"] .tab-container{background:linear-gradient(135deg,#121a2a 0%,#152033 100%);border-color:#263244;box-shadow:0 12px 28px rgba(2,6,23,.24);}
 html[data-theme="dark"] .tab-btn{color:#9fb2ca;}
@@ -191,6 +214,17 @@ html[data-theme="dark"] .bom-cat-tray{background:rgba(245,158,11,.14);color:#fcd
 html[data-theme="dark"] .bom-cat-other{background:#162133;color:#c7d3e3;border-color:#314155;}
 html[data-theme="dark"] .product-info-value[style*="#e74c3c"]{color:#fda4af !important;}
 html[data-theme="dark"] #addForm[style*="border:2px solid #667eea"]{border-color:#3b82f6 !important;}
+html[data-theme="dark"] .silica-choice-title,
+html[data-theme="dark"] .silica-modal-title{color:#eff6ff;}
+html[data-theme="dark"] .silica-choice-kicker{background:rgba(168,85,247,.18);color:#ddd6fe;}
+html[data-theme="dark"] .silica-choice-help,
+html[data-theme="dark"] .silica-modal-copy{color:#9fb2ca;}
+html[data-theme="dark"] .silica-choice-form select,
+html[data-theme="dark"] .silica-modal{background:#121a2a;border:1px solid #263244;color:#e5eefc;}
+html[data-theme="dark"] .silica-choice-badge{background:rgba(168,85,247,.16);color:#ddd6fe;}
+html[data-theme="dark"] .silica-choice-card{border-color:#6d28d9;background:linear-gradient(135deg,rgba(59,7,100,.34) 0%,rgba(30,41,59,.92) 46%,rgba(15,23,42,.98) 100%);box-shadow:0 22px 44px rgba(91,33,182,.24),0 12px 26px rgba(2,6,23,.26);}
+html[data-theme="dark"] .silica-choice-form label{color:#c4b5fd;}
+html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shadow:0 10px 22px rgba(91,33,182,.16);}
 </style>
 {% endblock %}
 
@@ -335,6 +369,34 @@ html[data-theme="dark"] #addForm[style*="border:2px solid #667eea"]{border-color
 {% endif %}
 </div>
 </div>
+
+{% if silica_options|length > 1 %}
+<div class="card silica-choice-card">
+    <div class="silica-choice-panel">
+        <div class="silica-choice-copy">
+            <div class="silica-choice-kicker">혼용 실리카 선택</div>
+            <div class="silica-choice-title">실리카 사용 선택</div>
+            <div class="silica-choice-help">복수 실리카가 등록된 상품입니다. 여기서 선택한 실리카가 생산 상세 입력과 사용량 계산에 반영됩니다.</div>
+        </div>
+        {% if can_prod %}
+        <form method="POST" action="/products/{{ product.id }}/silica-selection" id="silicaSelectionForm" class="silica-choice-form">
+            <input type="hidden" name="return_to" value="{{ return_to }}">
+            <input type="hidden" name="scope" id="silicaSelectionScope" value="single">
+            <div>
+                <label for="selectedSilicaMaterial">사용할 실리카</label>
+                <select name="selected_silica_material_id" id="selectedSilicaMaterial" data-current="{{ effective_selected_silica_id }}" onchange="handleSilicaSelectionChange()">
+                    {% for silica in silica_options %}
+                    <option value="{{ silica.material_id }}" {% if silica.material_id == effective_selected_silica_id %}selected{% endif %}>
+                        {{ silica.material_name }}{% if silica.quantity_per_box_expr %} | {{ silica.quantity_per_box_expr }} {{ silica.unit or '' }}{% else %} | {{ '%.6f'|format(silica.quantity_per_box or 0) }} {{ silica.unit or '' }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
 {% if can_prod %}
 <div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:2rem;">
@@ -517,7 +579,12 @@ html[data-theme="dark"] #addForm[style*="border:2px solid #667eea"]{border-color
             {% set cat_class = 'bom-cat-tray' %}
         {% endif %}
         <td><span class="bom-category-badge {{ cat_class }}">{{ cat }}</span></td>
-        <td><strong>{% if item.raw_material_display_name %}{{ item.raw_material_display_name }}{% else %}{{ item.material_name }}{% endif %}</strong></td>
+        <td>
+            <strong>{% if item.raw_material_display_name %}{{ item.raw_material_display_name }}{% else %}{{ item.material_name }}{% endif %}</strong>
+            {% if not item.raw_material_id and cat == '실리카' and item.material_id == effective_selected_silica_id %}
+            <span class="silica-choice-badge">생산 사용</span>
+            {% endif %}
+        </td>
         <td>
             {% if item.raw_material_id %}
                 <div style="font-size:0.85rem;color:#666;">
@@ -596,14 +663,29 @@ html[data-theme="dark"] #addForm[style*="border:2px solid #667eea"]{border-color
     {% endif %}
     {% endfor %}</tbody></table>
     </div>
-    {% else %}
+{% else %}
     <div class="empty-state"><div class="icon">📋</div><p>등록된 BOM이 없습니다.</p></div>
     {% endif %}
 </div>
 
+{% if can_prod and silica_options|length > 1 %}
+<div id="silicaScopeModal" class="silica-modal-bg" onclick="closeSilicaScopeModal(event)">
+    <div class="silica-modal" onclick="event.stopPropagation()">
+        <div class="silica-modal-title">실리카 선택 변경</div>
+        <div class="silica-modal-copy" id="silicaScopeModalCopy">변경 범위를 선택해주세요.</div>
+        <div class="silica-modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeSilicaScopeModal()">취소</button>
+            <button type="button" class="btn btn-secondary" onclick="submitSilicaSelection('single')">이 상품만 변경</button>
+            <button type="button" class="btn" onclick="submitSilicaSelection('all_mixed')">실리카 혼용 상품 전체 변경</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
 let selectedRawId=null;
 let selectedMaterials=[];
+let pendingSilicaValue=null;
 
 function openForm(){
     document.getElementById('addForm').style.display='block';
@@ -656,6 +738,60 @@ function toggleMaterialSelection(input){
 function removeMaterial(id){
     selectedMaterials=selectedMaterials.filter(m=>m.id!==id);
     updateMaterialList();
+}
+
+function handleSilicaSelectionChange(){
+    const select=document.getElementById('selectedSilicaMaterial');
+    if(!select) return;
+    const currentValue=String(select.dataset.current||'');
+    const nextValue=String(select.value||'');
+    if(!nextValue || nextValue===currentValue){
+        return;
+    }
+    pendingSilicaValue=nextValue;
+    const currentOption=[...select.options].find(opt=>String(opt.value)===currentValue);
+    const nextOption=select.options[select.selectedIndex];
+    const copy=document.getElementById('silicaScopeModalCopy');
+    if(copy){
+        const currentText=currentOption ? currentOption.text : '현재 실리카';
+        const nextText=nextOption ? nextOption.text : '선택 실리카';
+        copy.textContent=`${currentText}에서 ${nextText}(으)로 변경합니다. 이 상품만 바꿀지, 실리카 혼용 상품 전체에 같은 선택을 적용할지 선택해주세요.`;
+    }
+    const modal=document.getElementById('silicaScopeModal');
+    if(modal){
+        modal.style.display='flex';
+    }
+}
+
+function closeSilicaScopeModal(event){
+    if(event && event.target && event.target.id !== 'silicaScopeModal'){
+        return;
+    }
+    const select=document.getElementById('selectedSilicaMaterial');
+    if(select){
+        select.value=select.dataset.current||select.value;
+    }
+    pendingSilicaValue=null;
+    const modal=document.getElementById('silicaScopeModal');
+    if(modal){
+        modal.style.display='none';
+    }
+}
+
+function submitSilicaSelection(scope){
+    const form=document.getElementById('silicaSelectionForm');
+    const select=document.getElementById('selectedSilicaMaterial');
+    const scopeInput=document.getElementById('silicaSelectionScope');
+    const modal=document.getElementById('silicaScopeModal');
+    if(!form || !select || !scopeInput || !pendingSilicaValue){
+        return;
+    }
+    select.value=pendingSilicaValue;
+    scopeInput.value=scope||'single';
+    if(modal){
+        modal.style.display='none';
+    }
+    form.submit();
 }
 
 function updateMaterialList(){

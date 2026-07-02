@@ -34,6 +34,16 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
 .cat-btn[data-cat="무트레이"]::before{background:#64748b;box-shadow:0 0 0 4px rgba(100,116,139,.14);}
 .cat-badge{display:inline-block;padding:0.2rem 0.5rem;border-radius:10px;font-size:0.7rem;font-weight:600;}
 .product-action-group{display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;}
+.quick-edit-row{display:none;background:rgba(37,99,235,.04);}
+.quick-edit-cell{padding:0 !important;}
+.quick-edit-panel{padding:1rem 1.05rem;border-top:1px dashed #cbd5e1;background:linear-gradient(180deg,#f8fbff 0%,#f4f7fb 100%);}
+.quick-edit-title{font-size:.88rem;font-weight:900;color:#0f172a;margin-bottom:.75rem;}
+.quick-edit-grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:.7rem .8rem;}
+.quick-edit-grid .form-group{margin:0;}
+.quick-edit-grid .form-group label{display:block;font-size:.76rem;font-weight:800;color:#475569;margin-bottom:.3rem;}
+.quick-edit-grid .form-group input,
+.quick-edit-grid .form-group select{width:100%;height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:0 .7rem;background:#fff;}
+.quick-edit-actions{display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;margin-top:.85rem;}
 .spec-modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:1200;padding:1rem;}
 .spec-modal-bg.open{display:flex;}
 .spec-modal{width:min(980px,96vw);max-height:92vh;background:#fff;border-radius:20px;border:1px solid #dbe4f0;box-shadow:0 24px 54px rgba(15,23,42,.2);display:flex;flex-direction:column;overflow:hidden;}
@@ -57,6 +67,7 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
     .product-filter-title span{font-size:0.76rem;}
     .cat-btn{padding:0.56rem 0.8rem;font-size:0.76rem;}
     .cat-btn-count{min-width:1.45rem;height:1.45rem;font-size:0.69rem;}
+    .quick-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 @media (max-width: 600px) {
     .cat-filters{flex-wrap:nowrap;overflow-x:auto;gap:0.35rem;}
@@ -67,6 +78,8 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
     .prod-toolbar form{width:100%;}
     .prod-toolbar .search-input{min-width:0;width:100%;}
     .prod-actions{width:100%;justify-content:flex-end;}
+    .quick-edit-grid{grid-template-columns:1fr;}
+    .quick-edit-actions > *{width:100%;}
 }
 html[data-theme="dark"] .product-filter-panel{
     border-color:#263244;
@@ -92,6 +105,12 @@ html[data-theme="dark"] .cat-btn.active{
     box-shadow:0 14px 26px rgba(37,99,235,.24);
 }
 html[data-theme="dark"] .cat-btn.active .cat-btn-count{background:rgba(255,255,255,.18);color:#fff;}
+html[data-theme="dark"] .quick-edit-row{background:rgba(30,41,59,.58);}
+html[data-theme="dark"] .quick-edit-panel{background:linear-gradient(180deg,#162133 0%,#121a2a 100%);border-top-color:#314155;}
+html[data-theme="dark"] .quick-edit-title{color:#eff6ff;}
+html[data-theme="dark"] .quick-edit-grid .form-group label{color:#c7d3e3;}
+html[data-theme="dark"] .quick-edit-grid .form-group input,
+html[data-theme="dark"] .quick-edit-grid .form-group select{background:#0f1726;color:#eff6ff;border-color:#314155;}
 </style>
 {% endblock %}
 {% block content %}
@@ -207,6 +226,9 @@ html[data-theme="dark"] .cat-btn.active .cat-btn-count{background:rgba(255,255,2
             <td>{{ p.expiry_months or 12 }}개월</td>
             <td>
                 <div class="product-action-group">
+                    {% if can_prod %}
+                    <button type="button" class="btn btn-small btn-secondary" onclick="toggleQuickEdit({{ p.id }})">기본정보 수정</button>
+                    {% endif %}
                     <a href="{{ url_for('products.product_bom', product_id=p.id, return_to=current_list_url) }}" class="btn btn-small">BOM</a>
                     {% if p.spec_sheet_stored_name %}
                     <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small btn-secondary">사양서 보기</a>
@@ -224,6 +246,45 @@ html[data-theme="dark"] .cat-btn.active .cat-btn-count{background:rgba(255,255,2
             </td>
             {% endif %}
         </tr>
+        {% if can_prod %}
+        <tr id="quick_edit_{{ p.id }}" class="quick-edit-row">
+            <td colspan="9" class="quick-edit-cell">
+                <div class="quick-edit-panel">
+                    <div class="quick-edit-title">{{ p.name }} 기본정보 빠른 수정</div>
+                    <form method="POST" action="/products/{{ p.id }}/quick-update">
+                        <input type="hidden" name="return_to" value="{{ current_list_url }}">
+                        <div class="quick-edit-grid">
+                            <div class="form-group">
+                                <label>분류</label>
+                                <select name="category" required>
+                                    {% for c in CATS %}
+                                    <option value="{{ c }}" {% if (p.category or '기타') == c %}selected{% endif %}>{{ c }}</option>
+                                    {% endfor %}
+                                    <option value="기타" {% if (p.category or '기타') == '기타' %}selected{% endif %}>기타</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>박스당 낱봉</label><input type="number" name="box_quantity" min="1" step="1" value="{{ p.box_quantity or 100 }}" required></div>
+                            <div class="form-group"><label>매수</label><input type="number" name="sheets_per_pack" min="1" step="1" value="{{ p.sheets_per_pack or 24 }}" required></div>
+                            <div class="form-group"><label>절단</label><input type="number" name="cuts_per_sheet" min="1" step="1" value="{{ p.cuts_per_sheet or 9 }}" required></div>
+                            <div class="form-group"><label>1박스당 원초</label><input type="number" name="sok_per_box" min="0" step="0.01" value="{{ '%.2f'|format(p.sok_per_box or 0) }}" required></div>
+                            <div class="form-group">
+                                <label>소비기한</label>
+                                <select name="expiry_months" required>
+                                    {% for month in range(1, 13) %}
+                                    <option value="{{ month }}" {% if (p.expiry_months or 12) == month %}selected{% endif %}>{{ month }}개월</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="quick-edit-actions">
+                            <button type="button" class="btn btn-secondary btn-small" onclick="toggleQuickEdit({{ p.id }})">취소</button>
+                            <button type="submit" class="btn btn-small">저장</button>
+                        </div>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endif %}
         {% endfor %}
         </tbody>
     </table>
@@ -234,6 +295,20 @@ html[data-theme="dark"] .cat-btn.active .cat-btn-count{background:rgba(255,255,2
     </p>
     {% endif %}
 </div>
+
+<script>
+function toggleQuickEdit(productId){
+    const rows = document.querySelectorAll('.quick-edit-row');
+    rows.forEach((row) => {
+        if (row.id !== `quick_edit_${productId}`) {
+            row.style.display = 'none';
+        }
+    });
+    const target = document.getElementById(`quick_edit_${productId}`);
+    if (!target) return;
+    target.style.display = (target.style.display === 'table-row') ? 'none' : 'table-row';
+}
+</script>
 
 {% endblock %}
 
