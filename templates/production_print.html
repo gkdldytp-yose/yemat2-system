@@ -16,24 +16,68 @@
     .sheet { width: 100%; max-width: 198mm; margin: 0 auto; }
     .preview-actions {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
+      gap: 12px;
+      margin: 0 0 10px;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+      position: sticky;
+      top: 8px;
+      z-index: 20;
+    }
+    .preview-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .preview-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .preview-desc {
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+      line-height: 1.35;
     }
     .preview-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 30px;
-      padding: 0 12px;
-      border: 1px solid #94a3b8;
+      gap: 8px;
+      min-height: 48px;
+      min-width: 132px;
+      padding: 0 18px;
+      border: 1px solid #1d4ed8;
       border-radius: 999px;
-      background: #fff;
-      color: #0f172a;
-      font-size: 12px;
-      font-weight: 700;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
       cursor: pointer;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+    }
+    .preview-btn::before {
+      content: "🖨";
+      font-size: 16px;
+      line-height: 1;
+    }
+    .preview-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 32px rgba(37, 99, 235, 0.34);
+      filter: brightness(1.02);
+    }
+    .preview-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24);
     }
     .production-no-top {
       font-size: 10px;
@@ -259,6 +303,15 @@
         background: #efefef !important;
       }
     }
+    @media (max-width: 720px) {
+      .preview-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .preview-btn {
+        width: 100%;
+      }
+    }
   </style>
   {% macro fmt1(v) -%}
   {%- if v is not none and v != '' -%}
@@ -283,7 +336,11 @@
 <body>
   <div class="sheet">
     <div class="preview-actions">
-      <button type="button" class="preview-btn" onclick="window.print()">A4 출력</button>
+      <div class="preview-copy">
+        <div class="preview-title">생산일지 미리보기</div>
+        <div class="preview-desc">내용을 확인한 뒤 오른쪽 출력 버튼으로 바로 인쇄할 수 있습니다.</div>
+      </div>
+      <button type="button" class="preview-btn" onclick="window.print()">출력</button>
     </div>
     <div class="production-no-top">생산번호: PROD-{{ production.id }}</div>
 
@@ -575,9 +632,6 @@
       }
     });
 
-    if (new URLSearchParams(window.location.search).get('autoprint') === '1') {
-      window.onload = () => { window.print(); };
-    }
   </script>
 </body>
 </html>

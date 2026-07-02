@@ -696,6 +696,16 @@ body.modal-open {
     text-align: left;
     vertical-align: middle;
 }
+.stats-detail-table .stats-detail-car-number-col {
+    min-width: 190px;
+}
+.stats-detail-table .stats-detail-car-number-cell {
+    min-width: 190px;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    line-height: 1.5;
+}
 .stats-detail-table th {
     position: sticky;
     top: 0;
@@ -5361,6 +5371,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 // 스케줄 데이터 (서버에서 전달)
 const schedules = {{ schedules_json|safe }};
 const allProducts = {{ products_json|safe }};
+const allStatsProducts = {{ stats_products_json|safe }};
 const workDays = {{ work_days_json|safe }};
 const exportSchedules = {{ export_schedules_json|safe }};
 const exportCompletedSchedules = exportSchedules.filter((row) => Boolean(row.is_completed) && String(row.completed_date || '').trim());
@@ -6826,7 +6837,7 @@ function showAllStatsProducts() {
     const selected = document.getElementById('statsDetailSelectedProduct');
     if (selected && selected.style.display === 'flex') return;
     if (search && !String(search.value || '').trim()) {
-        renderStatsProductResults(allProducts || []);
+        renderStatsProductResults(allStatsProducts || []);
     }
 }
 
@@ -6835,10 +6846,10 @@ function filterStatsProducts() {
     if (!search) return;
     const keyword = String(search.value || '').trim().toLowerCase();
     if (!keyword) {
-        renderStatsProductResults(allProducts || []);
+        renderStatsProductResults(allStatsProducts || []);
         return;
     }
-    const filtered = (allProducts || []).filter((product) => String(product.name || '').toLowerCase().includes(keyword));
+    const filtered = (allStatsProducts || []).filter((product) => String(product.name || '').toLowerCase().includes(keyword));
     renderStatsProductResults(filtered);
 }
 
@@ -6902,7 +6913,7 @@ function renderStatsDetailRows(rows) {
                         <th style="width:130px;">생산일</th>
                         <th style="width:170px;">생산번호</th>
                         <th style="min-width:180px;">원초명</th>
-                        <th style="width:120px;">자호</th>
+                        <th class="stats-detail-car-number-col" style="width:190px;">자호</th>
                         <th style="width:110px;">수율</th>
                         <th style="min-width:150px;">소비기한</th>
                         <th style="width:140px;">생산량 (BOX)</th>
@@ -6915,7 +6926,7 @@ function renderStatsDetailRows(rows) {
                             <td data-label="생산일" style="white-space:nowrap;">${escapeHtml(formatStatsShortDate(row.production_date || '-'))}</td>
                             <td data-label="생산번호"><a class="stats-detail-production-link" href="/production/${row.production_id}">${escapeHtml(row.production_no || '-')}</a></td>
                             <td data-label="원초명">${escapeHtml(row.raw_material_name || '-')}</td>
-                            <td data-label="자호">${escapeHtml(row.car_number || '-')}</td>
+                            <td data-label="자호" class="stats-detail-car-number-cell">${escapeHtml(row.car_number || '-')}</td>
                             <td data-label="수율"><span class="stats-detail-yield">${row.yield_rate == null ? '-' : `${formatStatsNumber(row.yield_rate)}%`}</span></td>
                             <td data-label="소비기한">${escapeHtml(row.expiry_date || '-')}</td>
                             <td data-label="생산량">${formatStatsNumber(row.production_boxes || 0)} BOX</td>

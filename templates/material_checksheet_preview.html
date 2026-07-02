@@ -30,10 +30,45 @@
         }
         .actions {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+            position: sticky;
+            top: 8px;
+            z-index: 20;
+            flex-wrap: wrap;
+        }
+        .preview-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 220px;
+        }
+        .preview-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .preview-desc {
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            line-height: 1.35;
+        }
+        .preview-tools {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
             gap: 8px;
-            margin-bottom: 4px;
+            flex-wrap: wrap;
+            margin-left: auto;
         }
         .zoom-status {
             min-width: 58px;
@@ -50,6 +85,84 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
+        }
+        .preview-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 220px;
+        }
+        .preview-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .preview-desc {
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            line-height: 1.35;
+        }
+        .preview-tools {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        .actions button.print-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 48px;
+            min-width: 132px;
+            padding: 0 18px;
+            border-color: #1d4ed8;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 800;
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+        }
+        .actions button.print-btn::before {
+            content: "🖨";
+            font-size: 16px;
+            line-height: 1;
+        }
+        .actions button.print-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 32px rgba(37, 99, 235, 0.34);
+            filter: brightness(1.02);
+        }
+        .actions button.print-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 48px;
+            min-width: 132px;
+            padding: 0 18px;
+            border-color: #1d4ed8;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 800;
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+        }
+        .actions button.print-btn::before {
+            content: "🖨";
+            font-size: 16px;
+            line-height: 1;
+        }
+        .actions button.print-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 32px rgba(37, 99, 235, 0.34);
+            filter: brightness(1.02);
         }
         table {
             width: 100%;
@@ -361,6 +474,47 @@ function resetPreviewZoom() {
     applyPreviewZoom();
 }
 
+function enhancePreviewActions() {
+    const actions = document.querySelector('.actions');
+    if (!actions || actions.dataset.enhanced === '1') return;
+
+    const buttons = Array.from(actions.querySelectorAll('button'));
+    const zoomStatus = actions.querySelector('.zoom-status');
+    const printButton = buttons.find((button) => /print/.test(button.getAttribute('onclick') || ''));
+    const toolButtons = buttons.filter((button) => button !== printButton);
+
+    const copy = document.createElement('div');
+    copy.className = 'preview-copy';
+    copy.innerHTML = `
+        <div class="preview-title">부재료 점검표 미리보기</div>
+        <div class="preview-desc">내용을 확인한 뒤 오른쪽 출력 버튼으로 바로 인쇄할 수 있습니다.</div>
+    `;
+
+    const tools = document.createElement('div');
+    tools.className = 'preview-tools';
+
+    toolButtons.forEach((button) => {
+        const label = (button.textContent || '').trim();
+        if (label.includes('���')) button.textContent = '축소';
+        if (label.includes('�⺻')) button.textContent = '기본';
+        if (label.includes('Ȯ')) button.textContent = '확대';
+        tools.appendChild(button);
+    });
+
+    if (zoomStatus) tools.appendChild(zoomStatus);
+
+    if (printButton) {
+        printButton.textContent = '출력';
+        printButton.classList.add('print-btn');
+        tools.appendChild(printButton);
+    }
+
+    actions.innerHTML = '';
+    actions.appendChild(copy);
+    actions.appendChild(tools);
+    actions.dataset.enhanced = '1';
+}
+
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         event.preventDefault();
@@ -386,7 +540,10 @@ document.addEventListener('wheel', (event) => {
     changePreviewZoom(event.deltaY < 0 ? 0.1 : -0.1);
 }, { passive: false });
 
-window.addEventListener('load', applyPreviewZoom);
+window.addEventListener('load', () => {
+    enhancePreviewActions();
+    applyPreviewZoom();
+});
 
 if (new URLSearchParams(window.location.search).get('autoprint') === '1') {
     window.addEventListener('load', () => {

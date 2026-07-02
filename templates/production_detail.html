@@ -371,8 +371,50 @@ html[data-theme="dark"] .raw-change-option.active .raw-change-option-meta strong
 html[data-theme="dark"] .raw-change-targets,
 html[data-theme="dark"] .raw-change-empty,
 html[data-theme="dark"] .raw-change-actions{background:#162133;border-color:#263244;color:#c7d3e3;}
-html[data-theme="dark"] .lot-gap-panel,
-html[data-theme="dark"] .lot-gap-hint{background:rgba(249,115,22,.12);border-color:rgba(251,146,60,.28);color:#fdba74;}
+html[data-theme="dark"] .lot-gap-row td{background:#101827 !important;border-bottom-color:rgba(251,146,60,.2);}
+html[data-theme="dark"] .lot-gap-panel{
+    background:linear-gradient(180deg,rgba(38,24,15,.95) 0%,rgba(24,18,14,.96) 100%);
+    border-color:rgba(251,146,60,.28);
+    box-shadow:0 18px 36px rgba(2,6,23,.32);
+}
+html[data-theme="dark"] .lot-gap-title{color:#ffedd5;}
+html[data-theme="dark"] .lot-gap-desc,
+html[data-theme="dark"] .lot-gap-fields label{color:#fdba74;}
+html[data-theme="dark"] .lot-gap-meta span{
+    background:#1a2436;
+    border-color:rgba(251,146,60,.24);
+    color:#fed7aa;
+}
+html[data-theme="dark"] .lot-gap-fields input{
+    background:#0f1726;
+    border-color:rgba(251,146,60,.34);
+    color:#fff7ed;
+}
+html[data-theme="dark"] .lot-gap-fields input::placeholder{color:#f59e0b;}
+html[data-theme="dark"] .lot-gap-fields input:focus{
+    border-color:#fb923c;
+    box-shadow:0 0 0 3px rgba(249,115,22,.18);
+}
+html[data-theme="dark"] .lot-gap-none{
+    background:#221712;
+    border-color:rgba(251,146,60,.34);
+    color:#fdba74;
+}
+html[data-theme="dark"] .lot-gap-none.active{
+    background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);
+    border-color:#f97316;
+    color:#fff7ed;
+}
+html[data-theme="dark"] .lot-gap-hint{
+    background:rgba(249,115,22,.12);
+    border-color:rgba(251,146,60,.28);
+    color:#fdba74;
+}
+html[data-theme="dark"] .lot-gap-apply{
+    background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);
+    color:#fff7ed;
+    box-shadow:0 12px 22px rgba(234,88,12,.22);
+}
 html[data-theme="dark"] .raw-change-stock,
 html[data-theme="dark"] .unit-stock-badge{background:#162133;border-color:#263244;color:#dbe7f5;}
 html[data-theme="dark"] .raw-change-pick{background:#223046;color:#bfdbfe;}
@@ -494,7 +536,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         <a href="/production/{{ production.id }}" class="btn btn-small btn-secondary">수정 취소</a>
         {% endif %}
         {% if production.status == '완료' %}
-        <a href="/production/{{ production.id }}/print?autoprint=1" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ A4 출력</a>
+        <a href="/production/{{ production.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ 생산일지 미리보기</a>
         {% endif %}
         {% if can_prod %}
         <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% else %}생산건을 삭제할까요?{% endif %}')">

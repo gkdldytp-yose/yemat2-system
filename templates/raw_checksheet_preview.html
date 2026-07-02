@@ -30,10 +30,54 @@
         }
         .preview-actions {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+            position: sticky;
+            top: 8px;
+            z-index: 20;
+            flex-wrap: wrap;
+        }
+        .preview-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 220px;
+        }
+        .preview-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .preview-desc {
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            line-height: 1.35;
+        }
+        .preview-tools {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
             gap: 8px;
-            margin-bottom: 6px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        .preview-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            width: 100%;
+            margin-top: -2px;
+            padding-left: 0;
         }
         .zoom-status {
             min-width: 58px;
@@ -44,12 +88,16 @@
             font-weight: 700;
         }
         .preview-guide {
+            flex: 1 1 auto;
+            min-width: 0;
             font-size: 11px;
             color: #475569;
-            white-space: nowrap;
+            white-space: normal;
+            text-align: right;
         }
         .preview-status {
-            min-width: 72px;
+            flex: 0 0 auto;
+            min-width: 56px;
             font-size: 11px;
             color: #2563eb;
             text-align: right;
@@ -73,6 +121,34 @@
             background: #eff6ff;
             border-color: #60a5fa;
             color: #1d4ed8;
+        }
+        .preview-btn.print-btn {
+            gap: 8px;
+            min-height: 48px;
+            min-width: 132px;
+            padding: 0 18px;
+            border-color: #1d4ed8;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 800;
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+        }
+        .preview-btn.print-btn::before {
+            content: "🖨";
+            font-size: 16px;
+            line-height: 1;
+        }
+        .preview-btn.print-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 32px rgba(37, 99, 235, 0.34);
+            filter: brightness(1.02);
+        }
+        #noteEditToggleBtn {
+            flex: 0 0 auto;
+            min-width: 78px;
+            padding: 0 14px;
         }
         table {
             width: 100%;
@@ -286,10 +362,23 @@
                 gap: 6px;
                 flex-wrap: wrap;
             }
+            .preview-tools {
+                width: 100%;
+                justify-content: flex-start;
+                margin-left: 0;
+            }
+            .preview-meta {
+                justify-content: space-between;
+                padding-left: 0;
+                margin-top: 0;
+            }
             .preview-guide,
             .preview-status {
                 white-space: normal;
                 text-align: left;
+            }
+            #noteEditToggleBtn {
+                min-width: 0;
             }
             .preview-btn {
                 width: 100%;
@@ -457,14 +546,22 @@
 <body>
 <div class="sheet">
     <div class="preview-actions">
-        <button type="button" class="preview-btn" onclick="changePreviewZoom(-0.1)">축소</button>
-        <button type="button" class="preview-btn" onclick="resetPreviewZoom()">기본</button>
-        <span id="previewZoomStatus" class="zoom-status">100%</span>
-        <button type="button" class="preview-btn" onclick="changePreviewZoom(0.1)">확대</button>
-        <button type="button" class="preview-btn" onclick="window.print()">A4 출력</button>
-        <span class="preview-guide">기본은 미리보기 상태이며, 버튼 클릭 시 비고를 수정할 수 있습니다.</span>
-        <span id="noteSaveStatus" class="preview-status"></span>
-        <button type="button" id="noteEditToggleBtn" class="preview-btn" onclick="toggleNoteEdit()">비고 입력</button>
+        <div class="preview-copy">
+            <div class="preview-title">원재료 점검표 미리보기</div>
+            <div class="preview-desc">확인 후 출력할 수 있고, 필요하면 비고 입력 버튼으로 메모를 수정할 수 있습니다.</div>
+        </div>
+        <div class="preview-tools">
+            <button type="button" class="preview-btn" onclick="changePreviewZoom(-0.1)">축소</button>
+            <button type="button" class="preview-btn" onclick="resetPreviewZoom()">기본</button>
+            <span id="previewZoomStatus" class="zoom-status">100%</span>
+            <button type="button" class="preview-btn" onclick="changePreviewZoom(0.1)">확대</button>
+            <button type="button" class="preview-btn print-btn" onclick="window.print()">출력</button>
+        </div>
+        <div class="preview-meta">
+            <span class="preview-guide">기본은 미리보기 상태이며, 버튼 클릭 시 비고를 수정할 수 있습니다.</span>
+            <span id="noteSaveStatus" class="preview-status"></span>
+            <button type="button" id="noteEditToggleBtn" class="preview-btn" onclick="toggleNoteEdit()">비고 입력</button>
+        </div>
     </div>
 
         <table class="header-table">
