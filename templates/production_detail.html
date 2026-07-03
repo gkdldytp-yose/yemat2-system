@@ -5,8 +5,77 @@
 .sec{background:white;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
 .sec h3{font-size:1.1rem;color:#2c3e50;border-bottom:2px solid #667eea;padding-bottom:0.5rem;margin-bottom:1rem;}
 .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.info-item.production-qty-card{position:relative;overflow:hidden;border:1px solid transparent;border-radius:24px;padding:.9rem 1rem .85rem;backdrop-filter:blur(10px);}
 .info-item .lbl{font-size:0.78rem;color:#999;margin-bottom:0.2rem;}
 .info-item .val{font-weight:600;font-size:0.95rem;white-space:normal;word-break:break-word;line-height:1.35;}
+.production-qty-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
+.production-qty-badge{display:inline-flex;align-items:center;padding:.26rem .7rem;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(224,242,254,.94) 100%);color:#0284c7;font-size:.68rem;font-weight:900;line-height:1.15;border:1px solid rgba(103,232,249,.65);box-shadow:0 0 12px rgba(34,211,238,.18), inset 0 1px 0 rgba(255,255,255,.95);}
+.production-qty-badge.actual-box-badge{background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(255,237,213,.95) 100%);color:#ea580c;border-color:rgba(251,146,60,.58);box-shadow:0 0 12px rgba(251,146,60,.18), inset 0 1px 0 rgba(255,255,255,.96);}
+.production-qty-card.actual-emphasis{
+    border-color:rgba(103,232,249,.72);
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 34%),
+        radial-gradient(circle at 88% 18%, rgba(125,211,252,.34) 0%, rgba(125,211,252,0) 26%),
+        linear-gradient(135deg, rgba(240,249,255,.98) 0%, rgba(224,242,254,.98) 46%, rgba(236,254,255,.99) 100%);
+    box-shadow:
+        0 0 0 1px rgba(186,230,253,.42),
+        0 0 18px rgba(34,211,238,.18),
+        0 0 34px rgba(56,189,248,.16),
+        inset 0 1px 0 rgba(255,255,255,.96);
+}
+.production-qty-card.actual-box-emphasis{
+    border-color:rgba(251,146,60,.72);
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,.96) 0%, rgba(255,255,255,0) 36%),
+        radial-gradient(circle at 86% 18%, rgba(251,191,36,.28) 0%, rgba(251,191,36,0) 24%),
+        linear-gradient(135deg, rgba(255,251,235,.99) 0%, rgba(255,237,213,.98) 50%, rgba(255,247,237,.99) 100%);
+    box-shadow:
+        0 0 0 1px rgba(253,186,116,.34),
+        0 0 18px rgba(251,146,60,.16),
+        0 0 32px rgba(249,115,22,.12),
+        inset 0 1px 0 rgba(255,255,255,.96);
+}
+.production-qty-card.actual-box-emphasis::before{
+    content:"";
+    position:absolute;
+    inset:auto 18px -34px auto;
+    width:128px;
+    height:128px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(251,146,60,.22) 0%, rgba(251,146,60,0) 72%);
+    pointer-events:none;
+}
+.production-qty-card.actual-box-emphasis::after{
+    content:"";
+    position:absolute;
+    inset:1px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.46);
+    pointer-events:none;
+}
+.production-qty-card.actual-box-emphasis .lbl{color:#c2410c;text-shadow:0 0 12px rgba(253,186,116,.18);}
+.production-qty-card.actual-box-emphasis .val{font-size:1.16rem;font-weight:900;color:#7c2d12;letter-spacing:.01em;text-shadow:0 0 14px rgba(251,146,60,.1);}
+.production-qty-card.actual-emphasis::before{
+    content:"";
+    position:absolute;
+    inset:auto auto -32px -16px;
+    width:120px;
+    height:120px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(34,211,238,.22) 0%, rgba(34,211,238,0) 72%);
+    pointer-events:none;
+}
+.production-qty-card.actual-emphasis::after{
+    content:"";
+    position:absolute;
+    inset:1px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.48);
+    pointer-events:none;
+}
+.production-qty-card.actual-emphasis .lbl{color:#0369a1;text-shadow:0 0 12px rgba(125,211,252,.18);}
+.production-qty-card.actual-emphasis .val{font-size:1.16rem;font-weight:900;color:#082f49;letter-spacing:.01em;text-shadow:0 0 14px rgba(34,211,238,.12);}
+.production-qty-note{margin-top:.42rem;font-size:.76rem;font-weight:700;color:#0f766e;line-height:1.45;opacity:.92;}
 .product-title-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
 .product-title-actions{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
 .product-spec-btn{display:inline-flex;align-items:center;justify-content:center;padding:.42rem .82rem;border-radius:999px;font-size:.8rem;font-weight:800;text-decoration:none;line-height:1.2;}
@@ -189,6 +258,48 @@
 .section-head h3{margin:0 !important;}
 .raw-section-title-row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;min-width:0;}
 .raw-section-tools{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-left:auto;}
+.raw-summary-bar{background:#f8f9fa;border-radius:16px;padding:.85rem 1rem;margin-bottom:1rem;font-size:0.9rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.raw-summary-metrics{display:flex;gap:2rem;flex-wrap:wrap;align-items:center;}
+.raw-finished-panel{
+    position:relative;
+    min-width:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:flex-end;
+    padding:.72rem .95rem;
+    border-radius:20px;
+    border:1px solid rgba(96,165,250,.22);
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,.96) 0%, rgba(255,255,255,0) 34%),
+        radial-gradient(circle at 88% 20%, rgba(168,85,247,.18) 0%, rgba(168,85,247,0) 28%),
+        linear-gradient(135deg, rgba(238,242,255,.98) 0%, rgba(224,231,255,.98) 52%, rgba(239,246,255,.99) 100%);
+    box-shadow:
+        0 0 0 1px rgba(191,219,254,.34),
+        0 0 18px rgba(96,165,250,.18),
+        0 0 28px rgba(168,85,247,.12),
+        inset 0 1px 0 rgba(255,255,255,.92);
+    overflow:hidden;
+}
+.raw-finished-panel::before{
+    content:"";
+    position:absolute;
+    inset:auto -14px -46px auto;
+    width:116px;
+    height:116px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(96,165,250,.18) 0%, rgba(96,165,250,0) 72%);
+    pointer-events:none;
+}
+.raw-finished-metrics{display:flex;gap:.85rem;flex-wrap:nowrap;align-items:center;position:relative;z-index:1;white-space:nowrap;}
+.raw-finished-item{display:inline-flex;align-items:baseline;gap:.35rem;min-width:0;}
+.raw-finished-item + .raw-finished-item::before{content:"/";color:#94a3b8;font-size:.86rem;font-weight:700;margin-right:.1rem;}
+.raw-finished-label{font-size:.76rem;font-weight:800;color:#475569;letter-spacing:.02em;}
+.raw-finished-value{font-size:1.06rem;font-weight:900;color:#0f172a;text-shadow:0 0 14px rgba(96,165,250,.12);}
+.raw-finished-value.input{color:#2563eb;}
+.raw-finished-value.output{color:#7c3aed;}
+.raw-finished-value.yield.good{color:#16a34a;}
+.raw-finished-value.yield.mid{color:#d97706;}
+.raw-finished-value.yield.low{color:#dc2626;}
 .section-journal-btn{display:inline-flex;align-items:center;justify-content:center;padding:.42rem .85rem;border:1px solid #c7d2fe;border-radius:999px;background:#eef2ff;color:#334155;font-size:.8rem;font-weight:800;text-decoration:none;cursor:pointer;line-height:1.2;}
 .section-journal-btn:hover{background:#e0e7ff;border-color:#a5b4fc;color:#1e3a8a;}
 .section-journal-btn:disabled{opacity:.45;cursor:not-allowed;}
@@ -268,6 +379,41 @@ html[data-theme="dark"] .plan-edit-field label{color:#8ea3bd;}
 html[data-theme="dark"] .info-item .val,
 html[data-theme="dark"] .raw-meta .mv,
 html[data-theme="dark"] .plan-edit-title{color:#eff6ff;}
+html[data-theme="dark"] .production-qty-badge{background:linear-gradient(180deg,rgba(14,116,144,.34) 0%,rgba(12,74,110,.44) 100%);color:#cffafe;border:1px solid rgba(103,232,249,.34);box-shadow:0 0 16px rgba(34,211,238,.14), inset 0 1px 0 rgba(255,255,255,.05);}
+html[data-theme="dark"] .production-qty-badge.actual-box-badge{background:linear-gradient(180deg,rgba(154,52,18,.34) 0%,rgba(124,45,18,.42) 100%);color:#ffedd5;border-color:rgba(251,146,60,.32);box-shadow:0 0 16px rgba(249,115,22,.14), inset 0 1px 0 rgba(255,255,255,.04);}
+html[data-theme="dark"] .production-qty-card.actual-emphasis{
+    border-color:rgba(103,232,249,.42);
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,.08) 0%, rgba(255,255,255,0) 28%),
+        radial-gradient(circle at 88% 18%, rgba(34,211,238,.18) 0%, rgba(34,211,238,0) 24%),
+        linear-gradient(135deg, rgba(10,24,39,.98) 0%, rgba(8,47,73,.95) 48%, rgba(8,51,68,.95) 100%);
+    box-shadow:
+        0 0 0 1px rgba(125,211,252,.16),
+        0 0 18px rgba(34,211,238,.16),
+        0 0 34px rgba(14,165,233,.12),
+        inset 0 1px 0 rgba(255,255,255,.08);
+}
+html[data-theme="dark"] .production-qty-card.actual-box-emphasis{
+    border-color:rgba(251,146,60,.34);
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,.06) 0%, rgba(255,255,255,0) 28%),
+        radial-gradient(circle at 86% 18%, rgba(251,146,60,.18) 0%, rgba(251,146,60,0) 22%),
+        linear-gradient(135deg, rgba(41,23,10,.98) 0%, rgba(67,30,12,.95) 48%, rgba(60,31,15,.95) 100%);
+    box-shadow:
+        0 0 0 1px rgba(251,146,60,.14),
+        0 0 18px rgba(249,115,22,.14),
+        0 0 32px rgba(251,146,60,.1),
+        inset 0 1px 0 rgba(255,255,255,.06);
+}
+html[data-theme="dark"] .production-qty-card.actual-box-emphasis::before{background:radial-gradient(circle, rgba(251,146,60,.24) 0%, rgba(251,146,60,0) 72%);}
+html[data-theme="dark"] .production-qty-card.actual-box-emphasis::after{border-color:rgba(255,255,255,.08);}
+html[data-theme="dark"] .production-qty-card.actual-box-emphasis .lbl{color:#fdba74;}
+html[data-theme="dark"] .production-qty-card.actual-box-emphasis .val{color:#fff7ed;}
+html[data-theme="dark"] .production-qty-card.actual-emphasis::before{background:radial-gradient(circle, rgba(34,211,238,.26) 0%, rgba(34,211,238,0) 72%);}
+html[data-theme="dark"] .production-qty-card.actual-emphasis::after{border-color:rgba(255,255,255,.08);}
+html[data-theme="dark"] .production-qty-card.actual-emphasis .lbl{color:#a5f3fc;}
+html[data-theme="dark"] .production-qty-card.actual-emphasis .val{color:#ecfeff;}
+html[data-theme="dark"] .production-qty-note{color:#99f6e4;}
 html[data-theme="dark"] .note-textarea,
 html[data-theme="dark"] .note-suggestion-select,
 html[data-theme="dark"] .ainput,
@@ -354,6 +500,26 @@ html[data-theme="dark"] .journal-modal-desc,
 html[data-theme="dark"] .raw-change-sub,
 html[data-theme="dark"] .raw-change-target-label,
 html[data-theme="dark"] .raw-change-option-meta{color:#8ea3bd;}
+html[data-theme="dark"] .raw-summary-bar{background:#162133;border:1px solid #263244;}
+html[data-theme="dark"] .raw-finished-panel{
+    border-color:rgba(125,211,252,.2);
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,.06) 0%, rgba(255,255,255,0) 30%),
+        radial-gradient(circle at 88% 20%, rgba(168,85,247,.16) 0%, rgba(168,85,247,0) 24%),
+        linear-gradient(135deg, rgba(16,24,39,.98) 0%, rgba(30,41,59,.96) 56%, rgba(17,24,39,.98) 100%);
+    box-shadow:
+        0 0 0 1px rgba(96,165,250,.12),
+        0 0 18px rgba(96,165,250,.12),
+        0 0 28px rgba(168,85,247,.08),
+        inset 0 1px 0 rgba(255,255,255,.06);
+}
+html[data-theme="dark"] .raw-finished-label{color:#94a3b8;}
+html[data-theme="dark"] .raw-finished-value{color:#f8fafc;}
+html[data-theme="dark"] .raw-finished-value.input{color:#93c5fd;}
+html[data-theme="dark"] .raw-finished-value.output{color:#c4b5fd;}
+html[data-theme="dark"] .raw-finished-value.yield.good{color:#86efac;}
+html[data-theme="dark"] .raw-finished-value.yield.mid{color:#fcd34d;}
+html[data-theme="dark"] .raw-finished-value.yield.low{color:#fca5a5;}
 html[data-theme="dark"] .raw-change-option-name{color:#f8fbff;}
 html[data-theme="dark"] .raw-change-option-meta strong{color:#e5eefc;}
 html[data-theme="dark"] .journal-option-btn,
@@ -456,6 +622,11 @@ html[data-theme="dark"] [id^="rw_"]{color:#fda4af !important;}
     html,body{max-width:100%;overflow-x:hidden;}
     .info-grid{grid-template-columns:1fr !important;}
     .sec{padding:1rem !important;max-width:100%;overflow:hidden;}
+    .raw-summary-bar{align-items:stretch;}
+    .raw-summary-metrics{gap:.75rem 1rem;}
+    .raw-finished-panel{width:100%;display:flex;justify-content:flex-start;border-radius:18px;}
+    .raw-finished-metrics{width:100%;justify-content:space-between;white-space:normal;flex-wrap:wrap;gap:.45rem .8rem;}
+    .raw-finished-item{min-width:0;flex-wrap:wrap;}
     .raw-card{padding:0.75rem !important;}
     .raw-meta{grid-template-columns:1fr 1fr !important;gap:0.5rem !important;}
     .mat-tbl,
@@ -522,15 +693,16 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {%- set can_raw   = _r in ['admin','rawmat'] -%}
 {%- set is_admin  = _r == 'admin' -%}
 {%- set edit_completed = request.args.get('edit') == '1' -%}
-{%- set can_edit = can_prod and (production.status != '완료' or edit_completed) -%}
+{%- set has_workplace_access = has_workplace_access if has_workplace_access is defined else true -%}
+{%- set can_edit = can_prod and has_workplace_access and (production.status != '완료' or edit_completed) -%}
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
     <h1>🏭 생산 상세</h1>
     <div style="display:flex;gap:0.5rem;align-items:center;">
-        {% if production.status != '완료' and can_prod %}
+        {% if production.status != '완료' and can_edit %}
         <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="openPlanEditModal()">생산계획 수정</button>
         {% endif %}
-        {% if production.status == '완료' and can_prod and not edit_completed %}
+        {% if production.status == '완료' and can_edit and not edit_completed %}
         <a href="/production/{{ production.id }}?edit=1" class="btn btn-small" style="background:#f59e0b;">✏️ 완료건 수정</a>
         {% elif edit_completed %}
         <a href="/production/{{ production.id }}" class="btn btn-small btn-secondary">수정 취소</a>
@@ -538,7 +710,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         {% if production.status == '완료' %}
         <a href="/production/{{ production.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ 생산일지 미리보기</a>
         {% endif %}
-        {% if can_prod %}
+        {% if can_edit %}
         <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% else %}생산건을 삭제할까요?{% endif %}')">
             <input type="hidden" name="next" value="/production{% if production.status == '완료' %}?tab=done{% endif %}">
             <button type="submit" class="btn btn-small btn-danger">삭제</button>
@@ -548,12 +720,18 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     </div>
 </div>
 
+{% if not has_workplace_access %}
+<div class="alert alert-warning" style="margin-bottom:1rem;">
+    현재 로그인한 작업장과 이 생산건의 작업장이 달라 읽기 전용으로 표시됩니다.
+</div>
+{% endif %}
+
 {% if production.status == '완료' %}
 <div style="background:#e8f5e9;border:2px solid #27ae60;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;text-align:center;font-weight:600;color:#27ae60;">✅ 생산 완료</div>
 {% endif %}
 
 {% set selected_plan_lines = production.line.split(',') if production.line else [] %}
-{% if production.status != '완료' and can_prod %}
+{% if production.status != '완료' and can_edit %}
 <div id="planEditModal" class="plan-edit-modal" onclick="if(event.target===this){closePlanEditModal();}">
     <div class="plan-edit-sheet">
         <div class="plan-edit-head">
@@ -628,17 +806,22 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             {% elif production.status == '진행중' %}<span class="badge badge-warning">진행중</span>
             {% else %}<span class="badge badge-info">예정</span>{% endif %}
         </div></div>
-        <div class="info-item"><div class="lbl">계획 박스 수</div><div class="val">{{ production.planned_boxes }} BOX</div></div>
-        <div class="info-item">
-            <div class="lbl">실제 생산 박스 수 *</div>
+        <div class="info-item"><div class="lbl">계획 박스 수</div><div class="val">{{ production.planned_boxes_display }} BOX</div></div>
+        <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-box-emphasis{% endif %}">
+            <div class="production-qty-head">
+                <div class="lbl">실제 생산 박스 수 *</div>
+                {% if production.uses_actual_quantity %}
+                <span class="production-qty-badge actual-box-badge">실제 입력값</span>
+                {% endif %}
+            </div>
             {% if not can_edit %}
-            <div class="val">{{ production.actual_boxes }} BOX</div>
+            <div class="val">{{ production.actual_boxes_display }} BOX</div>
             {% else %}
             <input type="hidden" name="actual_boxes" id="actualBoxes"
                    value="{{ production.actual_boxes or production.planned_boxes }}"
                    min="1">
-            <div id="actualBoxesDisplay" class="display-readonly-value compact">{{ production.actual_boxes or production.planned_boxes }}</div>
-            <div class="display-readonly-hint">소비기한별 박스 수 합계가 자동 반영됩니다.</div>
+            <div id="actualBoxesDisplay" class="val">{{ production.actual_boxes_display }} BOX</div>
+            <div class="production-qty-note">소비기한별 박스 수 합계가 자동 반영됩니다.</div>
             {% endif %}
         </div>
         {% if can_edit or (production.sample_excluded_total or 0) > 0 %}
@@ -646,19 +829,42 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div class="lbl">실제 반영 박스 수</div>
             {% if not can_edit %}
             <div class="export-box-summary">
-                <div class="summary-main">{{ production.export_actual_boxes }} BOX</div>
-                <div class="summary-sub">샘플 제외 {{ production.sample_excluded_total }} BOX</div>
+                <div class="summary-main">{{ production.export_actual_boxes_display }} BOX</div>
+                <div class="summary-sub">샘플 제외 {{ production.sample_excluded_total_display }} BOX</div>
             </div>
             {% else %}
             <div class="export-box-summary">
                 <input type="hidden" id="exportActualBoxes" value="{{ production.export_actual_boxes }}">
-                <div id="exportActualBoxesDisplay" class="display-readonly-value success">{{ production.export_actual_boxes }}</div>
-                <div class="summary-sub" id="sampleExcludedSummary">샘플 제외 {{ production.sample_excluded_total }} BOX</div>
+                <div id="exportActualBoxesDisplay" class="display-readonly-value success">{{ production.export_actual_boxes_display }}</div>
+                <div class="summary-sub" id="sampleExcludedSummary">샘플 제외 {{ production.sample_excluded_total_display }} BOX</div>
             </div>
             {% endif %}
         </div>
         {% endif %}
-        <div class="info-item"><div class="lbl">박스당 수량</div><div class="val">{{ production.box_quantity }}개</div></div>
+        <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-emphasis{% endif %}">
+            <div class="production-qty-head">
+                <div class="lbl">생산 외포장 수량</div>
+                {% if production.uses_actual_quantity %}
+                <span class="production-qty-badge">실제 박스 기준</span>
+                {% endif %}
+            </div>
+            <div class="val">{{ production.production_outer_pack_display }}개</div>
+            {% if production.uses_actual_quantity %}
+            <div class="production-qty-note">실제 박스 수 {{ production.quantity_basis_boxes_display }} BOX 기준으로 반영 중</div>
+            {% endif %}
+        </div>
+        <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-emphasis{% endif %}">
+            <div class="production-qty-head">
+                <div class="lbl">생산 낱봉 수량</div>
+                {% if production.uses_actual_quantity %}
+                <span class="production-qty-badge">실제 박스 기준</span>
+                {% endif %}
+            </div>
+            <div class="val">{{ production.production_sachet_display }}개</div>
+            {% if production.uses_actual_quantity %}
+            <div class="production-qty-note">{{ production.quantity_basis_boxes_display }} BOX × {{ production.box_quantity }} 낱봉 기준</div>
+            {% endif %}
+        </div>
         <div class="info-item" style="grid-column:1 / -1;">
             <div class="lbl">소비기한 *</div>
             {% if not can_edit %}
@@ -821,17 +1027,39 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         </div>
     </div>
 
-    <div style="background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem;display:flex;gap:2rem;flex-wrap:wrap;">
+    <div class="raw-summary-bar">
+        <div class="raw-summary-metrics">
         <input type="hidden" name="raw_sok_mode" id="rawSokMode" value="{{ production.raw_sok_mode or 1 }}">
         <span>매수 <strong id="rawSheetsLabel">{{ production.active_sheets_per_pack or 0 }}매</strong></span>
         <span>1박스당 <strong id="rawPerBoxLabel">{{ "%.1f"|format(production.active_sok_per_box or 0) }}속</strong></span>
         {% if production.raw_sok_values and (production.raw_sok_values|length) > 1 and can_edit %}
         <button type="button" id="rawSokModeBtn" onclick="toggleRawSokMode()" style="background:#eef2ff;border:1px solid #4f46e5;color:#3730a3;padding:0.38rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.82rem;font-weight:700;position:relative;top:-2px;">매수 변경</button>
         {% endif %}
-        <span>총 필요량 <strong id="totalNeed" class="warn">{{ (total_raw_need_qty|round(0)|int) if total_raw_need_qty is not none else '-' }}속</strong></span>
-        <span>선택 합계 <strong id="totalSel" style="color:#667eea;">{{ (total_raw_selected_qty|round(0)|int) if total_raw_selected_qty is not none else 0 }}속</strong></span>
-        <span>잔여 <strong id="remain" style="color:{% if total_raw_remain_qty is not none and total_raw_remain_qty <= 0 %}#27ae60{% else %}#e74c3c{% endif %};">{{ (total_raw_remain_qty|round(0)|int) if total_raw_remain_qty is not none else '-' }}속</strong></span>
+        <span>총 필요량 <strong id="totalNeed" class="warn">{{ total_raw_need_display if total_raw_need_qty is not none else '-' }}속</strong></span>
+        <span>선택 합계 <strong id="totalSel" style="color:#667eea;">{{ total_raw_selected_display if total_raw_selected_qty is not none else 0 }}속</strong></span>
+        <span>잔여 <strong id="remain" style="color:{% if total_raw_remain_qty is not none and total_raw_remain_qty <= 0 %}#27ae60{% else %}#e74c3c{% endif %};">{{ "{:,.1f}".format(total_raw_remain_qty).rstrip('0').rstrip('.') if total_raw_remain_qty is not none else '-' }}속</strong></span>
         <span>수율 <strong id="rawYield" style="color:#2c3e50;">{% if total_raw_yield_rate is not none %}<span style="color:{% if total_raw_yield_rate >= 95 %}#27ae60{% elif total_raw_yield_rate >= 90 %}#f39c12{% else %}#e74c3c{% endif %}">{{ "%.1f"|format(total_raw_yield_rate) }}%</span>{% else %}-{% endif %}</strong></span>
+        </div>
+        {% if production.status == '완료' %}
+        <div class="raw-finished-panel">
+            <div class="raw-finished-metrics">
+                <div class="raw-finished-item">
+                    <div class="raw-finished-label">투입 속수</div>
+                    <div class="raw-finished-value input" id="finishedInputSok">{{ total_raw_selected_display }}속</div>
+                </div>
+                <div class="raw-finished-item">
+                    <div class="raw-finished-label">완제 속수</div>
+                    <div class="raw-finished-value output" id="finishedOutputSok">{{ total_raw_need_display }}속</div>
+                </div>
+                <div class="raw-finished-item">
+                    <div class="raw-finished-label">최종 수율</div>
+                    <div class="raw-finished-value yield {% if total_raw_yield_rate is not none %}{% if total_raw_yield_rate >= 95 %}good{% elif total_raw_yield_rate >= 90 %}mid{% else %}low{% endif %}{% endif %}" id="finishedYieldRate">
+                        {% if total_raw_yield_rate is not none %}{{ "%.1f"|format(total_raw_yield_rate) }}%{% else %}-{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <div id="rawCardsWrap">
@@ -1376,7 +1604,7 @@ function syncExpiryRows(){
     actualBoxesEl.value = hasAnyBoxInput ? String(normalizedTotal) : '';
     const actualBoxesDisplayEl = document.getElementById('actualBoxesDisplay');
     if(actualBoxesDisplayEl){
-        actualBoxesDisplayEl.textContent = actualBoxesEl.value || '-';
+        actualBoxesDisplayEl.textContent = actualBoxesEl.value ? `${formatRawNumber(actualBoxesEl.value)} BOX` : '-';
     }
     const normalizedSampleTotal = Math.round(totalSampleBoxes * 100) / 100;
     const exportActualBoxesEl = document.getElementById('exportActualBoxes');
@@ -1386,10 +1614,10 @@ function syncExpiryRows(){
         exportActualBoxesEl.value = String(Math.max(normalizedTotal - normalizedSampleTotal, 0));
     }
     if(exportActualBoxesDisplayEl && exportActualBoxesEl){
-        exportActualBoxesDisplayEl.textContent = exportActualBoxesEl.value;
+        exportActualBoxesDisplayEl.textContent = formatRawNumber(exportActualBoxesEl.value);
     }
     if(sampleSummaryEl){
-        sampleSummaryEl.textContent = `샘플 제외 ${normalizedSampleTotal} BOX`;
+        sampleSummaryEl.textContent = `샘플 제외 ${formatRawNumber(normalizedSampleTotal)} BOX`;
     }
     rows.forEach(row => {
         const idx = Number(row.dataset.index || 0);
@@ -1518,7 +1746,7 @@ function recalcAll(){
     const boxes = getActualBoxes();
     const need = getCurrentPerBox() * boxes;
     const tn = document.getElementById('totalNeed');
-    if(tn) tn.textContent = Math.ceil(need) + '속';
+    if(tn) tn.textContent = `${formatRawNumber(need)}속`;
 
     document.querySelectorAll('#matBody tr, #packBody tr').forEach(row => {
         const uid = row.dataset.uid;
@@ -1579,7 +1807,9 @@ function getRawChangeTargetCard(){
 function formatRawNumber(value){
     const num = Number(value || 0);
     if(!Number.isFinite(num)) return '0';
-    return Number.isInteger(num) ? String(num) : num.toLocaleString('ko-KR', {maximumFractionDigits: 1});
+    return Number.isInteger(num)
+        ? num.toLocaleString('ko-KR')
+        : num.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
 }
 
 function getRawOptionKind(option){
@@ -1965,19 +2195,33 @@ function updateTotal(){
 
     const ts = document.getElementById('totalSel');
     const rem = document.getElementById('remain');
-    if(ts) ts.textContent = Math.ceil(effectiveTotal) + '속';
+    const finishedInputEl = document.getElementById('finishedInputSok');
+    const finishedOutputEl = document.getElementById('finishedOutputSok');
+    const finishedYieldEl = document.getElementById('finishedYieldRate');
+    if(ts) ts.textContent = `${formatRawNumber(effectiveTotal)}속`;
     if(rem){
-        rem.textContent = Math.ceil(remain) + '속';
+        rem.textContent = `${formatRawNumber(remain)}속`;
         rem.style.color = remain <= 0 ? '#27ae60' : '#e74c3c';
     }
+    if(finishedInputEl) finishedInputEl.textContent = `${formatRawNumber(effectiveTotal)}속`;
+    if(finishedOutputEl) finishedOutputEl.textContent = `${formatRawNumber(effectiveNeed)}속`;
 
     const yieldEl = document.getElementById('rawYield');
     if(yieldEl && effectiveTotal > 0 && effectiveNeed > 0) {
         const yr = (effectiveNeed / effectiveTotal * 100).toFixed(1);
         const color = yr >= 95 ? '#27ae60' : yr >= 90 ? '#f39c12' : '#e74c3c';
         yieldEl.innerHTML = `<span style="color:${color}">${yr}%</span>`;
+        if(finishedYieldEl){
+            finishedYieldEl.textContent = `${yr}%`;
+            finishedYieldEl.classList.remove('good', 'mid', 'low');
+            finishedYieldEl.classList.add(yr >= 95 ? 'good' : yr >= 90 ? 'mid' : 'low');
+        }
     } else if(yieldEl) {
         yieldEl.textContent = '-';
+        if(finishedYieldEl){
+            finishedYieldEl.textContent = '-';
+            finishedYieldEl.classList.remove('good', 'mid', 'low');
+        }
     }
 }
 

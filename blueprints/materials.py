@@ -2839,8 +2839,9 @@ SELECT
             (material_id,),
         )
         material_lot_rows = [dict(row) for row in cursor.fetchall()]
+        visible_material_lot_rows = material_lot_rows
         if visible_lot_ids:
-            material_lot_rows = [row for row in material_lot_rows if int(row.get('id') or 0) in visible_lot_ids]
+            visible_material_lot_rows = [row for row in material_lot_rows if int(row.get('id') or 0) in visible_lot_ids]
         cursor.execute(
             """
             SELECT DISTINCT material_lot_id
@@ -2891,6 +2892,31 @@ SELECT
             for row in cursor.fetchall()
             if int(row['material_lot_id'] or 0) > 0
         }
+        previous_used_lots = []
+        for row in material_lot_rows:
+            lot_id = int(row.get('id') or 0)
+            if lot_id <= 0 or lot_id in visible_lot_ids or lot_id not in historical_lot_ids:
+                continue
+            previous_used_lots.append(
+                {
+                    'id': lot_id,
+                    'lot': row.get('lot') or '-',
+                    'receiving_date': row.get('receiving_date') or '',
+                    'manufacture_date': row.get('manufacture_date') or '',
+                    'expiry_date': row.get('expiry_date') or '',
+                    'received_quantity': _round_to_1_decimal(row.get('received_quantity') or row.get('legacy_quantity') or 0),
+                    'current_quantity': _round_to_1_decimal(row.get('current_quantity') or 0),
+                    'status_label': '사용 완료',
+                }
+            )
+        previous_used_lots.sort(
+            key=lambda row: (
+                0 if (row.get('receiving_date') or '').strip() else 1,
+                row.get('receiving_date') or '',
+                row.get('id') or 0,
+            ),
+            reverse=True,
+        )
 
         def _receive_log_matches_current_workplace(row):
             if not workplace_name:
@@ -2956,7 +2982,7 @@ SELECT
             for row in effective_receive_logs
             if int(row.get('material_lot_id') or 0) > 0
         }
-        for lot_row in material_lot_rows:
+        for lot_row in visible_material_lot_rows:
             lot_id = int(lot_row.get('id') or 0)
             if lot_id <= 0 or lot_id in effective_lot_ids:
                 continue
@@ -3021,6 +3047,7 @@ SELECT
             'ok': True,
             'material': payload,
             'lots': lots,
+            'previous_used_lots': previous_used_lots,
             'usage_logs': usage_logs,
             'export_usage_logs': export_usage_logs,
             'receive_logs': receive_complete_logs,
