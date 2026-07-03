@@ -271,6 +271,40 @@ def _get_packaging_bom_material_map(cursor, workplace):
     return result
 
 
+def _get_packaging_material_map(cursor, workplace):
+    result = _get_packaging_bom_material_map(cursor, workplace)
+
+    cursor.execute(
+        '''
+        SELECT DISTINCT
+            m.id,
+            COALESCE(m.code, '') as code,
+            COALESCE(m.name, '') as name,
+            COALESCE(m.category, '') as category,
+            COALESCE(m.unit, '') as unit,
+            COALESCE(s.name, '') as supplier_name
+        FROM production_material_usage pmu
+        JOIN productions p ON p.id = pmu.production_id
+        JOIN materials m ON m.id = pmu.material_id
+        LEFT JOIN suppliers s ON s.id = m.supplier_id
+        WHERE p.workplace = ?
+          AND pmu.material_id IS NOT NULL
+        ORDER BY m.name
+        ''',
+        (workplace,),
+    )
+    for row in cursor.fetchall():
+        item = dict(row)
+        material_id = int(item.get('id') or 0)
+        if material_id <= 0:
+            continue
+        if not _is_packaging_material_row(item):
+            continue
+        result[material_id] = item
+
+    return result
+
+
 def _get_print_workday(timestamp_text, cutoff_hour=6):
     text = (timestamp_text or '').strip()
     if not text:
@@ -652,8 +686,8 @@ def journals():
                 selected_material_month,
             )
 
-        packaging_bom_material_map = _get_packaging_bom_material_map(cursor, workplace)
-        packaging_material_ids = list(packaging_bom_material_map.keys())
+        packaging_material_map = _get_packaging_material_map(cursor, workplace)
+        packaging_material_ids = list(packaging_material_map.keys())
         packaging_journal_rows = []
         packaging_available_dates = []
         if packaging_material_ids:
@@ -1464,7 +1498,7 @@ def packaging_checksheet_preview():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        packaging_material_map = _get_packaging_bom_material_map(cursor, workplace)
+        packaging_material_map = _get_packaging_material_map(cursor, workplace)
         packaging_material_ids = list(packaging_material_map.keys())
         incoming_rows = []
         outgoing_rows = []

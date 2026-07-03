@@ -62,6 +62,234 @@
 .material-panel tbody tr:nth-child(even){background:#f8fafc;}
 .lot-actions{display:flex;gap:0.3rem;white-space:nowrap;}
 .lot-code{display:inline-block;font-family:Consolas,Monaco,monospace;font-size:0.78rem;background:#eef3f9;border:1px solid #d6e0ec;border-radius:6px;padding:0.2rem 0.35rem;color:#0f172a;}
+.lot-trace-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:flex-start;
+    width:100%;
+    text-align:left;
+    cursor:help;
+    transition:border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .15s ease;
+}
+.lot-trace-btn:hover{
+    border-color:#60a5fa;
+    background:#eff6ff;
+    box-shadow:0 0 0 3px rgba(59,130,246,.12);
+    transform:translateY(-1px);
+}
+.trace-filter-banner{
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:.75rem;
+    flex-wrap:wrap;
+    margin:0 0 .7rem;
+    padding:.72rem .85rem;
+    border:1px solid #bfdbfe;
+    border-radius:14px;
+    background:linear-gradient(135deg,#eff6ff 0%,#f8fbff 100%);
+}
+.trace-filter-banner.active{display:flex;}
+.trace-filter-copy{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;min-width:0;}
+.trace-filter-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:.22rem .56rem;
+    border-radius:999px;
+    background:#dbeafe;
+    color:#1d4ed8;
+    font-size:.72rem;
+    font-weight:900;
+}
+.trace-filter-text{
+    font-size:.82rem;
+    color:#334155;
+    line-height:1.45;
+}
+.trace-filter-text strong{color:#0f172a;}
+.trace-filter-reset{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #cbd5e1;
+    border-radius:999px;
+    background:#fff;
+    color:#334155;
+    padding:.42rem .78rem;
+    font-size:.78rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.trace-filter-reset:hover{border-color:#93c5fd;background:#eff6ff;color:#1d4ed8;}
+.previous-lot-toggle-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:.7rem;
+    min-height:46px;
+    padding:.62rem .95rem;
+    border:1px solid #93c5fd;
+    border-radius:16px;
+    background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 52%,#eef6ff 100%);
+    color:#0f172a;
+    box-shadow:0 10px 24px rgba(37,99,235,.14), inset 0 1px 0 rgba(255,255,255,.65);
+    cursor:pointer;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+.previous-lot-toggle-btn:hover{
+    transform:translateY(-1px);
+    border-color:#60a5fa;
+    box-shadow:0 14px 30px rgba(37,99,235,.2), 0 0 0 4px rgba(59,130,246,.12);
+}
+.previous-lot-toggle-btn:focus-visible{
+    outline:none;
+    box-shadow:0 0 0 4px rgba(59,130,246,.18), 0 14px 30px rgba(37,99,235,.2);
+}
+.previous-lot-toggle-btn.active{
+    border-color:#2563eb;
+    background:linear-gradient(135deg,#2563eb 0%,#3b82f6 58%,#60a5fa 100%);
+    color:#fff;
+    box-shadow:0 16px 34px rgba(37,99,235,.28), 0 0 22px rgba(96,165,250,.24);
+}
+.previous-lot-toggle-btn:disabled{
+    cursor:not-allowed;
+    opacity:.72;
+    transform:none;
+    box-shadow:0 6px 14px rgba(148,163,184,.14);
+}
+.previous-lot-toggle-btn:disabled:hover{
+    border-color:#93c5fd;
+    box-shadow:0 6px 14px rgba(148,163,184,.14);
+}
+.previous-lot-toggle-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    border-radius:999px;
+    background:rgba(255,255,255,.72);
+    color:#2563eb;
+    font-size:.88rem;
+    font-weight:900;
+    flex:0 0 auto;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+.previous-lot-toggle-btn.active .previous-lot-toggle-icon{
+    background:rgba(255,255,255,.2);
+    color:#fff;
+}
+.previous-lot-toggle-copy{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.05rem;
+    min-width:0;
+}
+.previous-lot-toggle-title{
+    font-size:.83rem;
+    font-weight:900;
+    line-height:1.15;
+    letter-spacing:.01em;
+}
+.previous-lot-toggle-sub{
+    font-size:.7rem;
+    font-weight:700;
+    color:#475569;
+    line-height:1.2;
+}
+.previous-lot-toggle-btn.active .previous-lot-toggle-sub{color:rgba(255,255,255,.88);}
+.previous-lot-toggle-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:32px;
+    height:28px;
+    padding:0 .55rem;
+    border-radius:999px;
+    background:#fff;
+    color:#1d4ed8;
+    font-size:.78rem;
+    font-weight:900;
+    box-shadow:0 4px 10px rgba(37,99,235,.14);
+}
+.previous-lot-toggle-btn.active .previous-lot-toggle-badge{
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    box-shadow:none;
+}
+.previous-lot-toggle-arrow{
+    font-size:1rem;
+    font-weight:900;
+    color:#1d4ed8;
+    transform:rotate(0deg);
+    transition:transform .18s ease, color .18s ease;
+}
+.previous-lot-toggle-btn.active .previous-lot-toggle-arrow{
+    color:#fff;
+    transform:rotate(180deg);
+}
+.previous-lot-panel{display:none;margin:0 0 .85rem;padding:.85rem .95rem;border:1px solid #dbe5f0;border-radius:16px;background:linear-gradient(180deg,#ffffff,#f8fbff);}
+.previous-lot-panel.active{display:block;}
+.previous-lot-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:.7rem;}
+.previous-lot-title{font-size:.84rem;font-weight:900;color:#0f172a;}
+.previous-lot-caption{font-size:.76rem;color:#64748b;line-height:1.45;}
+.previous-lot-search{
+    display:flex;
+    align-items:center;
+    gap:.55rem;
+    min-width:min(100%, 300px);
+    padding:.5rem .72rem;
+    border:1px solid #d7e3f4;
+    border-radius:14px;
+    background:linear-gradient(180deg,#ffffff,#f8fbff);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7), 0 6px 16px rgba(15,23,42,.05);
+}
+.previous-lot-search-icon{
+    color:#3b82f6;
+    font-size:.82rem;
+    font-weight:900;
+    flex:0 0 auto;
+}
+.previous-lot-search-input{
+    width:100%;
+    min-width:0;
+    border:none;
+    background:transparent;
+    color:#0f172a;
+    font-size:.81rem;
+    font-weight:700;
+}
+.previous-lot-search-input::placeholder{color:#94a3b8;}
+.previous-lot-search-input:focus{outline:none;}
+.previous-lot-list{display:flex;gap:.55rem;flex-wrap:wrap;}
+.previous-lot-chip{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.14rem;
+    min-width:124px;
+    padding:.52rem .72rem;
+    border:1px solid #dbe2ea;
+    border-radius:14px;
+    background:#fff;
+    color:#0f172a;
+    cursor:help;
+    box-shadow:0 6px 16px rgba(15,23,42,.05);
+    transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease, background .15s ease;
+}
+.previous-lot-chip:hover{
+    border-color:#60a5fa;
+    background:#eff6ff;
+    box-shadow:0 0 0 3px rgba(59,130,246,.12);
+    transform:translateY(-1px);
+}
+.previous-lot-code{font-family:Consolas,Monaco,monospace;font-size:.78rem;font-weight:800;color:#1e3a8a;line-height:1.25;}
+.previous-lot-meta{font-size:.72rem;color:#64748b;line-height:1.35;}
+.previous-lot-empty{font-size:.8rem;color:#64748b;padding:.2rem 0;}
+@media (max-width: 640px){
+    .previous-lot-toggle-btn{width:100%;justify-content:space-between;}
+    .previous-lot-toggle-copy{flex:1;min-width:0;}
+}
 .lot-inline-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.55rem;align-items:end;margin:0.6rem 0 0.85rem;padding:0.9rem;border:1px solid #dbe5f0;border-radius:12px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 6px 18px rgba(15,23,42,0.06);}
 .lot-field label{display:block;font-size:0.74rem;font-weight:700;color:#475569;margin-bottom:0.22rem;}
 .lot-field{min-width:0;}
@@ -436,6 +664,76 @@ html[data-theme="dark"] td.issue-empty,
 html[data-theme="dark"] .issue-status-table td.issue-empty,
 html[data-theme="dark"] .request-empty,
 html[data-theme="dark"] td.request-empty{background:#162133 !important;color:#8ea3bd !important;border-color:#263244 !important;}
+html[data-theme="dark"] .lot-trace-btn:hover{background:#162133;border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.18);}
+html[data-theme="dark"] .trace-filter-banner{
+    border-color:#2b4b72;
+    background:linear-gradient(135deg,#152033 0%,#101827 100%);
+}
+html[data-theme="dark"] .trace-filter-badge{background:rgba(37,99,235,.2);color:#bfdbfe;}
+html[data-theme="dark"] .trace-filter-text{color:#c7d3e3;}
+html[data-theme="dark"] .trace-filter-text strong{color:#eff6ff;}
+html[data-theme="dark"] .trace-filter-reset{
+    background:#162133;
+    border-color:#334155;
+    color:#dbe7f5;
+}
+html[data-theme="dark"] .trace-filter-reset:hover{background:#1b2940;border-color:#60a5fa;color:#eff6ff;}
+html[data-theme="dark"] .previous-lot-panel{
+    border-color:#263244;
+    background:linear-gradient(180deg,#121a2a 0%,#0f1726 100%);
+}
+html[data-theme="dark"] .previous-lot-search{
+    border-color:#334155;
+    background:linear-gradient(180deg,#162133,#101827);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03), 0 8px 18px rgba(2,6,23,.22);
+}
+html[data-theme="dark"] .previous-lot-search-icon{color:#7dd3fc;}
+html[data-theme="dark"] .previous-lot-search-input{color:#eff6ff;}
+html[data-theme="dark"] .previous-lot-search-input::placeholder{color:#7c8ea7;}
+html[data-theme="dark"] .previous-lot-toggle-btn{
+    border-color:#2f5d9a;
+    background:linear-gradient(135deg,#16314f 0%,#1d4f91 58%,#1f6ed4 100%);
+    color:#eff6ff;
+    box-shadow:0 16px 34px rgba(2,6,23,.28), 0 0 22px rgba(37,99,235,.2);
+}
+html[data-theme="dark"] .previous-lot-toggle-btn:hover{
+    border-color:#60a5fa;
+    box-shadow:0 18px 38px rgba(2,6,23,.34), 0 0 0 4px rgba(59,130,246,.16);
+}
+html[data-theme="dark"] .previous-lot-toggle-btn.active{
+    border-color:#7dd3fc;
+    background:linear-gradient(135deg,#2563eb 0%,#3b82f6 58%,#38bdf8 100%);
+}
+html[data-theme="dark"] .previous-lot-toggle-btn:disabled{
+    box-shadow:0 8px 20px rgba(2,6,23,.18);
+}
+html[data-theme="dark"] .previous-lot-toggle-icon{
+    background:rgba(255,255,255,.14);
+    color:#dbeafe;
+}
+html[data-theme="dark"] .previous-lot-toggle-sub{color:#c7d3e3;}
+html[data-theme="dark"] .previous-lot-toggle-badge{
+    background:rgba(255,255,255,.14);
+    color:#eff6ff;
+    box-shadow:none;
+}
+html[data-theme="dark"] .previous-lot-toggle-arrow{color:#dbeafe;}
+html[data-theme="dark"] .previous-lot-title{color:#eff6ff;}
+html[data-theme="dark"] .previous-lot-caption,
+html[data-theme="dark"] .previous-lot-empty{color:#8ea3bd;}
+html[data-theme="dark"] .previous-lot-chip{
+    background:#162133;
+    border-color:#334155;
+    color:#eff6ff;
+    box-shadow:0 8px 18px rgba(2,6,23,.22);
+}
+html[data-theme="dark"] .previous-lot-chip:hover{
+    background:#1b2940;
+    border-color:#60a5fa;
+    box-shadow:0 0 0 3px rgba(37,99,235,.18);
+}
+html[data-theme="dark"] .previous-lot-code{color:#bfdbfe;}
+html[data-theme="dark"] .previous-lot-meta{color:#94a3b8;}
 .receipt-split-toggle{display:inline-flex;align-items:center;justify-content:center;padding:.48rem .82rem;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:900;cursor:pointer;}
 .receipt-split-wrap{grid-column:1 / -1;display:none;flex-direction:column;gap:.7rem;padding:.95rem;border:1px solid #dbe5f0;border-radius:18px;background:linear-gradient(180deg,#ffffff,#f8fbff);}
 .receipt-split-wrap.open{display:flex;}
@@ -868,6 +1166,97 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
   color:#bfdbfe !important;
 }
 
+@media (max-width: 768px) {
+  html[data-theme="dark"] #issueBulkForm .request-list-table tbody tr,
+  html[data-theme="dark"] #issueStatusPendingPane .issue-status-table tbody tr,
+  html[data-theme="dark"] #issueStatusCompletedPane .issue-status-table tbody tr,
+  html[data-theme="dark"] #exportStatusCompletedPane .issue-status-table tbody tr{
+    background:linear-gradient(180deg,#121a2a 0%,#101827 100%) !important;
+    border-color:#263244 !important;
+    box-shadow:0 14px 28px rgba(2,6,23,.28) !important;
+  }
+  html[data-theme="dark"] #issueBulkForm .request-list-table tbody td,
+  html[data-theme="dark"] #issueStatusPendingPane .issue-status-table tbody td,
+  html[data-theme="dark"] #issueStatusCompletedPane .issue-status-table tbody td,
+  html[data-theme="dark"] #exportStatusCompletedPane .issue-status-table tbody td{
+    background:#121a2a !important;
+    color:#dbe7f5 !important;
+    border-top-color:#223046 !important;
+  }
+  html[data-theme="dark"] #issueBulkForm .request-list-table tbody td::before,
+  html[data-theme="dark"] #issueStatusPendingPane .issue-status-table tbody td::before,
+  html[data-theme="dark"] #issueStatusCompletedPane .issue-status-table tbody td::before,
+  html[data-theme="dark"] #exportStatusCompletedPane .issue-status-table tbody td::before{
+    color:#8ea3bd !important;
+  }
+  html[data-theme="dark"] #issueBulkForm .request-list-table tbody td.request-empty,
+  html[data-theme="dark"] #issueStatusPendingPane .issue-status-table tbody td.issue-empty,
+  html[data-theme="dark"] #issueStatusCompletedPane .issue-status-table tbody td.issue-empty,
+  html[data-theme="dark"] #exportStatusCompletedPane .issue-status-table tbody td.issue-empty{
+    background:#162133 !important;
+    color:#8ea3bd !important;
+    border-top-color:#263244 !important;
+  }
+  html[data-theme="dark"] #issueBulkForm .request-qty-box,
+  html[data-theme="dark"] #issueBulkForm .request-qty-unit,
+  html[data-theme="dark"] #issueBulkForm .request-note-input,
+  html[data-theme="dark"] #issueBulkForm .request-qty-input,
+  html[data-theme="dark"] #issueStatusPendingPane .issue-note-box,
+  html[data-theme="dark"] #issueStatusCompletedPane .issue-note-box,
+  html[data-theme="dark"] #exportStatusCompletedPane .issue-note-box{
+    background:#162133 !important;
+    border-color:#314155 !important;
+    color:#e5eefc !important;
+  }
+  html[data-theme="dark"] #issueBulkForm .request-note-input::placeholder{
+    color:#8ea3bd !important;
+  }
+  html[data-theme="dark"] .receipt-modal-body,
+  html[data-theme="dark"] .receipt-modal-summary,
+  html[data-theme="dark"] .receipt-modal-grid{
+    background:transparent !important;
+  }
+  html[data-theme="dark"] .receipt-summary-item,
+  html[data-theme="dark"] .receipt-split-wrap,
+  html[data-theme="dark"] .receipt-split-row{
+    background:linear-gradient(180deg,#121a2a 0%,#101827 100%) !important;
+    border-color:#263244 !important;
+    color:#dbe7f5 !important;
+  }
+  html[data-theme="dark"] .receipt-split-title,
+  html[data-theme="dark"] .receipt-split-cell label{
+    color:#eff6ff !important;
+  }
+  html[data-theme="dark"] .receipt-split-caption{
+    color:#8ea3bd !important;
+  }
+  html[data-theme="dark"] .receipt-split-add,
+  html[data-theme="dark"] .receipt-split-none,
+  html[data-theme="dark"] .receipt-modal-close{
+    background:#162133 !important;
+    border-color:#334155 !important;
+    color:#dbe7f5 !important;
+  }
+  html[data-theme="dark"] .receipt-split-none.active{
+    background:linear-gradient(135deg,#1d4ed8,#2563eb) !important;
+    border-color:#2563eb !important;
+    color:#fff !important;
+  }
+  html[data-theme="dark"] .receipt-split-cell input,
+  html[data-theme="dark"] .receipt-actual-qty,
+  html[data-theme="dark"] #receiptProcessNote,
+  html[data-theme="dark"] #exportProcessNote,
+  html[data-theme="dark"] #exportCompletedAt{
+    background:#0f1726 !important;
+    border-color:#314155 !important;
+    color:#eff6ff !important;
+  }
+  html[data-theme="dark"] .receipt-split-qty.is-auto input{
+    background:#162133 !important;
+    color:#c7d3e3 !important;
+  }
+}
+
 </style>
 {% endblock %}
 {% block content %}
@@ -1036,19 +1425,36 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
         </div>
 
         <div id="materialLotsPanel" class="material-panel active">
-            {% if can_manage_lots %}
-            <p class="material-section-title">신규 로트 등록</p>
-            <form id="addLotForm" class="lot-inline-form" onsubmit="submitAddLot(event)">
-                <div class="lot-field"><label>입고일</label><input type="date" name="receiving_date" required></div>
-                <div class="lot-field"><label>제조일</label><input type="date" name="manufacture_date"></div>
-                <div class="lot-field"><label>소비기한</label><input type="date" name="expiry_date"></div>
-                <div class="lot-field"><label>입고수량</label><input type="number" name="received_quantity" step="0.1" placeholder="0" required></div>
-                <div class="lot-field"><label>현재수량</label><input type="number" name="current_quantity" step="0.1" placeholder="0" required></div>
-                <div class="lot-field"><label>공급사LOT</label><input type="text" name="supplier_lot" placeholder="선택 입력"></div>
-                <button type="submit" class="btn btn-small lot-submit">로트 추가</button>
-            </form>
-            {% endif %}
-            <p class="material-section-title">로트 목록</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.55rem;">
+                <p class="material-section-title" style="margin:0;">로트 목록</p>
+                <button type="button" class="previous-lot-toggle-btn" id="previousUsedLotsToggleBtn" onclick="togglePreviousUsedLots()" aria-expanded="false">
+                    <span class="previous-lot-toggle-icon" aria-hidden="true">LOT</span>
+                    <span class="previous-lot-toggle-copy">
+                        <span class="previous-lot-toggle-title">이전에 사용한 로트 보기</span>
+                        <span class="previous-lot-toggle-sub">사용 완료 로트 추적 기록 열기</span>
+                    </span>
+                    <span class="previous-lot-toggle-badge">0</span>
+                    <span class="previous-lot-toggle-arrow" aria-hidden="true">▾</span>
+                </button>
+            </div>
+            <div class="previous-lot-panel" id="previousUsedLotsPanel">
+                <div class="previous-lot-head">
+                    <div>
+                        <div class="previous-lot-title">이전에 사용한 로트</div>
+                        <div class="previous-lot-caption">사용 완료로 현재고가 없는 lot도 클릭해서 HACCP 추적성 기준 사용 및 입고 기록을 확인할 수 있습니다.</div>
+                    </div>
+                    <label class="previous-lot-search" for="previousLotSearchInput">
+                        <span class="previous-lot-search-icon" aria-hidden="true">⌕</span>
+                        <input
+                            type="text"
+                            id="previousLotSearchInput"
+                            class="previous-lot-search-input"
+                            placeholder="로트번호 또는 입고일 검색"
+                            oninput="handlePreviousLotSearch(this.value)">
+                    </label>
+                </div>
+                <div class="previous-lot-list" id="previousUsedLotsList"></div>
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
@@ -1066,6 +1472,13 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
                     <div class="material-log-total">총 사용량 <span id="md_usage_total_qty">0.0</span></div>
                 </div>
                 <button type="button" class="btn btn-small btn-secondary" id="usageExportToggleBtn" onclick="toggleExportUsageLogs()">반출 기록 보기</button>
+            </div>
+            <div class="trace-filter-banner" id="usageTraceFilterBanner">
+                <div class="trace-filter-copy">
+                    <span class="trace-filter-badge">HACCP 추적성</span>
+                    <span class="trace-filter-text"><strong id="usageTraceLotLabel">-</strong> 로트를 사용한 생산 및 반출 기록만 보고 있습니다.</span>
+                </div>
+                <button type="button" class="trace-filter-reset" onclick="clearMaterialLotTraceFilter()">추적 해제</button>
             </div>
             <div class="usage-filter-bar">
                 <div class="usage-filter-left">
@@ -1105,6 +1518,13 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
                     </div>
                     <button type="button" class="btn btn-small btn-secondary" id="disposedReceiveToggleBtn" onclick="toggleDisposedReceiveLogs()">폐기 이력 보기</button>
                 </div>
+            </div>
+            <div class="trace-filter-banner" id="receiveTraceFilterBanner">
+                <div class="trace-filter-copy">
+                    <span class="trace-filter-badge">HACCP 추적성</span>
+                    <span class="trace-filter-text"><strong id="receiveTraceLotLabel">-</strong> 로트의 입고 및 수정 기록만 보고 있습니다.</span>
+                </div>
+                <button type="button" class="trace-filter-reset" onclick="clearMaterialLotTraceFilter()">추적 해제</button>
             </div>
             <div class="usage-filter-bar">
                 <div class="usage-filter-left">
@@ -2022,6 +2442,11 @@ let currentUsageFilterMode = 'month';
 let currentUsageFilterMonth = '';
 let currentMaterialCode = '';
 let showExportUsageLogs = false;
+let currentTraceLotId = '';
+let currentTraceLotLabel = '';
+let currentPreviousUsedLots = [];
+let showPreviousUsedLots = false;
+let previousLotSearchTerm = '';
 const REQ_PANEL_STATE_KEY = 'materials_req_panel_expanded';
 const MATERIALS_SCROLL_Y_KEY = 'materials_scroll_y';
 const MATERIALS_SCROLL_PATH_KEY = 'materials_scroll_path';
@@ -2170,10 +2595,146 @@ function trimMaterialCodeFromLot(lotText){
     return lotValue.startsWith(prefix) ? lotValue.slice(prefix.length) : lotValue;
 }
 
+function normalizeTraceLotValue(value){
+    return String(value || '').trim();
+}
+
+function escapeHtml(value){
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function lotMatchesCurrentTrace(log){
+    if(!currentTraceLotLabel) return true;
+    const selectedLotId = String(currentTraceLotId || '').trim();
+    const selectedLotLabel = normalizeTraceLotValue(currentTraceLotLabel);
+    const logLotId = String(log?.material_lot_id || '').trim();
+    const logLot = normalizeTraceLotValue(log?.lot || '');
+    if(selectedLotId && logLotId && selectedLotId === logLotId) return true;
+    return !!selectedLotLabel && logLot === selectedLotLabel;
+}
+
+function updateMaterialTraceFilterBanners(){
+    const isActive = !!currentTraceLotLabel;
+    const displayLot = trimMaterialCodeFromLot(currentTraceLotLabel || '-');
+    [
+        ['usageTraceFilterBanner', 'usageTraceLotLabel'],
+        ['receiveTraceFilterBanner', 'receiveTraceLotLabel'],
+    ].forEach(([bannerId, labelId]) => {
+        const banner = document.getElementById(bannerId);
+        const label = document.getElementById(labelId);
+        if(banner) banner.classList.toggle('active', isActive);
+        if(label) label.textContent = displayLot;
+    });
+}
+
+function applyMaterialLotTraceFilter(lotId, lotLabel){
+    currentTraceLotId = String(lotId || '').trim();
+    currentTraceLotLabel = normalizeTraceLotValue(lotLabel);
+    currentUsageFilterMode = 'all';
+    currentReceiveFilterMode = 'all';
+    updateMaterialTraceFilterBanners();
+    switchMaterialPanel('logs');
+    applyUsageLogFilter();
+    applyReceiveLogFilter();
+}
+
+function clearMaterialLotTraceFilter(){
+    currentTraceLotId = '';
+    currentTraceLotLabel = '';
+    resetUsageLogFilter();
+    resetReceiveLogFilter();
+    updateMaterialTraceFilterBanners();
+}
+
+function handlePreviousLotSearch(value){
+    previousLotSearchTerm = String(value || '').trim().toLowerCase();
+    renderPreviousUsedLots();
+}
+
+function renderPreviousUsedLots(){
+    const panel = document.getElementById('previousUsedLotsPanel');
+    const list = document.getElementById('previousUsedLotsList');
+    const toggleBtn = document.getElementById('previousUsedLotsToggleBtn');
+    const searchInput = document.getElementById('previousLotSearchInput');
+    const previousLotCount = Array.isArray(currentPreviousUsedLots) ? currentPreviousUsedLots.length : 0;
+    const filteredPreviousLots = previousLotSearchTerm
+        ? currentPreviousUsedLots.filter((lot) => {
+            const lotText = String(lot?.lot || '').toLowerCase();
+            const trimmedLotText = trimMaterialCodeFromLot(lot?.lot || '').toLowerCase();
+            const receivingDate = String(lot?.receiving_date || '').toLowerCase();
+            const manufactureDate = String(lot?.manufacture_date || '').toLowerCase();
+            return (
+                lotText.includes(previousLotSearchTerm)
+                || trimmedLotText.includes(previousLotSearchTerm)
+                || receivingDate.includes(previousLotSearchTerm)
+                || manufactureDate.includes(previousLotSearchTerm)
+            );
+        })
+        : currentPreviousUsedLots;
+    if(toggleBtn){
+        toggleBtn.classList.toggle('active', showPreviousUsedLots && previousLotCount > 0);
+        toggleBtn.disabled = previousLotCount === 0;
+        toggleBtn.setAttribute('aria-expanded', showPreviousUsedLots && previousLotCount > 0 ? 'true' : 'false');
+        toggleBtn.innerHTML = `
+            <span class="previous-lot-toggle-icon" aria-hidden="true">LOT</span>
+            <span class="previous-lot-toggle-copy">
+                <span class="previous-lot-toggle-title">${previousLotCount === 0 ? '이전 사용 로트 없음' : (showPreviousUsedLots ? '이전에 사용한 로트 숨기기' : '이전에 사용한 로트 보기')}</span>
+                <span class="previous-lot-toggle-sub">${previousLotCount === 0 ? '추적 가능한 사용 완료 로트가 없습니다.' : '사용 완료 로트 추적 기록 열기'}</span>
+            </span>
+            <span class="previous-lot-toggle-badge">${previousLotCount}</span>
+            <span class="previous-lot-toggle-arrow" aria-hidden="true">▾</span>
+        `;
+    }
+    if(panel){
+        panel.classList.toggle('active', showPreviousUsedLots && previousLotCount > 0);
+    }
+    if(searchInput){
+        if(searchInput.value !== previousLotSearchTerm){
+            searchInput.value = previousLotSearchTerm;
+        }
+        searchInput.disabled = previousLotCount === 0;
+    }
+    if(!list) return;
+    if(previousLotCount === 0){
+        list.innerHTML = '<div class="previous-lot-empty">이전에 사용한 로트가 없습니다.</div>';
+        return;
+    }
+    if(filteredPreviousLots.length === 0){
+        list.innerHTML = '<div class="previous-lot-empty">검색 조건에 맞는 이전 사용 로트가 없습니다.</div>';
+        return;
+    }
+    list.innerHTML = filteredPreviousLots.map((lot) => `
+        <button
+            type="button"
+            class="previous-lot-chip"
+            title="해당 로트를 사용한 생산 및 입고 기록을 확인 할 수 있습니다."
+            aria-label="해당 로트를 사용한 생산 및 입고 기록을 확인 할 수 있습니다."
+            onclick='applyMaterialLotTraceFilter(${JSON.stringify(String(lot.id || ''))}, ${JSON.stringify(String(lot.lot || '-'))})'>
+            <span class="previous-lot-code">${escapeHtml(trimMaterialCodeFromLot(lot.lot || '-'))}</span>
+            <span class="previous-lot-meta">${escapeHtml(lot.status_label || '사용 완료')}${lot.receiving_date ? ` · 입고일 ${escapeHtml(lot.receiving_date)}` : ''}</span>
+        </button>
+    `).join('');
+}
+
+function togglePreviousUsedLots(){
+    if(!Array.isArray(currentPreviousUsedLots) || currentPreviousUsedLots.length === 0){
+        showPreviousUsedLots = false;
+        renderPreviousUsedLots();
+        return;
+    }
+    showPreviousUsedLots = !showPreviousUsedLots;
+    renderPreviousUsedLots();
+}
+
 function getFilteredUsageLogs(){
     const rows = Array.isArray(currentUsageLogs) ? currentUsageLogs.slice() : [];
     const exportRows = showExportUsageLogs && Array.isArray(currentExportUsageLogs) ? currentExportUsageLogs.slice() : [];
-    const baseRows = rows.concat(exportRows);
+    const baseRows = rows.concat(exportRows).filter((log) => lotMatchesCurrentTrace(log));
     if(currentUsageFilterMode === 'all') return baseRows;
     if(currentUsageFilterMode === 'custom'){
         const startValue = document.getElementById('usageFilterStartDate')?.value || '';
@@ -2312,7 +2873,7 @@ function getBaseReceiveLogsForCurrentTab(){
 
 function getFilteredReceiveLogs(){
     const rows = Array.isArray(getBaseReceiveLogsForCurrentTab()) ? getBaseReceiveLogsForCurrentTab().slice() : [];
-    let filteredRows = rows;
+    let filteredRows = rows.filter((log) => lotMatchesCurrentTrace(log));
     if(currentReceiveFilterMode === 'custom'){
         const startValue = document.getElementById('receiveFilterStartDate')?.value || '';
         const endValue = document.getElementById('receiveFilterEndDate')?.value || '';
@@ -4024,7 +4585,16 @@ function renderLotRows(lots){
     tbody.innerHTML = lots.map(lot => `
         <tr>
             <td>${lot.location_name || '-'}<input type="hidden" value="${lot.location_id || ''}" id="lot_location_${lot.id}"></td>
-            <td><span class="lot-code">${lot.lot || '-'}</span></td>
+            <td>
+                <button
+                    type="button"
+                    class="lot-code lot-trace-btn"
+                    title="해당 로트를 사용한 생산 및 입고 기록을 확인 할 수 있습니다."
+                    aria-label="해당 로트를 사용한 생산 및 입고 기록을 확인 할 수 있습니다."
+                    onclick='applyMaterialLotTraceFilter(${JSON.stringify(String(lot.id || ''))}, ${JSON.stringify(String(lot.lot || '-'))})'>
+                    ${lot.lot || '-'}
+                </button>
+            </td>
             <td>${CAN_LOT_MANAGE ? `<input type="date" value="${lot.receiving_date || ''}" id="lot_receiving_${lot.id}" style="width:100%;" disabled>` : (lot.receiving_date || '-')}</td>
             <td>${CAN_LOT_MANAGE ? `<input type="date" value="${lot.manufacture_date || ''}" id="lot_manufacture_${lot.id}" style="width:100%;" disabled>` : (lot.manufacture_date || '-')}</td>
             <td>${CAN_LOT_MANAGE ? `<input type="date" value="${lot.expiry_date || ''}" id="lot_expiry_${lot.id}" style="width:100%;" disabled>` : (lot.expiry_date || '-')}</td>
@@ -4076,7 +4646,7 @@ function renderUsageRows(logs){
         totalEl.textContent = totalQty.toFixed(1);
     }
     if(!logs || logs.length === 0){
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">사용 로그가 없습니다.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#64748b;">${currentTraceLotLabel ? '선택한 로트의 사용 로그가 없습니다.' : '사용 로그가 없습니다.'}</td></tr>`;
         return;
     }
     tbody.innerHTML = logs.map(log => `
@@ -4145,7 +4715,7 @@ function renderReceiveRows(logs){
         hint.style.display = isCompleteTab && showDisposedReceiveLogs && currentDisposedReceiveLogs.length ? 'block' : 'none';
     }
     if(!rows.length){
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">입고 로그가 없습니다.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">${currentTraceLotLabel ? '선택한 로트의 입고 로그가 없습니다.' : '입고 로그가 없습니다.'}</td></tr>`;
         return;
     }
     tbody.innerHTML = rows.map(log => `
@@ -4176,10 +4746,16 @@ function toggleDisposedReceiveLogs(){
 }
 
 async function loadMaterialDetail(materialId){
-    const res = await fetch(`/materials/${materialId}/detail`);
-    const payload = await res.json();
-    if(!payload.ok){
-        alert(payload.message || '상세 조회 실패');
+    let payload;
+    try{
+        const res = await fetch(`/materials/${materialId}/detail`);
+        payload = await res.json();
+    }catch(_err){
+        alert('상세 조회 중 오류가 발생했습니다.');
+        return false;
+    }
+    if(!payload || !payload.ok){
+        alert(payload?.message || '상세 조회 실패');
         return false;
     }
     const m = payload.material || {};
@@ -4198,22 +4774,32 @@ async function loadMaterialDetail(materialId){
     currentEffectiveReceiveLogs = payload.effective_receive_logs || [];
     currentEffectiveReceiveTotal = Number(payload.effective_receive_total || 0);
     currentDisposedReceiveLogs = payload.disposed_receive_logs || [];
+    currentPreviousUsedLots = payload.previous_used_lots || [];
+    showPreviousUsedLots = false;
+    previousLotSearchTerm = '';
     showDisposedReceiveLogs = false;
     currentReceiveLogTab = 'complete';
-    renderLotRows(payload.lots || []);
-    resetUsageLogFilter();
-    resetReceiveLogFilter();
-    switchReceiveLogTab('complete');
+    currentTraceLotId = '';
+    currentTraceLotLabel = '';
+    document.getElementById('materialDetailModal').style.display = 'flex';
+    try{
+        updateMaterialTraceFilterBanners();
+        renderLotRows(payload.lots || []);
+        renderPreviousUsedLots();
+        resetUsageLogFilter();
+        resetReceiveLogFilter();
+        switchReceiveLogTab('complete');
+    }catch(_err){
+        console.error('material detail render failed', _err);
+        alert('부자재 상세 화면을 그리는 중 오류가 발생했습니다.');
+    }
     return true;
 }
 
 async function openMaterialDetailModal(materialId){
     currentMaterialId = materialId;
     switchMaterialPanel('lots');
-    const ok = await loadMaterialDetail(materialId);
-    if(ok){
-        document.getElementById('materialDetailModal').style.display = 'flex';
-    }
+    await loadMaterialDetail(materialId);
 }
 
 async function submitAddLot(e){

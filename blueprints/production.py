@@ -1052,6 +1052,18 @@ def _normalize_production_status(status_value):
     return s
 
 
+def _normalize_workplace_key(workplace_value):
+    return ''.join(str(workplace_value or '').strip().lower().split())
+
+
+def _has_production_workplace_access(viewer_workplace, production_workplace):
+    viewer_key = _normalize_workplace_key(viewer_workplace)
+    production_key = _normalize_workplace_key(production_workplace)
+    if not viewer_key or not production_key:
+        return True
+    return viewer_key == production_key
+
+
 def _load_schedule_stats_products(cursor, workplace):
     cursor.execute(
         '''
@@ -4098,6 +4110,25 @@ def production_detail(production_id):
     """Auto-generated docstring."""
     import math
 
+    def _coerce_float(value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _has_entered_actual_boxes(value):
+        if value is None:
+            return False
+        if isinstance(value, str) and not value.strip():
+            return False
+        return _coerce_float(value) > 0
+
+    def _format_display_quantity(value):
+        numeric = _coerce_float(value)
+        if numeric.is_integer():
+            return f'{int(numeric):,}'
+        return f'{numeric:,.1f}'.rstrip('0').rstrip('.')
+
     material_shortage_popup = session.pop('material_shortage_popup', None)
     if material_shortage_popup and int(material_shortage_popup.get('production_id', 0) or 0) != int(production_id):
         material_shortage_popup = None
@@ -4128,7 +4159,31 @@ def production_detail(production_id):
 
     production = dict(production)
     production['status'] = _normalize_production_status(production.get('status'))
+    viewer_workplace = (get_workplace() or session.get('workplace') or '').strip()
+    production_workplace = (production.get('workplace') or '').strip()
+    has_workplace_access = _has_production_workplace_access(viewer_workplace, production_workplace)
     edit_completed = request.args.get('edit') == '1'
+    production['uses_actual_quantity'] = _has_entered_actual_boxes(production.get('actual_boxes'))
+    quantity_basis_boxes = (
+        _coerce_float(production.get('actual_boxes'))
+        if production['uses_actual_quantity']
+        else _coerce_float(production.get('planned_boxes'))
+    )
+    production['quantity_basis_boxes'] = quantity_basis_boxes
+    production['quantity_basis_boxes_display'] = _format_display_quantity(quantity_basis_boxes)
+    production['quantity_basis_label'] = '실제 박스 수 기준' if production['uses_actual_quantity'] else '계획 박스 수 기준'
+    production['planned_boxes_display'] = _format_display_quantity(production.get('planned_boxes'))
+    production['actual_boxes_display'] = _format_display_quantity(
+        production.get('actual_boxes') if production['uses_actual_quantity'] else production.get('planned_boxes')
+    )
+    production['export_actual_boxes_display'] = _format_display_quantity(production.get('export_actual_boxes'))
+    production['sample_excluded_total_display'] = _format_display_quantity(production.get('sample_excluded_total'))
+    production['production_outer_pack_display'] = _format_display_quantity(
+        (_coerce_float(production.get('box_quantity')) / 10) * quantity_basis_boxes
+    )
+    production['production_sachet_display'] = _format_display_quantity(
+        quantity_basis_boxes * _coerce_float(production.get('box_quantity'))
+    )
 
 
     calculated_expiry_date = ''
@@ -4148,6 +4203,8 @@ def production_detail(production_id):
         1,
     )
     production['export_actual_boxes'] = round(_get_production_export_box_total(production), 1)
+    production['export_actual_boxes_display'] = _format_display_quantity(production['export_actual_boxes'])
+    production['sample_excluded_total_display'] = _format_display_quantity(production['sample_excluded_total'])
 
     # ???곹뭹??BOM ?먯큹 紐⑸줉
     # - 완료???앹궛: ?ㅼ젣 ?ъ슜???먯큹留??쒖떆 (production_material_usage 湲곗?)
@@ -4440,7 +4497,7 @@ def production_detail(production_id):
         (production_id,),
     )
     material_usage = [dict(row) for row in cursor.fetchall()]
-    current_workplace = (production.get('workplace') or get_workplace() or session.get('workplace') or '').strip()
+    current_workplace = production_workplace or viewer_workplace
     workplace_stock_map = {}
     material_ids = [int(row.get('material_id') or 0) for row in material_usage if int(row.get('material_id') or 0) > 0]
     location_ids = _get_inventory_location_ids(cursor, current_workplace)
@@ -4502,6 +4559,8 @@ def production_detail(production_id):
         if total_raw_selected_qty > 0 and total_raw_need_qty > 0
         else None
     )
+    total_raw_selected_display = _format_display_quantity(total_raw_selected_qty)
+    total_raw_need_display = _format_display_quantity(total_raw_need_qty)
 
     cursor.execute(
         '''
@@ -4580,6 +4639,8 @@ def production_detail(production_id):
         'production_detail.html',
         user=session['user'],
         production=production,
+        viewer_workplace=viewer_workplace,
+        has_workplace_access=has_workplace_access,
         material_usage=material_usage,
         bom_raw_items=bom_raw_items,
         calculated_expiry_date=calculated_expiry_date,
@@ -4590,6 +4651,8 @@ def production_detail(production_id):
         total_raw_need_qty=total_raw_need_qty,
         total_raw_remain_qty=total_raw_remain_qty,
         total_raw_yield_rate=total_raw_yield_rate,
+        total_raw_selected_display=total_raw_selected_display,
+        total_raw_need_display=total_raw_need_display,
         material_shortage_popup=material_shortage_popup,
         personnel_note_suggestions=personnel_note_suggestions,
         raw_checksheet_options=raw_checksheet_options,
@@ -4625,6 +4688,11 @@ def edit_production_plan(production_id):
 
     production = dict(production)
     production['status'] = _normalize_production_status(production.get('status'))
+    current_workplace = (get_workplace() or session.get('workplace') or '').strip()
+    production_workplace = (production.get('workplace') or '').strip()
+    if not _has_production_workplace_access(current_workplace, production_workplace):
+        conn_context.__exit__(None, None, None)
+        return redirect(url_for('production.production_detail', production_id=production_id))
 
     if production['status'] == '완료':
         conn.close()
@@ -4813,6 +4881,12 @@ def update_production_usage(production_id):
         touched_material_ids = set()
         current_workplace = (get_workplace() or session.get('workplace') or '').strip()
         production_workplace = (prod_row['workplace'] if prod_row and prod_row['workplace'] else current_workplace or '').strip()
+        if not _has_production_workplace_access(current_workplace, production_workplace):
+            rollback_db(conn)
+            return (
+                "<script>alert('해당 생산건은 현재 작업장 권한이 없어 읽기 전용으로만 확인할 수 있습니다.');"
+                f" window.location.href = '/production/{production_id}';</script>"
+            )
         workplace_location_id = _get_inventory_location_id(cursor, current_workplace) if current_workplace else None
         production_status = _normalize_production_status(prod_row['status'] if prod_row and prod_row['status'] else '')
         is_completed_status = production_status == _normalize_production_status('\uC644\uB8CC')
@@ -5680,6 +5754,14 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
 def _delete_production_record_response(production_id, success_redirect):
     try:
         with db_transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT workplace FROM productions WHERE id = ?', (production_id,))
+            prod = cursor.fetchone()
+            if prod:
+                current_workplace = (get_workplace() or session.get('workplace') or '').strip()
+                production_workplace = (prod['workplace'] or '').strip()
+                if not _has_production_workplace_access(current_workplace, production_workplace):
+                    return redirect(url_for('production.production_detail', production_id=production_id))
             deleted = _delete_production_record(conn, production_id, session.get('user_id'))
             if not deleted:
                 return redirect(success_redirect)
