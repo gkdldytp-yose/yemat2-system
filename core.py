@@ -1,4 +1,4 @@
-from flask import session, redirect, url_for, request, flash
+﻿from flask import session, redirect, url_for, request, flash
 from contextlib import contextmanager
 import atexit
 import sqlite3
@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import hashlib
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# 공통 작업장 목록 (물류 작업장은 일반 선택 목록에서 제외)
+# 怨듯넻 ?묒뾽??紐⑸줉 (臾쇰쪟 ?묒뾽?μ? ?쇰컲 ?좏깮 紐⑸줉?먯꽌 ?쒖쇅)
 WORKPLACES = ['\u0031\ub3d9 \uc870\ubbf8', '\u0031\ub3d9 \uc790\ubc18', '\u0032\ub3d9 \uc2e0\uad00 \u0031\uce35', '\u0032\ub3d9 \uc2e0\uad00 \u0032\uce35']
 LOGISTICS_WORKPLACE = '\ubb3c\ub958'
 SHARED_WORKPLACE = '공통'
@@ -216,7 +216,7 @@ def build_session_user(user_row, current_workplace=None):
     if isinstance(workplaces, str):
         workplaces = [value.strip() for value in workplaces.split(',') if value.strip()]
     if not workplaces:
-        workplaces = ['1동 조미']
+        workplaces = ['1??議곕?']
     base_role = normalize_user_role(user_row.get('role') or ('admin' if user_row.get('is_admin') else 'readonly'))
     workplace_roles = parse_workplace_roles(user_row.get('workplace_roles'))
     payload = {
@@ -237,7 +237,7 @@ def build_session_user(user_row, current_workplace=None):
     payload['role'] = get_effective_user_role(payload, current_workplace or session.get('workplace'))
     return payload
 
-# 데이터베이스 연결
+# ?곗씠?곕쿋?댁뒪 ?곌껐
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DB_PATH = PROJECT_ROOT / 'yemat.db'
@@ -283,7 +283,7 @@ def password_needs_rehash(stored_hash):
 
 
 def get_db():
-    """데이터베이스 연결 - SQLite 재사용 풀 + WAL 최적화"""
+    """Return a pooled SQLite connection configured for this app."""
     with _db_pool_lock:
         return _acquire_pooled_connection()
 
@@ -607,7 +607,7 @@ def _ensure_logistics_schema(conn):
                 reason TEXT,
                 reason_detail TEXT,
                 material_lot_id INTEGER,
-                status TEXT NOT NULL DEFAULT '요청',
+                status TEXT NOT NULL DEFAULT '?붿껌',
                 note TEXT,
                 requested_by TEXT,
                 requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -629,7 +629,7 @@ def _ensure_logistics_schema(conn):
             )
             '''
         )
-        # 기존 DB 마이그레이션
+        # 湲곗〈 DB 留덉씠洹몃젅?댁뀡
         li_cols = [row['name'] for row in conn.execute("PRAGMA table_info(logistics_issue_requests)").fetchall()]
         if 'request_type' not in li_cols:
             conn.execute("ALTER TABLE logistics_issue_requests ADD COLUMN request_type TEXT NOT NULL DEFAULT 'ISSUE'")
@@ -721,7 +721,7 @@ def get_usernames_for_notification(conn, roles=None, include_admin=False):
 
 
 def _ensure_user_schema(conn):
-    """users 테이블에 필요한 컬럼이 없으면 추가"""
+    """Ensure required columns exist on the users table."""
     global _user_schema_checked
     if _user_schema_checked:
         return
@@ -742,9 +742,9 @@ def _ensure_user_schema(conn):
         if 'recovery_answer_hash' not in cols:
             conn.execute("ALTER TABLE users ADD COLUMN recovery_answer_hash TEXT")
 
-        # 기존 사용자 기본값 보정
+        # 湲곗〈 ?ъ슜??湲곕낯媛?蹂댁젙
         conn.execute("UPDATE users SET status='approved' WHERE status IS NULL")
-        # workplaces 비어 있으면 workplace1/2 기준으로 채움
+        # workplaces 鍮꾩뼱 ?덉쑝硫?workplace1/2 湲곗??쇰줈 梨꾩?
         conn.execute(
             """
             UPDATE users
@@ -755,8 +755,8 @@ def _ensure_user_schema(conn):
             WHERE (workplaces IS NULL OR workplaces = '')
             """
         )
-        # 그래도 비면 기본 작업장
-        conn.execute("UPDATE users SET workplaces='1동 조미' WHERE workplaces IS NULL OR workplaces = ''")
+        # 洹몃옒??鍮꾨㈃ 湲곕낯 ?묒뾽??
+        conn.execute("UPDATE users SET workplaces='1??議곕?' WHERE workplaces IS NULL OR workplaces = ''")
         conn.execute("UPDATE users SET can_integrated_management = 1 WHERE COALESCE(is_admin, 0) = 1")
         conn.execute("UPDATE users SET can_integrated_management = 1 WHERE LOWER(COALESCE(username, '')) = 'test'")
     except Exception:
@@ -765,7 +765,7 @@ def _ensure_user_schema(conn):
 
 
 def _ensure_shared_materials(conn):
-    """공통 부자재 카테고리를 공통(workplace)으로 정규화"""
+    """Normalize shared material categories into the shared workplace."""
     global _materials_shared_checked
     if _materials_shared_checked:
         return
@@ -802,17 +802,17 @@ def _ensure_materials_schema(conn):
             conn.execute("ALTER TABLE materials ADD COLUMN upper_unit TEXT")
         if 'upper_unit_qty' not in cols:
             conn.execute("ALTER TABLE materials ADD COLUMN upper_unit_qty REAL")
-        conn.execute("UPDATE materials SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
-        conn.execute("UPDATE logistics_stocks SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
-        conn.execute("UPDATE logistics_defect_stocks SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
-        conn.execute("UPDATE logistics_issue_requests SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '개'")
+        conn.execute("UPDATE materials SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '媛?")
+        conn.execute("UPDATE logistics_stocks SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '媛?")
+        conn.execute("UPDATE logistics_defect_stocks SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '媛?")
+        conn.execute("UPDATE logistics_issue_requests SET unit = 'EA' WHERE COALESCE(TRIM(unit), '') = '媛?")
     except Exception:
         pass
     _materials_schema_checked = True
 
 
 def _ensure_purchase_schema(conn):
-    """purchase_requests 테이블에 사용자 추적 컬럼 추가"""
+    """Ensure purchase request audit columns exist."""
     global _purchase_schema_checked
     if _purchase_schema_checked:
         return
@@ -838,7 +838,7 @@ def _ensure_purchase_schema(conn):
 
 
 def _ensure_audit_schema(conn):
-    """감사 로그 테이블 생성"""
+    """Ensure the audit log table exists."""
     global _audit_schema_checked
     if _audit_schema_checked:
         return
@@ -865,7 +865,7 @@ def _ensure_audit_schema(conn):
 
 
 def _ensure_production_schema(conn):
-    """productions 테이블 인원관리 컬럼 보정"""
+    """Ensure production table support columns exist."""
     global _production_schema_checked
     if _production_schema_checked:
         return
@@ -1041,7 +1041,7 @@ def _ensure_production_schema(conn):
 
 
 def _ensure_products_schema(conn):
-    """products 테이블 상품 보조 컬럼 보정"""
+    """Ensure product helper columns exist."""
     global _products_schema_checked
     if _products_schema_checked:
         return
@@ -1075,7 +1075,7 @@ def _ensure_products_schema(conn):
 
 
 def _ensure_raw_material_schema(conn):
-    """raw_materials 테이블에 코드/로트 컬럼을 보정한다."""
+    """Ensure raw material code and lot columns exist."""
     global _raw_material_schema_checked
     if _raw_material_schema_checked:
         return
@@ -1183,7 +1183,7 @@ def _ensure_raw_material_schema(conn):
 
 
 def _ensure_material_lot_schema(conn):
-    """부자재 로트/로트 로그 테이블 생성"""
+    """Ensure material lot and material lot log tables exist."""
     global _material_lot_schema_checked
     if _material_lot_schema_checked:
         try:
@@ -1321,7 +1321,7 @@ def _cleanup_old_logs(conn):
 
 
 def audit_log(conn, action, entity, entity_id=None, data=None):
-    """감사 로그 기록 (동일 트랜잭션 내에서 사용)"""
+    """Write an audit log entry within the current transaction."""
     try:
         user = session.get('user', {}) if session else {}
         username = user.get('username')
@@ -1347,19 +1347,19 @@ def audit_log(conn, action, entity, entity_id=None, data=None):
             ),
         )
     except Exception:
-        # 로깅 실패는 업무 흐름을 막지 않음
+        # 濡쒓퉭 ?ㅽ뙣???낅Т ?먮쫫??留됱? ?딆쓬
         pass
 
 
-# 작업장 헬퍼 함수
+# ?묒뾽???ы띁 ?⑥닔
 
 def get_workplace():
-    """현재 세션의 작업장 반환"""
-    return session.get('workplace', '1동 조미')
+    """Return the currently selected workplace from the session."""
+    return session.get('workplace', '1??議곕?')
 
 
 def require_workplace(f):
-    """작업장 선택을 요구하는 데코레이터"""
+    """Persist the selected workplace in the session."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'workplace' not in session:
@@ -1369,16 +1369,16 @@ def require_workplace(f):
 
 
 def rows_to_dict(rows):
-    """sqlite3.Row 객체 리스트를 딕셔너리 리스트로 변환"""
+    """Convert sqlite3.Row iterables into plain dict lists."""
     if not rows:
         return []
     return [dict(row) for row in rows]
 
 
-# 로그인/권한 데코레이터
+# 濡쒓렇??沅뚰븳 ?곗퐫?덉씠??
 
 def has_role(*roles):
-    """현재 사용자 role 체크 (헬퍼 함수)"""
+    """Check whether the current user has one of the given roles."""
     user = session.get('user', {})
     if not user:
         return False
@@ -1397,7 +1397,7 @@ def login_required(f):
         if not isinstance(user, dict):
             session.pop('user', None)
             session.pop('workplace', None)
-            flash('로그인 정보가 만료되어 다시 로그인해 주세요.', 'warning')
+            flash('濡쒓렇???뺣낫媛 留뚮즺?섏뼱 ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??', 'warning')
             return redirect(url_for('auth.login'))
         user_workplaces = user.get('workplaces') or []
         if not user_workplaces:
@@ -1430,7 +1430,7 @@ def login_required(f):
     return decorated_function
 
 
-# 관리자 권한 필요 데코레이터
+# 愿由ъ옄 沅뚰븳 ?꾩슂 ?곗퐫?덉씠??
 
 def admin_required(f):
     @wraps(f)
@@ -1444,8 +1444,9 @@ def admin_required(f):
 
 
 def role_required(*roles):
-    """역할 기반 접근 제어 데코레이터.
-    admin은 항상 통과. roles에 해당 role이 있으면 통과.
+    """Role-based access decorator.
+
+    Admin users are always allowed. Other users must match one of `roles`.
     """
     def decorator(f):
         @wraps(f)
@@ -1453,13 +1454,15 @@ def role_required(*roles):
             if 'user' not in session:
                 return redirect(url_for('auth.login'))
             user_role = get_effective_user_role(session['user'])
-            # admin은 모든 권한 통과
+            # admin? 紐⑤뱺 沅뚰븳 ?듦낵
             if user_role == 'admin':
                 return f(*args, **kwargs)
-            # 허용된 role이면 통과
+            # ?덉슜??role?대㈃ ?듦낵
             if user_role in roles:
                 return f(*args, **kwargs)
-            # 권한 없음 → 대시보드로
+            # 沅뚰븳 ?놁쓬 ????쒕낫?쒕줈
             return redirect(url_for('main.index'))
         return decorated_function
     return decorator
+
+

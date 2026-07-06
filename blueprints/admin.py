@@ -3913,8 +3913,6 @@ def integrated_management():
                 stock_by_workplace[wp_name] = qty
                 workplace_total += qty
             workplace_total = round(workplace_total + 1e-9, 1)
-            if workplace_total <= 0:
-                continue
             item['stock_by_workplace'] = stock_by_workplace
             item['workplace_total_stock'] = workplace_total
             item['logistics_stock'] = 0.0
@@ -6010,6 +6008,7 @@ SELECT
             (material_id,),
         )
         material_lot_rows = [dict(row) for row in cursor.fetchall()]
+        visible_material_lot_rows = material_lot_rows
         visible_lot_ids = set()
         if detail_location_ids:
             placeholders = ','.join(['?'] * len(detail_location_ids))
@@ -6029,7 +6028,7 @@ SELECT
                 if int(row['material_lot_id'] or 0) > 0
             }
         if visible_lot_ids:
-            material_lot_rows = [row for row in material_lot_rows if int(row.get('id') or 0) in visible_lot_ids]
+            visible_material_lot_rows = [row for row in material_lot_rows if int(row.get('id') or 0) in visible_lot_ids]
         cursor.execute(
             """
             SELECT DISTINCT material_lot_id
@@ -6080,6 +6079,31 @@ SELECT
             for row in cursor.fetchall()
             if int(row['material_lot_id'] or 0) > 0
         }
+        previous_used_lots = []
+        for row in material_lot_rows:
+            lot_id = int(row.get('id') or 0)
+            if lot_id <= 0 or lot_id in visible_lot_ids or lot_id not in historical_lot_ids:
+                continue
+            previous_used_lots.append(
+                {
+                    'id': lot_id,
+                    'lot': row.get('lot') or '-',
+                    'receiving_date': row.get('receiving_date') or '',
+                    'manufacture_date': row.get('manufacture_date') or '',
+                    'expiry_date': row.get('expiry_date') or '',
+                    'received_quantity': _round_to_1_decimal(row.get('received_quantity') or row.get('legacy_quantity') or 0),
+                    'current_quantity': _round_to_1_decimal(row.get('current_quantity') or 0),
+                    'status_label': '사용 완료',
+                }
+            )
+        previous_used_lots.sort(
+            key=lambda row: (
+                0 if (row.get('receiving_date') or '').strip() else 1,
+                row.get('receiving_date') or '',
+                row.get('id') or 0,
+            ),
+            reverse=True,
+        )
 
         def _receive_log_matches_current_workplace(row):
             if not detail_workplace:
@@ -6147,7 +6171,7 @@ SELECT
             for row in effective_receive_logs
             if int(row.get('material_lot_id') or 0) > 0
         }
-        for lot_row in material_lot_rows:
+        for lot_row in visible_material_lot_rows:
             lot_id = int(lot_row.get('id') or 0)
             if lot_id <= 0 or lot_id in effective_lot_ids:
                 continue
@@ -6184,12 +6208,14 @@ SELECT
         effective_receive_total = _round_to_1_decimal(
             sum(float(row.get('received_quantity') or 0) for row in effective_receive_logs)
         )
+        active_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) != 1]
+        disposed_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) == 1]
         receive_complete_logs = [
-            row for row in receive_logs
+            row for row in active_receive_logs
             if str(row.get('action') or '') in {'create', 'issue_request_complete'}
         ]
         receive_update_logs = [
-            row for row in receive_logs
+            row for row in active_receive_logs
             if str(row.get('action') or '') == 'issue_request_update'
         ]
         for row in receive_update_logs:
@@ -6207,11 +6233,13 @@ SELECT
             'ok': True,
             'material': payload,
             'lots': lots,
+            'previous_used_lots': previous_used_lots,
             'usage_logs': usage_logs,
             'export_usage_logs': export_usage_logs,
             'receive_logs': receive_complete_logs,
             'receive_complete_logs': receive_complete_logs,
             'receive_update_logs': receive_update_logs,
+            'disposed_receive_logs': disposed_receive_logs,
             'initial_stock_log': initial_stock_log,
             'effective_receive_logs': effective_receive_logs,
             'effective_receive_total': effective_receive_total,

@@ -1,4 +1,4 @@
-Flask==3.1.0
+﻿Flask==3.1.0
 fastapi==0.109.0
 uvicorn==0.27.0
 sqlalchemy==2.0.25
@@ -12,3 +12,7 @@ python-dateutil==2.8.2
 jinja2==3.1.3
 aiosqlite==0.19.0
 gunicorn
+pillow
+pytesseract
+pypdfium2
+
