@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
-from datetime import datetime, date, timedelta
+﻿from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
+from datetime import datetime, date
 from collections import defaultdict
 import calendar
 import json
 import math
 import logging
+import os
+import re
 
 from core import (
     admin_required,
@@ -28,8 +30,6 @@ from core import (
 
 bp = Blueprint('production', __name__)
 logger = logging.getLogger('yemat.waitress')
-
-
 FIXED_PUBLIC_HOLIDAYS = {
     (1, 1): '\uC2E0\uC815',
     (3, 1): '\uC0BC\uC77C\uC808',
@@ -207,13 +207,13 @@ def _parse_iso_date(raw_value):
 def _parse_positive_int(raw_value, label):
     text = str(raw_value or '').strip()
     if not text:
-        raise ValueError(f'{label}을(를) 입력해주세요.')
+        raise ValueError(f'{label}??瑜? ?낅젰?댁＜?몄슂.')
     try:
         value = int(float(text))
     except ValueError as exc:
-        raise ValueError(f'{label}은(는) 숫자로 입력해주세요.') from exc
+        raise ValueError(f'{label}?(?? ?レ옄濡??낅젰?댁＜?몄슂.') from exc
     if value <= 0:
-        raise ValueError(f'{label}은(는) 1 이상이어야 합니다.')
+        raise ValueError(f'{label}?(?? 1 ?댁긽?댁뼱???⑸땲??')
     return value
 
 
@@ -242,7 +242,7 @@ def _get_export_unit_suffix(unit_mode):
 
 
 def _get_export_unit_name(unit_mode):
-    return '파렛트' if _normalize_export_unit_mode(unit_mode) == 'pallet' else '컨테이너'
+    return '팔렛' if _normalize_export_unit_mode(unit_mode) == 'pallet' else '컨테이너'
 
 
 def _build_export_unit_label(start_no, end_no, unit_mode):
@@ -293,7 +293,7 @@ def _ensure_auto_work_days_for_range(conn, cursor, start_date, end_date):
 
 def _get_business_schedule_dates(conn, cursor, start_date, production_end_date):
     if start_date > production_end_date:
-        raise ValueError('생산 종료일은 생산 시작일보다 빠를 수 없습니다.')
+        raise ValueError('?앹궛 醫낅즺?쇱? ?앹궛 ?쒖옉?쇰낫??鍮좊? ???놁뒿?덈떎.')
     end_date = production_end_date
     _ensure_auto_work_days_for_range(conn, cursor, start_date, end_date)
     rows = cursor.execute(
@@ -363,7 +363,7 @@ def _is_started_export_row(row):
 
 
 def _build_export_schedule_note(export_schedule_id, container_label, note=''):
-    prefix = f'[수출일정 #{export_schedule_id}'
+    prefix = f'[?섏텧?쇱젙 #{export_schedule_id}'
     if container_label:
         prefix += f' / {container_label}'
     prefix += ']'
@@ -392,7 +392,7 @@ def _create_schedule_with_production(
             product_id, scheduled_date, planned_boxes, note, status, line, workplace,
             production_id, schedule_source, export_schedule_id, export_container_no, export_container_label
         )
-        VALUES (?, ?, ?, ?, '예정', ?, ?, NULL, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, '?덉젙', ?, ?, NULL, ?, ?, ?, ?)
         ''',
         (
             product_id,
@@ -413,7 +413,7 @@ def _create_schedule_with_production(
         INSERT INTO productions (
             product_id, production_date, planned_boxes, status, note, schedule_id, workplace, export_schedule_id
         )
-        VALUES (?, ?, ?, '예정', ?, ?, ?, ?)
+        VALUES (?, ?, ?, '?덉젙', ?, ?, ?, ?)
         ''',
         (
             product_id,
@@ -763,7 +763,7 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
     start_date = _parse_iso_date(export_row.get('production_start_date'))
     production_end_date = _parse_iso_date(export_row.get('production_end_date') or export_row.get('cutoff_date'))
     if not start_date or not production_end_date:
-        raise ValueError('생산 시작일과 생산 종료일을 확인해주세요.')
+        raise ValueError('?앹궛 ?쒖옉?쇨낵 ?앹궛 醫낅즺?쇱쓣 ?뺤씤?댁＜?몄슂.')
 
     excluded_date_set = set(_parse_export_excluded_dates(export_row.get('excluded_dates')))
     preserve_schedule_ids = {int(schedule_id) for schedule_id in (preserve_schedule_ids or []) if schedule_id}
@@ -795,11 +795,11 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
         earliest_started = _parse_iso_date(started_dates[0])
         latest_started = _parse_iso_date(started_dates[-1])
         if original_product_id and int(original_product_id) != product_id:
-            raise ValueError('생산이 시작된 수출 일정은 제품을 변경할 수 없습니다.')
+            raise ValueError('?앹궛???쒖옉???섏텧 ?쇱젙? ?쒗뭹??蹂寃쏀븷 ???놁뒿?덈떎.')
         if earliest_started and start_date > earliest_started:
-            raise ValueError('생산이 시작된 일정보다 늦은 시작일로는 수정할 수 없습니다.')
+            raise ValueError('?앹궛???쒖옉???쇱젙蹂대떎 ??? ?쒖옉?쇰줈???섏젙?????놁뒿?덈떎.')
         if latest_started and production_end_date < latest_started:
-            raise ValueError('생산이 시작된 일정 이전으로 생산 종료일을 앞당길 수 없습니다.')
+            raise ValueError('?앹궛???쒖옉???쇱젙 ?댁쟾?쇰줈 ?앹궛 醫낅즺?쇱쓣 ?욌떦湲????놁뒿?덈떎.')
 
     if untouched_rows:
         _delete_export_generated_rows(cursor, export_schedule_id, [int(row['schedule_id']) for row in untouched_rows])
@@ -815,11 +815,11 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
     locked_planned_total = int(sum(_get_export_row_locked_boxes(row) for row in preserved_rows))
     locked_total = produced_total + locked_planned_total
     if export_quantity < locked_total:
-        raise ValueError('이미 생산된 수량보다 적게 수출 수량을 수정할 수 없습니다.')
+        raise ValueError('?대? ?앹궛???섎웾蹂대떎 ?곴쾶 ?섏텧 ?섎웾???섏젙?????놁뒿?덈떎.')
     remaining_total = max(export_quantity - locked_total, 0)
 
     if remaining_total > 0 and not available_dates:
-        raise ValueError('남은 수량을 배정할 영업일이 없습니다. 시작일 또는 생산 종료일을 확인해주세요.')
+        raise ValueError('?⑥? ?섎웾??諛곗젙???곸뾽?쇱씠 ?놁뒿?덈떎. ?쒖옉???먮뒗 ?앹궛 醫낅즺?쇱쓣 ?뺤씤?댁＜?몄슂.')
 
     line_text = (export_row.get('line') or '').strip()
     note_text = (export_row.get('note') or '').strip()
@@ -969,11 +969,11 @@ def _get_production_material_section(row):
     category = (row.get('category') or '').strip()
     if category in ('기름', '소금') or '기름' in category or '유지' in category or '소금' in category:
         return 'base'
-    if category == '내포':
+    if category == '?댄룷':
         return 'pack_inner'
     if category == '외포':
         return 'pack_outer'
-    if category == '박스':
+    if category == '諛뺤뒪':
         return 'pack_box'
     if category == '실리카':
         return 'pack_silica'
@@ -1073,7 +1073,7 @@ def _load_schedule_stats_products(cursor, workplace):
         FROM productions pr
         JOIN products p ON p.id = pr.product_id
         WHERE COALESCE(NULLIF(TRIM(pr.workplace), ''), '') = ?
-          AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
+          AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
         ORDER BY p.name ASC, p.id ASC
         ''',
         (workplace,),
@@ -1171,7 +1171,7 @@ def _compose_raw_usage_note(user_note, raw_sok_mode, per_box_value, sheets_per_p
     if int(raw_sok_mode or 1) > 1 and float(per_box_value or 0) > 0:
         if int(sheets_per_pack or 0) > 0:
             if int(base_sheets_per_pack or 0) > 0:
-                auto_note = f"매수 변경 적용: {int(base_sheets_per_pack)}매 → {int(sheets_per_pack)}매"
+                auto_note = f"매수 변경 적용: {int(base_sheets_per_pack)}매 -> {int(sheets_per_pack)}매"
             else:
                 auto_note = f"매수 변경 적용: {int(sheets_per_pack)}매"
     if auto_note and base_note:
@@ -1201,11 +1201,11 @@ def _build_sample_usage_auto_note(expiry_rows):
             sample_boxes = 0.0
         if sample_boxes <= 0:
             continue
-        label = (row.get('date') or '').strip() or f"{int(row.get('index') or 0)}차 소비기한"
-        parts.append(f'{label} {_format_box_count_text(sample_boxes)}박스')
+        label = (row.get('date') or '').strip() or f"{int(row.get('index') or 0)}李??뚮퉬湲고븳"
+        parts.append(f'{label} {_format_box_count_text(sample_boxes)}諛뺤뒪')
     if not parts:
         return ''
-    return f"샘플 제외: {', '.join(parts)} (수출 일정표 제외)"
+    return f"?섑뵆 ?쒖쇅: {', '.join(parts)} (?섏텧 ?쇱젙???쒖쇅)"
 
 
 def _compose_raw_usage_note(
@@ -1222,7 +1222,7 @@ def _compose_raw_usage_note(
         stripped = line.strip()
         if stripped.startswith('매수 변경 적용:'):
             continue
-        if stripped.startswith('샘플 제외:'):
+        if stripped.startswith('?섑뵆 ?쒖쇅:'):
             continue
         filtered_lines.append(line)
     base_note = '\n'.join(filtered_lines).strip()
@@ -1230,7 +1230,7 @@ def _compose_raw_usage_note(
     auto_lines = []
     if int(raw_sok_mode or 1) > 1 and float(per_box_value or 0) > 0 and int(sheets_per_pack or 0) > 0:
         if int(base_sheets_per_pack or 0) > 0:
-            auto_lines.append(f"매수 변경 적용: {int(base_sheets_per_pack)}매 → {int(sheets_per_pack)}매")
+            auto_lines.append(f"매수 변경 적용: {int(base_sheets_per_pack)}매 -> {int(sheets_per_pack)}매")
         else:
             auto_lines.append(f"매수 변경 적용: {int(sheets_per_pack)}매")
     sample_line = (sample_auto_note or '').strip()
@@ -1530,7 +1530,7 @@ def _material_required_info_fields(category):
 
 def _has_material_info(value, unknown_flag=0):
     text = (value or '').strip()
-    return bool(text) or text == '없음' or bool(int(unknown_flag or 0))
+    return bool(text) or text == '?놁쓬' or bool(int(unknown_flag or 0))
 
 
 def _material_missing_info_fields(category, manufacture_date, expiry_date, manufacture_unknown=0, expiry_unknown=0):
@@ -1898,7 +1898,7 @@ def schedules():
             SELECT
                 pr.product_id,
                 COALESCE(NULLIF(TRIM(p.code), ''), printf('P%05d', pr.product_id)) as product_code,
-                COALESCE(NULLIF(TRIM(p.name), ''), '미등록 상품') as product_name,
+                COALESCE(NULLIF(TRIM(p.name), ''), '誘몃벑濡??곹뭹') as product_name,
                 COUNT(pr.id) as completed_count,
                 ROUND(SUM(
                     CASE
@@ -1912,7 +1912,7 @@ def schedules():
             LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
             WHERE COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
               AND pr.production_date BETWEEN ? AND ?
-              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
+              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
             GROUP BY pr.product_id, product_code, product_name
             ORDER BY total_production_boxes DESC, product_name ASC, product_code ASC
             ''',
@@ -2111,7 +2111,7 @@ def schedules():
         )
         export_in_progress_rows = [row for row in export_rows_view if not row.get('is_completed')]
 
-    # ?ㅼ?以??곗씠?곕? JSON?쇰줈 蹂??(JavaScript?먯꽌 ?ъ슜)
+    # ???餓??怨쀬뵠?怨? JSON??곗쨮 癰??(JavaScript?癒?퐣 ????
     schedules_view = []
     schedules_list = []
     weekday_labels = ['월', '화', '수', '목', '금', '토', '일']
@@ -2126,13 +2126,13 @@ def schedules():
         work_info = work_days_data.get(scheduled_date) or {}
         raw_work_type = (work_info.get('type') or '').strip()
         if raw_work_type == 'overtime':
-            work_type_text = '잔업'
+            work_type_text = '?붿뾽'
         elif raw_work_type == 'extra':
-            work_type_text = '특근'
+            work_type_text = '?밴렐'
         elif raw_work_type == 'holiday':
-            work_type_text = '휴무'
+            work_type_text = '?대Т'
         else:
-            work_type_text = '일반'
+            work_type_text = '?쇰컲'
         overtime_hours = work_info.get('overtime_hours')
         overtime_hours = float(overtime_hours or 0) if overtime_hours not in (None, '') else 0.0
 
@@ -2153,7 +2153,7 @@ def schedules():
                 'line': s['line'] if s['line'] else '',
                 'production_id': s['linked_production_id'],
                 'actual_boxes': s['prod_actual_boxes'],
-                'is_completed': status_value == '완료',
+                'is_completed': status_value == '?꾨즺',
                 'source': s['schedule_source'] if 'schedule_source' in s.keys() and s['schedule_source'] else 'manual',
                 'export_schedule_id': s['export_schedule_id'] if 'export_schedule_id' in s.keys() else None,
                 'export_container_label': s['export_container_label'] if 'export_container_label' in s.keys() and s['export_container_label'] else '',
@@ -2164,17 +2164,16 @@ def schedules():
         )
     schedules_json = json.dumps(schedules_list, ensure_ascii=False)
 
-    # ?곹뭹 ?곗씠?곕룄 JSON?쇰줈 蹂??(寃??湲곕뒫??
+    # ?怨밸? ?怨쀬뵠?怨뺣즲 JSON??곗쨮 癰??(野??疫꿸퀡???
     products_list = []
     for p in products:
         products_list.append({'id': p['id'], 'name': p['name']})
     products_json = json.dumps(products_list, ensure_ascii=False)
     stats_products_json = json.dumps(stats_products, ensure_ascii=False)
 
-    # 洹쇰Т???곗씠?곕룄 JSON?쇰줈 蹂??
+    # 域뱀눖龜???怨쀬뵠?怨뺣즲 JSON??곗쨮 癰??
     work_days_json = json.dumps(work_days_data, ensure_ascii=False)
     export_schedules_json = json.dumps(export_rows_json, ensure_ascii=False)
-
     return render_template(
         'schedules.html',
         user=session['user'],
@@ -2200,20 +2199,20 @@ def schedules():
 @bp.route('/schedules/stats-product-data')
 @login_required
 def schedule_stats_product_data():
-    """생산 통계 모달용 상품별 생산 이력 데이터."""
+    """?앹궛 ?듦퀎 紐⑤떖???곹뭹蹂??앹궛 ?대젰 ?곗씠??"""
     workplace = (request.args.get('workplace') or get_workplace() or '').strip()
     product_id = request.args.get('product_id', type=int)
     date_from_raw = (request.args.get('date_from') or '').strip()
     date_to_raw = (request.args.get('date_to') or '').strip()
 
     if not product_id:
-        return jsonify({'ok': False, 'message': '상품 정보가 올바르지 않습니다.'}), 400
+        return jsonify({'ok': False, 'message': '?곹뭹 ?뺣낫媛 ?щ컮瑜댁? ?딆뒿?덈떎.'}), 400
 
     try:
         date_from = _parse_iso_date(date_from_raw) if date_from_raw else None
         date_to = _parse_iso_date(date_to_raw) if date_to_raw else None
     except ValueError:
-        return jsonify({'ok': False, 'message': '날짜 형식이 올바르지 않습니다.'}), 400
+        return jsonify({'ok': False, 'message': '?좎쭨 ?뺤떇???щ컮瑜댁? ?딆뒿?덈떎.'}), 400
 
     today = today_local()
     if not date_from or not date_to:
@@ -2226,7 +2225,7 @@ def schedule_stats_product_data():
         date_to = date_to or default_end
 
     if date_from > date_to:
-        return jsonify({'ok': False, 'message': '조회 시작일이 종료일보다 늦을 수 없습니다.'}), 400
+        return jsonify({'ok': False, 'message': '議고쉶 ?쒖옉?쇱씠 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.'}), 400
 
     with db_connection() as conn:
         cursor = conn.cursor()
@@ -2239,13 +2238,13 @@ def schedule_stats_product_data():
             JOIN products p ON p.id = pr.product_id
             WHERE p.id = ?
               AND COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
-              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
+              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
             ''',
             (product_id, workplace, workplace),
         )
         product_row = cursor.fetchone()
         if not product_row:
-            return jsonify({'ok': False, 'message': '해당 상품을 찾을 수 없습니다.'}), 404
+            return jsonify({'ok': False, 'message': '?대떦 ?곹뭹??李얠쓣 ???놁뒿?덈떎.'}), 404
 
         cursor.execute(
             '''
@@ -2300,7 +2299,7 @@ def schedule_stats_product_data():
             WHERE pr.product_id = ?
               AND pr.production_date BETWEEN ? AND ?
               AND COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
-              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '완료'
+              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
             GROUP BY
                 pr.id, pr.production_date, pr.actual_boxes, ps.planned_boxes, pr.planned_boxes,
                 pr.raw_sok_mode, p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3
@@ -2364,9 +2363,9 @@ def schedule_requirements_data():
     try:
         def _normalize_sub_category(raw_category):
             text = (raw_category or '').strip()
-            if text == '박스':
+            if text == '諛뺤뒪':
                 return 'box'
-            if text == '내포':
+            if text == '?댄룷':
                 return 'inner'
             if text == '외포':
                 return 'outer'
@@ -2387,7 +2386,7 @@ def schedule_requirements_data():
             (workplace,),
         )
         schedule_rows = [dict(r) for r in cursor.fetchall()]
-        planned_rows = [r for r in schedule_rows if _normalize_production_status(r.get('status')) == '예정']
+        planned_rows = [r for r in schedule_rows if _normalize_production_status(r.get('status')) == '?덉젙']
 
         product_box_map = {}
         product_name_map = {}
@@ -2524,7 +2523,7 @@ def schedule_requirements_data():
             if pid not in product_detail:
                 product_detail[pid] = {
                     'product_id': pid,
-                    'product_name': product_name_map.get(pid) or f'상품 {pid}',
+                    'product_name': product_name_map.get(pid) or f'?곹뭹 {pid}',
                     'planned_boxes': float(product_box_map.get(pid) or 0),
                     'raw_map': {},
                     'base_map': {},
@@ -2548,8 +2547,8 @@ def schedule_requirements_data():
                 name = row.get('raw_name') or code or '원초'
                 stock = raw_stock_map.get(code, 0.0)
                 raw_key = f'raw:{code}'
-                _upsert_item(summary_raw, raw_key, code, name, '속', stock, need_qty)
-                _upsert_item(product_detail[pid]['raw_map'], raw_key, code, name, '속', stock, need_qty)
+                _upsert_item(summary_raw, raw_key, code, name, '원초', stock, need_qty)
+                _upsert_item(product_detail[pid]['raw_map'], raw_key, code, name, '원초', stock, need_qty)
             elif row.get('material_id'):
                 qty_per_box = float(row.get('quantity_per_box') or 0)
                 if qty_per_box <= 0:
@@ -2670,7 +2669,7 @@ def schedule_material_capacity_bom():
     workplace = get_workplace()
 
     if not product_id:
-        return jsonify({'ok': False, 'message': '상품을 먼저 선택해 주세요.'}), 400
+        return jsonify({'ok': False, 'message': '?곹뭹??癒쇱? ?좏깮??二쇱꽭??'}), 400
 
     with db_connection() as conn:
         cursor = conn.cursor()
@@ -2689,7 +2688,7 @@ def schedule_material_capacity_bom():
         )
         product_row = cursor.fetchone()
         if not product_row:
-            return jsonify({'ok': False, 'message': '선택한 상품을 찾을 수 없습니다.'}), 404
+            return jsonify({'ok': False, 'message': '?좏깮???곹뭹??李얠쓣 ???놁뒿?덈떎.'}), 404
 
         cursor.execute(
             '''
@@ -2803,7 +2802,7 @@ def schedule_material_capacity_bom():
                         'group_label': '원초',
                         'code': code,
                         'name': row.get('raw_name') or code,
-                        'unit': '속',
+                        'unit': 'kg',
                         'per_box_qty': 0.0,
                         'stock': round(float(raw_stock_map.get(code, 0.0) or 0.0), 2),
                     }
@@ -2869,7 +2868,7 @@ def schedule_requirements_auto_purchase():
             planned_rows = []
             for raw_row in cursor.fetchall():
                 row = dict(raw_row)
-                if _normalize_production_status(row.get('status')) == '예정':
+                if _normalize_production_status(row.get('status')) == '?덉젙':
                     planned_rows.append(row)
 
         product_box_map = {}
@@ -2987,7 +2986,7 @@ def schedule_requirements_auto_purchase():
                 WHERE material_id = ?
                   AND requester_workplace = ?
                   AND COALESCE(request_type, 'ISSUE') = 'ISSUE'
-                  AND status = '요청'
+                  AND status = '?붿껌'
                 LIMIT 1
                 ''',
                 (mid, workplace),
@@ -2998,7 +2997,7 @@ def schedule_requirements_auto_purchase():
                 continue
 
             issue_qty = round(shortage, 2)
-            issue_note = "[자동 불출 등록]"
+            issue_note = "[?먮룞 遺덉텧 ?깅줉]"
             cursor.execute(
                 '''
                 INSERT INTO logistics_issue_requests
@@ -3065,19 +3064,19 @@ def add_schedule():
     note = request.form.get('note', '')
 
     if not product_id:
-        return "<script>alert('상품을 선택해 주세요.');history.back();</script>", 400
+        return "<script>alert('?곹뭹???좏깮??二쇱꽭??');history.back();</script>", 400
     with db_transaction() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
         if not cursor.fetchone():
-            return "<script>alert('선택한 상품을 찾을 수 없습니다. 다시 선택해 주세요.');history.back();</script>", 400
+            return "<script>alert('?좏깮???곹뭹??李얠쓣 ???놁뒿?덈떎. ?ㅼ떆 ?좏깮??二쇱꽭??');history.back();</script>", 400
 
         for scheduled_date in scheduled_dates:
             if scheduled_date:
                 cursor.execute(
                     '''
                     INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
-                    VALUES (?, ?, ?, ?, '예정', ?, ?)
+                    VALUES (?, ?, ?, ?, '?덉젙', ?, ?)
                 ''',
                     (product_id, scheduled_date, planned_boxes, note, production_lines_str, workplace),
                 )
@@ -3085,7 +3084,7 @@ def add_schedule():
                 cursor.execute(
                     '''
                     INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
-                    VALUES (?, ?, ?, '예정', ?, ?, ?)
+                    VALUES (?, ?, ?, '?덉젙', ?, ?, ?)
                 ''',
                     (product_id, scheduled_date, planned_boxes, note, schedule_id, workplace),
                 )
@@ -3136,7 +3135,7 @@ def copy_schedule():
                     cursor.execute(
                         '''
                         INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
-                        VALUES (?, ?, ?, ?, '예정', ?, ?)
+                        VALUES (?, ?, ?, ?, '?덉젙', ?, ?)
                     ''',
                         (
                             original['product_id'],
@@ -3151,7 +3150,7 @@ def copy_schedule():
                     cursor.execute(
                         '''
                         INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
-                        VALUES (?, ?, ?, '예정', ?, ?, ?)
+                        VALUES (?, ?, ?, '?덉젙', ?, ?, ?)
                     ''',
                         (
                             original['product_id'],
@@ -3196,7 +3195,7 @@ def delete_schedule(schedule_id):
             if not schedule_before:
                 return redirect(request.referrer or url_for('production.schedules'))
 
-            if _normalize_production_status(schedule_before['status']) == '완료':
+            if _normalize_production_status(schedule_before['status']) == '?꾨즺':
                 return redirect(request.referrer or url_for('production.schedules'))
 
             row = schedule_before
@@ -3217,7 +3216,7 @@ def delete_schedule(schedule_id):
                 cursor.execute('SELECT status FROM productions WHERE id = ?', (production_id,))
                 prod = cursor.fetchone()
 
-                if prod and _normalize_production_status(prod['status']) == '완료':
+                if prod and _normalize_production_status(prod['status']) == '?꾨즺':
                     cursor.execute(
                         '''
                         SELECT pmu.actual_quantity, pmu.material_id,
@@ -3305,7 +3304,7 @@ def restore_export_schedule_date(export_schedule_id):
         workplace = get_workplace()
         scheduled_date = (request.form.get('scheduled_date') or '').strip()
         if not scheduled_date:
-            raise ValueError('복구할 날짜를 확인해주세요.')
+            raise ValueError('蹂듦뎄???좎쭨瑜??뺤씤?댁＜?몄슂.')
 
         with db_transaction() as conn:
             cursor = conn.cursor()
@@ -3314,12 +3313,12 @@ def restore_export_schedule_date(export_schedule_id):
                 (export_schedule_id, workplace),
             ).fetchone()
             if not export_row:
-                raise ValueError('복구할 수출 일정이 없습니다.')
+                raise ValueError('蹂듦뎄???섏텧 ?쇱젙???놁뒿?덈떎.')
             export_row = dict(export_row)
 
             excluded_dates_before = _parse_export_excluded_dates(export_row.get('excluded_dates'))
             if scheduled_date not in excluded_dates_before:
-                raise ValueError('이미 복구된 일정입니다.')
+                raise ValueError('?대? 蹂듦뎄???쇱젙?낅땲??')
 
             excluded_dates_after = [value for value in excluded_dates_before if value != scheduled_date]
             _save_export_excluded_dates(cursor, export_schedule_id, excluded_dates_after)
@@ -3383,17 +3382,17 @@ def add_schedule_to_date(date):
     production_lines_str = ','.join(production_lines) if production_lines else ''
 
     if not product_id:
-        return "<script>alert('상품을 선택해 주세요.');history.back();</script>", 400
+        return "<script>alert('?곹뭹???좏깮??二쇱꽭??');history.back();</script>", 400
     with db_transaction() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
         if not cursor.fetchone():
-            return "<script>alert('선택한 상품을 찾을 수 없습니다. 다시 선택해 주세요.');history.back();</script>", 400
+            return "<script>alert('?좏깮???곹뭹??李얠쓣 ???놁뒿?덈떎. ?ㅼ떆 ?좏깮??二쇱꽭??');history.back();</script>", 400
 
         cursor.execute(
             '''
             INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, line, workplace)
-            VALUES (?, ?, ?, '예정', ?, ?)
+            VALUES (?, ?, ?, '?덉젙', ?, ?)
         ''',
             (product_id, date, planned_boxes, production_lines_str, workplace),
         )
@@ -3401,7 +3400,7 @@ def add_schedule_to_date(date):
         cursor.execute(
             '''
             INSERT INTO productions (product_id, production_date, planned_boxes, status, schedule_id, workplace)
-            VALUES (?, ?, ?, '예정', ?, ?)
+            VALUES (?, ?, ?, '?덉젙', ?, ?)
         ''',
             (product_id, date, planned_boxes, schedule_id, workplace),
         )
@@ -3436,8 +3435,8 @@ def _schedule_error_response(message, view='export'):
 
 
 def _parse_export_container_inputs(form):
-    boxes_per_container = _parse_positive_int(form.get('boxes_per_container'), '1C 박스 수량')
-    container_count = _parse_positive_int(form.get('container_count'), '생산 필요 컨테이너 수')
+    boxes_per_container = _parse_positive_int(form.get('boxes_per_container'), '1C 諛뺤뒪 ?섎웾')
+    container_count = _parse_positive_int(form.get('container_count'), '생산 필요 컨테이너 수량')
     export_quantity = boxes_per_container * container_count
     use_po_numbers = str(form.get('use_po_numbers') or '').strip() in {'1', 'true', 'on', 'yes'}
     po_numbers = _normalize_po_values(form.getlist('container_po_numbers'))
@@ -3447,7 +3446,7 @@ def _parse_export_container_inputs(form):
         po_numbers = po_numbers[:container_count]
         for index, po_number in enumerate(po_numbers, start=1):
             if not po_number:
-                raise ValueError(f'{index}C의 PO 번호를 입력해주세요.')
+                raise ValueError(f'{index}C??PO 踰덊샇瑜??낅젰?댁＜?몄슂.')
     else:
         po_numbers = []
     return boxes_per_container, container_count, export_quantity, po_numbers
@@ -3458,7 +3457,7 @@ def _parse_export_container_inputs(form):
 def add_export_schedule():
     try:
         workplace = get_workplace()
-        product_id = _parse_positive_int(request.form.get('product_id'), '수출 제품')
+        product_id = _parse_positive_int(request.form.get('product_id'), '?섏텧 ?쒗뭹')
         boxes_per_container, container_count, export_quantity, po_numbers = _parse_export_container_inputs(request.form)
         unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
         start_date = (request.form.get('production_start_date') or '').strip()
@@ -3467,7 +3466,7 @@ def add_export_schedule():
         note = (request.form.get('note') or '').strip()
         line_values = _normalize_line_values(request.form.getlist('production_lines'))
         if not line_values:
-            raise ValueError('생산 라인을 1개 이상 선택해주세요.')
+            raise ValueError('?앹궛 ?쇱씤??1媛??댁긽 ?좏깮?댁＜?몄슂.')
 
         with db_transaction() as conn:
             cursor = conn.cursor()
@@ -3476,7 +3475,7 @@ def add_export_schedule():
                 (product_id, workplace),
             ).fetchone()
             if not product_row:
-                raise ValueError('선택한 수출 제품을 찾을 수 없습니다.')
+                raise ValueError('?좏깮???섏텧 ?쒗뭹??李얠쓣 ???놁뒿?덈떎.')
 
             cursor.execute(
                 '''
@@ -3537,7 +3536,7 @@ def add_export_schedule():
 def update_export_schedule(export_schedule_id):
     try:
         workplace = get_workplace()
-        product_id = _parse_positive_int(request.form.get('product_id'), '수출 제품')
+        product_id = _parse_positive_int(request.form.get('product_id'), '?섏텧 ?쒗뭹')
         boxes_per_container, container_count, export_quantity, po_numbers = _parse_export_container_inputs(request.form)
         unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
         start_date = (request.form.get('production_start_date') or '').strip()
@@ -3546,7 +3545,7 @@ def update_export_schedule(export_schedule_id):
         note = (request.form.get('note') or '').strip()
         line_values = _normalize_line_values(request.form.getlist('production_lines'))
         if not line_values:
-            raise ValueError('생산 라인을 1개 이상 선택해주세요.')
+            raise ValueError('?앹궛 ?쇱씤??1媛??댁긽 ?좏깮?댁＜?몄슂.')
 
         with db_transaction() as conn:
             cursor = conn.cursor()
@@ -3555,13 +3554,13 @@ def update_export_schedule(export_schedule_id):
                 (export_schedule_id, workplace),
             ).fetchone()
             if not before_row:
-                raise ValueError('수정할 수출 일정이 없습니다.')
+                raise ValueError('?섏젙???섏텧 ?쇱젙???놁뒿?덈떎.')
             product_row = cursor.execute(
                 'SELECT id, name FROM products WHERE id = ? AND workplace = ?',
                 (product_id, workplace),
             ).fetchone()
             if not product_row:
-                raise ValueError('선택한 수출 제품을 찾을 수 없습니다.')
+                raise ValueError('?좏깮???섏텧 ?쒗뭹??李얠쓣 ???놁뒿?덈떎.')
 
             cursor.execute(
                 '''
@@ -3620,11 +3619,11 @@ def delete_export_schedule(export_schedule_id):
                 (export_schedule_id, workplace),
             ).fetchone()
             if not export_row:
-                raise ValueError('삭제할 수출 일정이 없습니다.')
+                raise ValueError('??젣???섏텧 ?쇱젙???놁뒿?덈떎.')
             linked_rows = _load_export_linked_rows(cursor, export_schedule_id)
             started_rows = [row for row in linked_rows if _is_started_export_row(row)]
             if started_rows:
-                raise ValueError('생산이 시작된 수출 일정은 삭제할 수 없습니다.')
+                raise ValueError('?앹궛???쒖옉???섏텧 ?쇱젙? ??젣?????놁뒿?덈떎.')
             _delete_export_generated_rows(cursor, export_schedule_id, [int(row['schedule_id']) for row in linked_rows])
             cursor.execute('DELETE FROM export_schedules WHERE id = ? AND workplace = ?', (export_schedule_id, workplace))
             audit_log(
@@ -3646,7 +3645,7 @@ def work_days():
     year = request.args.get('year', type=int)
     month = request.args.get('month', type=int)
 
-    # 湲곕낯媛? ?대쾲 ??
+    # 疫꿸퀡??첎? ??苡???
     today = today_local()
     if not year or not month:
         year = today.year
@@ -3670,11 +3669,11 @@ def work_days():
         )
         work_days_data = {row['date']: row for row in cursor.fetchall()}
 
-    # 罹섎┛???앹꽦
+    # 筌?꼶?????밴쉐
     from calendar import monthrange
 
     first_weekday = month_start.weekday()
-    if first_weekday == 6:  # ?쇱슂??
+    if first_weekday == 6:  # ??깆뒄??
         first_weekday = 0
     else:
         first_weekday += 1
@@ -3683,7 +3682,7 @@ def work_days():
 
     calendar_days = []
 
-    # ?댁쟾 ???좎쭨 梨꾩슦湲?
+    # ??곸읈 ???醫롮? 筌?쑴??묾?
     if first_weekday > 0:
         prev_month = month - 1 if month > 1 else 12
         prev_year = year if month > 1 else year - 1
@@ -3701,7 +3700,7 @@ def work_days():
                 }
             )
 
-    # ?꾩옱 ???좎쭨
+    # ?袁⑹삺 ???醫롮?
     for day in range(1, days_in_month + 1):
         day_date = date(year, month, day).isoformat()
         work_day = work_days_data.get(day_date)
@@ -3717,8 +3716,8 @@ def work_days():
             }
         )
 
-    # ?ㅼ쓬 ???좎쭨 梨꾩슦湲?
-    remaining = 42 - len(calendar_days)  # 6二?= 42移?
+    # ??쇱벉 ???醫롮? 筌?쑴??묾?
+    remaining = 42 - len(calendar_days)  # 6雅?= 42燁?
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
     for day in range(1, remaining + 1):
@@ -3733,7 +3732,7 @@ def work_days():
             }
         )
 
-    # ?듦퀎 怨꾩궛
+    # ?????④쑴沅?
     excluded_work_types = {'holiday', 'overtime', 'extra'}
     stats = {
         'work': sum(
@@ -3802,7 +3801,7 @@ def manage_work_day():
                 {'date': work_date, 'type': work_type, 'overtime_hours': overtime_hours, 'note': note},
             )
 
-    # ?대떦 ?좎쭨???곗썡濡?由щ떎?대젆??
+    # ?????醫롮????怨쀬뜞嚥??귐됰뼄?????
     work_date_obj = datetime.strptime(work_date, '%Y-%m-%d').date()
     return redirect(url_for('production.work_days', year=work_date_obj.year, month=work_date_obj.month))
 
@@ -3817,7 +3816,7 @@ def delete_work_day():
         cursor.execute('DELETE FROM work_days WHERE date = ?', (work_date,))
         audit_log(conn, 'delete', 'work_day', None, {'date': work_date})
 
-    # ?대떦 ?좎쭨???곗썡濡?由щ떎?대젆??
+    # ?????醫롮????怨쀬뜞嚥??귐됰뼄?????
     work_date_obj = datetime.strptime(work_date, '%Y-%m-%d').date()
     return redirect(url_for('production.work_days', year=work_date_obj.year, month=work_date_obj.month))
 
@@ -3830,11 +3829,11 @@ def production_list():
 
     workplace = get_workplace()
 
-    # 荑쇰━ ?뚮씪誘명꽣
+    # ?묒눖?????뵬沃섎챸苑?
     month_param = request.args.get('month', '')
     tab_param = request.args.get('tab', 'active')  # active | done
 
-    # ?꾩옱 ??諛?理쒓렐 6媛쒖썡 怨꾩궛
+    # ?袁⑹삺 ??獄?筌ㅼ뮄??6揶쏆뮇???④쑴沅?
     today = dt.today()
     if month_param:
         try:
@@ -3848,7 +3847,7 @@ def production_list():
     current_year = current_dt.strftime('%Y')
     current_month_num = current_dt.strftime('%m')
 
-    # ?댁쟾/?ㅼ쓬 ??
+    # ??곸읈/??쇱벉 ??
     if current_dt.month == 1:
         prev_dt = current_dt.replace(year=current_dt.year - 1, month=12)
     else:
@@ -3865,7 +3864,7 @@ def production_list():
     conn = conn_context.__enter__()
     cursor = conn.cursor()
 
-    # 월별 데이터 조회 후 상태 정규화로 탭 분리
+    # ?붾퀎 ?곗씠??議고쉶 ???곹깭 ?뺢퇋?붾줈 ??遺꾨━
     cursor.execute(
         '''
         SELECT
@@ -3885,8 +3884,8 @@ def production_list():
     for row in all_rows:
         row['status'] = _normalize_production_status(row.get('status'))
 
-    done_rows = [r for r in all_rows if r.get('status') == '완료']
-    active_rows = [r for r in all_rows if r.get('status') != '완료']
+    done_rows = [r for r in all_rows if r.get('status') == '?꾨즺']
+    active_rows = [r for r in all_rows if r.get('status') != '?꾨즺']
     done_count = len(done_rows)
     active_count = len(active_rows)
     if tab_param == 'active' and not active_rows and done_rows:
@@ -3909,7 +3908,7 @@ def production_list():
     seen_calendar_dates = set()
     for row in all_nav_rows:
         normalized_status = _normalize_production_status(row.get('status'))
-        include_row = normalized_status == '완료' if tab_param == 'done' else normalized_status != '완료'
+        include_row = normalized_status == '?꾨즺' if tab_param == 'done' else normalized_status != '?꾨즺'
         if not include_row:
             continue
         production_date = (row.get('production_date') or '').strip()
@@ -3948,11 +3947,11 @@ def add_production():
         conn = conn_context.__enter__()
         cursor = conn.cursor()
 
-        # ?곹뭹 紐⑸줉 (?꾩옱 ?묒뾽?λ쭔)
+        # ?怨밸? 筌뤴뫖以?(?袁⑹삺 ?臾믩씜?貫彛?
         cursor.execute('SELECT id, name, box_quantity FROM products WHERE workplace = ? ORDER BY name', (workplace,))
         products = cursor.fetchall()
 
-        # ?곹뭹蹂?BOM ?먯큹 ?뺣낫 (?먯큹 ?ш퀬/?먰샇/?낃퀬???ы븿) - ?묒뾽???꾪꽣
+        # ?怨밸?癰?BOM ?癒?겧 ?類ｋ궖 (?癒?겧 ?????癒곗깈/??껎????釉? - ?臾믩씜???袁り숲
         cursor.execute(
             '''
             SELECT b.product_id, b.quantity_per_box,
@@ -3967,7 +3966,7 @@ def add_production():
         )
         bom_raw = cursor.fetchall()
 
-        # ?곹뭹蹂?BOM 遺?먯옱 ?뺣낫 - ?묒뾽???꾪꽣
+        # ?怨밸?癰?BOM ??癒?삺 ?類ｋ궖 - ?臾믩씜???袁り숲
         cursor.execute(
             '''
             SELECT b.product_id, b.quantity_per_box,
@@ -3999,7 +3998,7 @@ def add_production():
 
         conn_context.__exit__(None, None, None)
 
-        # JSON?쇰줈 蹂??
+        # JSON??곗쨮 癰??
         products_list = [{'id': p['id'], 'name': p['name'], 'box_quantity': p['box_quantity']} for p in products]
         products_json = json.dumps(products_list, ensure_ascii=False)
 
@@ -4043,7 +4042,7 @@ def add_production():
             bom_mat_data=bom_mat_data,
         )
 
-    # POST ?붿껌 泥섎━
+    # POST ?遺욧퍕 筌ｌ꼶??
     product_id = request.form.get('product_id')
     production_date = request.form.get('production_date')
     planned_boxes = request.form.get('planned_boxes')
@@ -4052,34 +4051,34 @@ def add_production():
     note = request.form.get('note')
 
     if not production_lines:
-        return "<script>alert('?앹궛 ?쇱씤???좏깮?댁＜?몄슂.'); window.history.back();</script>"
+        return "<script>alert('??밴텦 ??깆뵥???醫뤾문??곻폒?紐꾩뒄.'); window.history.back();</script>"
 
     conn = get_db()
     begin_db_transaction(conn)
     cursor = conn.cursor()
 
-    # ?앹궛 湲곕줉 ?앹꽦 (workplace 異붽?)
+    # ??밴텦 疫꿸퀡以???밴쉐 (workplace ?곕떽?)
     cursor.execute(
         '''
         INSERT INTO productions (product_id, production_date, planned_boxes, status, note, workplace)
-        VALUES (?, ?, ?, '예정', ?, ?)
+        VALUES (?, ?, ?, '?덉젙', ?, ?)
     ''',
         (product_id, production_date, planned_boxes, note, workplace),
     )
 
     production_id = cursor.lastrowid
 
-    # ???묐갑???곕룞: ?ㅼ?以꾩뿉???먮룞 ?깅줉 (workplace 異붽?)
+    # ???臾먭컩???怨뺣짗: ???餓κ쑴肉???癒?짗 ?源낆쨯 (workplace ?곕떽?)
     cursor.execute(
         '''
         INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, note, production_id, line, workplace)
-        VALUES (?, ?, ?, '예정', ?, ?, ?, ?)
+        VALUES (?, ?, ?, '?덉젙', ?, ?, ?, ?)
     ''',
         (product_id, production_date, planned_boxes, note, production_id, production_lines_str, workplace),
     )
     schedule_id = cursor.lastrowid
 
-    # ?앹궛??schedule_id ???
+    # ??밴텦??schedule_id ???
     cursor.execute('UPDATE productions SET schedule_id = ? WHERE id = ?', (schedule_id, production_id))
 
     audit_log(
@@ -4137,7 +4136,7 @@ def production_detail(production_id):
     conn = conn_context.__enter__()
     cursor = conn.cursor()
 
-    # ?앹궛 ?뺣낫
+    # ??밴텦 ?類ｋ궖
     cursor.execute(
         '''
         SELECT pr.*, p.name as product_name, p.box_quantity, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
@@ -4171,7 +4170,7 @@ def production_detail(production_id):
     )
     production['quantity_basis_boxes'] = quantity_basis_boxes
     production['quantity_basis_boxes_display'] = _format_display_quantity(quantity_basis_boxes)
-    production['quantity_basis_label'] = '실제 박스 수 기준' if production['uses_actual_quantity'] else '계획 박스 수 기준'
+    production['quantity_basis_label'] = '?ㅼ젣 諛뺤뒪 ??湲곗?' if production['uses_actual_quantity'] else '怨꾪쉷 諛뺤뒪 ??湲곗?'
     production['planned_boxes_display'] = _format_display_quantity(production.get('planned_boxes'))
     production['actual_boxes_display'] = _format_display_quantity(
         production.get('actual_boxes') if production['uses_actual_quantity'] else production.get('planned_boxes')
@@ -4206,9 +4205,9 @@ def production_detail(production_id):
     production['export_actual_boxes_display'] = _format_display_quantity(production['export_actual_boxes'])
     production['sample_excluded_total_display'] = _format_display_quantity(production['sample_excluded_total'])
 
-    # ???곹뭹??BOM ?먯큹 紐⑸줉
-    # - 완료???앹궛: ?ㅼ젣 ?ъ슜???먯큹留??쒖떆 (production_material_usage 湲곗?)
-    # - 吏꾪뻾 以??앹궛: ?ш퀬 ?덈뒗 ?먯큹 ?쒖떆 (?좏깮 媛??
+    # ???怨밸???BOM ?癒?겧 筌뤴뫖以?
+    # - ?꾨즺????밴텦: ??쇱젫 ??????癒?겧筌???뽯뻻 (production_material_usage 疫꿸퀣?)
+    # - 筌욊쑵六?餓???밴텦: ??????덈뮉 ?癒?겧 ??뽯뻻 (?醫뤾문 揶??
     raw_sok_mode, active_raw_option, product_raw_options = _resolve_raw_sok_mode(production, production.get('raw_sok_mode'))
     production['raw_sok_mode'] = raw_sok_mode
     production['active_sok_per_box'] = float(active_raw_option.get('sok_per_box') or 0)
@@ -4216,8 +4215,8 @@ def production_detail(production_id):
     production['raw_sok_values'] = [float(item.get('sok_per_box') or 0) for item in product_raw_options]
     production['raw_sheet_values'] = [int(item.get('sheets_per_pack') or 0) for item in product_raw_options]
 
-    if production['status'] == '완료' and not edit_completed:
-        # 완료嫄? ?ㅼ젣 ?ъ슜???먯큹 湲곕줉 ?쒖떆 (?뚯쭊???먯큹???대쫫 ?쒖떆)
+    if production['status'] == '?꾨즺' and not edit_completed:
+        # ?꾨즺椰? ??쇱젫 ??????癒?겧 疫꿸퀡以???뽯뻻 (???춭???癒?겧????已???뽯뻻)
         cursor.execute(
             '''
             SELECT pmu.raw_material_id as rm_id, 
@@ -4225,7 +4224,7 @@ def production_detail(production_id):
                    pmu.actual_quantity as actual_quantity,
                    pmu.expected_quantity as expected_quantity,
                    pmu.yield_rate as yield_rate,
-                   COALESCE(rm.name, pmu.raw_material_name, '(??젣???먯큹)') as rm_name, 
+                   COALESCE(rm.name, pmu.raw_material_name, '(??????癒?겧)') as rm_name, 
                    rm.car_number, 
                    rm.receiving_date,
                    COALESCE(rm.current_stock, 0) as current_stock
@@ -4410,11 +4409,11 @@ def production_detail(production_id):
     )
     raw_change_options = [dict(row) for row in cursor.fetchall()]
 
-    # 遺?먯옱 ?ъ슜 ?댁뿭 ?뺤씤
+    # ??癒?삺 ??????곷열 ?類ㅼ뵥
     cursor.execute('SELECT COUNT(*) as count FROM production_material_usage WHERE production_id = ?', (production_id,))
     usage_count = cursor.fetchone()['count']
 
-    if usage_count > 0 and production['status'] != '완료':
+    if usage_count > 0 and production['status'] != '?꾨즺':
         cursor.execute(
             '''
             SELECT b.product_id, b.material_id, b.quantity_per_box,
@@ -4449,7 +4448,7 @@ def production_detail(production_id):
                 )
             conn.commit()
 
-    # 遺?먯옱 ?ъ슜?됱씠 ?놁쑝硫?BOM 湲곕컲?쇰줈 ?먮룞 ?앹꽦 (遺?먯옱留? ?먯큹???ъ슜?먭? ?좏깮)
+    # ??癒?삺 ?????깆뵠 ??곸몵筌?BOM 疫꿸퀡而??곗쨮 ?癒?짗 ??밴쉐 (??癒?삺筌? ?癒?겧??????癒? ?醫뤾문)
     if usage_count == 0 and production:
         planned = float(production['planned_boxes'])
 
@@ -4481,7 +4480,7 @@ def production_detail(production_id):
 
         conn.commit()
 
-    # 遺?먯옱 ?ъ슜 ?댁뿭 議고쉶
+    # ??癒?삺 ??????곷열 鈺곌퀬??
     cursor.execute(
         '''
         SELECT pmu.*, 
@@ -4694,7 +4693,7 @@ def edit_production_plan(production_id):
         conn_context.__exit__(None, None, None)
         return redirect(url_for('production.production_detail', production_id=production_id))
 
-    if production['status'] == '완료':
+    if production['status'] == '?꾨즺':
         conn.close()
         return redirect(url_for('production.production_detail', production_id=production_id))
 
@@ -4707,21 +4706,21 @@ def edit_production_plan(production_id):
 
         if not production_date or not planned_boxes_raw:
             conn.close()
-            return "<script>alert('생산일과 계획 생산 박스 수를 입력해주세요.');history.back();</script>", 400
+            return "<script>alert('?앹궛?쇨낵 怨꾪쉷 ?앹궛 諛뺤뒪 ?섎? ?낅젰?댁＜?몄슂.');history.back();</script>", 400
 
         if not production_lines:
             conn.close()
-            return "<script>alert('생산 라인을 하나 이상 선택해주세요.');history.back();</script>", 400
+            return "<script>alert('?앹궛 ?쇱씤???섎굹 ?댁긽 ?좏깮?댁＜?몄슂.');history.back();</script>", 400
 
         try:
             planned_boxes = float(planned_boxes_raw)
         except ValueError:
             conn.close()
-            return "<script>alert('계획 생산 박스 수를 숫자로 입력해주세요.');history.back();</script>", 400
+            return "<script>alert('怨꾪쉷 ?앹궛 諛뺤뒪 ?섎? ?レ옄濡??낅젰?댁＜?몄슂.');history.back();</script>", 400
 
         if planned_boxes <= 0:
             conn.close()
-            return "<script>alert('계획 생산 박스 수는 0보다 커야 합니다.');history.back();</script>", 400
+            return "<script>alert('怨꾪쉷 ?앹궛 諛뺤뒪 ?섎뒗 0蹂대떎 而ㅼ빞 ?⑸땲??');history.back();</script>", 400
 
         before_production = dict(production)
 
@@ -4884,7 +4883,7 @@ def update_production_usage(production_id):
         if not _has_production_workplace_access(current_workplace, production_workplace):
             rollback_db(conn)
             return (
-                "<script>alert('해당 생산건은 현재 작업장 권한이 없어 읽기 전용으로만 확인할 수 있습니다.');"
+                "<script>alert('?대떦 ?앹궛嫄댁? ?꾩옱 ?묒뾽??沅뚰븳???놁뼱 ?쎄린 ?꾩슜?쇰줈留??뺤씤?????덉뒿?덈떎.');"
                 f" window.location.href = '/production/{production_id}';</script>"
             )
         workplace_location_id = _get_inventory_location_id(cursor, current_workplace) if current_workplace else None
@@ -4904,7 +4903,7 @@ def update_production_usage(production_id):
             usage_row = cursor.fetchone()
             if not usage_row:
                 rollback_db(conn)
-                return "<script>alert('정보를 적용할 부자재 항목을 찾을 수 없습니다.'); window.history.back();</script>"
+                return "<script>alert('?뺣낫瑜??곸슜??부자재 ??ぉ??李얠쓣 ???놁뒿?덈떎.'); window.history.back();</script>"
 
             gap = _get_material_info_gap(cursor, int(usage_row['material_id']), usage_row['category'], current_workplace)
             if not gap:
@@ -4959,7 +4958,7 @@ def update_production_usage(production_id):
         import re
         if expiry_date and not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_date):
             rollback_db(conn)
-            return "<script>alert('?뚮퉬湲고븳 ?뺤떇? YYYY-MM-DD ?먮뒗 YYYY-MM-DDA ?뺥깭濡??낅젰?댁＜?몄슂.'); window.history.back();</script>"
+            return "<script>alert('???돩疫꿸퀬釉??類ㅻ뻼? YYYY-MM-DD ?癒?뮉 YYYY-MM-DDA ?類κ묶嚥???낆젾??곻폒?紐꾩뒄.'); window.history.back();</script>"
 
         expiry_box_inputs = [(request.form.get(f'expiry_boxes_{idx}') or '').strip() for idx in range(1, 4)]
         sample_box_inputs = [(request.form.get(f'sample_excluded_boxes_{idx}') or '').strip() for idx in range(1, 4)]
@@ -4972,10 +4971,10 @@ def update_production_usage(production_id):
                 box_value = float(raw_box)
             except ValueError:
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 소비기한 박스 수는 숫자로 입력해주세요.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳 諛뺤뒪 ?섎뒗 ?レ옄濡??낅젰?댁＜?몄슂.'); window.history.back();</script>"
             if box_value <= 0:
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 소비기한 박스 수는 0보다 커야 합니다.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳 諛뺤뒪 ?섎뒗 0蹂대떎 而ㅼ빞 ?⑸땲??'); window.history.back();</script>"
             parsed_expiry_boxes.append(box_value)
 
         parsed_sample_boxes = []
@@ -4987,16 +4986,16 @@ def update_production_usage(production_id):
                 sample_box_value = float(raw_sample_box)
             except ValueError:
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 샘플 제외 박스 수는 숫자로 입력해주세요.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?섑뵆 ?쒖쇅 諛뺤뒪 ?섎뒗 ?レ옄濡??낅젰?댁＜?몄슂.'); window.history.back();</script>"
             if sample_box_value < 0:
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 샘플 제외 박스 수는 0 이상이어야 합니다.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?섑뵆 ?쒖쇅 諛뺤뒪 ?섎뒗 0 ?댁긽?댁뼱???⑸땲??'); window.history.back();</script>"
             parsed_sample_boxes.append(sample_box_value if sample_box_value > 0 else None)
 
         has_secondary_expiry = bool(expiry_date_2_input or expiry_date_3_input or expiry_box_inputs[1] or expiry_box_inputs[2])
         if parsed_expiry_boxes[0] is None:
             rollback_db(conn)
-            return "<script>alert('첫 번째 소비기한의 박스 수를 입력해주세요.'); window.history.back();</script>"
+            return "<script>alert('泥?踰덉㎏ ?뚮퉬湲고븳??諛뺤뒪 ?섎? ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
         for idx, (expiry_input, box_value) in enumerate(
             (
@@ -5009,19 +5008,19 @@ def update_production_usage(production_id):
             has_box = box_value is not None
             if has_date != has_box:
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 소비기한은 날짜와 박스 수를 함께 입력해주세요.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳? ?좎쭨? 諛뺤뒪 ?섎? ?④퍡 ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
         expiry_date_2 = expiry_date_2_input
         expiry_date_3 = expiry_date_3_input
         for idx, expiry_value in enumerate((expiry_date_2, expiry_date_3), start=2):
             if expiry_value and not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_value):
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 소비기한은 YYYY-MM-DD 또는 YYYY-MM-DDA 형식으로 입력해주세요.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳? YYYY-MM-DD ?먮뒗 YYYY-MM-DDA ?뺤떇?쇰줈 ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
         computed_actual_boxes = sum(float(box or 0) for box in parsed_expiry_boxes if box is not None)
         if computed_actual_boxes <= 0:
             rollback_db(conn)
-            return "<script>alert('소비기한별 박스 수를 1개 이상 입력해주세요.'); window.history.back();</script>"
+            return "<script>alert('?뚮퉬湲고븳蹂?諛뺤뒪 ?섎? 1媛??댁긽 ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
         actual_boxes = computed_actual_boxes
         for idx, sample_box_value in enumerate(parsed_sample_boxes, start=1):
             if sample_box_value is None:
@@ -5029,10 +5028,10 @@ def update_production_usage(production_id):
             expiry_box_value = parsed_expiry_boxes[idx - 1]
             if expiry_box_value is None or float(expiry_box_value or 0) <= 0:
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 샘플 제외는 해당 소비기한 박스 수를 먼저 입력해야 합니다.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?섑뵆 ?쒖쇅???대떦 ?뚮퉬湲고븳 諛뺤뒪 ?섎? 癒쇱? ?낅젰?댁빞 ?⑸땲??'); window.history.back();</script>"
             if float(sample_box_value) > float(expiry_box_value):
                 rollback_db(conn)
-                return f"<script>alert('{idx}번째 샘플 제외 박스 수는 소비기한 박스 수를 초과할 수 없습니다.'); window.history.back();</script>"
+                return f"<script>alert('{idx}踰덉㎏ ?섑뵆 ?쒖쇅 諛뺤뒪 ?섎뒗 ?뚮퉬湲고븳 諛뺤뒪 ?섎? 珥덇낵?????놁뒿?덈떎.'); window.history.back();</script>"
         expiry_rows_for_note = [
             {
                 'index': idx,
@@ -5046,16 +5045,16 @@ def update_production_usage(production_id):
 
         missing = []
         if supply_people is None:
-            missing.append('怨듦툒 ?몄썝')
+            missing.append('?⑤벀???紐꾩뜚')
         if packing_people is None:
-            missing.append('?ъ옣 ?몄썝')
+            missing.append('?????紐꾩뜚')
         if outer_packing_people is None:
-            missing.append('?명룷???몄썝')
+            missing.append('?紐낅７???紐꾩뜚')
         if not work_time:
-            missing.append('?묒뾽?쒓컙')
+            missing.append('?臾믩씜??볦퍢')
         if missing:
             rollback_db(conn)
-            return f"<script>alert('?몄썝愿由??꾩닔 ?낅젰: {', '.join(missing)}'); window.history.back();</script>"
+            return f"<script>alert('?紐꾩뜚?욜뵳??袁⑸땾 ??낆젾: {', '.join(missing)}'); window.history.back();</script>"
 
         cursor.execute(
             '''
@@ -5108,7 +5107,7 @@ def update_production_usage(production_id):
             ),
         )
 
-        # 1. ?ㅼ젣 諛뺤뒪 ?섎줈 ?덉긽???ш퀎????湲곗〈 usage ?낅뜲?댄듃
+        # 1. ??쇱젫 獄쏅벡????롮쨮 ??됯맒?????????疫꿸퀣??usage ??낅쑓??꾨뱜
         if actual_boxes > 0:
             import math
 
@@ -5139,7 +5138,7 @@ def update_production_usage(production_id):
                     (new_expected, production_id, bom['material_id']),
                 )
 
-        # 2. ?먯큹 ?ㅼ쨷 ?좏깮 泥섎━ (raw_rm_id_N ?뺤떇)
+        # 2. ?癒?겧 ??쇱㉦ ?醫뤾문 筌ｌ꼶??(raw_rm_id_N ?類ㅻ뻼)
         raw_entries = {}
         for key in request.form:
             if key.startswith('raw_rm_id_'):
@@ -5202,7 +5201,7 @@ def update_production_usage(production_id):
                     )
                     touched_material_ids.add(legacy['material_id'])
 
-        # ???먯큹 ?ш퀬 遺議?寃利?(李④컧 ?꾩뿉 癒쇱? 泥댄겕)
+        # ???癒?겧 ?????븃??野껓쭩?(筌△몿而??袁⑸퓠 ?믪눘? 筌ｋ똾寃?
         raw_requests = []
         for idx in sorted(raw_entries.keys(), key=lambda x: int(x)):
             entry = raw_entries[idx]
@@ -5213,7 +5212,7 @@ def update_production_usage(production_id):
             rm_workplace = (rm['workplace'] or '').strip()
             if production_workplace and rm_workplace != production_workplace:
                 rollback_db(conn)
-                return "<script>alert('다른 작업장 원초는 선택할 수 없습니다.'); window.history.back();</script>"
+                return "<script>alert('?ㅻⅨ ?묒뾽??원초???좏깮?????놁뒿?덈떎.'); window.history.back();</script>"
             raw_requests.append(
                 {
                     'source_rm_id': int(rm['id']),
@@ -5508,7 +5507,7 @@ def update_production_usage(production_id):
                     ),
                 )
 
-        # 3. ?쇰컲 遺?먯옱 ?ㅼ궗?⑸웾 泥섎━
+        # 3. ??곗뺘 ??癒?삺 ??쇨텢??몄쎗 筌ｌ꼶??
         for key in request.form:
             if key.startswith('actual_mat_'):
                 usage_id = key.replace('actual_mat_', '')
@@ -5542,7 +5541,7 @@ def update_production_usage(production_id):
                     (actual, loss, yield_rate, usage_id),
                 )
 
-                # 遺?먯옱 ?ш퀬 李④컧
+                # ??癒?삺 ????筌△몿而?
                 if save_action != 'temp' and row['material_id']:
                     consumed_lots = _consume_material_fifo(
                         cursor,
@@ -5570,7 +5569,7 @@ def update_production_usage(production_id):
                     '''
                     UPDATE productions
                     SET actual_boxes = ?,
-                        status = CASE WHEN status='완료' OR status LIKE '%꾨즺%' THEN '완료' ELSE '예정' END
+                        status = CASE WHEN status='?꾨즺' OR status LIKE '%袁⑥┷%' THEN '?꾨즺' ELSE '?덉젙' END
                     WHERE id = ?
                     ''',
                     (actual_boxes, production_id),
@@ -5592,17 +5591,17 @@ def update_production_usage(production_id):
                 return redirect(url_for('materials.purchase_orders'))
             return redirect(url_for('production.production_detail', production_id=production_id))
 
-        # 4. ?앹궛 완료 泥섎━
+        # 4. ??밴텦 ?꾨즺 筌ｌ꼶??
         if actual_boxes > 0:
             cursor.execute(
                 '''
-                UPDATE productions SET actual_boxes = ?, status = '완료' WHERE id = ?
+                UPDATE productions SET actual_boxes = ?, status = '?꾨즺' WHERE id = ?
                 ''',
                 (actual_boxes, production_id),
             )
             cursor.execute(
                 '''
-                UPDATE production_schedules SET status = '완료' WHERE production_id = ?
+                UPDATE production_schedules SET status = '?꾨즺' WHERE production_id = ?
                 ''',
                 (production_id,),
             )
@@ -5694,7 +5693,7 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
     status = _normalize_production_status(prod['status'])
     product_id, schedule_id = prod['product_id'], prod['schedule_id']
 
-    if status == '완료':
+    if status == '?꾨즺':
         cursor.execute(
             '''
             SELECT raw_material_id, material_id, actual_quantity
@@ -5727,7 +5726,7 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
                 cursor.execute(
                     '''
                     INSERT INTO raw_material_logs (raw_material_id, type, quantity, note, production_id, created_by)
-                    VALUES (?, 'RETURN', ?, '생산 삭제: 선입선출 분할 롤백', ?, ?)
+                    VALUES (?, 'RETURN', ?, '?앹궛 ??젣: ?좎엯?좎텧 遺꾪븷 濡ㅻ갚', ?, ?)
                     ''',
                     (rm_id, qty, production_id, actor_user_id),
                 )
@@ -5767,7 +5766,7 @@ def _delete_production_record_response(production_id, success_redirect):
                 return redirect(success_redirect)
     except Exception as e:
         print(f"CRITICAL ERROR: {e}")
-        return f"삭제 실패: {str(e)}", 500
+        return f"??젣 ?ㅽ뙣: {str(e)}", 500
 
     return redirect(success_redirect)
 
@@ -5789,7 +5788,7 @@ def production_search():
         SELECT pr.*, p.name as product_name
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
-        WHERE (pr.status = '완료' OR pr.status LIKE '%꾨즺%')
+        WHERE (pr.status = '?꾨즺' OR pr.status LIKE '%袁⑥┷%')
         AND pr.workplace = ?
     """
     params = [workplace]
@@ -5814,7 +5813,7 @@ def production_search():
     results = cursor.fetchall()
     conn_context.__exit__(None, None, None)
 
-    # JSON 蹂??
+    # JSON 癰??
     data = [
         {
             'id': r['id'],
@@ -5827,3 +5826,6 @@ def production_search():
     ]
 
     return json.dumps({'results': data}, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
+
+
+

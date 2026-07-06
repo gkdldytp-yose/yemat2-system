@@ -1456,7 +1456,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     .schedule-toolbar .view-toggle button,
     .schedule-toolbar > .btn {
         width: 100%;
-    }
+    }
     #listView {
         overflow: hidden;
     }
@@ -3051,6 +3051,58 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     gap:0.75rem;
     flex-wrap:wrap;
     cursor:pointer;
+    padding:1rem 1.15rem;
+    border:1px solid #334155;
+    border-radius:18px;
+    background:
+        radial-gradient(circle at top right, rgba(96,165,250,0.16), transparent 34%),
+        linear-gradient(135deg,#1e293b 0%,#182235 58%,#0f172a 100%);
+    box-shadow:0 16px 34px rgba(15,23,42,0.16);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+.export-filter-head:hover {
+    transform:translateY(-1px);
+    border-color:#60a5fa;
+    box-shadow:0 22px 42px rgba(15,23,42,0.22), 0 0 0 4px rgba(96,165,250,0.1);
+}
+.export-filter-head.is-open {
+    border-color:#60a5fa;
+    background:
+        radial-gradient(circle at top right, rgba(96,165,250,0.18), transparent 32%),
+        linear-gradient(135deg,#2563eb 0%,#1d4ed8 54%,#1e3a8a 100%);
+    box-shadow:0 22px 46px rgba(37,99,235,0.24), 0 0 0 4px rgba(96,165,250,0.12);
+}
+.export-filter-head h3,
+.export-filter-head .req-muted {
+    color:#eff6ff;
+}
+.export-filter-head .req-muted {
+    opacity:.88;
+}
+.export-filter-trigger {
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    flex-wrap:wrap;
+    margin-left:auto;
+}
+.export-filter-arrow {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.16);
+    color:#eff6ff;
+    font-size:1rem;
+    font-weight:900;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+    transition:transform .18s ease, background .18s ease;
+}
+.export-filter-head.is-open .export-filter-arrow {
+    transform:rotate(180deg);
+    background:rgba(255,255,255,0.22);
 }
 .export-completed-filter-toggle {
     border:1px solid #bfdbfe;
@@ -3062,6 +3114,12 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     font-weight:900;
     cursor:pointer;
     box-shadow:0 8px 18px rgba(37,99,235,0.12);
+    transition:transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+}
+.export-completed-filter-toggle:hover {
+    transform:translateY(-1px);
+    border-color:#93c5fd;
+    box-shadow:0 12px 24px rgba(37,99,235,0.18);
 }
 .export-completed-filter-wrap {
     padding:1rem;
@@ -3559,8 +3617,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
         margin-left:1rem;
         margin-right:1rem;
     }
-}
-html[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
+}`nhtml[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
 html[data-theme="dark"] .schedule-page-sub{color:#8ea3bd;}
 html[data-theme="dark"] .modal-content{background:linear-gradient(180deg,#121a2a,#0f1726);border:1px solid #263244;box-shadow:0 30px 70px rgba(2,6,23,.52);}
 html[data-theme="dark"] .modal-content h2,
@@ -3585,7 +3642,28 @@ html[data-theme="dark"] .calendar-header a:hover,
 html[data-theme="dark"] .calendar-action-btn:hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
 html[data-theme="dark"] .export-tab-btn{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
 html[data-theme="dark"] .export-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 14px 28px rgba(37,99,235,0.2);}
-html[data-theme="dark"] .export-completed-filter-toggle{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
+html[data-theme="dark"] .export-filter-head{
+    border-color:#36506f;
+    background:
+        radial-gradient(circle at top right, rgba(96,165,250,0.18), transparent 34%),
+        linear-gradient(135deg,#1b2940 0%,#172554 52%,#0f172a 100%);
+    box-shadow:0 18px 38px rgba(2,6,23,.3);
+}
+html[data-theme="dark"] .export-filter-head:hover{
+    border-color:#60a5fa;
+    box-shadow:0 24px 44px rgba(2,6,23,.36), 0 0 0 4px rgba(96,165,250,.12);
+}
+html[data-theme="dark"] .export-filter-head.is-open{
+    border-color:#60a5fa;
+    background:
+        radial-gradient(circle at top right, rgba(96,165,250,0.2), transparent 32%),
+        linear-gradient(135deg,#2563eb 0%,#1d4ed8 50%,#172554 100%);
+}
+html[data-theme="dark"] .export-filter-head h3,
+html[data-theme="dark"] .export-filter-head .req-muted{color:#eff6ff;}
+html[data-theme="dark"] .export-filter-arrow{background:rgba(255,255,255,.14);color:#eff6ff;}
+html[data-theme="dark"] .export-completed-filter-toggle{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#60a5fa;color:#dbe7f5;box-shadow:0 10px 22px rgba(2,6,23,.2);}
+html[data-theme="dark"] .export-completed-filter-toggle:hover{background:#1a2436;border-color:#93c5fd;color:#eff6ff;box-shadow:0 14px 28px rgba(2,6,23,.24);}
 html[data-theme="dark"] .export-completed-search-panel{background:linear-gradient(180deg,#162133 0%,#121a2a 100%);border-color:#314155;box-shadow:none;}
 html[data-theme="dark"] .export-completed-search-field label{color:#8ea3bd;}
 html[data-theme="dark"] .export-completed-search-field input{
@@ -3847,7 +3925,7 @@ html[data-theme="dark"] .schedule-add-form input[type="number"]:focus,
 html[data-theme="dark"] .schedule-add-form textarea:focus {
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
-}
+}
 html[data-theme="dark"] .search-icon,
 html[data-theme="dark"] .schedule-date-count,
 html[data-theme="dark"] .schedule-helper-text,
@@ -4389,7 +4467,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 <div class="schedule-toolbar">
     <div class="view-toggle">
         <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
-        <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
+        <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
         <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
         <button data-view="capacity" onclick="switchView('capacity')">📦 생산 가능량 계산기</button>
         <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
@@ -4827,8 +4905,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div class="export-empty">{{ empty_message }}</div>
     {% endif %}
 {%- endmacro %}
-
-<div id="exportView" class="card" style="display: none;">
+`n<div id="exportView" class="card" style="display: none;">
     <div class="export-topbar">
         <div>
             <h2 style="margin:0;">수출 일정표</h2>
@@ -4877,11 +4954,12 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 
     <div id="exportTabCompletedPane" style="display:none;">
         <div class="export-section">
-            <div class="export-section-head export-filter-head" onclick="toggleExportCompletedSearchPanel()">
+            <div class="export-section-head export-filter-head" id="exportCompletedFilterHead" onclick="toggleExportCompletedSearchPanel()">
                 <h3>완료 일정 검색</h3>
-                <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                <div class="export-filter-trigger">
                     <div class="req-muted" id="exportCompletedFilterSummary"></div>
                     <button type="button" class="export-completed-filter-toggle" id="exportCompletedFilterToggleBtn" onclick="event.stopPropagation(); toggleExportCompletedSearchPanel()">검색 열기</button>
+                    <span class="export-filter-arrow" aria-hidden="true">▾</span>
                 </div>
             </div>
             <div class="export-completed-filter-wrap" id="exportCompletedFilterBody" style="display:none;">
@@ -5105,8 +5183,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         </div>
     </div>
 </div>
-
-<!-- 스케줄 추가 모달 -->
+`n<!-- 스케줄 추가 모달 -->
 <div id="addModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
@@ -5401,9 +5478,10 @@ let statsProductSearchOpenMode = false;
 function getActiveView() {
     const params = new URLSearchParams(window.location.search);
     const view = (params.get('view') || 'calendar').toLowerCase();
-    if (view === 'list' || view === 'stats') return 'stats';
+    if (view === 'list' || view === 'stats') return 'stats';
     if (view === 'requirements') return 'requirements';
     if (view === 'export') return 'export';
+    if (view === 'capacity') return 'capacity';
     return 'calendar';
 }
 
@@ -5506,8 +5584,10 @@ function toggleExportCompletedSearchPanel(forceOpen = null) {
     exportCompletedSearchOpen = typeof forceOpen === 'boolean' ? forceOpen : !exportCompletedSearchOpen;
     const body = document.getElementById('exportCompletedFilterBody');
     const btn = document.getElementById('exportCompletedFilterToggleBtn');
+    const head = document.getElementById('exportCompletedFilterHead');
     if (body) body.style.display = exportCompletedSearchOpen ? 'grid' : 'none';
     if (btn) btn.textContent = exportCompletedSearchOpen ? '검색 닫기' : '검색 열기';
+    if (head) head.classList.toggle('is-open', exportCompletedSearchOpen);
 }
 
 function resetExportCompletedMonthFilter() {
@@ -6078,7 +6158,7 @@ function switchView(view) {
     const statsView = document.getElementById('statsView');
     const requirementsView = document.getElementById('requirementsView');
     const exportView = document.getElementById('exportView');
-    const capacityView = document.getElementById('capacityView');
+    const capacityView = document.getElementById('capacityView');
     const buttons = document.querySelectorAll('.view-toggle button[data-view]');
     const normalizedView = view === 'list' ? 'stats' : view;
 
@@ -6088,12 +6168,12 @@ function switchView(view) {
     if (statsView) statsView.style.display = 'none';
     if (requirementsView) requirementsView.style.display = 'none';
     if (exportView) exportView.style.display = 'none';
-    if (capacityView) capacityView.style.display = 'none';
+    if (capacityView) capacityView.style.display = 'none';
 
     if (normalizedView === 'calendar') {
         calendarView.style.display = 'block';
     } else if (normalizedView === 'stats') {
-        if (statsView) statsView.style.display = 'block';
+        if (statsView) statsView.style.display = 'block';
     } else if (normalizedView === 'requirements') {
         if (requirementsView) requirementsView.style.display = 'block';
         loadRequirementsData();
@@ -7064,8 +7144,7 @@ function openAddModal(selectedDate = null) {
         document.getElementById('productSearch').focus();
     }, 100);
 }
-
-function closeModal() {
+`nfunction closeModal() {
     document.getElementById('addModal').style.display = 'none';
     clearSelection();
 }
@@ -7207,14 +7286,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 모달 외부 클릭 시 닫기
 window.onclick = function(event) {
-    const addModal = document.getElementById('addModal');
+    const addModal = document.getElementById('addModal');
     const copyModal = document.getElementById('copyModal');
     const exportModal = document.getElementById('exportModal');
     const statsDetailModal = document.getElementById('statsDetailModal');
     
     if (event.target == addModal) {
         closeModal();
-    }
+    }
     if (event.target == copyModal) {
         closeCopyModal();
     }
@@ -7670,4 +7749,7 @@ function closeExportModal() {
 }
 </script>
 {% endblock %}
+
+
+
 

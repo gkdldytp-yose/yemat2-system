@@ -26,6 +26,32 @@
     box-shadow:0 0 0 3px rgba(96,165,250,.18);
     outline:none;
 }
+.material-add-card{
+    display:none;
+    margin-top:1rem;
+    margin-bottom:1rem;
+    border:2px solid #667eea;
+    border-radius:18px;
+    background:
+        radial-gradient(circle at top right, rgba(96,165,250,.16), transparent 34%),
+        linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    box-shadow:0 18px 36px rgba(59,130,246,.12);
+}
+.material-add-card h2{margin-bottom:1rem;}
+.material-add-card .material-add-code-input{
+    border:1px solid #667eea;
+    background:#f8faff;
+}
+.material-add-card .material-add-readonly{
+    background:#f1f5f9;
+    color:#475569;
+}
+.material-add-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:.5rem;
+    margin-top:.75rem;
+}
 @media (max-width: 768px) {
     .modal-box{padding:1rem;border-radius:8px;}
     .material-header-grid{grid-template-columns:repeat(2,minmax(130px,1fr));}
@@ -328,8 +354,44 @@
 .req-tab-btn.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 6px 14px rgba(15,23,42,0.22);}
 .req-tab-count,.issue-status-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 0.45rem;margin-left:0.38rem;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.74rem;font-weight:900;line-height:1;}
 .req-tab-btn.active .req-tab-count,.issue-status-btn.active .issue-status-count{background:rgba(255,255,255,0.18);color:#fff;}
+.req-tab-btn.req-tab-issue.active{background:linear-gradient(135deg,#0f766e,#14b8a6);border-color:#0f766e;box-shadow:0 10px 22px rgba(20,184,166,.24);}
+.req-tab-btn.req-tab-export.active{background:linear-gradient(135deg,#c2410c,#f97316);border-color:#c2410c;box-shadow:0 10px 22px rgba(249,115,22,.24);}
 .req-pane{display:none;}
 .req-pane.active{display:block;}
+.req-pane-shell{
+    padding:1rem;
+    border-radius:20px;
+    border:1px solid transparent;
+    margin-bottom:.9rem;
+}
+.req-pane-issue{
+    background:linear-gradient(180deg,rgba(20,184,166,.09),rgba(236,253,245,.68));
+    border-color:#99f6e4;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+.req-pane-export{
+    background:linear-gradient(180deg,rgba(251,146,60,.10),rgba(255,247,237,.76));
+    border-color:#fdba74;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+.req-pane-issue .request-builder-card,
+.req-pane-issue .issue-status-board{
+    background:linear-gradient(180deg,#ffffff,#f0fdfa);
+    border-color:#b7efe4;
+}
+.req-pane-export .request-builder-card,
+.req-pane-export .issue-status-board{
+    background:linear-gradient(180deg,#ffffff,#fff7ed);
+    border-color:#fed7aa;
+}
+.req-pane-issue .request-builder-title,
+.req-pane-issue .issue-status-title{color:#0f766e;}
+.req-pane-export .request-builder-title,
+.req-pane-export .issue-status-title{color:#c2410c;}
+.req-pane-issue .request-builder-caption,
+.req-pane-issue .issue-status-caption{color:#0f766e;}
+.req-pane-export .request-builder-caption,
+.req-pane-export .issue-status-caption{color:#9a3412;}
 .issue-builder{display:grid;grid-template-columns:1fr 1.1fr;gap:1rem;margin-bottom:0.9rem;}
 @media (max-width: 980px){.issue-builder{grid-template-columns:1fr;}}
 .req-header-btn{
@@ -337,20 +399,93 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    border:1px solid #94a3b8;
-    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
-    border-radius:12px;
-    padding:0.78rem 0.92rem;
+    gap:1rem;
+    border:1px solid #60a5fa;
+    background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 55%,#f8fbff 100%);
+    border-radius:16px;
+    padding:0.95rem 1.05rem;
     font-size:0.95rem;
     font-weight:900;
     color:#0f172a;
     letter-spacing:0.01em;
     cursor:pointer;
+    box-shadow:0 12px 28px rgba(37,99,235,.14), inset 0 1px 0 rgba(255,255,255,.8);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+.req-header-btn:hover{transform:translateY(-1px);border-color:#2563eb;box-shadow:0 16px 34px rgba(37,99,235,.2),0 0 0 4px rgba(59,130,246,.10);}
+.req-header-btn:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(59,130,246,.18),0 16px 34px rgba(37,99,235,.2);}
+.req-header-main{display:flex;align-items:center;gap:.85rem;min-width:0;flex:1;}
+.req-header-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:42px;
+    height:42px;
+    border-radius:14px;
+    background:rgba(37,99,235,.12);
+    color:#1d4ed8;
+    font-size:1.05rem;
+    flex:0 0 auto;
+}
+.req-header-copy{display:flex;flex-direction:column;align-items:flex-start;gap:.18rem;min-width:0;}
+.req-header-title{font-size:1rem;font-weight:900;color:#0f172a;line-height:1.15;}
+.req-header-sub{font-size:.78rem;font-weight:700;color:#475569;line-height:1.35;text-align:left;}
+.req-header-right{display:flex;align-items:center;gap:.7rem;flex:0 0 auto;}
+.req-header-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:74px;
+    height:32px;
+    padding:0 .85rem;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid rgba(37,99,235,.16);
+    color:#1d4ed8;
+    font-size:.78rem;
+    font-weight:900;
+    box-shadow:0 4px 10px rgba(37,99,235,.10);
 }
 .req-header-arrow{transition:transform 0.2s ease;}
 #requestCard.req-open .req-header-arrow{transform:rotate(180deg);}
+#requestCard.req-open .req-header-btn{border-color:#2563eb;background:linear-gradient(135deg,#2563eb 0%,#3b82f6 58%,#93c5fd 100%);color:#fff;box-shadow:0 18px 36px rgba(37,99,235,.26);}
+#requestCard.req-open .req-header-icon{background:rgba(255,255,255,.18);color:#fff;}
+#requestCard.req-open .req-header-title,
+#requestCard.req-open .req-header-sub{color:#fff;}
+#requestCard.req-open .req-header-badge{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.22);color:#fff;box-shadow:none;}
 .req-body{display:none;margin-top:0.85rem;}
 #requestCard.req-open .req-body{display:block;}
+@media (max-width: 720px){
+    .req-header-btn{
+        flex-direction:column;
+        align-items:stretch;
+        gap:.8rem;
+        padding:.9rem;
+    }
+    .req-header-main{
+        width:100%;
+        align-items:flex-start;
+    }
+    .req-header-copy{
+        flex:1;
+    }
+    .req-header-title{
+        font-size:.96rem;
+    }
+    .req-header-sub{
+        font-size:.76rem;
+        white-space:normal;
+        word-break:keep-all;
+        overflow-wrap:anywhere;
+    }
+    .req-header-right{
+        width:100%;
+        justify-content:space-between;
+    }
+    .req-header-badge{
+        min-width:68px;
+    }
+}
 .req-pane h3{font-size:1rem;font-weight:900;color:#0f172a;}
 #requestCard .form-group label{font-size:0.85rem;font-weight:800;color:#1e293b;}
 #requestCard input,#requestCard select,#requestCard textarea{font-size:0.9rem;}
@@ -535,11 +670,27 @@ html[data-theme="dark"] .cat-btn.active,
 html[data-theme="dark"] .material-detail-tab.active,
 html[data-theme="dark"] .req-tab-btn.active,
 html[data-theme="dark"] .issue-status-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 10px 22px rgba(37,99,235,.22);}
+html[data-theme="dark"] .req-tab-btn.req-tab-issue.active{background:linear-gradient(135deg,#0f766e,#14b8a6);border-color:#2dd4bf;}
+html[data-theme="dark"] .req-tab-btn.req-tab-export.active{background:linear-gradient(135deg,#c2410c,#f97316);border-color:#fb923c;}
 html[data-theme="dark"] .modal-box,
 html[data-theme="dark"] .material-modal,
 html[data-theme="dark"] .issue-status-board,
 html[data-theme="dark"] .request-builder-card,
 html[data-theme="dark"] .receipt-modal{background:linear-gradient(180deg,#121a2a 0%,#0f1726 100%);border:1px solid #263244;box-shadow:0 24px 54px rgba(2,6,23,.42);}
+html[data-theme="dark"] .req-pane-issue{background:linear-gradient(180deg,rgba(15,118,110,.18),rgba(15,23,42,.92));border-color:rgba(45,212,191,.28);}
+html[data-theme="dark"] .req-pane-export{background:linear-gradient(180deg,rgba(194,65,12,.2),rgba(15,23,42,.92));border-color:rgba(251,146,60,.32);}
+html[data-theme="dark"] .req-pane-issue .request-builder-card,
+html[data-theme="dark"] .req-pane-issue .issue-status-board{background:linear-gradient(180deg,#121a2a,#10211f);border-color:#1d4f4a;}
+html[data-theme="dark"] .req-pane-export .request-builder-card,
+html[data-theme="dark"] .req-pane-export .issue-status-board{background:linear-gradient(180deg,#121a2a,#2a1a10);border-color:#5b3418;}
+html[data-theme="dark"] .req-pane-issue .request-builder-title,
+html[data-theme="dark"] .req-pane-issue .issue-status-title{color:#99f6e4 !important;}
+html[data-theme="dark"] .req-pane-export .request-builder-title,
+html[data-theme="dark"] .req-pane-export .issue-status-title{color:#fdba74 !important;}
+html[data-theme="dark"] .req-pane-issue .request-builder-caption,
+html[data-theme="dark"] .req-pane-issue .issue-status-caption{color:#7dd3c7 !important;}
+html[data-theme="dark"] .req-pane-export .request-builder-caption,
+html[data-theme="dark"] .req-pane-export .issue-status-caption{color:#fdba74 !important;}
 html[data-theme="dark"] .material-edit-modal h3,
 html[data-theme="dark"] .material-edit-modal .form-group label{color:#eff6ff;}
 html[data-theme="dark"] .material-edit-modal input,
@@ -558,6 +709,31 @@ html[data-theme="dark"] .material-edit-modal input:focus,
 html[data-theme="dark"] .material-edit-modal select:focus{
     border-color:#60a5fa !important;
     box-shadow:0 0 0 3px rgba(59,130,246,.22);
+}
+html[data-theme="dark"] .material-add-card{
+    background:
+        radial-gradient(circle at top right, rgba(96,165,250,.16), transparent 34%),
+        linear-gradient(180deg,#152033 0%,#101827 100%);
+    border-color:#4f6fd8;
+    box-shadow:0 22px 40px rgba(2,6,23,.28);
+}
+html[data-theme="dark"] .material-add-card h2,
+html[data-theme="dark"] .material-add-card label{color:#eff6ff;}
+html[data-theme="dark"] .material-add-card input,
+html[data-theme="dark"] .material-add-card select{
+    background:#152033;
+    border-color:#334155;
+    color:#eff6ff;
+}
+html[data-theme="dark"] .material-add-card input::placeholder{color:#8ea3bd;}
+html[data-theme="dark"] .material-add-card .material-add-code-input{
+    background:#13203a;
+    border-color:#5b7cff;
+}
+html[data-theme="dark"] .material-add-card .material-add-readonly{
+    background:#0f1726;
+    border-color:#314155;
+    color:#c7d3e3;
 }
 html[data-theme="dark"] .material-modal,
 html[data-theme="dark"] .material-header-item,
@@ -601,7 +777,13 @@ html[data-theme="dark"] .issue-date-calendar,
 html[data-theme="dark"] .receipt-modal-head,
 html[data-theme="dark"] .receipt-help{background:#162133;border-color:#263244;color:#c7d3e3;}
 html[data-theme="dark"] .lot-inline-form,
-html[data-theme="dark"] .req-header-btn{background:linear-gradient(180deg,#162133,#121a2a);border-color:#2b3648;color:#eff6ff;}
+html[data-theme="dark"] .req-header-btn{background:linear-gradient(135deg,#172554 0%,#152033 55%,#0f172a 100%);border-color:#3b82f6;color:#eff6ff;box-shadow:0 12px 28px rgba(2,6,23,.32);}
+html[data-theme="dark"] .req-header-btn:hover{border-color:#60a5fa;box-shadow:0 18px 34px rgba(2,6,23,.4),0 0 0 4px rgba(96,165,250,.12);}
+html[data-theme="dark"] .req-header-icon{background:rgba(96,165,250,.18);color:#bfdbfe;}
+html[data-theme="dark"] .req-header-title{color:#eff6ff;}
+html[data-theme="dark"] .req-header-sub{color:#c7d3e3;}
+html[data-theme="dark"] .req-header-badge{background:rgba(15,23,42,.65);border-color:rgba(96,165,250,.22);color:#bfdbfe;box-shadow:none;}
+html[data-theme="dark"] #requestCard.req-open .req-header-btn{background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 58%,#1e40af 100%);border-color:#60a5fa;color:#fff;}
 html[data-theme="dark"] .usage-filter-bar{background:linear-gradient(180deg,#121a2a 0%,#162133 100%);border-color:#263244;}
 html[data-theme="dark"] .usage-filter-chip,
 html[data-theme="dark"] .usage-filter-nav,
@@ -1270,80 +1452,6 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
 {% set UPPER_UNITS = ['CAN','P','포대','BOX'] %}
 
 {% if can_manage_material_master %}
-<div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:1rem;">
-    <h2>부자재 추가</h2>
-    <form method="POST" action="/materials/add">
-        <div class="grid grid-3">
-            <div class="form-group">
-                <label>자재 코드 (미입력 시 자동생성)</label>
-                <input type="text" name="code" placeholder="예: P01A018" style="border: 1px solid #667eea; background-color: #f8faff;">
-            </div>
-
-            <div class="form-group">
-                <label>분류 *</label>
-                <select name="category" required>
-                    <option value="">선택</option>
-                    {% for c in MAT_CATS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>부자재명 *</label>
-                <input type="text" name="name" required>
-            </div>
-
-            <div class="form-group">
-                <label>단위 *</label>
-                <select name="unit">
-                    <option>EA</option><option>kg</option><option>L</option>
-                    <option>g</option><option>ml</option><option>박스</option><option>롤</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>상위 단위</label>
-                <select name="upper_unit">
-                    <option value="">없음</option>
-                    {% for u in UPPER_UNITS %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>상위 단위 환산값</label>
-                <input type="number" name="upper_unit_qty" step="0.01" min="0" placeholder="예: 18">
-            </div>
-
-            <div class="form-group">
-                <label>공급업체</label>
-                <select name="supplier_id">
-                    <option value="">없음</option>
-                    {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>현재 재고 (로트 합계 자동)</label>
-                <input type="number" name="current_stock" step="0.01" value="0" readonly style="background:#f1f5f9;color:#475569;">
-            </div>
-
-            <div class="form-group">
-                <label>최소 재고</label>
-                <input type="number" name="min_stock" step="0.01" value="0">
-            </div>
-            
-            <div class="form-group">
-                <label>규격 (선택)</label>
-                <input type="text" name="spec" placeholder="예: 100*200">
-            </div>
-        </div>
-
-        <div style="text-align:right;margin-top:0.75rem;display:flex;gap:0.5rem;justify-content:flex-end;">
-            <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('addForm').style.display='none'">취소</button>
-            <button type="submit" class="btn btn-small">추가</button>
-        </div>
-    </form>
-</div>
-
 <div id="editModal" class="modal-bg">
     <div class="modal-box material-edit-modal">
         <div style="display:flex;justify-content:flex-start;margin-bottom:0.5rem;">
@@ -1559,7 +1667,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
 
         <div class="mat-actions" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
             {% if can_manage_material_master %}
-            <button class="btn btn-small" onclick="document.getElementById('addForm').style.display='block'">+ 추가</button>
+            <button type="button" class="btn btn-small" onclick="openAddForm()">+ 추가</button>
             {% endif %}
         </div>
     </div>
@@ -1685,17 +1793,26 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
 
 {% if not is_logistics_role %}
 <div class="card" id="requestCard" style="margin-top:1rem;">
-    <button type="button" class="req-header-btn" onclick="toggleRequestPanel()">
-        <span>불출 / 반출 요청</span>
-        <span class="req-header-arrow">▾</span>
+    <button type="button" class="req-header-btn" id="requestPanelToggleBtn" onclick="toggleRequestPanel()" aria-expanded="false" aria-controls="reqBody">
+        <span class="req-header-main">
+            <span class="req-header-icon" aria-hidden="true">📦</span>
+            <span class="req-header-copy">
+                <span class="req-header-title">불출 / 반출 요청</span>
+                <span class="req-header-sub">눌러서 요청 등록과 완료 내역을 열 수 있습니다.</span>
+            </span>
+        </span>
+        <span class="req-header-right">
+            <span class="req-header-badge" id="requestPanelToggleBadge">열기</span>
+            <span class="req-header-arrow" aria-hidden="true">▾</span>
+        </span>
     </button>
     <div class="req-body" id="reqBody">
     <div class="req-tabs">
-        <button type="button" class="req-tab-btn" id="reqTabIssueBtn" onclick="switchReqTab('issue')">불출요청 탭 <span class="req-tab-count">{{ issue_requests_pending|length }}</span></button>
-        <button type="button" class="req-tab-btn" id="reqTabExportBtn" onclick="switchReqTab('export')">반출요청 탭 <span class="req-tab-count">{{ export_requests_pending|length }}</span></button>
+        <button type="button" class="req-tab-btn req-tab-issue" id="reqTabIssueBtn" onclick="switchReqTab('issue')">불출요청 탭 <span class="req-tab-count">{{ issue_requests_pending|length }}</span></button>
+        <button type="button" class="req-tab-btn req-tab-export" id="reqTabExportBtn" onclick="switchReqTab('export')">반출요청 탭 <span class="req-tab-count">{{ export_requests_pending|length }}</span></button>
     </div>
 
-    <div id="reqPaneIssue" class="req-pane">
+    <div id="reqPaneIssue" class="req-pane req-pane-issue">
         {% if not is_logistics_role %}
         <div class="issue-builder">
             <div class="request-builder-card">
@@ -1941,7 +2058,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
         </div>
     </div>
 
-    <div id="reqPaneExport" class="req-pane">
+    <div id="reqPaneExport" class="req-pane req-pane-export">
         {% if not is_logistics_role %}
         <div class="issue-builder">
             <div class="request-builder-card">
@@ -2199,6 +2316,82 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
         </div>
     </div>
     </div>
+</div>
+{% endif %}
+
+{% if can_manage_material_master %}
+<div id="addForm" class="card material-add-card">
+    <h2>부자재 추가</h2>
+    <form method="POST" action="/materials/add">
+        <div class="grid grid-3">
+            <div class="form-group">
+                <label>자재 코드 (미입력 시 자동생성)</label>
+                <input type="text" name="code" placeholder="예: P01A018" class="material-add-code-input">
+            </div>
+
+            <div class="form-group">
+                <label>분류 *</label>
+                <select name="category" required>
+                    <option value="">선택</option>
+                    {% for c in MAT_CATS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>부자재명 *</label>
+                <input type="text" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label>단위 *</label>
+                <select name="unit">
+                    <option>EA</option><option>kg</option><option>L</option>
+                    <option>g</option><option>ml</option><option>박스</option><option>롤</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>상위 단위</label>
+                <select name="upper_unit">
+                    <option value="">없음</option>
+                    {% for u in UPPER_UNITS %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>상위 단위 환산값</label>
+                <input type="number" name="upper_unit_qty" step="0.01" min="0" placeholder="예: 18">
+            </div>
+
+            <div class="form-group">
+                <label>공급업체</label>
+                <select name="supplier_id">
+                    <option value="">없음</option>
+                    {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>현재 재고 (로트 합계 자동)</label>
+                <input type="number" name="current_stock" step="0.01" value="0" readonly class="material-add-readonly">
+            </div>
+
+            <div class="form-group">
+                <label>최소 재고</label>
+                <input type="number" name="min_stock" step="0.01" value="0">
+            </div>
+
+            <div class="form-group">
+                <label>규격 (선택)</label>
+                <input type="text" name="spec" placeholder="예: 100*200">
+            </div>
+        </div>
+
+        <div class="material-add-actions">
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeAddForm()">취소</button>
+            <button type="submit" class="btn btn-small">추가</button>
+        </div>
+    </form>
 </div>
 {% endif %}
 
@@ -2977,11 +3170,35 @@ function handleReceiveFilterDateChange(){
 let ISSUE_MATERIAL_SOURCE = [];
 let EXPORT_MATERIAL_SOURCE = [];
 
+function openAddForm(){
+    const form = document.getElementById('addForm');
+    if(!form) return;
+    form.style.display = 'block';
+    requestAnimationFrame(() => {
+        form.scrollIntoView({ behavior:'smooth', block:'start' });
+        form.querySelector('input, select, textarea')?.focus();
+    });
+}
+
+function closeAddForm(){
+    const form = document.getElementById('addForm');
+    if(!form) return;
+    form.style.display = 'none';
+}
+
 function setRequestPanelExpanded(expanded){
     reqExpanded = Boolean(expanded);
     const card = document.getElementById('requestCard');
     if(!card) return;
     card.classList.toggle('req-open', reqExpanded);
+    const toggleBtn = document.getElementById('requestPanelToggleBtn');
+    const badge = document.getElementById('requestPanelToggleBadge');
+    if(toggleBtn){
+        toggleBtn.setAttribute('aria-expanded', reqExpanded ? 'true' : 'false');
+    }
+    if(badge){
+        badge.textContent = reqExpanded ? '접기' : '열기';
+    }
     try {
         localStorage.setItem(REQ_PANEL_STATE_KEY, reqExpanded ? '1' : '0');
     } catch (e) {}

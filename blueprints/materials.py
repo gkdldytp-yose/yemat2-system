@@ -4482,6 +4482,14 @@ def update_raw_material_basic():
         sheets_per_sok = float(request.form.get('sheets_per_sok') or 0)
     except (TypeError, ValueError):
         sheets_per_sok = 0
+    try:
+        total_stock = float(request.form.get('total_stock') or 0)
+    except (TypeError, ValueError):
+        total_stock = 0
+    try:
+        current_stock = float(request.form.get('current_stock') or 0)
+    except (TypeError, ValueError):
+        current_stock = 0
 
     if raw_id <= 0:
         return redirect(url_for('materials.raw_materials'))
@@ -4489,6 +4497,13 @@ def update_raw_material_basic():
         return redirect(url_for('materials.raw_materials'))
     if sheets_per_sok < 0:
         sheets_per_sok = 0
+    if total_stock < 0:
+        total_stock = 0
+    if current_stock < 0:
+        current_stock = 0
+    if current_stock > total_stock:
+        current_stock = total_stock
+    used_quantity = total_stock - current_stock
 
     try:
         with db_transaction() as conn:
@@ -4509,11 +4524,24 @@ def update_raw_material_basic():
             cursor.execute(
                 '''
                 UPDATE raw_materials
-                SET code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?
+                SET code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?,
+                    total_stock = ?, current_stock = ?, used_quantity = ?
                 WHERE id = ?
                   AND workplace = ?
                 ''',
-                (code, name, sheets_per_sok, receiving_date, ja_ho, ja_ho, raw_id, workplace),
+                (
+                    code,
+                    name,
+                    sheets_per_sok,
+                    receiving_date,
+                    ja_ho,
+                    ja_ho,
+                    total_stock,
+                    current_stock,
+                    used_quantity,
+                    raw_id,
+                    workplace,
+                ),
             )
             final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
             audit_log(
@@ -4530,6 +4558,9 @@ def update_raw_material_basic():
                         'sheets_per_sok': sheets_per_sok,
                         'receiving_date': receiving_date,
                         'ja_ho': ja_ho,
+                        'total_stock': total_stock,
+                        'current_stock': current_stock,
+                        'used_quantity': used_quantity,
                     },
                 },
             )
