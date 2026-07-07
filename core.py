@@ -538,6 +538,7 @@ def _ensure_dashboard_todo_schema(conn):
                 detail TEXT,
                 importance TEXT,
                 due_date TEXT,
+                todo_status TEXT NOT NULL DEFAULT 'processing',
                 is_done INTEGER NOT NULL DEFAULT 0,
                 created_by TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -553,6 +554,8 @@ def _ensure_dashboard_todo_schema(conn):
             conn.execute("ALTER TABLE dashboard_todos ADD COLUMN importance TEXT")
         if 'due_date' not in todo_cols:
             conn.execute("ALTER TABLE dashboard_todos ADD COLUMN due_date TEXT")
+        if 'todo_status' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN todo_status TEXT NOT NULL DEFAULT 'processing'")
         if 'is_done' not in todo_cols:
             conn.execute("ALTER TABLE dashboard_todos ADD COLUMN is_done INTEGER NOT NULL DEFAULT 0")
         if 'created_by' not in todo_cols:
@@ -564,7 +567,23 @@ def _ensure_dashboard_todo_schema(conn):
         if 'done_at' not in todo_cols:
             conn.execute("ALTER TABLE dashboard_todos ADD COLUMN done_at TIMESTAMP")
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_workplace_status_due ON dashboard_todos(workplace, is_done, due_date, created_at DESC)"
+            """
+            UPDATE dashboard_todos
+            SET todo_status = CASE
+                WHEN COALESCE(is_done, 0) = 1 THEN 'completed'
+                WHEN COALESCE(TRIM(todo_status), '') IN ('processing', 'info_needed', 'completed') THEN TRIM(todo_status)
+                ELSE 'processing'
+            END
+            """
+        )
+        conn.execute(
+            """
+            UPDATE dashboard_todos
+            SET is_done = CASE WHEN todo_status = 'completed' THEN 1 ELSE 0 END
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_workplace_status_due ON dashboard_todos(workplace, todo_status, due_date, created_at DESC)"
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_workplace_done_at ON dashboard_todos(workplace, done_at DESC, created_at DESC)"
@@ -1065,6 +1084,8 @@ def _ensure_products_schema(conn):
             conn.execute("ALTER TABLE products ADD COLUMN spec_sheet_uploaded_at TIMESTAMP")
         if 'selected_silica_material_id' not in cols:
             conn.execute("ALTER TABLE products ADD COLUMN selected_silica_material_id INTEGER")
+        if 'selected_pouch_material_id' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN selected_pouch_material_id INTEGER")
         conn.execute("UPDATE products SET expiry_months = 12 WHERE expiry_months IS NULL")
         bom_cols = [row['name'] for row in conn.execute("PRAGMA table_info(bom)").fetchall()]
         if bom_cols and 'quantity_per_box_expr' not in bom_cols:

@@ -1,5 +1,5 @@
 ﻿from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from collections import defaultdict
 import calendar
 import json
@@ -7,6 +7,8 @@ import math
 import logging
 import os
 import re
+
+from markupsafe import Markup, escape
 
 from core import (
     admin_required,
@@ -215,6 +217,165 @@ def _parse_positive_int(raw_value, label):
     if value <= 0:
         raise ValueError(f'{label}?(?? 1 ?댁긽?댁뼱???⑸땲??')
     return value
+
+
+def _format_schedule_quantity(value):
+    try:
+        return f"{int(float(value or 0)):,}"
+    except (TypeError, ValueError):
+        return '0'
+
+
+def _get_schedule_work_status_meta(work_data):
+    work_type = str((work_data or {}).get('type') or '').strip()
+    overtime_hours = (work_data or {}).get('overtime_hours')
+    try:
+        overtime_hours = float(overtime_hours or 0)
+    except (TypeError, ValueError):
+        overtime_hours = 0.0
+    if work_type == 'work':
+        return {'text': '근무', 'class_name': 'tag-work', 'day_class': 'workday-work'}
+    if work_type == 'holiday':
+        return {'text': '휴무', 'class_name': 'tag-holiday', 'day_class': 'workday-holiday'}
+    if work_type == 'overtime':
+        text = f'잔업({int(overtime_hours)}h)' if overtime_hours.is_integer() and overtime_hours > 0 else (f'잔업({overtime_hours:g}h)' if overtime_hours > 0 else '잔업')
+        return {'text': text, 'class_name': 'tag-overtime', 'day_class': 'workday-overtime'}
+    if work_type == 'extra':
+        return {'text': '특근', 'class_name': 'tag-extra', 'day_class': 'workday-extra'}
+    return {'text': '', 'class_name': '', 'day_class': ''}
+
+
+def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days_data):
+    first_weekday, days_in_month = calendar.monthrange(year, month)
+    first_weekday = (first_weekday + 1) % 7
+    rows_by_date = defaultdict(list)
+    for schedule in schedules_list:
+        rows_by_date[str(schedule.get('scheduled_date') or '')].append(schedule)
+
+    html_parts = []
+    for _ in range(first_weekday):
+        html_parts.append('<div class="calendar-day other-month"></div>')
+
+    for day in range(1, days_in_month + 1):
+        date_str = f'{year}-{month:02d}-{day:02d}'
+        work_data = work_days_data.get(date_str) or {}
+        status_meta = _get_schedule_work_status_meta(work_data)
+        day_classes = ['calendar-day']
+        if status_meta['day_class']:
+            day_classes.append(status_meta['day_class'])
+        html_parts.append(
+            f'<div class="{" ".join(day_classes)}" onclick="openAddModal(\'{escape(date_str)}\')">'
+        )
+        html_parts.append('<div class="day-header" style="display:flex;justify-content:space-between;align-items:center;">')
+        html_parts.append(f'<div class="day-number">{day}</div>')
+        if status_meta['text']:
+            html_parts.append(
+                f'<span class="work-status-tag {escape(status_meta["class_name"])}">{escape(status_meta["text"])}</span>'
+            )
+        day_rows = rows_by_date.get(date_str, [])
+        if day_rows:
+            html_parts.append(f'<span class="schedule-count">{len(day_rows)}건</span>')
+        html_parts.append('</div>')
+        holiday_caption = str(work_data.get('holiday_caption') or '').strip()
+        if holiday_caption:
+            html_parts.append(f'<div class="holiday-caption">{escape(holiday_caption)}</div>')
+        if day_rows:
+            html_parts.append('<div class="day-schedules">')
+            for schedule in day_rows:
+                is_completed = bool(schedule.get('is_completed')) or str(schedule.get('status') or '').strip() == '완료'
+                line_text = str(schedule.get('line') or '').strip()
+                production_id = int(schedule.get('production_id') or 0)
+                detail_url = f'/production/{production_id}' if production_id > 0 else f'/schedules/{date_str}'
+                item_classes = 'schedule-item done' if is_completed else 'schedule-item'
+                html_parts.append(
+                    f'<div class="{item_classes}" style="position:relative;cursor:pointer;" onclick="event.stopPropagation(); window.location.href=\'{escape(detail_url)}\';">'
+                )
+                html_parts.append(f'<div class="schedule-name">{escape(str(schedule.get("product_name") or ""))}</div>')
+                if str(schedule.get('source') or '') == 'export':
+                    label = str(schedule.get('export_container_label') or '').strip()
+                    badge_text = f'수출 {label}' if label else '수출'
+                    html_parts.append(f'<span class="done-badge" style="background:#dbeafe;color:#1d4ed8;">{escape(badge_text)}</span>')
+                if is_completed:
+                    html_parts.append('<span class="done-badge">완료</span>')
+                html_parts.append('<div class="schedule-info">')
+                if is_completed:
+                    html_parts.append(f'<span style="color:#3b82f6">실제 {_format_schedule_quantity(schedule.get("actual_boxes"))}박스</span>')
+                else:
+                    html_parts.append(f'<span style="color:#3b82f6">계획 {_format_schedule_quantity(schedule.get("planned_boxes"))}박스</span>')
+                if line_text:
+                    html_parts.append('<div class="line-container">')
+                    for line_value in [item.strip() for item in line_text.split(',') if item.strip()]:
+                        html_parts.append(f'<span class="line-tag">L{escape(line_value)}</span>')
+                    html_parts.append('</div>')
+                html_parts.append('</div>')
+                tooltip = f'{str(schedule.get("product_name") or "")} - {_format_schedule_quantity(schedule.get("planned_boxes"))}박스'
+                if line_text:
+                    tooltip += f'&#10;라인: {line_text}'
+                delete_title = '완료 건은 삭제할 수 없습니다.' if is_completed else ('수출 일정에서 이 날짜를 제외합니다.' if str(schedule.get('source') or '') == 'export' else '삭제')
+                html_parts.append(
+                    f'<button class="calendar-delete-btn" {"disabled" if is_completed else ""} title="{escape(delete_title)}" onclick="event.stopPropagation(); deleteScheduleFromCalendar({int(schedule.get("id") or 0)}, {str(is_completed).lower()}, {str(str(schedule.get("source") or "") == "export").lower()});">🗑</button>'
+                )
+                html_parts.append('</div>')
+            html_parts.append('</div>')
+        html_parts.append('</div>')
+
+    total_rendered = first_weekday + days_in_month
+    trailing_days = (7 - (total_rendered % 7)) % 7
+    for _ in range(trailing_days):
+        html_parts.append('<div class="calendar-day other-month"></div>')
+    return Markup(''.join(html_parts))
+
+
+def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_data):
+    month_key = f'{year}-{month:02d}'
+    monthly_rows = [
+        schedule for schedule in schedules_list
+        if str(schedule.get('scheduled_date') or '').startswith(month_key)
+    ]
+    monthly_rows.sort(key=lambda row: (str(row.get('scheduled_date') or ''), str(row.get('product_name') or '')))
+    if not monthly_rows:
+        return Markup('<div class="mobile-empty-state">이번 달에 등록된 생산 일정이 없습니다.</div>')
+
+    weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일']
+    grouped = defaultdict(list)
+    for row in monthly_rows:
+        grouped[str(row.get('scheduled_date') or '')].append(row)
+
+    html_parts = []
+    for date_str in sorted(grouped.keys()):
+        current_date = datetime.strptime(date_str, '%Y-%m-%d')
+        work_meta = _get_schedule_work_status_meta(work_days_data.get(date_str) or {})
+        badge_class = f'work-status-tag {work_meta["class_name"]}'.strip() if work_meta['class_name'] else 'work-status-tag'
+        html_parts.append('<section class="mobile-day-group">')
+        html_parts.append('<div class="mobile-day-header">')
+        html_parts.append(f'<div class="mobile-day-date"><strong>{current_date.month}월 {current_date.day}일</strong><span>{weekdays[current_date.weekday()]}</span></div>')
+        html_parts.append(f'<span class="{escape(badge_class)}">{escape(work_meta["text"] or "미지정")}</span>')
+        html_parts.append('</div><div class="mobile-day-schedules">')
+        for schedule in grouped[date_str]:
+            is_completed = bool(schedule.get('is_completed')) or str(schedule.get('status') or '').strip() == '완료'
+            status_text = '완료' if is_completed else '예정'
+            status_class = 'done' if is_completed else 'planned'
+            line_text = str(schedule.get('line') or '').strip()
+            detail_url = f'/production/{int(schedule.get("production_id") or 0)}' if int(schedule.get('production_id') or 0) > 0 else f'/schedules/{date_str}'
+            html_parts.append(f'<div class="mobile-schedule-card{" done" if is_completed else ""}" data-detail-url="{escape(detail_url)}" onclick="window.location.href=\'{escape(detail_url)}\'">')
+            html_parts.append('<div class="mobile-schedule-top">')
+            html_parts.append(f'<div class="mobile-schedule-name">{escape(str(schedule.get("product_name") or ""))}')
+            if str(schedule.get('source') or '') == 'export':
+                label = str(schedule.get('export_container_label') or '').strip()
+                badge_text = f'수출 {label}' if label else '수출'
+                html_parts.append(f'<div class="req-muted" style="margin-top:0.2rem;color:#1d4ed8;font-weight:700;">{escape(badge_text)}</div>')
+            html_parts.append('</div>')
+            html_parts.append(f'<span class="mobile-status-badge {status_class}">{status_text}</span>')
+            html_parts.append('</div><div class="mobile-schedule-meta">')
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">날짜</span><span class="mobile-meta-value">{current_date.month}월 {current_date.day}일</span></div>')
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">요일</span><span class="mobile-meta-value">{weekdays[current_date.weekday()]}</span></div>')
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">계획수량</span><span class="mobile-meta-value">{_format_schedule_quantity(schedule.get("planned_boxes"))}박스</span></div>')
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">실제수량</span><span class="mobile-meta-value">{(_format_schedule_quantity(schedule.get("actual_boxes")) + "박스") if is_completed else "-"}</span></div>')
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">라인</span><span class="mobile-meta-value">{escape("라인 " + line_text) if line_text else "-"}</span></div>')
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">상태</span><span class="mobile-meta-value">{status_text}</span></div>')
+            html_parts.append('</div></div>')
+        html_parts.append('</div></section>')
+    return Markup(''.join(html_parts))
 
 
 def _normalize_line_values(raw_lines):
@@ -967,17 +1128,18 @@ def _save_export_excluded_dates(cursor, export_schedule_id, excluded_dates):
 
 def _get_production_material_section(row):
     category = (row.get('category') or '').strip()
+    normalized_category = _normalize_pack_material_category(category)
     if category in ('기름', '소금') or '기름' in category or '유지' in category or '소금' in category:
         return 'base'
-    if category == '?댄룷':
+    if normalized_category == 'inner':
         return 'pack_inner'
-    if category == '외포':
+    if normalized_category == 'outer':
         return 'pack_outer'
-    if category == '諛뺤뒪':
+    if normalized_category == 'box':
         return 'pack_box'
-    if category == '실리카':
+    if normalized_category == 'silica':
         return 'pack_silica'
-    if category == '트레이':
+    if normalized_category == 'tray':
         return 'pack_tray'
     return 'pack_other'
 
@@ -996,31 +1158,57 @@ def _get_production_material_sort_key(row):
     return f'9-0-{name}'
 
 
-def _filter_selected_silica_bom_rows(rows):
+def _normalize_pack_material_category(raw_category):
+    text = str(raw_category or '').strip()
+    if not text:
+        return 'etc'
+    compact = text.replace(' ', '')
+    if compact in ('박스', '諛뺤뒪') or '박스' in text:
+        return 'box'
+    if compact in ('내포', '?댄룷') or '내포' in text:
+        return 'inner'
+    if compact == '외포' or '외포' in text:
+        return 'outer'
+    if compact == '실리카' or '실리카' in text:
+        return 'silica'
+    if compact == '트레이' or '트레이' in text:
+        return 'tray'
+    return 'etc'
+
+
+def _filter_selected_variant_bom_rows(rows):
     if not rows:
         return []
 
-    selected_map = {}
-    silica_map = defaultdict(list)
+    selected_fields = {
+        '실리카': 'selected_silica_material_id',
+        '파우치': 'selected_pouch_material_id',
+    }
+    selected_map = {category: {} for category in selected_fields}
+    material_maps = {category: defaultdict(list) for category in selected_fields}
     for row in rows:
         row_dict = dict(row)
         product_id = int(row_dict.get('product_id') or 0)
         material_id = int(row_dict.get('material_id') or 0)
         if product_id <= 0:
             continue
-        if product_id not in selected_map:
-            selected_map[product_id] = int(row_dict.get('selected_silica_material_id') or 0)
         category = (row_dict.get('material_category') or row_dict.get('category') or '').strip()
-        if material_id > 0 and category == '실리카' and material_id not in silica_map[product_id]:
-            silica_map[product_id].append(material_id)
+        field_name = selected_fields.get(category)
+        if not field_name:
+            continue
+        if product_id not in selected_map[category]:
+            selected_map[category][product_id] = int(row_dict.get(field_name) or 0)
+        if material_id > 0 and material_id not in material_maps[category][product_id]:
+            material_maps[category][product_id].append(material_id)
 
-    effective_map = {}
-    for product_id, material_ids in silica_map.items():
-        selected_id = int(selected_map.get(product_id) or 0)
-        if selected_id in material_ids:
-            effective_map[product_id] = selected_id
-        elif material_ids:
-            effective_map[product_id] = material_ids[0]
+    effective_maps = {category: {} for category in selected_fields}
+    for category, product_materials in material_maps.items():
+        for product_id, material_ids in product_materials.items():
+            selected_id = int(selected_map[category].get(product_id) or 0)
+            if selected_id in material_ids:
+                effective_maps[category][product_id] = selected_id
+            elif material_ids:
+                effective_maps[category][product_id] = material_ids[0]
 
     filtered = []
     for row in rows:
@@ -1028,8 +1216,8 @@ def _filter_selected_silica_bom_rows(rows):
         product_id = int(row_dict.get('product_id') or 0)
         material_id = int(row_dict.get('material_id') or 0)
         category = (row_dict.get('material_category') or row_dict.get('category') or '').strip()
-        if product_id > 0 and material_id > 0 and category == '실리카':
-            effective_id = effective_map.get(product_id)
+        if product_id > 0 and material_id > 0 and category in effective_maps:
+            effective_id = effective_maps[category].get(product_id)
             if effective_id and material_id != effective_id:
                 continue
         filtered.append(row_dict)
@@ -1832,6 +2020,7 @@ def schedules():
         month = today.month
 
     month_start = date(year, month, 1)
+    done_status = _normalize_production_status('\uC644\uB8CC')
     if month == 12:
         month_end = date(year + 1, 1, 1) - timedelta(days=1)
     else:
@@ -1896,29 +2085,56 @@ def schedules():
         cursor.execute(
             '''
             SELECT
+                pr.id as production_id,
                 pr.product_id,
+                pr.status as production_status,
                 COALESCE(NULLIF(TRIM(p.code), ''), printf('P%05d', pr.product_id)) as product_code,
                 COALESCE(NULLIF(TRIM(p.name), ''), '誘몃벑濡??곹뭹') as product_name,
-                COUNT(pr.id) as completed_count,
-                ROUND(SUM(
-                    CASE
-                        WHEN COALESCE(pr.actual_boxes, 0) > 0 THEN COALESCE(pr.actual_boxes, 0)
-                        WHEN COALESCE(ps.planned_boxes, 0) > 0 THEN COALESCE(ps.planned_boxes, 0)
-                        ELSE 0
-                    END
-                ), 1) as total_production_boxes
+                COALESCE(pr.actual_boxes, 0) as actual_boxes,
+                COALESCE(ps.planned_boxes, 0) as schedule_planned_boxes,
+                COALESCE(pr.planned_boxes, 0) as production_planned_boxes
             FROM productions pr
             LEFT JOIN products p ON p.id = pr.product_id
             LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
             WHERE COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
               AND pr.production_date BETWEEN ? AND ?
-              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
-            GROUP BY pr.product_id, product_code, product_name
-            ORDER BY total_production_boxes DESC, product_name ASC, product_code ASC
             ''',
             (workplace, workplace, month_start.isoformat(), month_end.isoformat()),
         )
-        monthly_stats_rows = [dict(row) for row in cursor.fetchall()]
+        monthly_stats_map = {}
+        for raw_row in cursor.fetchall():
+            row = dict(raw_row)
+            if _normalize_production_status(row.get('production_status')) != done_status:
+                continue
+            product_id = int(row.get('product_id') or 0)
+            if product_id <= 0:
+                continue
+            actual_boxes = float(row.get('actual_boxes') or 0)
+            schedule_planned_boxes = float(row.get('schedule_planned_boxes') or 0)
+            production_planned_boxes = float(row.get('production_planned_boxes') or 0)
+            production_boxes = actual_boxes if actual_boxes > 0 else (schedule_planned_boxes if schedule_planned_boxes > 0 else production_planned_boxes)
+            item = monthly_stats_map.setdefault(
+                product_id,
+                {
+                    'product_id': product_id,
+                    'product_code': row.get('product_code') or f'P{product_id:05d}',
+                    'product_name': row.get('product_name') or f'상품 {product_id}',
+                    'completed_count': 0,
+                    'total_production_boxes': 0.0,
+                },
+            )
+            item['completed_count'] += 1
+            item['total_production_boxes'] += production_boxes
+        monthly_stats_rows = sorted(
+            [
+                {
+                    **item,
+                    'total_production_boxes': round(float(item.get('total_production_boxes') or 0), 1),
+                }
+                for item in monthly_stats_map.values()
+            ],
+            key=lambda item: (-float(item.get('total_production_boxes') or 0), str(item.get('product_name') or ''), str(item.get('product_code') or '')),
+        )
         for index, row in enumerate(monthly_stats_rows, start=1):
             row['rank'] = index
 
@@ -2115,8 +2331,9 @@ def schedules():
     schedules_view = []
     schedules_list = []
     weekday_labels = ['월', '화', '수', '목', '금', '토', '일']
+    done_status = _normalize_production_status('\uC644\uB8CC')
     for s in schedules:
-        status_value = s['prod_status'] if s['prod_status'] else s['status']
+        status_value = _normalize_production_status(s['prod_status'] if s['prod_status'] else s['status'])
         scheduled_date = s['scheduled_date']
         try:
             weekday_text = weekday_labels[datetime.strptime(scheduled_date, '%Y-%m-%d').weekday()]
@@ -2153,7 +2370,7 @@ def schedules():
                 'line': s['line'] if s['line'] else '',
                 'production_id': s['linked_production_id'],
                 'actual_boxes': s['prod_actual_boxes'],
-                'is_completed': status_value == '?꾨즺',
+                'is_completed': status_value == done_status,
                 'source': s['schedule_source'] if 'schedule_source' in s.keys() and s['schedule_source'] else 'manual',
                 'export_schedule_id': s['export_schedule_id'] if 'export_schedule_id' in s.keys() else None,
                 'export_container_label': s['export_container_label'] if 'export_container_label' in s.keys() and s['export_container_label'] else '',
@@ -2174,6 +2391,8 @@ def schedules():
     # 域뱀눖龜???怨쀬뵠?怨뺣즲 JSON??곗쨮 癰??
     work_days_json = json.dumps(work_days_data, ensure_ascii=False)
     export_schedules_json = json.dumps(export_rows_json, ensure_ascii=False)
+    initial_calendar_html = _build_schedule_initial_calendar_html(year, month, schedules_list, work_days_data)
+    initial_mobile_calendar_html = _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_data)
     return render_template(
         'schedules.html',
         user=session['user'],
@@ -2184,6 +2403,8 @@ def schedules():
         products_json=products_json,
         stats_products_json=stats_products_json,
         work_days_json=work_days_json,
+        initial_calendar_html=initial_calendar_html,
+        initial_mobile_calendar_html=initial_mobile_calendar_html,
         export_schedules=export_rows_view,
         export_in_progress_schedules=export_in_progress_rows,
         export_active_schedules=export_active_rows,
@@ -2204,6 +2425,7 @@ def schedule_stats_product_data():
     product_id = request.args.get('product_id', type=int)
     date_from_raw = (request.args.get('date_from') or '').strip()
     date_to_raw = (request.args.get('date_to') or '').strip()
+    done_status = _normalize_production_status('\uC644\uB8CC')
 
     if not product_id:
         return jsonify({'ok': False, 'message': '?곹뭹 ?뺣낫媛 ?щ컮瑜댁? ?딆뒿?덈떎.'}), 400
@@ -2231,16 +2453,13 @@ def schedule_stats_product_data():
         cursor = conn.cursor()
         cursor.execute(
             '''
-            SELECT DISTINCT
+            SELECT
                 p.id,
                 p.name
-            FROM productions pr
-            JOIN products p ON p.id = pr.product_id
+            FROM products p
             WHERE p.id = ?
-              AND COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
-              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
             ''',
-            (product_id, workplace, workplace),
+            (product_id,),
         )
         product_row = cursor.fetchone()
         if not product_row:
@@ -2263,6 +2482,7 @@ def schedule_stats_product_data():
                 GROUP_CONCAT(
                     DISTINCT COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''))
                 ) as raw_car_numbers,
+                pr.status as production_status,
                 TRIM(
                     COALESCE(NULLIF(pr.expiry_date, ''), '')
                     || CASE WHEN COALESCE(NULLIF(pr.expiry_date_2, ''), '') != '' THEN ', ' || pr.expiry_date_2 ELSE '' END
@@ -2299,9 +2519,8 @@ def schedule_stats_product_data():
             WHERE pr.product_id = ?
               AND pr.production_date BETWEEN ? AND ?
               AND COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
-              AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
             GROUP BY
-                pr.id, pr.production_date, pr.actual_boxes, ps.planned_boxes, pr.planned_boxes,
+                pr.id, pr.production_date, pr.actual_boxes, ps.planned_boxes, pr.planned_boxes, pr.status,
                 pr.raw_sok_mode, p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3
             ORDER BY pr.production_date DESC, pr.id DESC
             ''',
@@ -2318,6 +2537,8 @@ def schedule_stats_product_data():
         total_boxes = 0.0
         for row in cursor.fetchall():
             item = dict(row)
+            if _normalize_production_status(item.get('production_status')) != done_status:
+                continue
             production_boxes = float(item.get('production_boxes') or 0)
             total_boxes += production_boxes
             rows.append(
@@ -2356,24 +2577,14 @@ def schedule_stats_product_data():
 @login_required
 def schedule_requirements_data():
     workplace = get_workplace()
+    planned_status = _normalize_production_status('\uC608\uC815')
 
     conn_context = db_connection()
     conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         def _normalize_sub_category(raw_category):
-            text = (raw_category or '').strip()
-            if text == '諛뺤뒪':
-                return 'box'
-            if text == '?댄룷':
-                return 'inner'
-            if text == '외포':
-                return 'outer'
-            if text == '실리카':
-                return 'silica'
-            if text == '트레이':
-                return 'tray'
-            return 'etc'
+            return _normalize_pack_material_category(raw_category)
 
         cursor.execute(
             '''
@@ -2386,7 +2597,7 @@ def schedule_requirements_data():
             (workplace,),
         )
         schedule_rows = [dict(r) for r in cursor.fetchall()]
-        planned_rows = [r for r in schedule_rows if _normalize_production_status(r.get('status')) == '?덉젙']
+        planned_rows = [r for r in schedule_rows if _normalize_production_status(r.get('status')) == planned_status]
 
         product_box_map = {}
         product_name_map = {}
@@ -2430,7 +2641,8 @@ def schedule_requirements_data():
                 COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) as material_code,
                 COALESCE(m.category, '') as material_category,
                 COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') as material_unit,
-                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
             FROM bom b
             LEFT JOIN products p ON p.id = b.product_id
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
@@ -2439,7 +2651,7 @@ def schedule_requirements_data():
             ''',
             product_ids,
         )
-        bom_rows = _filter_selected_silica_bom_rows(cursor.fetchall())
+        bom_rows = _filter_selected_variant_bom_rows(cursor.fetchall())
 
         raw_codes = sorted(
             {
@@ -2635,7 +2847,8 @@ def schedule_requirements_data():
                 m.name as m_name,
                 m.unit,
                 COALESCE(m.category, '') as material_category,
-                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
             FROM bom b
             JOIN materials m ON b.material_id = m.id
             JOIN products p ON b.product_id = p.id
@@ -2643,7 +2856,7 @@ def schedule_requirements_data():
             ''',
             (workplace,),
         )
-        bom_mat = _filter_selected_silica_bom_rows(
+        bom_mat = _filter_selected_variant_bom_rows(
             [
                 {
                     'product_id': row['product_id'],
@@ -2654,6 +2867,7 @@ def schedule_requirements_data():
                     'unit': row['unit'],
                     'material_category': row['material_category'],
                     'selected_silica_material_id': row['selected_silica_material_id'],
+                    'selected_pouch_material_id': row['selected_pouch_material_id'],
                 }
                 for row in cursor.fetchall()
             ]
@@ -2703,7 +2917,8 @@ def schedule_material_capacity_bom():
                 COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) AS material_code,
                 COALESCE(m.category, '') AS material_category,
                 COALESCE(NULLIF(TRIM(m.unit), ''), 'EA') AS material_unit,
-                COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
+                COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
+                COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
             FROM bom b
             LEFT JOIN products p ON p.id = b.product_id
             LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
@@ -2713,7 +2928,7 @@ def schedule_material_capacity_bom():
             ''',
             (product_id,),
         )
-        bom_rows = _filter_selected_silica_bom_rows(cursor.fetchall())
+        bom_rows = _filter_selected_variant_bom_rows(cursor.fetchall())
 
         raw_codes = sorted(
             {
@@ -2854,6 +3069,7 @@ def schedule_requirements_auto_purchase():
     """??? ?? ?? ???? ?? ?? ???? ????."""
     payload = request.get_json(silent=True) or {}
     workplace = (payload.get('workplace') or request.form.get('workplace') or get_workplace() or '').strip()
+    planned_status = _normalize_production_status('\uC608\uC815')
     try:
         with db_transaction() as conn:
             cursor = conn.cursor()
@@ -2868,7 +3084,7 @@ def schedule_requirements_auto_purchase():
             planned_rows = []
             for raw_row in cursor.fetchall():
                 row = dict(raw_row)
-                if _normalize_production_status(row.get('status')) == '?덉젙':
+                if _normalize_production_status(row.get('status')) == planned_status:
                     planned_rows.append(row)
 
         product_box_map = {}
@@ -2903,7 +3119,8 @@ def schedule_requirements_auto_purchase():
                 m.name as material_name,
                 COALESCE(m.unit, '') as unit,
                 COALESCE(m.category, '') as material_category,
-                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
             FROM bom b
             JOIN products p ON p.id = b.product_id
             JOIN materials m ON m.id = b.material_id
@@ -2912,7 +3129,7 @@ def schedule_requirements_auto_purchase():
             ''',
             product_ids,
         )
-        bom_rows = _filter_selected_silica_bom_rows(cursor.fetchall())
+        bom_rows = _filter_selected_variant_bom_rows(cursor.fetchall())
 
         material_ids = sorted({int(row.get('material_id') or 0) for row in bom_rows if int(row.get('material_id') or 0) > 0})
         workplace_stock_map = {}
@@ -3828,6 +4045,7 @@ def production_list():
     from datetime import datetime as dt
 
     workplace = get_workplace()
+    done_status = _normalize_production_status('\uC644\uB8CC')
 
     # ?묒눖?????뵬沃섎챸苑?
     month_param = request.args.get('month', '')
@@ -3884,8 +4102,8 @@ def production_list():
     for row in all_rows:
         row['status'] = _normalize_production_status(row.get('status'))
 
-    done_rows = [r for r in all_rows if r.get('status') == '?꾨즺']
-    active_rows = [r for r in all_rows if r.get('status') != '?꾨즺']
+    done_rows = [r for r in all_rows if r.get('status') == done_status]
+    active_rows = [r for r in all_rows if r.get('status') != done_status]
     done_count = len(done_rows)
     active_count = len(active_rows)
     if tab_param == 'active' and not active_rows and done_rows:
@@ -3908,7 +4126,7 @@ def production_list():
     seen_calendar_dates = set()
     for row in all_nav_rows:
         normalized_status = _normalize_production_status(row.get('status'))
-        include_row = normalized_status == '?꾨즺' if tab_param == 'done' else normalized_status != '?꾨즺'
+        include_row = normalized_status == done_status if tab_param == 'done' else normalized_status != done_status
         if not include_row:
             continue
         production_date = (row.get('production_date') or '').strip()
@@ -3972,7 +4190,8 @@ def add_production():
             SELECT b.product_id, b.quantity_per_box,
                    m.id as m_id, m.name as m_name, m.unit,
                    COALESCE(m.category, '') as material_category,
-                   COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id
+                   COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                   COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
             FROM bom b
             JOIN materials m ON b.material_id = m.id
             JOIN products p ON b.product_id = p.id
@@ -3980,7 +4199,7 @@ def add_production():
         ''',
             (workplace,),
         )
-        bom_mat = _filter_selected_silica_bom_rows(
+        bom_mat = _filter_selected_variant_bom_rows(
             [
                 {
                     'product_id': row['product_id'],
@@ -3990,7 +4209,8 @@ def add_production():
                     'm_name': row['m_name'],
                     'unit': row['unit'],
                     'material_category': '실리카' if '실리카' in str(row['m_name'] or '') else '',
-                    'selected_silica_material_id': 0,
+                    'selected_silica_material_id': row['selected_silica_material_id'],
+                    'selected_pouch_material_id': row['selected_pouch_material_id'],
                 }
                 for row in cursor.fetchall()
             ]
@@ -4158,6 +4378,7 @@ def production_detail(production_id):
 
     production = dict(production)
     production['status'] = _normalize_production_status(production.get('status'))
+    done_status = _normalize_production_status('\uC644\uB8CC')
     viewer_workplace = (get_workplace() or session.get('workplace') or '').strip()
     production_workplace = (production.get('workplace') or '').strip()
     has_workplace_access = _has_production_workplace_access(viewer_workplace, production_workplace)
@@ -4215,7 +4436,7 @@ def production_detail(production_id):
     production['raw_sok_values'] = [float(item.get('sok_per_box') or 0) for item in product_raw_options]
     production['raw_sheet_values'] = [int(item.get('sheets_per_pack') or 0) for item in product_raw_options]
 
-    if production['status'] == '?꾨즺' and not edit_completed:
+    if production['status'] == done_status and not edit_completed:
         # ?꾨즺椰? ??쇱젫 ??????癒?겧 疫꿸퀡以???뽯뻻 (???춭???癒?겧????已???뽯뻻)
         cursor.execute(
             '''
@@ -4413,12 +4634,13 @@ def production_detail(production_id):
     cursor.execute('SELECT COUNT(*) as count FROM production_material_usage WHERE production_id = ?', (production_id,))
     usage_count = cursor.fetchone()['count']
 
-    if usage_count > 0 and production['status'] != '?꾨즺':
+    if usage_count > 0 and production['status'] != done_status:
         cursor.execute(
             '''
             SELECT b.product_id, b.material_id, b.quantity_per_box,
                    COALESCE(m.category, '') AS material_category,
-                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
+                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
+                   COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
             FROM bom b
             LEFT JOIN materials m ON m.id = b.material_id
             LEFT JOIN products p ON p.id = b.product_id
@@ -4433,7 +4655,7 @@ def production_detail(production_id):
             ''',
             (production['product_id'], production_id),
         )
-        missing_bom_mats = _filter_selected_silica_bom_rows(cursor.fetchall())
+        missing_bom_mats = _filter_selected_variant_bom_rows(cursor.fetchall())
         if missing_bom_mats:
             planned = float(production['planned_boxes'] or 0)
             for bom in missing_bom_mats:
@@ -4456,7 +4678,8 @@ def production_detail(production_id):
             '''
             SELECT b.*, m.name as material_name, m.unit, m.category,
                    b.product_id,
-                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
+                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
+                   COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
             FROM bom b
             JOIN materials m ON b.material_id = m.id
             JOIN products p ON p.id = b.product_id
@@ -4464,7 +4687,7 @@ def production_detail(production_id):
         ''',
             (production['product_id'],),
         )
-        bom_mats = _filter_selected_silica_bom_rows(cursor.fetchall())
+        bom_mats = _filter_selected_variant_bom_rows(cursor.fetchall())
 
         for bom in bom_mats:
             exact_qty = float(bom['quantity_per_box']) * planned
@@ -4687,13 +4910,14 @@ def edit_production_plan(production_id):
 
     production = dict(production)
     production['status'] = _normalize_production_status(production.get('status'))
+    done_status = _normalize_production_status('\uC644\uB8CC')
     current_workplace = (get_workplace() or session.get('workplace') or '').strip()
     production_workplace = (production.get('workplace') or '').strip()
     if not _has_production_workplace_access(current_workplace, production_workplace):
         conn_context.__exit__(None, None, None)
         return redirect(url_for('production.production_detail', production_id=production_id))
 
-    if production['status'] == '?꾨즺':
+    if production['status'] == done_status:
         conn.close()
         return redirect(url_for('production.production_detail', production_id=production_id))
 
@@ -4757,7 +4981,8 @@ def edit_production_plan(production_id):
             '''
             SELECT b.product_id, b.material_id, b.quantity_per_box,
                    COALESCE(m.category, '') AS material_category,
-                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
+                   COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
+                   COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
             FROM bom b
             LEFT JOIN materials m ON m.id = b.material_id
             LEFT JOIN products p ON p.id = b.product_id
@@ -4766,7 +4991,7 @@ def edit_production_plan(production_id):
             ''',
             (production['product_id'],),
         )
-        for bom in _filter_selected_silica_bom_rows(cursor.fetchall()):
+        for bom in _filter_selected_variant_bom_rows(cursor.fetchall()):
             material_id = bom['material_id']
             expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned_boxes * 100) / 100
             cursor.execute(
@@ -5115,7 +5340,8 @@ def update_production_usage(production_id):
                 '''
                 SELECT b.product_id, b.material_id, b.quantity_per_box,
                        COALESCE(m.category, '') AS material_category,
-                       COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id
+                       COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
+                       COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
                 FROM bom b
                 LEFT JOIN materials m ON m.id = b.material_id
                 LEFT JOIN products p ON p.id = b.product_id
@@ -5124,7 +5350,7 @@ def update_production_usage(production_id):
             ''',
                 (production_id,),
             )
-            bom_mats = _filter_selected_silica_bom_rows(cursor.fetchall())
+            bom_mats = _filter_selected_variant_bom_rows(cursor.fetchall())
 
             for bom in bom_mats:
                 exact = float(bom['quantity_per_box']) * actual_boxes

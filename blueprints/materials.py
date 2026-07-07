@@ -3419,10 +3419,10 @@ def raw_materials():
         selected_done_month = current_month_key
     if len(selected_done_month) != 7:
         selected_done_month = current_month_key
-    if selected_tab == 'done' and not selected_done_date and selected_done_scope != 'all':
+    if selected_done_date:
         selected_done_scope = 'month'
     elif selected_done_scope == '':
-        selected_done_scope = 'all'
+        selected_done_scope = 'month'
     logistics_workplace_filter = (request.args.get('logistics_workplace') or '??').strip() if is_logistics else '??'
     logistics_workplace_tabs = ['??'] + [wp for wp in WORKPLACES if wp != LOGISTICS_WORKPLACE]
 
@@ -3819,6 +3819,7 @@ def raw_materials():
     return render_template(
         'raw_materials.html',
         user=session['user'],
+        selected_tab=selected_tab,
         raw_materials=raw_materials,
         raw_code_profiles=raw_code_profiles,
         raw_code_profiles_json=json.dumps(raw_code_profiles, ensure_ascii=False),
@@ -3835,6 +3836,7 @@ def raw_materials():
         logistics_workplace_tabs=logistics_workplace_tabs,
         workplaces=WORKPLACES,
         current_workplace=workplace,
+        server_today=today_local().isoformat(),
         active_raw_groups=active_raw_groups,
         done_raw_groups=done_raw_groups,
         done_raw_rows=done_source_rows,

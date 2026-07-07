@@ -33,6 +33,16 @@ box-shadow:0 16px 34px rgba(15,23,42,.07);}
 .cat-btn[data-cat="세트"]::before{background:#db2777;box-shadow:0 0 0 4px rgba(219,39,119,.12);}
 .cat-btn[data-cat="무트레이"]::before{background:#64748b;box-shadow:0 0 0 4px rgba(100,116,139,.14);}
 .cat-badge{display:inline-block;padding:0.2rem 0.5rem;border-radius:10px;font-size:0.7rem;font-weight:600;}
+.product-name-stack{display:flex;flex-direction:column;gap:.38rem;}
+.product-variant-badges{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;}
+.product-variant-badge{display:inline-flex;align-items:center;gap:.35rem;max-width:100%;padding:.24rem .56rem;border-radius:999px;border:1px solid transparent;font-size:.68rem;font-weight:800;line-height:1.2;}
+.product-variant-badge .variant-kind{display:inline-flex;align-items:center;padding:.15rem .34rem;border-radius:999px;background:rgba(255,255,255,.65);font-size:.61rem;font-weight:900;}
+.product-variant-badge .variant-text{display:inline-block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.product-variant-badge .variant-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.15rem;height:1.15rem;padding:0 .28rem;border-radius:999px;background:rgba(15,23,42,.08);font-size:.6rem;font-weight:900;}
+.product-variant-badge.silica{background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe;box-shadow:0 8px 18px rgba(109,40,217,.12);}
+.product-variant-badge.silica .variant-kind{color:#5b21b6;}
+.product-variant-badge.pouch{background:#ecfeff;color:#0f766e;border-color:#99f6e4;box-shadow:0 8px 18px rgba(13,148,136,.12);}
+.product-variant-badge.pouch .variant-kind{color:#115e59;}
 .product-action-group{display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;}
 .quick-edit-row{display:none;background:rgba(37,99,235,.04);}
 .quick-edit-cell{padding:0 !important;}
@@ -111,6 +121,10 @@ html[data-theme="dark"] .quick-edit-title{color:#eff6ff;}
 html[data-theme="dark"] .quick-edit-grid .form-group label{color:#c7d3e3;}
 html[data-theme="dark"] .quick-edit-grid .form-group input,
 html[data-theme="dark"] .quick-edit-grid .form-group select{background:#0f1726;color:#eff6ff;border-color:#314155;}
+html[data-theme="dark"] .product-variant-badge .variant-kind{background:rgba(255,255,255,.08);}
+html[data-theme="dark"] .product-variant-badge .variant-count{background:rgba(255,255,255,.12);}
+html[data-theme="dark"] .product-variant-badge.silica{background:rgba(109,40,217,.18);color:#ddd6fe;border-color:rgba(221,214,254,.22);box-shadow:none;}
+html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,.18);color:#ccfbf1;border-color:rgba(153,246,228,.2);box-shadow:none;}
 </style>
 {% endblock %}
 {% block content %}
@@ -137,7 +151,15 @@ html[data-theme="dark"] .quick-edit-grid .form-group select{background:#0f1726;c
             </div>
             <div class="form-group"><label>박스당 낱봉 *</label><input type="number" name="box_quantity" value="100" required></div>
             <div class="form-group"><label>매수 *</label><input type="number" name="sheets_per_pack" value="24" required></div>
-            <div class="form-group"><label>절단 *</label><input type="number" name="cuts_per_sheet" value="9" required></div>
+            <div class="form-group">
+                <label>절단 *</label>
+                <select name="cuts_per_sheet" required>
+                    <option value="none">없음</option>
+                    {% for cut in range(1, 21) %}
+                    <option value="{{ cut }}" {% if cut == 9 %}selected{% endif %}>{{ cut }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
         <div style="text-align:right;margin-top:0.75rem;display:flex;gap:0.5rem;justify-content:flex-end;">
             <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('addForm').style.display='none'">취소</button>
@@ -199,7 +221,22 @@ html[data-theme="dark"] .quick-edit-grid .form-group select{background:#0f1726;c
         <tbody>
         {% for p in products %}
         <tr>
-            <td><strong style="font-size:0.85rem;">{{ p.name }}</strong></td>
+            <td>
+                <div class="product-name-stack">
+                    <strong style="font-size:0.85rem;">{{ p.name }}</strong>
+                    {% if p.variant_badges %}
+                    <div class="product-variant-badges">
+                        {% for badge in p.variant_badges %}
+                        <span class="product-variant-badge {% if badge.category == '실리카' %}silica{% else %}pouch{% endif %}" title="{{ badge.category }} 현재 사용: {{ badge.label }}">
+                            <span class="variant-kind">{{ badge.category }}</span>
+                            <span class="variant-text">{{ badge.label }}</span>
+                            <span class="variant-count">{{ badge.count }}</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </td>
             <td>
                 {% if p.category %}
                 <span class="cat-badge" style="background:
@@ -215,7 +252,7 @@ html[data-theme="dark"] .quick-edit-grid .form-group select{background:#0f1726;c
             </td>
             <td>{{ p.box_quantity }}</td>
             <td>{{ p.sheets_per_pack or 24 }}매</td>
-            <td>{{ p.cuts_per_sheet or 9 }}</td>
+            <td>{% if p.cuts_per_sheet is not none and (p.cuts_per_sheet|int) == 0 %}없음{% else %}{{ p.cuts_per_sheet or 9 }}{% endif %}</td>
             <td>
                 {% if p.sok_per_box and p.sok_per_box > 0 %}
                 {{ "%.2f"|format(p.sok_per_box) }}속
@@ -265,7 +302,16 @@ html[data-theme="dark"] .quick-edit-grid .form-group select{background:#0f1726;c
                             </div>
                             <div class="form-group"><label>박스당 낱봉</label><input type="number" name="box_quantity" min="1" step="1" value="{{ p.box_quantity or 100 }}" required></div>
                             <div class="form-group"><label>매수</label><input type="number" name="sheets_per_pack" min="1" step="1" value="{{ p.sheets_per_pack or 24 }}" required></div>
-                            <div class="form-group"><label>절단</label><input type="number" name="cuts_per_sheet" min="1" step="1" value="{{ p.cuts_per_sheet or 9 }}" required></div>
+                            <div class="form-group">
+                                <label>절단</label>
+                                {% set selected_cut = 9 if p.cuts_per_sheet is none else (p.cuts_per_sheet|int) %}
+                                <select name="cuts_per_sheet" required>
+                                    <option value="none" {% if selected_cut == 0 %}selected{% endif %}>없음</option>
+                                    {% for cut in range(1, 21) %}
+                                    <option value="{{ cut }}" {% if selected_cut == cut %}selected{% endif %}>{{ cut }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                             <div class="form-group"><label>1박스당 원초</label><input type="number" name="sok_per_box" min="0" step="0.01" value="{{ '%.2f'|format(p.sok_per_box or 0) }}" required></div>
                             <div class="form-group">
                                 <label>소비기한</label>

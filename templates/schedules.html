@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}생산 스케줄 - 예맛 생산관리{% endblock %}
 
@@ -3617,7 +3617,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
         margin-left:1rem;
         margin-right:1rem;
     }
-}`nhtml[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
+}html[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
 html[data-theme="dark"] .schedule-page-sub{color:#8ea3bd;}
 html[data-theme="dark"] .modal-content{background:linear-gradient(180deg,#121a2a,#0f1726);border:1px solid #263244;box-shadow:0 30px 70px rgba(2,6,23,.52);}
 html[data-theme="dark"] .modal-content h2,
@@ -4513,12 +4513,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         <div class="calendar-weekday">토</div>
     </div>
     
-    <div class="calendar-days" id="calendarDays">
-        <!-- JavaScript로 생성 -->
-    </div>
-    <div class="mobile-calendar-list" id="mobileCalendarList">
-        <!-- JavaScript로 생성 -->
-    </div>
+    <div class="calendar-days" id="calendarDays">{{ initial_calendar_html }}</div>
+    <div class="mobile-calendar-list" id="mobileCalendarList">{{ initial_mobile_calendar_html }}</div>
 </div>
 
 <!-- 필요 원,부자재 체크 뷰 -->
@@ -4905,7 +4901,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div class="export-empty">{{ empty_message }}</div>
     {% endif %}
 {%- endmacro %}
-`n<div id="exportView" class="card" style="display: none;">
+<div id="exportView" class="card" style="display: none;">
     <div class="export-topbar">
         <div>
             <h2 style="margin:0;">수출 일정표</h2>
@@ -5183,7 +5179,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         </div>
     </div>
 </div>
-`n<!-- 스케줄 추가 모달 -->
+<!-- 스케줄 추가 모달 -->
 <div id="addModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
@@ -5968,7 +5964,8 @@ function renderCalendar() {
             dayElement.classList.add('workday-holiday');
         }
         else if (workData.type === 'overtime') { 
-            typeText = workData.hours ? `잔업(${workData.hours}h)` : '잔업'; 
+            const overtimeHours = Number(workData.overtime_hours || 0);
+            typeText = overtimeHours ? `잔업(${overtimeHours}h)` : '잔업'; 
             statusTag.classList.add('tag-overtime');
             dayElement.classList.add('workday-overtime');
         }
@@ -5993,6 +5990,8 @@ function renderCalendar() {
 
     // --- 이후 스케줄 아이템 생성 로직(daySchedules.filter 등)은 그대로 유지 ---
     const daySchedules = schedules.filter(s => s.scheduled_date === dateStr);
+    calendarDays.appendChild(dayElement);
+
     if (daySchedules.length > 0) {
         const countBadge = document.createElement('span');
         countBadge.className = 'schedule-count';
@@ -6006,16 +6005,18 @@ function renderCalendar() {
             schedulesContainer.className = 'day-schedules';
             
             daySchedules.forEach(schedule => {
+    try {
     const scheduleItem = document.createElement('div');
     scheduleItem.className = 'schedule-item';
     if (schedule.is_completed) {
         scheduleItem.classList.add('done');
     }
+    const lineText = String(schedule.line || '');
     
     // 1. 상품명 (상단)
     const nameDiv = document.createElement('div');
     nameDiv.className = 'schedule-name';
-    nameDiv.textContent = schedule.product_name;
+    nameDiv.textContent = String(schedule.product_name || '');
     scheduleItem.appendChild(nameDiv);
     if (schedule.source === 'export') {
         const exportBadge = document.createElement('span');
@@ -6047,11 +6048,11 @@ function renderCalendar() {
     infoDiv.appendChild(boxesSpan);
 
     // 라인 배지들
-    if (schedule.line) {
+    if (lineText) {
         const lineContainer = document.createElement('div');
         lineContainer.className = 'line-container';
         
-        schedule.line.split(',').forEach(l => {
+        lineText.split(',').forEach(l => {
             const tag = document.createElement('span');
             tag.className = 'line-tag';
             tag.textContent = `L${l}`; // 공간 절약을 위해 '라인' 대신 'L' 사용
@@ -6063,8 +6064,8 @@ function renderCalendar() {
     scheduleItem.appendChild(infoDiv);
 
     // 툴팁 설정 (기존과 동일)
-    let tooltip = `${schedule.product_name} - ${schedule.planned_boxes}박스`;
-    if (schedule.line) tooltip += `\n라인: ${schedule.line}`;
+    let tooltip = `${String(schedule.product_name || '')} - ${schedule.planned_boxes}박스`;
+    if (lineText) tooltip += `\n라인: ${lineText}`;
     scheduleItem.title = tooltip;
     scheduleItem.style.cursor = 'pointer';
     scheduleItem.onclick = function(e) {
@@ -6092,12 +6093,13 @@ function renderCalendar() {
     scheduleItem.appendChild(deleteBtn);
     
     schedulesContainer.appendChild(scheduleItem);
+    } catch (error) {
+        console.error('Failed to render schedule item', schedule, error);
+    }
 });
             
             dayElement.appendChild(schedulesContainer);
         }
-        
-        calendarDays.appendChild(dayElement);
     }
     
     const totalRendered = startingDayOfWeek + daysInMonth;
@@ -7144,7 +7146,7 @@ function openAddModal(selectedDate = null) {
         document.getElementById('productSearch').focus();
     }, 100);
 }
-`nfunction closeModal() {
+function closeModal() {
     document.getElementById('addModal').style.display = 'none';
     clearSelection();
 }
@@ -7275,7 +7277,6 @@ document.getElementById('exportContainerCountInput').addEventListener('input', f
 
 // 페이지 로드 시 캘린더 렌더링
 document.addEventListener('DOMContentLoaded', function() {
-    renderCalendar();
     resetExportCompletedMonthFilter();
     switchExportScheduleTab('active');
     const activeView = getActiveView();
