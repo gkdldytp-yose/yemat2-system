@@ -24,7 +24,7 @@ def _product_bom_url(product_id, return_to=''):
     return url_for('products.product_bom', product_id=product_id)
 
 
-def _load_product_silica_options(cursor, product_id):
+def _load_product_variant_options(cursor, product_id, category):
     cursor.execute(
         '''
         SELECT
@@ -39,17 +39,25 @@ def _load_product_silica_options(cursor, product_id):
         JOIN materials m ON m.id = b.material_id
         WHERE b.product_id = ?
           AND b.material_id IS NOT NULL
-          AND COALESCE(m.category, '') = '실리카'
+          AND COALESCE(m.category, '') = ?
         ORDER BY b.id ASC
         ''',
-        (product_id,),
+        (product_id, category),
     )
     return [dict(row) for row in cursor.fetchall()]
 
 
-def _resolve_effective_silica_material_id(selected_material_id, silica_options):
+def _load_product_silica_options(cursor, product_id):
+    return _load_product_variant_options(cursor, product_id, '실리카')
+
+
+def _load_product_pouch_options(cursor, product_id):
+    return _load_product_variant_options(cursor, product_id, '파우치')
+
+
+def _resolve_effective_variant_material_id(selected_material_id, options):
     unique_ids = []
-    for item in silica_options:
+    for item in options:
         material_id = int(item.get('material_id') or 0)
         if material_id > 0 and material_id not in unique_ids:
             unique_ids.append(material_id)
@@ -61,39 +69,55 @@ def _resolve_effective_silica_material_id(selected_material_id, silica_options):
     return 0
 
 
-def _sync_product_selected_silica(cursor, product_id):
-    cursor.execute('SELECT selected_silica_material_id FROM products WHERE id = ?', (product_id,))
+def _resolve_effective_silica_material_id(selected_material_id, silica_options):
+    return _resolve_effective_variant_material_id(selected_material_id, silica_options)
+
+
+def _resolve_effective_pouch_material_id(selected_material_id, pouch_options):
+    return _resolve_effective_variant_material_id(selected_material_id, pouch_options)
+
+
+def _sync_product_selected_variant(cursor, product_id, selected_field, category):
+    cursor.execute(f'SELECT {selected_field} FROM products WHERE id = ?', (product_id,))
     product_row = cursor.fetchone()
     if not product_row:
         return 0, []
-    silica_options = _load_product_silica_options(cursor, product_id)
-    effective_id = _resolve_effective_silica_material_id(product_row['selected_silica_material_id'], silica_options)
-    stored_id = int(product_row['selected_silica_material_id'] or 0)
+    options = _load_product_variant_options(cursor, product_id, category)
+    effective_id = _resolve_effective_variant_material_id(product_row[selected_field], options)
+    stored_id = int(product_row[selected_field] or 0)
     normalized_id = effective_id if effective_id > 0 else None
     if stored_id != int(normalized_id or 0):
         cursor.execute(
-            'UPDATE products SET selected_silica_material_id = ? WHERE id = ?',
+            f'UPDATE products SET {selected_field} = ? WHERE id = ?',
             (normalized_id, product_id),
         )
-    return effective_id, silica_options
+    return effective_id, options
 
 
-def _find_products_for_shared_silica_update(cursor, workplace, old_material_id, new_material_id):
+def _sync_product_selected_silica(cursor, product_id):
+    return _sync_product_selected_variant(cursor, product_id, 'selected_silica_material_id', '실리카')
+
+
+def _sync_product_selected_pouch(cursor, product_id):
+    return _sync_product_selected_variant(cursor, product_id, 'selected_pouch_material_id', '파우치')
+
+
+def _find_products_for_shared_variant_update(cursor, workplace, old_material_id, new_material_id, selected_field, category):
     cursor.execute(
         '''
         SELECT
             p.id AS product_id,
-            p.selected_silica_material_id,
+            p.{selected_field},
             b.material_id
         FROM products p
         JOIN bom b ON b.product_id = p.id
         JOIN materials m ON m.id = b.material_id
         WHERE p.workplace = ?
           AND b.material_id IS NOT NULL
-          AND COALESCE(m.category, '') = '실리카'
+          AND COALESCE(m.category, '') = ?
         ORDER BY p.id ASC, b.id ASC
-        ''',
-        (workplace,),
+        '''.format(selected_field=selected_field),
+        (workplace, category),
     )
     grouped = {}
     for row in cursor.fetchall():
@@ -104,7 +128,7 @@ def _find_products_for_shared_silica_update(cursor, workplace, old_material_id, 
         bucket = grouped.setdefault(
             product_id,
             {
-                'selected_id': int(row['selected_silica_material_id'] or 0),
+                'selected_id': int(row[selected_field] or 0),
                 'material_ids': [],
             },
         )
@@ -118,10 +142,103 @@ def _find_products_for_shared_silica_update(cursor, workplace, old_material_id, 
             continue
         if old_material_id not in material_ids or new_material_id not in material_ids:
             continue
-        effective_id = _resolve_effective_silica_material_id(payload['selected_id'], [{'material_id': mid} for mid in material_ids])
+        effective_id = _resolve_effective_variant_material_id(payload['selected_id'], [{'material_id': mid} for mid in material_ids])
         if effective_id == old_material_id:
             matched_ids.append(product_id)
     return matched_ids
+
+
+def _find_products_for_shared_silica_update(cursor, workplace, old_material_id, new_material_id):
+    return _find_products_for_shared_variant_update(
+        cursor,
+        workplace,
+        old_material_id,
+        new_material_id,
+        'selected_silica_material_id',
+        '실리카',
+    )
+
+
+def _find_products_for_shared_pouch_update(cursor, workplace, old_material_id, new_material_id):
+    return _find_products_for_shared_variant_update(
+        cursor,
+        workplace,
+        old_material_id,
+        new_material_id,
+        'selected_pouch_material_id',
+        '파우치',
+    )
+
+
+def _attach_product_variant_statuses(cursor, product_rows):
+    products = [dict(row) for row in product_rows]
+    product_ids = [int(item.get('id') or 0) for item in products if int(item.get('id') or 0) > 0]
+    if not product_ids:
+        return products
+
+    placeholders = ','.join(['?'] * len(product_ids))
+    cursor.execute(
+        f'''
+        SELECT
+            p.id AS product_id,
+            COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
+            COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id,
+            b.material_id,
+            COALESCE(m.category, '') AS category,
+            COALESCE(m.name, '') AS material_name
+        FROM products p
+        JOIN bom b ON b.product_id = p.id
+        JOIN materials m ON m.id = b.material_id
+        WHERE p.id IN ({placeholders})
+          AND b.material_id IS NOT NULL
+          AND COALESCE(m.category, '') IN ('실리카', '파우치')
+        ORDER BY p.id ASC, b.id ASC
+        ''',
+        product_ids,
+    )
+    rows = [dict(row) for row in cursor.fetchall()]
+    product_variant_map = {
+        int(item['id']): {
+            '실리카': {'selected_id': int(item.get('selected_silica_material_id') or 0), 'options': []},
+            '파우치': {'selected_id': int(item.get('selected_pouch_material_id') or 0), 'options': []},
+        }
+        for item in products
+    }
+    for row in rows:
+        product_id = int(row.get('product_id') or 0)
+        material_id = int(row.get('material_id') or 0)
+        category = (row.get('category') or '').strip()
+        if product_id <= 0 or material_id <= 0 or category not in ('실리카', '파우치'):
+            continue
+        bucket = product_variant_map.get(product_id, {}).get(category)
+        if bucket is None:
+            continue
+        if any(int(option.get('material_id') or 0) == material_id for option in bucket['options']):
+            continue
+        bucket['options'].append({'material_id': material_id, 'material_name': (row.get('material_name') or '').strip()})
+
+    for item in products:
+        product_id = int(item.get('id') or 0)
+        variant_info = product_variant_map.get(product_id, {})
+        variant_badges = []
+        for category in ('실리카', '파우치'):
+            bucket = variant_info.get(category) or {}
+            options = bucket.get('options') or []
+            if len(options) < 2:
+                continue
+            selected_id = int(bucket.get('selected_id') or 0)
+            selected_option = next((option for option in options if int(option.get('material_id') or 0) == selected_id), None)
+            if not selected_option and options:
+                selected_option = options[0]
+            if not selected_option:
+                continue
+            variant_badges.append({
+                'category': category,
+                'label': selected_option.get('material_name') or category,
+                'count': len(options),
+            })
+        item['variant_badges'] = variant_badges
+    return products
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SPEC_SHEET_DIR = PROJECT_ROOT / 'uploads' / 'product_specs'
 SPEC_SHEET_DIR.mkdir(parents=True, exist_ok=True)
@@ -207,6 +324,21 @@ def _parse_positive_int_field(raw_value, label):
     return value
 
 
+def _parse_cuts_per_sheet_field(raw_value, label='절단'):
+    text = str(raw_value or '').strip().lower()
+    if not text:
+        raise ValueError(f'{label}을(를) 선택해주세요.')
+    if text in {'none', '없음'}:
+        return 0
+    try:
+        value = int(float(text))
+    except (TypeError, ValueError):
+        raise ValueError(f'{label}은(는) 숫자 또는 없음으로 입력해주세요.')
+    if value < 0:
+        raise ValueError(f'{label}은(는) 0 이상이어야 합니다.')
+    return value
+
+
 def _parse_non_negative_float_field(raw_value, label):
     text = str(raw_value or '').strip()
     if not text:
@@ -252,7 +384,7 @@ def products():
 
         query += ' GROUP BY p.id ORDER BY p.category, p.name'
         cursor.execute(query, params)
-        products = cursor.fetchall()
+        products = _attach_product_variant_statuses(cursor, cursor.fetchall())
         base_count_query = '''
             SELECT COALESCE(p.category, '') AS category, COUNT(*) AS cnt
             FROM products p
@@ -410,18 +542,23 @@ def manage_product_spec_sheet(product_id):
 def add_product():
     """?곹뭹 異붽?"""
     workplace = get_workplace()
-    name = request.form.get('name')
-    code = request.form.get('code')
+    name = (request.form.get('name') or '').strip()
+    code = (request.form.get('code') or '').strip()
     description = request.form.get('description')
-    box_quantity = request.form.get('box_quantity', 1)
-    category = request.form.get('category', '湲고?')
+    category = (request.form.get('category') or '기타').strip() or '기타'
+    try:
+        box_quantity = _parse_positive_int_field(request.form.get('box_quantity', 1), '박스당 낱봉')
+        sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack', 24), '매수')
+        cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet', 9), '절단')
+    except ValueError as e:
+        return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
     try:
         with db_transaction() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO products (name, code, description, box_quantity, category, workplace)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (name, code, description, box_quantity, category, workplace))
+                INSERT INTO products (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet))
         return redirect(url_for('products.products'))
     except Exception as e:
         return f"?먮윭: {e}", 400
@@ -464,9 +601,14 @@ def product_bom(product_id):
         cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
         product = cursor.fetchone()
         silica_options = _load_product_silica_options(cursor, product_id)
+        pouch_options = _load_product_pouch_options(cursor, product_id)
         effective_selected_silica_id = _resolve_effective_silica_material_id(
             product['selected_silica_material_id'] if product else None,
             silica_options,
+        )
+        effective_selected_pouch_id = _resolve_effective_pouch_material_id(
+            product['selected_pouch_material_id'] if product else None,
+            pouch_options,
         )
 
         cursor.execute('''
@@ -558,26 +700,31 @@ def product_bom(product_id):
                           materials=materials,
                           raw_materials=raw_materials,
                           silica_options=silica_options,
+                          pouch_options=pouch_options,
                           effective_selected_silica_id=effective_selected_silica_id,
+                          effective_selected_pouch_id=effective_selected_pouch_id,
                           return_to=return_to)
 
 @bp.route('/products/<int:product_id>/update-info', methods=['POST'])
 @role_required('production')
 def update_product_info(product_id):
     """?곹뭹 湲곕낯 ?뺣낫 ?낅뜲?댄듃"""
-    box_quantity = request.form.get('box_quantity')
-    sheets_per_pack = request.form.get('sheets_per_pack')
-    cuts_per_sheet = request.form.get('cuts_per_sheet')
-    category = (request.form.get('category') or '湲고?').strip() or '湲고?'
+    category = (request.form.get('category') or '기타').strip() or '기타'
     raw_option_values = _parse_raw_option_values(request.form)
     first_option, second_option, third_option = raw_option_values
     sok_per_box = first_option['sok'] if first_option['sok'] is not None else 0
-    sheets_per_pack = first_option['sheets'] if first_option['sheets'] is not None else sheets_per_pack
     sok_per_box_2 = second_option['sok']
     sok_per_box_3 = third_option['sok']
     sheets_per_pack_2 = second_option['sheets']
     sheets_per_pack_3 = third_option['sheets']
     expiry_months = request.form.get('expiry_months', 12)
+    try:
+        box_quantity = _parse_positive_int_field(request.form.get('box_quantity'), '박스당 낱봉')
+        base_sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack'), '매수')
+        cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet'), '절단')
+    except ValueError as e:
+        return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
+    sheets_per_pack = first_option['sheets'] if first_option['sheets'] is not None else base_sheets_per_pack
     try:
         expiry_months = int(expiry_months)
     except (TypeError, ValueError):
@@ -876,6 +1023,42 @@ def update_product_silica_selection(product_id):
     return redirect(_product_bom_url(product_id, request.form.get('return_to')))
 
 
+@bp.route('/products/<int:product_id>/pouch-selection', methods=['POST'])
+@role_required('production')
+def update_product_pouch_selection(product_id):
+    new_material_id = request.form.get('selected_pouch_material_id', type=int)
+    scope = (request.form.get('scope') or 'single').strip()
+
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, workplace FROM products WHERE id = ?', (product_id,))
+        product = cursor.fetchone()
+        if not product:
+            return redirect(url_for('products.products'))
+
+        current_material_id, pouch_options = _sync_product_selected_pouch(cursor, product_id)
+        valid_ids = {int(item['material_id']) for item in pouch_options if int(item.get('material_id') or 0) > 0}
+        if not new_material_id or new_material_id not in valid_ids:
+            return "<meta charset='utf-8'><script>alert('선택 가능한 파우치를 확인해주세요.'); history.back();</script>"
+
+        product_ids = [product_id]
+        if scope == 'all_mixed' and current_material_id and current_material_id != new_material_id:
+            product_ids = _find_products_for_shared_pouch_update(
+                cursor,
+                product['workplace'],
+                current_material_id,
+                new_material_id,
+            ) or [product_id]
+
+        placeholders = ','.join(['?'] * len(product_ids))
+        cursor.execute(
+            f'UPDATE products SET selected_pouch_material_id = ? WHERE id IN ({placeholders})',
+            [new_material_id, *product_ids],
+        )
+
+    return redirect(_product_bom_url(product_id, request.form.get('return_to')))
+
+
 @bp.route('/products/<int:product_id>/quick-update', methods=['POST'])
 @role_required('production')
 def quick_update_product_info(product_id):
@@ -884,7 +1067,7 @@ def quick_update_product_info(product_id):
     try:
         box_quantity = _parse_positive_int_field(request.form.get('box_quantity'), '박스당 낱봉')
         sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack'), '매수')
-        cuts_per_sheet = _parse_positive_int_field(request.form.get('cuts_per_sheet'), '절단')
+        cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet'), '절단')
         sok_per_box = _parse_non_negative_float_field(request.form.get('sok_per_box'), '1박스당 원초')
         expiry_months = int(expiry_months)
     except ValueError as e:

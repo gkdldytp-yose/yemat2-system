@@ -64,6 +64,13 @@ def _normalize_todo_importance(raw_value):
     return ''
 
 
+def _normalize_todo_status(raw_value, default='processing'):
+    value = (raw_value or '').strip().lower()
+    if value in ('processing', 'info_needed', 'completed'):
+        return value
+    return default
+
+
 def _is_todo_owner(username, created_by):
     return bool((username or '').strip()) and (username or '').strip() == (created_by or '').strip()
 
@@ -108,6 +115,7 @@ def create_dashboard_todo():
     title = (request.form.get('title') or '').strip()
     detail = (request.form.get('detail') or '').strip()
     importance = _normalize_todo_importance(request.form.get('importance'))
+    todo_status = _normalize_todo_status(request.form.get('todo_status'))
     due_date_raw = (request.form.get('due_date') or '').strip()
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
@@ -122,10 +130,21 @@ def create_dashboard_todo():
         cursor = conn.cursor()
         cursor.execute(
             '''
-            INSERT INTO dashboard_todos (workplace, title, detail, importance, due_date, created_by)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO dashboard_todos (workplace, title, detail, importance, due_date, todo_status, is_done, created_by, done_by, done_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'completed' THEN CURRENT_TIMESTAMP ELSE NULL END)
             ''',
-            (workplace, title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, username),
+            (
+                workplace,
+                title[:120],
+                detail[:2000],
+                importance or None,
+                due_date.isoformat() if due_date else None,
+                todo_status,
+                1 if todo_status == 'completed' else 0,
+                username,
+                username if todo_status == 'completed' else None,
+                todo_status,
+            ),
         )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
@@ -134,13 +153,18 @@ def create_dashboard_todo():
 def toggle_dashboard_todo(todo_id):
     workplace = get_workplace()
     username = (session.get('user') or {}).get('username')
-    is_done = 1 if (request.form.get('is_done') or '').strip() in ('1', 'true', 'on', 'yes') else 0
+    raw_status = (request.form.get('todo_status') or '').strip()
+    if raw_status:
+        todo_status = _normalize_todo_status(raw_status)
+    else:
+        is_done = 1 if (request.form.get('is_done') or '').strip() in ('1', 'true', 'on', 'yes') else 0
+        todo_status = 'completed' if is_done else 'processing'
 
     with db_transaction() as conn:
         cursor = conn.cursor()
         todo_row = cursor.execute(
             '''
-            SELECT id, workplace, is_done, created_by
+            SELECT id, workplace, is_done, todo_status, created_by
             FROM dashboard_todos
             WHERE id = ? AND workplace = ?
             ''',
@@ -156,12 +180,17 @@ def toggle_dashboard_todo(todo_id):
         cursor.execute(
             '''
             UPDATE dashboard_todos
-            SET is_done = ?,
-                done_by = CASE WHEN ? = 1 THEN ? ELSE NULL END,
-                done_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END
+            SET todo_status = ?,
+                is_done = CASE WHEN ? = 'completed' THEN 1 ELSE 0 END,
+                done_by = CASE WHEN ? = 'completed' THEN ? ELSE NULL END,
+                done_at = CASE
+                    WHEN ? = 'completed' AND COALESCE(done_at, '') = '' THEN CURRENT_TIMESTAMP
+                    WHEN ? = 'completed' THEN done_at
+                    ELSE NULL
+                END
             WHERE id = ? AND workplace = ?
             ''',
-            (is_done, is_done, username, is_done, todo_id, workplace),
+            (todo_status, todo_status, todo_status, username, todo_status, todo_status, todo_id, workplace),
         )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
@@ -173,6 +202,7 @@ def update_dashboard_todo(todo_id):
     title = (request.form.get('title') or '').strip()
     detail = (request.form.get('detail') or '').strip()
     importance = _normalize_todo_importance(request.form.get('importance'))
+    todo_status = _normalize_todo_status(request.form.get('todo_status'))
     due_date_raw = (request.form.get('due_date') or '').strip()
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
@@ -206,10 +236,31 @@ def update_dashboard_todo(todo_id):
             SET title = ?,
                 detail = ?,
                 importance = ?,
-                due_date = ?
+                due_date = ?,
+                todo_status = ?,
+                is_done = CASE WHEN ? = 'completed' THEN 1 ELSE 0 END,
+                done_by = CASE WHEN ? = 'completed' THEN ? ELSE NULL END,
+                done_at = CASE
+                    WHEN ? = 'completed' AND COALESCE(done_at, '') = '' THEN CURRENT_TIMESTAMP
+                    WHEN ? = 'completed' THEN done_at
+                    ELSE NULL
+                END
             WHERE id = ? AND workplace = ?
             ''',
-            (title[:120], detail[:2000], importance or None, due_date.isoformat() if due_date else None, todo_id, workplace),
+            (
+                title[:120],
+                detail[:2000],
+                importance or None,
+                due_date.isoformat() if due_date else None,
+                todo_status,
+                todo_status,
+                todo_status,
+                username,
+                todo_status,
+                todo_status,
+                todo_id,
+                workplace,
+            ),
         )
     return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
@@ -504,6 +555,8 @@ def index():
             title,
             detail,
             due_date,
+            importance,
+            todo_status,
             is_done,
             created_by,
             created_at,
@@ -517,18 +570,30 @@ def index():
     todo_rows = cursor.fetchall()
     dashboard_todos = []
     completed_dashboard_todos = []
+    processing_dashboard_todos = []
+    info_needed_dashboard_todos = []
     due_soon_dashboard_todos = []
     overdue_dashboard_todos = []
     for row in todo_rows:
         item = dict(row)
+        item['todo_status'] = _normalize_todo_status(item.get('todo_status'), 'completed' if int(item.get('is_done') or 0) else 'processing')
         due_date = _parse_dashboard_todo_due_date(item.get('due_date'))
         item['due_date_obj'] = due_date
         item['is_due_soon'] = bool(due_date and today <= due_date <= (today + timedelta(days=3)))
-        item['is_overdue'] = bool(due_date and due_date < today and not int(item.get('is_done') or 0))
-        if int(item.get('is_done') or 0):
+        item['is_overdue'] = bool(due_date and due_date < today and item['todo_status'] != 'completed')
+        item['status_label'] = {
+            'completed': '완료',
+            'processing': '처리중',
+            'info_needed': '정보 보강 필요',
+        }.get(item['todo_status'], '처리중')
+        if item['todo_status'] == 'completed':
             completed_dashboard_todos.append(item)
         else:
             dashboard_todos.append(item)
+            if item['todo_status'] == 'processing':
+                processing_dashboard_todos.append(item)
+            elif item['todo_status'] == 'info_needed':
+                info_needed_dashboard_todos.append(item)
             if item['is_due_soon']:
                 due_soon_dashboard_todos.append(item)
             if item['is_overdue']:
@@ -536,6 +601,8 @@ def index():
 
     dashboard_todos.sort(key=_todo_sort_key)
     completed_dashboard_todos.sort(key=lambda item: (str(item.get('done_at') or ''), str(item.get('created_at') or '')), reverse=True)
+    processing_dashboard_todos.sort(key=_todo_sort_key)
+    info_needed_dashboard_todos.sort(key=_todo_sort_key)
     due_soon_dashboard_todos.sort(key=_todo_sort_key)
     overdue_dashboard_todos.sort(key=_todo_sort_key)
 
@@ -553,6 +620,8 @@ def index():
                           pending_issues=pending_issues,
                           dashboard_todos=dashboard_todos,
                           completed_dashboard_todos=completed_dashboard_todos,
+                          processing_dashboard_todos=processing_dashboard_todos,
+                          info_needed_dashboard_todos=info_needed_dashboard_todos,
                           due_soon_dashboard_todos=due_soon_dashboard_todos,
                           overdue_dashboard_todos=overdue_dashboard_todos,
                           today=today)

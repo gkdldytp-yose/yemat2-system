@@ -80,6 +80,18 @@ def _should_auto_audit_request():
         return False
     if request.method == 'OPTIONS':
         return False
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return False
+    if request.endpoint in {
+        'production.schedule_requirements_data',
+        'production.schedule_stats_product_data',
+        'production.schedule_material_capacity_bom',
+        'materials.raw_materials_activity',
+        'materials.raw_material_logs_data',
+        'materials.raw_material_detail',
+        'materials.material_detail',
+    }:
+        return False
     if not session.get('user'):
         return False
     if request.endpoint in {'auth.login', 'auth.logout'}:
@@ -432,6 +444,12 @@ def create_app():
             return value
         return ''
 
+    def _normalize_todo_status(raw_value, default='processing'):
+        value = str(raw_value or '').strip().lower()
+        if value in {'processing', 'info_needed', 'completed'}:
+            return value
+        return default
+
     def _load_nav_todos(cursor, workplace):
         today = today_local()
         completed_date_from = (request.args.get('todo_completed_from') or today.isoformat()).strip() or today.isoformat()
@@ -439,6 +457,12 @@ def create_app():
         completed_keyword = (request.args.get('todo_completed_keyword') or '').strip()
         completed_importance = _normalize_todo_importance(request.args.get('todo_completed_importance'))
         completed_done_by = (request.args.get('todo_completed_done_by') or '').strip()
+        active_todos = []
+        completed_todos = []
+        processing_todos = []
+        info_needed_todos = []
+        due_soon_todos = []
+        overdue_todos = []
         cursor.execute(
             """
             SELECT
@@ -448,6 +472,7 @@ def create_app():
                 t.detail,
                 t.importance,
                 t.due_date,
+                t.todo_status,
                 t.is_done,
                 t.created_by,
                 t.created_at,
@@ -459,51 +484,87 @@ def create_app():
             LEFT JOIN users uc ON uc.username = t.created_by
             LEFT JOIN users ud ON ud.username = t.done_by
             WHERE workplace = ?
-            ORDER BY COALESCE(t.is_done, 0) ASC, COALESCE(t.due_date, '') ASC, t.id DESC
+              AND COALESCE(t.todo_status, CASE WHEN COALESCE(t.is_done, 0) = 1 THEN 'completed' ELSE 'processing' END) != 'completed'
+            ORDER BY COALESCE(t.due_date, '') ASC, t.id DESC
             """,
             (workplace,),
         )
-        active_todos = []
-        completed_todos = []
-        due_soon_todos = []
-        overdue_todos = []
         for row in cursor.fetchall():
             item = dict(row)
             item['importance'] = _normalize_todo_importance(item.get('importance'))
+            item['todo_status'] = _normalize_todo_status(item.get('todo_status'), 'completed' if int(item.get('is_done') or 0) else 'processing')
+            item['status_label'] = {
+                'processing': '처리중',
+                'info_needed': '정보 보강 필요',
+                'completed': '완료',
+            }.get(item['todo_status'], '처리중')
             due_date = _parse_todo_due_date(item.get('due_date'))
             item['is_due_soon'] = bool(due_date and today <= due_date <= (today + timedelta(days=3)))
-            item['is_overdue'] = bool(due_date and due_date < today and not int(item.get('is_done') or 0))
-            if int(item.get('is_done') or 0):
-                done_date = str(item.get('done_at') or '')[:10]
-                matches = True
-                if completed_date_from and done_date and done_date < completed_date_from:
-                    matches = False
-                if completed_date_to and done_date and done_date > completed_date_to:
-                    matches = False
-                if completed_keyword:
-                    haystack = f"{item.get('title') or ''} {item.get('detail') or ''}".lower()
-                    if completed_keyword.lower() not in haystack:
-                        matches = False
-                if completed_importance and item['importance'] != completed_importance:
-                    matches = False
-                done_by_search_text = f"{item.get('done_by_name') or ''} {item.get('done_by') or ''}".lower()
-                if completed_done_by and completed_done_by.lower() not in done_by_search_text:
-                    matches = False
-                if matches:
-                    completed_todos.append(item)
-            else:
-                active_todos.append(item)
-                if item['is_due_soon']:
-                    due_soon_todos.append(item)
-                if item['is_overdue']:
-                    overdue_todos.append(item)
+            item['is_overdue'] = bool(due_date and due_date < today and item['todo_status'] != 'completed')
+            active_todos.append(item)
+            if item['todo_status'] == 'processing':
+                processing_todos.append(item)
+            elif item['todo_status'] == 'info_needed':
+                info_needed_todos.append(item)
+            if item['is_due_soon']:
+                due_soon_todos.append(item)
+            if item['is_overdue']:
+                overdue_todos.append(item)
+
+        completed_query = """
+            SELECT
+                t.id,
+                t.workplace,
+                t.title,
+                t.detail,
+                t.importance,
+                t.due_date,
+                t.todo_status,
+                t.is_done,
+                t.created_by,
+                t.created_at,
+                t.done_by,
+                t.done_at,
+                COALESCE(NULLIF(TRIM(uc.name), ''), t.created_by) AS created_by_name,
+                COALESCE(NULLIF(TRIM(ud.name), ''), t.done_by) AS done_by_name
+            FROM dashboard_todos t
+            LEFT JOIN users uc ON uc.username = t.created_by
+            LEFT JOIN users ud ON ud.username = t.done_by
+            WHERE workplace = ?
+              AND COALESCE(t.todo_status, CASE WHEN COALESCE(t.is_done, 0) = 1 THEN 'completed' ELSE 'processing' END) = 'completed'
+              AND substr(COALESCE(t.done_at, ''), 1, 10) BETWEEN ? AND ?
+        """
+        completed_params = [workplace, completed_date_from, completed_date_to]
+        if completed_keyword:
+            completed_query += " AND (COALESCE(t.title, '') LIKE ? OR COALESCE(t.detail, '') LIKE ?)"
+            keyword_like = f'%{completed_keyword}%'
+            completed_params.extend([keyword_like, keyword_like])
+        if completed_importance:
+            completed_query += " AND COALESCE(t.importance, '') = ?"
+            completed_params.append(completed_importance)
+        if completed_done_by:
+            completed_query += " AND (COALESCE(ud.name, '') LIKE ? OR COALESCE(t.done_by, '') LIKE ?)"
+            done_by_like = f'%{completed_done_by}%'
+            completed_params.extend([done_by_like, done_by_like])
+        completed_query += " ORDER BY COALESCE(t.done_at, '') DESC, COALESCE(t.created_at, '') DESC"
+        cursor.execute(completed_query, completed_params)
+        for row in cursor.fetchall():
+            item = dict(row)
+            item['importance'] = _normalize_todo_importance(item.get('importance'))
+            item['todo_status'] = _normalize_todo_status(item.get('todo_status'), 'completed')
+            item['status_label'] = '완료'
+            completed_todos.append(item)
         active_todos.sort(key=_todo_sort_key)
         completed_todos.sort(key=lambda item: (str(item.get('done_at') or ''), str(item.get('created_at') or '')), reverse=True)
+        processing_todos.sort(key=_todo_sort_key)
+        info_needed_todos.sort(key=_todo_sort_key)
         due_soon_todos.sort(key=_todo_sort_key)
         overdue_todos.sort(key=_todo_sort_key)
         return {
             'nav_dashboard_todos': active_todos,
             'nav_completed_dashboard_todos': completed_todos,
+            'nav_processing_dashboard_todos': processing_todos,
+            'nav_info_needed_dashboard_todos': info_needed_todos,
             'nav_due_soon_dashboard_todos': due_soon_todos,
             'nav_overdue_dashboard_todos': overdue_todos,
             'nav_today': today,
@@ -573,7 +634,7 @@ def create_app():
                 SELECT id, title, detail, due_date
                 FROM dashboard_todos
                 WHERE workplace = ?
-                  AND COALESCE(is_done, 0) = 0
+                  AND COALESCE(todo_status, CASE WHEN COALESCE(is_done, 0) = 1 THEN 'completed' ELSE 'processing' END) != 'completed'
                   AND due_date IS NOT NULL
                   AND TRIM(due_date) <> ''
                   AND due_date BETWEEN ? AND ?
@@ -626,6 +687,8 @@ def create_app():
                 'nav_stored_unread_notifications': 0,
                 'nav_dashboard_todos': [],
                 'nav_completed_dashboard_todos': [],
+                'nav_processing_dashboard_todos': [],
+                'nav_info_needed_dashboard_todos': [],
                 'nav_due_soon_dashboard_todos': [],
                 'nav_overdue_dashboard_todos': [],
                 'nav_today': today_local(),
@@ -646,6 +709,8 @@ def create_app():
             todo_context = _load_nav_todos(cursor, workplace) if workplace else {
                 'nav_dashboard_todos': [],
                 'nav_completed_dashboard_todos': [],
+                'nav_processing_dashboard_todos': [],
+                'nav_info_needed_dashboard_todos': [],
                 'nav_due_soon_dashboard_todos': [],
                 'nav_overdue_dashboard_todos': [],
                 'nav_today': today_local(),
@@ -668,40 +733,6 @@ def create_app():
                     (username,),
                 )
                 dynamic_read_map = {row['notification_key']: row['signature'] for row in cursor.fetchall()}
-            cursor.execute(
-                '''
-                SELECT username, name
-                FROM users
-                WHERE status = 'pending'
-                '''
-            )
-            pending_signup_titles = set()
-            for row in cursor.fetchall():
-                pending_username = str(row['username'] or '').strip()
-                pending_name = str(row['name'] or '').strip()
-                if pending_username:
-                    pending_signup_titles.add(f'신규 회원가입 요청: {pending_username}')
-                if pending_name:
-                    pending_signup_titles.add(f'신규 회원가입 요청: {pending_name}')
-            cursor.execute(
-                '''
-                DELETE FROM user_notifications
-                WHERE username = ?
-                  AND link = '/users'
-                  AND title LIKE '신규 회원가입 요청:%'
-                ''',
-                (username,),
-            )
-            conn.commit()
-            for title in pending_signup_titles:
-                cursor.execute(
-                    '''
-                    INSERT INTO user_notifications (username, title, body, link, is_read, created_at, read_at)
-                    SELECT username, title, body, link, is_read, created_at, read_at
-                    FROM user_notifications
-                    WHERE 1 = 0
-                    ''',
-                )
             cursor.execute(
                 '''
                 SELECT id, title, body, link, is_read, created_at

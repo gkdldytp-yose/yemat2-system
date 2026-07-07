@@ -148,6 +148,38 @@ def _round_to_4_decimal(value):
     return round(float(value or 0) + 1e-9, 4)
 
 
+def _parse_positive_int_field(raw_value, label, default=None):
+    text = str(raw_value or '').strip()
+    if not text:
+        if default is not None:
+            return int(default)
+        raise ValueError(f'{label}을(를) 입력해주세요.')
+    try:
+        value = int(float(text))
+    except (TypeError, ValueError):
+        raise ValueError(f'{label}은(는) 숫자로 입력해주세요.')
+    if value <= 0:
+        raise ValueError(f'{label}은(는) 1 이상이어야 합니다.')
+    return value
+
+
+def _parse_cuts_per_sheet_field(raw_value, label='절단', default=None):
+    text = str(raw_value or '').strip().lower()
+    if not text:
+        if default is not None:
+            return int(default)
+        raise ValueError(f'{label}을(를) 선택해주세요.')
+    if text in {'none', '없음'}:
+        return 0
+    try:
+        value = int(float(text))
+    except (TypeError, ValueError):
+        raise ValueError(f'{label}은(는) 숫자 또는 없음으로 입력해주세요.')
+    if value < 0:
+        raise ValueError(f'{label}은(는) 0 이상이어야 합니다.')
+    return value
+
+
 def _subcontract_row_sort_key(row):
     item = row or {}
     item_type = (item.get('item_type') or '').strip()
@@ -5008,12 +5040,17 @@ def integrated_add_product():
     name = request.form.get('name')
     code = request.form.get('code')
     description = request.form.get('description')
-    box_quantity = request.form.get('box_quantity', 1)
+    category = (request.form.get('category') or '기타').strip() or '기타'
     expiry_months = request.form.get('expiry_months', 12)
     try:
+        box_quantity = _parse_positive_int_field(request.form.get('box_quantity', 1), '박스당 수량', default=1)
+        sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack'), '매수', default=24)
+        cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet'), '절단', default=9)
         expiry_months = int(expiry_months)
-    except (TypeError, ValueError):
-        expiry_months = 12
+    except ValueError as e:
+        return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
+    except (TypeError, OverflowError):
+        return "<meta charset='utf-8'><script>alert('입력값을 다시 확인해주세요.'); history.back();</script>"
     if expiry_months < 1 or expiry_months > 12:
         expiry_months = 12
 
@@ -5025,9 +5062,9 @@ def integrated_add_product():
                 if cursor.fetchone():
                     return "<script>alert('???????쇨덫?? ???? ????⑥ル??????黎앸럽????룸돥??????????곗뒩筌? ?????諛몃마?????????筌?캉??'); history.back();</script>"
             cursor.execute('''
-                INSERT INTO products (name, code, description, box_quantity, category, workplace)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (name, code, description, box_quantity, category, workplace))
+                INSERT INTO products (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet, expiry_months)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet, expiry_months))
             audit_log(
                 conn,
                 'create',
@@ -5040,6 +5077,9 @@ def integrated_add_product():
                     'box_quantity': box_quantity,
                     'category': category,
                     'workplace': workplace,
+                    'sheets_per_pack': sheets_per_pack,
+                    'cuts_per_sheet': cuts_per_sheet,
+                    'expiry_months': expiry_months,
                 },
             )
     except Exception:
@@ -5449,12 +5489,30 @@ def integrated_bulk_assign_product_workplace():
                 ''',
                 valid_ids,
             )
-            rows = cursor.fetchall()
-            for row in rows:
-                cursor.execute(
-                    'UPDATE products SET workplace = ? WHERE id = ?',
-                    (target_workplace, row['id']),
-                )
+            product_rows = cursor.fetchall()
+
+            cursor.execute(
+                f'''
+                SELECT DISTINCT
+                    m.id,
+                    m.category,
+                    m.workplace
+                FROM bom b
+                JOIN materials m ON m.id = b.material_id
+                WHERE b.product_id IN ({placeholders})
+                  AND b.material_id IS NOT NULL
+                ''',
+                valid_ids,
+            )
+            bom_material_rows = cursor.fetchall()
+
+            for row in product_rows:
+                before_workplace = (row['workplace'] or '').strip()
+                if before_workplace != target_workplace:
+                    cursor.execute(
+                        'UPDATE products SET workplace = ? WHERE id = ?',
+                        (target_workplace, row['id']),
+                    )
                 audit_log(
                     conn,
                     'update',
@@ -5463,6 +5521,28 @@ def integrated_bulk_assign_product_workplace():
                     {
                         'bulk_set_workplace': target_workplace,
                         'before_workplace': row['workplace'],
+                    },
+                )
+
+            for row in bom_material_rows:
+                category = (row['category'] or '').strip()
+                resolved_workplace = SHARED_WORKPLACE if category in SHARED_MATERIAL_CATEGORIES else target_workplace
+                before_workplace = (row['workplace'] or '').strip()
+                if before_workplace != resolved_workplace:
+                    cursor.execute(
+                        'UPDATE materials SET workplace = ? WHERE id = ?',
+                        (resolved_workplace, row['id']),
+                    )
+                audit_log(
+                    conn,
+                    'update',
+                    'material',
+                    row['id'],
+                    {
+                        'bulk_set_workplace_from_product': resolved_workplace,
+                        'selected_target_workplace': target_workplace,
+                        'before_workplace': row['workplace'],
+                        'linked_product_ids': valid_ids,
                     },
                 )
     except Exception:
@@ -6442,6 +6522,9 @@ def integrated_update_product():
     expiry_months = request.form.get('expiry_months', 12)
 
     try:
+        box_quantity = _parse_positive_int_field(box_quantity, '박스당 수량', default=1)
+        sheets_per_pack = _parse_positive_int_field(sheets_per_pack, '매수', default=24)
+        cuts_per_sheet = _parse_cuts_per_sheet_field(cuts_per_sheet, '절단', default=9)
         with db_transaction() as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))

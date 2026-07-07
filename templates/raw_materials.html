@@ -85,16 +85,16 @@
                 <div class="raw-add-step" id="rawAddStepEntry"><span class="raw-add-step-num">2</span><span>원초 정보 입력</span></div>
             </div>
             <div id="rawAddChoicePanel" class="raw-add-panel">
-                <p class="raw-add-guide">이미 등록된 원초명이 있으면 <strong>동일한 코드</strong>를 사용해서 등록하세요. 같은 원초는 코드만 유지하고 입고일, 자호만 바꿔 이어서 등록하는 방식입니다.</p>
+                <p class="raw-add-guide">이미 등록된 원초명이 있으면 <strong>동일한 코드</strong>를 사용해서 등록하세요. 같은 원초는 코드는 유지하고 입고일과 자호만 바꿔 이어서 등록하는 방식입니다.</p>
                 <div class="raw-add-choice-grid">
                     <button type="button" class="raw-add-choice" onclick="chooseExistingRawCode()">
                         <span class="raw-add-badge">권장</span>
-                        <span class="raw-add-choice-title">이미 등록된 원초 선택</span>
+                        <span class="raw-add-choice-title">기존 등록 원초 선택</span>
                         <span class="raw-add-choice-desc">기존 코드 원초를 선택하면 마지막 등록값을 자동으로 가져옵니다. 총재고와 현재고만 비워 두고, 가져온 값은 모두 수정 가능합니다.</span>
                     </button>
                     <button type="button" class="raw-add-choice" onclick="chooseNewRawCode()">
                         <span class="raw-add-choice-title">신규 원초 등록</span>
-                        <span class="raw-add-choice-desc">처음 등록하는 원초일 때 선택합니다. 기존 방식 그대로 새 원초 정보를 직접 입력해서 등록합니다.</span>
+                        <span class="raw-add-choice-desc">처음 등록하는 원초라면 이 항목을 선택합니다. 기존 방식 그대로 원초 정보를 직접 입력해서 등록합니다.</span>
                     </button>
                 </div>
                 <div id="rawAddExistingPicker" class="raw-add-existing-picker" hidden>
@@ -107,11 +107,11 @@
                                 <option value="{{ p.code }}">{{ p.code }} - {{ p.name }}</option>
                                 {% endfor %}
                             </select>
-                            <div class="raw-add-hint">이미 등록된 원초 코드를 먼저 선택한 뒤 다음으로 넘어가세요.</div>
+                            <div class="raw-add-hint">이미 등록된 원초 코드를 먼저 선택한 뒤 다음으로 진행하세요.</div>
                         </div>
                         <div class="raw-add-inline-actions">
-                            <button type="button" class="btn btn-small raw-add-back-btn" onclick="cancelExistingRawCodeChoice()">취소</button>
-                            <button type="button" class="btn btn-small raw-add-next-btn" style="background:#2563eb;" onclick="goToExistingRawEntry()">다음</button>
+                            <button type="button" class="btn btn-small raw-add-back-btn" onclick="cancelExistingRawCodeChoice()">痍⑥냼</button>
+                            <button type="button" class="btn btn-small raw-add-next-btn" style="background:#2563eb;" onclick="goToExistingRawEntry()">?ㅼ쓬</button>
                         </div>
                     </div>
                 </div>
@@ -138,6 +138,14 @@
 </div>
 {% endif %}
 
+<div
+    id="rawMaterialsPageRoot"
+    data-selected-tab="{{ selected_tab }}"
+    data-done-dates='{{ done_dates|tojson|forceescape }}'
+    data-selected-done-date="{{ selected_done_date or '' }}"
+    data-selected-done-month="{{ selected_done_month or '' }}"
+    data-selected-done-scope="{{ selected_done_scope or '' }}"
+>
 <div class="card">
     <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
         <h2>원초 목록</h2>
@@ -149,15 +157,11 @@
 
     <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
         <form method="GET" action="/raw-materials" id="rawListFilterForm" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
-            <input type="hidden" name="tab" id="rawListFilterTab" value="{{ request.args.get('tab', 'active') }}">
-            <input type="hidden" name="done_scope" id="rawListDoneScope" value="{{ selected_done_scope or 'all' }}">
-            <input type="hidden" name="done_month" id="rawListDoneMonth" value="{{ selected_done_month or '' }}">
-            {% if selected_done_date and request.args.get('tab', 'active') == 'done' %}
-            <input type="hidden" name="done_date" id="rawListDoneDate" value="{{ selected_done_date }}">
-            {% endif %}
-            {% if selected_done_kind and selected_done_kind != 'all' and request.args.get('tab', 'active') == 'done' %}
-            <input type="hidden" name="done_kind" id="rawListDoneKind" value="{{ selected_done_kind }}">
-            {% endif %}
+            <input type="hidden" name="tab" id="rawListFilterTab" value="{{ selected_tab }}">
+            <input type="hidden" name="done_scope" id="rawListDoneScope" value="{{ selected_done_scope or 'all' }}" {% if selected_tab != 'done' %}disabled{% endif %}>
+            <input type="hidden" name="done_month" id="rawListDoneMonth" value="{{ selected_done_month or '' }}" {% if selected_tab != 'done' %}disabled{% endif %}>
+            <input type="hidden" name="done_date" id="rawListDoneDate" value="{{ selected_done_date or '' }}" {% if selected_tab != 'done' %}disabled{% endif %}>
+            <input type="hidden" name="done_kind" id="rawListDoneKind" value="{{ selected_done_kind or 'all' }}" {% if selected_tab != 'done' %}disabled{% endif %}>
             <div style="grid-column:span 2;display:flex;flex-direction:column;gap:0.35rem;">
                 <label for="rawSearchField" style="font-size:0.82rem;color:#475569;font-weight:600;">&#xAC80;&#xC0C9; &#xAE30;&#xC900;</label>
                 <select id="rawSearchField" name="raw_search_field" style="padding:0.45rem 0.55rem;border:1px solid #dbe2ea;border-radius:10px;background:#fff;">
@@ -183,27 +187,27 @@
             </div>
             <div style="grid-column:span 2;display:flex;gap:0.5rem;justify-content:flex-end;align-items:end;flex-wrap:wrap;">
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">&#xC801;&#xC6A9;</button>
-                <a href="/raw-materials?tab={{ request.args.get('tab', 'active') }}" id="rawListFilterReset" class="btn btn-small btn-secondary">&#xCD08;&#xAE30;&#xD654;</a>
+                <a href="/raw-materials?tab={{ selected_tab }}" id="rawListFilterReset" class="btn btn-small btn-secondary">&#xCD08;&#xAE30;&#xD654;</a>
             </div>
         </form>
     </div>
 
-    <!-- 탭 -->
+    <!-- ??-->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('active')" id="tab_active">
-            🌿 사용중
+        <button class="tab-btn {% if selected_tab != 'done' %}active{% endif %}" onclick="switchTab('active')" id="tab_active" type="button">
+            사용중
             {% set cnt = active_raw_groups|length %}
             <span class="cnt-badge">{{ cnt }}</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('done')" id="tab_done">
-            🌿 사용완료
+        <button class="tab-btn {% if selected_tab == 'done' %}active{% endif %}" onclick="switchTab('done')" id="tab_done" type="button">
+            사용완료
             {% set cnt2 = done_raw_rows|length %}
             <span class="cnt-badge" id="done_cnt">{{ cnt2 }}</span>
         </button>
     </div>
 
-    <!-- 사용중 탭 -->
-    <div id="pane_active">
+    <!-- ?ъ슜以???-->
+    <div id="pane_active" {% if selected_tab == 'done' %}style="display:none;"{% endif %}>
     {% if active_raw_groups %}
     <div class="raw-code-groups">
         {% for group in active_raw_groups %}
@@ -231,15 +235,15 @@
                             </div>
                             <div class="raw-item-inline-meta">
                                 <span class="raw-inline-meta">입고일 {{ rm.receiving_date or '-' }}</span>
-                                <span class="raw-inline-meta">1박스 {{ rm.sheets_per_sok }}속</span>
+                                <span class="raw-inline-meta">1박스당 {{ rm.sheets_per_sok }}속</span>
                             </div>
                         </div>
                         <div class="raw-current-hero {{ rm.stock_color }}">
                             <span class="raw-current-hero-label">현재고</span>
                             <strong class="raw-current-hero-value" style="color:{{ rm.current_stock_text_color }};">{{ "{:,}".format(rm.current_stock_value|int) }}속</strong>
                             <div class="raw-current-hero-meta">
-                                <span>잔여율 {{ rm.stock_percent }}%</span>
-                                <span>{% if rm.stock_color == 'danger' %}빠른 확인 필요{% elif rm.stock_color == 'warn' %}보충 주의{% else %}재고 여유{% endif %}</span>
+                                <span>잔량 {{ rm.stock_percent }}%</span>
+                                <span>{% if rm.stock_color == 'danger' %}빠른 확인 필요{% elif rm.stock_color == 'warn' %}보충 주의{% else %}재고 양호{% endif %}</span>
                             </div>
                         </div>
                         <div class="raw-code-metrics raw-code-metrics-secondary">
@@ -259,7 +263,7 @@
                         <button class="btn btn-small" onclick="showExport({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">반출</button>
                         <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">수정</button>
                         <button class="btn btn-small" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">점검표</button>
-                        <form method="POST" action="/raw-materials/{{ rm.id }}/delete" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n생산 기록에 사용된 항목이 있으면 삭제할 수 없습니다.\nBOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
+                        <form method="POST" action="/raw-materials/{{ rm.id }}/delete" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n생산 기록이나 사용 항목이 있으면 삭제할 수 없습니다.\nBOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
                             <button type="submit" class="btn btn-small raw-delete-btn">삭제</button>
                         </form>
                         {% endif %}
@@ -270,12 +274,12 @@
         </section>
         {% endfor %}
     </div>
-    {% else %}<p style="text-align:center;color:#999;padding:2rem;">사용중인 원초가 없습니다</p>{% endif %}
+    {% else %}<p style="text-align:center;color:#999;padding:2rem;">사용중인 원초가 없습니다.</p>{% endif %}
     </div>
     {% if false %}
     {% set active_list = raw_materials | selectattr('current_stock', 'gt', 0) | list %}
     {% if active_list %}
-    <div class="table-container"><table><thead><tr><th>원초명</th><th>1박스당 속수</th><th>입고일</th><th>자호</th><th>총재고</th><th>현재고</th><th>사용량</th><th>잔여율</th><th>관리</th></tr></thead>
+    <div class="table-container"><table><thead><tr><th>?먯큹紐?/th><th>1諛뺤뒪???띿닔</th><th>?낃퀬??/th><th>?먰샇</th><th>珥앹옱怨?/th><th>?꾩옱怨?/th><th>?ъ슜??/th><th>?붿뿬??/th><th>愿由?/th></tr></thead>
     <tbody>{% for rm in active_list %}
     <tr style="cursor:pointer;" onclick="showLogs({{ rm.id }},'{{ rm.name|e }}')">
         <td>
@@ -283,12 +287,12 @@
                 <a href="#" class="raw-name-link" onclick="event.stopPropagation(); openRawLotModal({{ rm.id }}); return false;">{{ rm.name }}</a>
             </strong>
         </td>
-        <td>{{ rm.sheets_per_sok }}속/box</td>
+        <td>{{ rm.sheets_per_sok }}??box</td>
         <td>{{ rm.receiving_date or '-' }}</td>
         <td>{{ rm.car_number or '-' }}</td>
-        <td>{{ rm.total_stock|int }}속</td>
-        <td><strong style="color:{% if rm.current_stock<10 %}#e74c3c{% else %}#27ae60{% endif %}">{{ rm.current_stock|int }}속</strong></td>
-        <td>{{ rm.used_quantity|int }}속</td>
+        <td>{{ rm.total_stock|int }}??/td>
+        <td><strong style="color:{% if rm.current_stock<10 %}#e74c3c{% else %}#27ae60{% endif %}">{{ rm.current_stock|int }}??/strong></td>
+        <td>{{ rm.used_quantity|int }}??/td>
         <td>
             {% if rm.total_stock and rm.total_stock > 0 %}
             {% set percent = (rm.current_stock / rm.total_stock * 100) | int %}
@@ -302,22 +306,22 @@
         </td>
         <td onclick="event.stopPropagation()">
             {% if can_raw %}
-            <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}','{{ rm.receiving_date or "" }}')">입고</button>
-            <button class="btn btn-small" onclick="showExport({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">반출</button>
-            <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">수정</button>
-            <button class="btn btn-small" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">점검표</button>
-            <form method="POST" action="/raw-materials/{{ rm.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n※ 생산 기록에 사용된 적이 있으면 삭제할 수 없습니다.\n※ BOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
-                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+            <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}','{{ rm.receiving_date or "" }}')">?낃퀬</button>
+            <button class="btn btn-small" onclick="showExport({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">諛섏텧</button>
+            <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">?섏젙</button>
+            <button class="btn btn-small" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">?먭???/button>
+            <form method="POST" action="/raw-materials/{{ rm.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ rm.name }}??瑜? ??젣?섏떆寃좎뒿?덇퉴?\n\n???앹궛 湲곕줉???ъ슜???곸씠 ?덉쑝硫???젣?????놁뒿?덈떎.\n??BOM???깅줉?섏뼱 ?덉쑝硫?BOM?먯꽌???먮룞?쇰줈 ?쒓굅?⑸땲??')">
+                <button type="submit" class="btn btn-small" style="background:#e74c3c;">??젣</button>
             </form>
             {% endif %}
         </td>
     </tr>
     {% endfor %}</tbody></table></div>
-    {% else %}<p style="text-align:center;color:#999;padding:2rem;">사용중인 원초가 없습니다</p>{% endif %}
+    {% else %}<p style="text-align:center;color:#999;padding:2rem;">?ъ슜以묒씤 ?먯큹媛 ?놁뒿?덈떎</p>{% endif %}
 
-    <!-- 사용완료 탭 -->
+    <!-- ?ъ슜?꾨즺 ??-->
     {% endif %}
-    <div id="pane_done" style="display:none;">
+    <div id="pane_done" {% if selected_tab != 'done' %}style="display:none;"{% endif %}>
     
     <div class="done-calendar">
         <div class="done-calendar-head">
@@ -357,7 +361,7 @@
         <td>
             <div>{{ rm.done_date or '-' }}</div>
             {% if rm.done_kind == 'export' %}
-            <span style="background:#fff7ed;color:#c2410c;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">반출완료</span>
+            <span style="background:#fff7ed;color:#c2410c;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">반출 완료</span>
             {% else %}
             <span style="background:#e8f5e9;color:#27ae60;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">사용완료</span>
             {% endif %}
@@ -372,11 +376,12 @@
         </td>
     </tr>
     {% endfor %}</tbody></table></div>
-    {% else %}<p style="text-align:center;color:#999;padding:2rem;">사용완료된 원초가 없습니다</p>{% endif %}
+    {% else %}<p style="text-align:center;color:#999;padding:2rem;">사용완료 원초가 없습니다.</p>{% endif %}
+</div>
 </div>
 </div>
 
-<!-- 원초 사용/입고/반출 내역 모달 -->
+<!-- 원초 사용/입고/반출 이력 모달 -->
 <div id="rawLotDetailModal" class="modal" style="display:none;">
     <div class="modal-content raw-lot-modal">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
@@ -385,7 +390,7 @@
         </div>
         <div class="raw-lot-header-grid">
             <div class="raw-lot-header-item"><span class="label">원초명</span><span class="value" id="rd_name">-</span></div>
-            <div class="raw-lot-header-item"><span class="label">코드</span><span class="value" id="rd_code">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">肄붾뱶</span><span class="value" id="rd_code">-</span></div>
             <div class="raw-lot-header-item"><span class="label">작업장</span><span class="value" id="rd_workplace">-</span></div>
             <div class="raw-lot-header-item"><span class="label">총재고 합계</span><span class="value" id="rd_total_stock">0</span></div>
             <div class="raw-lot-header-item"><span class="label">현재고 합계</span><span class="value" id="rd_current_stock">0</span></div>
@@ -444,7 +449,7 @@
 <div id="rawActivityModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:1100px;margin:5% auto;background:white;padding:1.25rem;border-radius:12px;max-height:84vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
-            <h2 style="margin:0;">📌 원초 사용/입고/반출 내역</h2>
+            <h2 style="margin:0;">원초 사용/입고/반출 이력</h2>
             <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
                 <button type="button" class="btn btn-small btn-secondary" onclick="moveRawActivityDate(-1)">◀</button>
                 <input type="date" id="rawActDateInput" style="padding:0.38rem 0.45rem;border:1px solid #cbd5e1;border-radius:8px;">
@@ -487,7 +492,7 @@
                     <input type="text" name="name" id="rawBasicEditName" required>
                 </div>
                 <div class="form-group">
-                    <label>코드</label>
+                    <label>肄붾뱶</label>
                     <input type="text" name="code" id="rawBasicEditCode">
                 </div>
                 <div class="form-group">
@@ -512,7 +517,7 @@
                 </div>
             </div>
             <div style="text-align:right;margin-top:1rem;">
-                <button type="button" class="btn btn-secondary" onclick="closeRawBasicEditModal()">취소</button>
+                <button type="button" class="btn btn-secondary" onclick="closeRawBasicEditModal()">痍⑥냼</button>
                 <button type="submit" class="btn">저장</button>
             </div>
         </form>
@@ -520,7 +525,7 @@
 </div>
 <!-- 입고 모달 --><div id="receiveModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:500px;margin:10% auto;background:white;padding:2rem;border-radius:12px;">
-        <h2>📦 <span id="receiveName"></span> 입고</h2>
+        <h2><span id="receiveName"></span> 입고</h2>
         <form method="POST" action="/raw-materials/update-stock">
             <input type="hidden" name="raw_material_id" id="receiveId">
             <input type="hidden" name="log_type" value="receive">
@@ -531,7 +536,7 @@
             </div>
             
             <div class="form-group">
-                <label>입고 수량 (속) *</label>
+                <label>입고 수량(속) *</label>
                 <input type="number" name="receive_quantity" id="receiveQty" step="0.01" required onchange="calcReceiveTotal()">
             </div>
             
@@ -552,14 +557,14 @@
             </div>
             
             <div class="form-group">
-                <label>비고</label>
+                <label>鍮꾧퀬</label>
                 <textarea name="note" rows="2" placeholder="입고 관련 메모"></textarea>
             </div>
             
             <input type="hidden" name="current_stock" id="receiveHiddenStock">
             
             <div style="text-align:right;">
-                <button type="button" class="btn btn-secondary" onclick="closeModals()">취소</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">痍⑥냼</button>
                 <button type="submit" class="btn">입고 처리</button>
             </div>
         </form>
@@ -569,7 +574,7 @@
 <!-- 반출 모달 -->
 <div id="exportModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:500px;margin:10% auto;background:white;padding:2rem;border-radius:12px;">
-        <h2>📤 <span id="exportName"></span> 반출</h2>
+        <h2><span id="exportName"></span> 반출</h2>
         <form method="POST" action="/raw-materials/update-stock">
             <input type="hidden" name="raw_material_id" id="exportId">
             <input type="hidden" name="log_type" value="export">
@@ -580,7 +585,7 @@
             </div>
             
             <div class="form-group">
-                <label>반출 수량 (속) *</label>
+                <label>반출 수량(속) *</label>
                 <input type="number" name="export_quantity" id="exportQty" step="0.01" required onchange="calcExportTotal()">
             </div>
             
@@ -595,8 +600,8 @@
                     <option value="">선택</option>
                     <option value="타공장 이동">타공장 이동</option>
                     <option value="폐기">폐기</option>
-                    <option value="반품">반품</option>
-                    <option value="기타">기타</option>
+                    <option value="諛섑뭹">諛섑뭹</option>
+                    <option value="湲고?">湲고?</option>
                 </select>
             </div>
             
@@ -613,7 +618,7 @@
             <input type="hidden" name="current_stock" id="exportHiddenStock">
             
             <div style="text-align:right;">
-                <button type="button" class="btn btn-secondary" onclick="closeModals()">취소</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">痍⑥냼</button>
                 <button type="submit" class="btn btn-danger">반출 처리</button>
             </div>
         </form>
@@ -623,36 +628,36 @@
 <!-- 재고 조정 모달 -->
 <div id="adjustModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:500px;margin:10% auto;background:white;padding:2rem;border-radius:12px;">
-        <h2>⚙️ <span id="adjustName"></span> 재고 조정</h2>
+        <h2><span id="adjustName"></span> 재고 조정</h2>
         <form method="POST" action="/raw-materials/update-stock">
             <input type="hidden" name="raw_material_id" id="adjustId">
             <input type="hidden" name="log_type" value="adjustment">
             
             <div class="form-group">
-                <label>현재 재고 (속)</label>
+                <label>현재 재고(속)</label>
                 <input type="number" name="current_stock" id="adjustStock" step="0.01" required>
             </div>
             
             <div class="form-group">
                 <label>조정 사유</label>
-                <textarea name="note" rows="2" placeholder="예: 재고 실사, 오류 수정"></textarea>
+                <textarea name="note" rows="2" placeholder="실사 재고 조사, 오류 수정"></textarea>
             </div>
             
             <div style="text-align:right;">
-                <button type="button" class="btn btn-secondary" onclick="closeModals()">취소</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">痍⑥냼</button>
                 <button type="submit" class="btn">저장</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- 로그 모달 -->
+<!-- 濡쒓렇 紐⑤떖 -->
 <div id="rawChecksheetModal" class="modal" style="display:none;">
     <div class="modal-content" style="width:min(96vw,1400px);height:min(94vh,1080px);margin:1.5vh auto;background:white;padding:1rem 1rem 1.1rem;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
             <h2 style="margin:0;">원초 점검표 미리보기</h2>
             <div style="display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;">
-                <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="printRawChecksheet()">A4 출력</button>
+                <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="printRawChecksheet()">A4 異쒕젰</button>
                 <button type="button" class="btn btn-secondary btn-small" onclick="closeRawChecksheetModal()">닫기</button>
             </div>
         </div>
@@ -663,7 +668,7 @@
 <div id="logsModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:900px;margin:5% auto;background:white;padding:2rem;border-radius:12px;max-height:80vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-            <h2>📊 <span id="logsName"></span> 사용 로그</h2>
+            <h2><span id="logsName"></span> 사용 로그</h2>
             <button type="button" class="btn btn-secondary btn-small" onclick="closeModals()">닫기</button>
         </div>
         <div id="logsContent">
@@ -714,7 +719,7 @@ function openRawAddWizard(){
     resetRawAddForm();
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
-    document.getElementById('rawAddEntryGuide').textContent = '등록할 원초 코드를 먼저 선택하세요.';
+    document.getElementById('rawAddEntryGuide').textContent = '등록된 원초 코드를 먼저 선택하세요.';
     setRawAddEntryState(false);
     setRawAddWizardStep('select');
 }
@@ -745,7 +750,7 @@ function chooseNewRawCode(){
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
     document.querySelectorAll('.raw-add-choice')[1]?.classList.add('active');
-    document.getElementById('rawAddEntryGuide').textContent = '신규 원초 정보를 입력하세요. 처음 등록하는 원초일 때만 새 코드로 등록하면 됩니다.';
+    document.getElementById('rawAddEntryGuide').textContent = '신규 원초 정보를 입력하세요. 처음 등록하는 원초라면 새 코드로 등록하면 됩니다.';
     setRawAddEntryState(true);
     setRawAddWizardStep('entry');
 }
@@ -755,7 +760,7 @@ function backToRawCodeChoice(){
     resetRawAddForm();
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
-    document.getElementById('rawAddEntryGuide').textContent = '등록할 원초 코드를 먼저 선택하세요.';
+    document.getElementById('rawAddEntryGuide').textContent = '등록된 원초 코드를 먼저 선택하세요.';
     setRawAddEntryState(false);
     setRawAddWizardStep('select');
 }
@@ -817,79 +822,122 @@ function applyRawCodeProfile(code){
 }
 
 const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
-const rawDoneDates = {{ done_dates|tojson }};
-const rawSelectedDoneDate = {{ selected_done_date|tojson }};
-const rawSelectedDoneMonth = {{ selected_done_month|tojson }};
-const rawSelectedDoneScope = {{ selected_done_scope|tojson }};
+let rawDoneDates = [];
+let rawSelectedDoneDate = '';
+let rawSelectedDoneMonth = '';
+let rawSelectedDoneScope = '';
+let initialRawSelectedTab = 'active';
 let rawActivityWorkplace = CURRENT_WORKPLACE || 'all';
-let doneCalendarAnchor = rawSelectedDoneDate
-    ? new Date(`${rawSelectedDoneDate}T00:00:00`)
-    : (rawSelectedDoneMonth ? new Date(`${rawSelectedDoneMonth}-01T00:00:00`) : (rawDoneDates.length ? new Date(`${rawDoneDates[0]}T00:00:00`) : new Date()));
+const SERVER_TODAY_ISO = {{ server_today|tojson }};
+let doneCalendarAnchor = new Date();
 
-function buildDoneTabDefaultUrl(){
-    const params = new URLSearchParams(window.location.search);
-    const monthKey = rawSelectedDoneMonth || `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`;
-    params.set('tab', 'done');
-    params.set('done_scope', 'month');
-    params.set('done_month', monthKey);
-    params.delete('done_date');
-    return `/raw-materials?${params.toString()}`;
+function hydrateRawMaterialsStateFromDom(root = document){
+    const pageRoot = root.querySelector('#rawMaterialsPageRoot');
+    if(!pageRoot) return;
+    initialRawSelectedTab = pageRoot.dataset.selectedTab || 'active';
+    rawSelectedDoneDate = pageRoot.dataset.selectedDoneDate || '';
+    rawSelectedDoneMonth = pageRoot.dataset.selectedDoneMonth || '';
+    rawSelectedDoneScope = pageRoot.dataset.selectedDoneScope || '';
+    try {
+        rawDoneDates = JSON.parse(pageRoot.dataset.doneDates || '[]');
+    } catch (error) {
+        rawDoneDates = [];
+    }
+    doneCalendarAnchor = rawSelectedDoneDate
+        ? new Date(`${rawSelectedDoneDate}T00:00:00`)
+        : (rawSelectedDoneMonth ? new Date(`${rawSelectedDoneMonth}-01T00:00:00`) : (rawDoneDates.length ? new Date(`${rawDoneDates[0]}T00:00:00`) : new Date()));
 }
 
-function switchTab(tab){
-    const params = new URLSearchParams(window.location.search);
-    const currentTab = params.get('tab') || 'active';
-    if(tab === 'done' && currentTab !== 'done'){
-        window.location.href = buildDoneTabDefaultUrl();
-        return;
+function getDoneMonthKey(){
+    return rawSelectedDoneMonth || `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function replaceRawMaterialsUrl(params){
+    const query = params.toString();
+    const url = query ? `/raw-materials?${query}` : '/raw-materials';
+    window.history.replaceState(null, '', url);
+}
+
+async function updateRawMaterialsView(url){
+    const response = await fetch(url, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    });
+    if(!response.ok){
+        throw new Error('원초 관리 데이터를 불러오지 못했습니다.');
     }
-    if(tab === 'active' && currentTab === 'done'){
-        params.set('tab', 'active');
-        params.delete('done_date');
-        params.delete('done_scope');
-        params.delete('done_month');
-        window.location.href = `/raw-materials?${params.toString()}`;
-        return;
+    const html = await response.text();
+    const parser = new DOMParser();
+    const nextDoc = parser.parseFromString(html, 'text/html');
+    const nextRoot = nextDoc.querySelector('#rawMaterialsPageRoot');
+    const currentRoot = document.querySelector('#rawMaterialsPageRoot');
+    if(!nextRoot || !currentRoot){
+        throw new Error('원초 관리 화면을 갱신하지 못했습니다.');
     }
-    document.getElementById('pane_active').style.display = tab==='active' ? '' : 'none';
-    document.getElementById('pane_done').style.display = tab==='done' ? '' : 'none';
-    document.getElementById('tab_active').classList.toggle('active', tab==='active');
-    document.getElementById('tab_done').classList.toggle('active', tab==='done');
+    currentRoot.outerHTML = nextRoot.outerHTML;
+    hydrateRawMaterialsStateFromDom(document);
+}
+
+function syncRawFilterHiddenFields(tab){
     const tabInput = document.getElementById('rawListFilterTab');
-    if(tabInput){
-        tabInput.value = tab;
-    }
-    const resetLink = document.getElementById('rawListFilterReset');
-    if(resetLink){
-        resetLink.href = `/raw-materials?tab=${encodeURIComponent(tab)}`;
-    }
     const doneDateInput = document.getElementById('rawListDoneDate');
     const doneKindInput = document.getElementById('rawListDoneKind');
     const doneScopeInput = document.getElementById('rawListDoneScope');
     const doneMonthInput = document.getElementById('rawListDoneMonth');
+    const isDone = tab === 'done';
+    if(tabInput){
+        tabInput.value = tab;
+    }
     if(doneDateInput){
-        doneDateInput.disabled = tab !== 'done';
+        doneDateInput.disabled = !isDone;
     }
     if(doneKindInput){
-        doneKindInput.disabled = tab !== 'done';
+        doneKindInput.disabled = !isDone;
     }
     if(doneScopeInput){
-        doneScopeInput.disabled = tab !== 'done';
+        doneScopeInput.disabled = !isDone;
     }
     if(doneMonthInput){
-        doneMonthInput.disabled = tab !== 'done';
+        doneMonthInput.disabled = !isDone;
     }
 }
 
-// 페이지 로드 시 URL에서 tab 파라미터 읽어서 자동 선택
-window.onload = function(){
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if(tab === 'done'){
-        switchTab('done');
+function syncTabUi(tab){
+    document.getElementById('pane_active').style.display = tab==='active' ? '' : 'none';
+    document.getElementById('pane_done').style.display = tab==='done' ? '' : 'none';
+    document.getElementById('tab_active').classList.toggle('active', tab==='active');
+    document.getElementById('tab_done').classList.toggle('active', tab==='done');
+    syncRawFilterHiddenFields(tab);
+    const resetLink = document.getElementById('rawListFilterReset');
+    if(resetLink){
+        resetLink.href = `/raw-materials?tab=${encodeURIComponent(tab)}`;
     }
+}
+
+function switchTab(tab){
+    const nextTab = tab === 'done' ? 'done' : 'active';
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', nextTab);
+    if(nextTab === 'done'){
+        if(!params.get('done_scope')){
+            params.set('done_scope', rawSelectedDoneScope || 'month');
+        }
+        if(!params.get('done_month')){
+            params.set('done_month', getDoneMonthKey());
+        }
+    }
+    replaceRawMaterialsUrl(params);
+    syncTabUi(nextTab);
+    if(nextTab === 'done'){
+        renderDoneCalendar();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    hydrateRawMaterialsStateFromDom(document);
     renderDoneCalendar();
-};
+});
 
 let currentStock = 0;
 
@@ -921,7 +969,17 @@ function applyDoneKindFilter(kind){
         params.set('done_scope', 'month');
     }
     params.set('done_month', `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`);
-    window.location.href = `/raw-materials?${params.toString()}`;
+    const nextUrl = `/raw-materials?${params.toString()}`;
+    replaceRawMaterialsUrl(params);
+    updateRawMaterialsView(nextUrl)
+        .then(() => {
+            syncTabUi('done');
+            renderDoneCalendar();
+        })
+        .catch((error) => {
+            console.error(error);
+            window.location.href = nextUrl;
+        });
 }
 
 function applyDoneDateFilter(dateStr){
@@ -936,7 +994,17 @@ function applyDoneDateFilter(dateStr){
         params.set('done_scope', 'month');
         params.set('done_month', `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`);
     }
-    window.location.href = `/raw-materials?${params.toString()}`;
+    const nextUrl = `/raw-materials?${params.toString()}`;
+    replaceRawMaterialsUrl(params);
+    updateRawMaterialsView(nextUrl)
+        .then(() => {
+            syncTabUi('done');
+            renderDoneCalendar();
+        })
+        .catch((error) => {
+            console.error(error);
+            window.location.href = nextUrl;
+        });
 }
 
 function moveDoneCalendarMonth(delta){
@@ -946,7 +1014,17 @@ function moveDoneCalendarMonth(delta){
     params.delete('done_date');
     params.set('done_scope', 'month');
     params.set('done_month', `${doneCalendarAnchor.getFullYear()}-${String(doneCalendarAnchor.getMonth() + 1).padStart(2, '0')}`);
-    window.location.href = `/raw-materials?${params.toString()}`;
+    const nextUrl = `/raw-materials?${params.toString()}`;
+    replaceRawMaterialsUrl(params);
+    updateRawMaterialsView(nextUrl)
+        .then(() => {
+            syncTabUi('done');
+            renderDoneCalendar();
+        })
+        .catch((error) => {
+            console.error(error);
+            window.location.href = nextUrl;
+        });
 }
 
 function renderDoneCalendar(){
@@ -962,7 +1040,7 @@ function renderDoneCalendar(){
     const year = doneCalendarAnchor.getFullYear();
     const month = doneCalendarAnchor.getMonth();
     label.textContent = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
-    const weekdays = ['일','월','화','수','목','금','토'];
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
     const firstDay = new Date(year, month, 1);
     const lastDate = new Date(year, month + 1, 0).getDate();
     const startWeekday = firstDay.getDay();
@@ -975,7 +1053,7 @@ function renderDoneCalendar(){
         const hasHistory = dateSet.has(dateStr);
         const activeClass = rawSelectedDoneDate === dateStr ? ' active' : '';
         if(hasHistory){
-            html += `<a class="done-calendar-day has-history${activeClass}" href="${buildDoneCalendarUrl(dateStr)}">${day}</a>`;
+            html += `<button type="button" class="done-calendar-day has-history${activeClass}" onclick="applyDoneDateFilter('${dateStr}')">${day}</button>`;
         } else {
             html += `<div class="done-calendar-day">${day}</div>`;
         }
@@ -983,8 +1061,11 @@ function renderDoneCalendar(){
     grid.innerHTML = html;
 }
 
-// 오늘 날짜를 YYYY-MM-DD 형식으로
+// ?ㅻ뒛 ?좎쭨瑜?YYYY-MM-DD ?뺤떇?쇰줈
 function getTodayDate() {
+    if (SERVER_TODAY_ISO) {
+        return SERVER_TODAY_ISO;
+    }
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -1154,6 +1235,9 @@ function setRawActivityWorkplace(wp, skipReload){
 }
 
 function getTodayIsoDate(){
+    if (SERVER_TODAY_ISO) {
+        return SERVER_TODAY_ISO;
+    }
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -1381,7 +1465,7 @@ async function loadRawActivityByDate(targetDate){
         }).join('');
     } catch (err){
         if(periodEl) periodEl.textContent = '조회 일자: -';
-        if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;">내역 조회 실패: ${escapeHtml(err.message || '오류')}</td></tr>`;
+        if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;">이력 조회 실패: ${escapeHtml(err.message || '오류')}</td></tr>`;
     }
 }
 
@@ -1803,6 +1887,7 @@ html[data-theme="dark"] #exportModal input[style*="#fff3e0"]{background:rgba(249
   #rawLotTableBody td:nth-child(8)::before{content:'관리';}
   #rawUsageLogTableBody td:nth-child(1)::before{content:'사용일';}
   #rawUsageLogTableBody td:nth-child(2)::before{content:'상품명';}
+  #rawUsageLogTableBody td:nth-child(3)::before{content:'사용수량';}
   #rawUsageLogTableBody td:nth-child(3)::before{content:'사용수량';}
   #rawUsageLogTableBody td:nth-child(4)::before{content:'입고일';}
   #rawUsageLogTableBody td:nth-child(5)::before{content:'자호';}

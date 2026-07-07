@@ -31,7 +31,8 @@
         <div>
             <label style="font-weight: 600; color: #666; font-size: 0.9rem;">매수 / 절단</label>
             <p style="font-size: 1.1rem; margin: 0.25rem 0;">
-                {{ product.sheets_per_pack or 24 }}매 / {{ product.cuts_per_sheet or 9 }}절단
+                {{ product.sheets_per_pack or 24 }}매 /
+                {% if product.cuts_per_sheet is not none and (product.cuts_per_sheet|int) == 0 %}없음{% else %}{{ product.cuts_per_sheet or 9 }}절단{% endif %}
             </p>
         </div>
     </div>
@@ -61,7 +62,13 @@
             </div>
             <div class="form-group">
                 <label>절단 *</label>
-                <input type="number" name="cuts_per_sheet" value="{{ product.cuts_per_sheet or 9 }}" min="1" required>
+                {% set selected_cut = 9 if product.cuts_per_sheet is none else (product.cuts_per_sheet|int) %}
+                <select name="cuts_per_sheet" required>
+                    <option value="none" {% if selected_cut == 0 %}selected{% endif %}>없음</option>
+                    {% for cut in range(1, 21) %}
+                    <option value="{{ cut }}" {% if selected_cut == cut %}selected{% endif %}>{{ cut }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
         <div style="text-align: right; margin-top: 1rem;">
