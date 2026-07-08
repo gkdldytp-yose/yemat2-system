@@ -685,6 +685,46 @@ const RAW_CODE_PROFILES = (() => {
     try { return JSON.parse(el.textContent || '[]'); } catch (_) { return []; }
 })();
 let rawAddMode = 'new';
+const RAW_ADD_WIZARD_TEXT = {
+    existingBadge: '권장',
+    existingTitle: '기존 등록 원초 선택',
+    existingDesc: '기존 코드 원초를 선택하면 마지막 등록값을 자동으로 가져옵니다. 총재고와 현재고만 비워 두고, 가져온 값은 모두 수정 가능합니다.',
+    newTitle: '신규 원초 등록',
+    newDesc: '처음 등록하는 원초라면 이 항목을 선택합니다. 기존 방식 그대로 원초 정보를 직접 입력해서 등록합니다.',
+    pickerHint: '이미 등록된 원초 코드를 먼저 선택한 뒤 다음으로 진행하세요.',
+    cancel: '취소',
+    next: '다음',
+    selectGuide: '등록된 원초 코드를 먼저 선택하세요.',
+    newGuide: '신규 원초 정보를 입력하세요. 처음 등록하는 원초라면 새 코드로 등록하면 됩니다.',
+    existingGuide: '불러온 마지막 등록값을 확인하고 필요한 항목만 수정해서 등록하세요. 총재고와 현재고는 이번 입고 수량으로 입력하면 됩니다.',
+    existingSelectAlert: '먼저 기존 원초 코드를 선택하세요.'
+};
+
+function normalizeRawAddWizardText(){
+    const choiceButtons = document.querySelectorAll('.raw-add-choice');
+    const existingButton = choiceButtons[0];
+    const newButton = choiceButtons[1];
+    if(existingButton){
+        const badge = existingButton.querySelector('.raw-add-badge');
+        const title = existingButton.querySelector('.raw-add-choice-title');
+        const desc = existingButton.querySelector('.raw-add-choice-desc');
+        if(badge) badge.textContent = RAW_ADD_WIZARD_TEXT.existingBadge;
+        if(title) title.textContent = RAW_ADD_WIZARD_TEXT.existingTitle;
+        if(desc) desc.textContent = RAW_ADD_WIZARD_TEXT.existingDesc;
+    }
+    if(newButton){
+        const title = newButton.querySelector('.raw-add-choice-title');
+        const desc = newButton.querySelector('.raw-add-choice-desc');
+        if(title) title.textContent = RAW_ADD_WIZARD_TEXT.newTitle;
+        if(desc) desc.textContent = RAW_ADD_WIZARD_TEXT.newDesc;
+    }
+    const hint = document.querySelector('.raw-add-hint');
+    if(hint) hint.textContent = RAW_ADD_WIZARD_TEXT.pickerHint;
+    const backButton = document.querySelector('.raw-add-back-btn');
+    if(backButton) backButton.textContent = RAW_ADD_WIZARD_TEXT.cancel;
+    const nextButton = document.querySelector('.raw-add-next-btn');
+    if(nextButton) nextButton.textContent = RAW_ADD_WIZARD_TEXT.next;
+}
 
 function setRawAddWizardStep(step){
     const isEntry = step === 'entry';
@@ -716,10 +756,12 @@ function openRawAddWizard(){
     const addForm = document.getElementById('addForm');
     if(addForm) addForm.style.display = 'block';
     rawAddMode = 'new';
+    normalizeRawAddWizardText();
     resetRawAddForm();
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
     document.getElementById('rawAddEntryGuide').textContent = '등록된 원초 코드를 먼저 선택하세요.';
+    document.getElementById('rawAddEntryGuide').textContent = RAW_ADD_WIZARD_TEXT.selectGuide;
     setRawAddEntryState(false);
     setRawAddWizardStep('select');
 }
@@ -737,6 +779,7 @@ function closeRawAddWizard(){
 
 function chooseExistingRawCode(){
     rawAddMode = 'existing';
+    normalizeRawAddWizardText();
     resetRawAddForm();
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
     document.querySelector('.raw-add-choice')?.classList.add('active');
@@ -746,27 +789,32 @@ function chooseExistingRawCode(){
 
 function chooseNewRawCode(){
     rawAddMode = 'new';
+    normalizeRawAddWizardText();
     resetRawAddForm();
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
     document.querySelectorAll('.raw-add-choice')[1]?.classList.add('active');
     document.getElementById('rawAddEntryGuide').textContent = '신규 원초 정보를 입력하세요. 처음 등록하는 원초라면 새 코드로 등록하면 됩니다.';
+    document.getElementById('rawAddEntryGuide').textContent = RAW_ADD_WIZARD_TEXT.newGuide;
     setRawAddEntryState(true);
     setRawAddWizardStep('entry');
 }
 
 function backToRawCodeChoice(){
     rawAddMode = 'new';
+    normalizeRawAddWizardText();
     resetRawAddForm();
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
     document.getElementById('rawAddEntryGuide').textContent = '등록된 원초 코드를 먼저 선택하세요.';
+    document.getElementById('rawAddEntryGuide').textContent = RAW_ADD_WIZARD_TEXT.selectGuide;
     setRawAddEntryState(false);
     setRawAddWizardStep('select');
 }
 
 function cancelExistingRawCodeChoice(){
     rawAddMode = 'new';
+    normalizeRawAddWizardText();
     resetRawAddForm();
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     document.querySelectorAll('.raw-add-choice').forEach((el) => el.classList.remove('active'));
@@ -777,11 +825,13 @@ function goToExistingRawEntry(){
     const selectedCode = (codeSelect?.value || '').trim();
     if(!selectedCode){
         alert('먼저 기존 원초 코드를 선택하세요.');
+        alert(RAW_ADD_WIZARD_TEXT.existingSelectAlert);
         codeSelect?.focus();
         return;
     }
     applyRawCodeProfile(selectedCode);
     document.getElementById('rawAddEntryGuide').textContent = '불러온 마지막 값을 확인하고 필요한 항목을 수정한 뒤 등록하세요. 총재고와 현재고는 새 입고 수량으로 입력하면 됩니다.';
+    document.getElementById('rawAddEntryGuide').textContent = RAW_ADD_WIZARD_TEXT.existingGuide;
     document.getElementById('rawAddExistingPicker')?.setAttribute('hidden', 'hidden');
     setRawAddEntryState(true);
     setRawAddWizardStep('entry');
@@ -935,6 +985,7 @@ function switchTab(tab){
 }
 
 document.addEventListener('DOMContentLoaded', function(){
+    normalizeRawAddWizardText();
     hydrateRawMaterialsStateFromDom(document);
     renderDoneCalendar();
 });

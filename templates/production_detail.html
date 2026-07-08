@@ -844,18 +844,6 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         {% endif %}
         <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-emphasis{% endif %}">
             <div class="production-qty-head">
-                <div class="lbl">생산 외포장 수량</div>
-                {% if production.uses_actual_quantity %}
-                <span class="production-qty-badge">실제 박스 기준</span>
-                {% endif %}
-            </div>
-            <div class="val">{{ production.production_outer_pack_display }}개</div>
-            {% if production.uses_actual_quantity %}
-            <div class="production-qty-note">실제 박스 수 {{ production.quantity_basis_boxes_display }} BOX 기준으로 반영 중</div>
-            {% endif %}
-        </div>
-        <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-emphasis{% endif %}">
-            <div class="production-qty-head">
                 <div class="lbl">생산 낱봉 수량</div>
                 {% if production.uses_actual_quantity %}
                 <span class="production-qty-badge">실제 박스 기준</span>
