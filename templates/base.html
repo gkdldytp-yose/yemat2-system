@@ -220,18 +220,41 @@
         .modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);}
         .modal-content,.modal-box{background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 24px 56px rgba(15,23,42,.22);}
         .todo-modal-bg{display:none;position:fixed;inset:0;padding:1rem;background:rgba(15,23,42,.52);align-items:center;justify-content:center;z-index:1400;}
-        .todo-modal{width:min(1180px,100%);max-height:calc(100vh - 2rem);overflow:auto;border-radius:24px;background:#fff;box-shadow:0 28px 70px rgba(15,23,42,.25);padding:1.1rem;}
+        .todo-modal{width:min(1000px,100%);max-height:calc(100vh - 2rem);overflow:auto;border-radius:24px;background:#fff;box-shadow:0 28px 70px rgba(15,23,42,.25);padding:1.1rem;}
         .todo-modal-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:0.9rem;}
-        .todo-quick-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.7rem;margin-bottom:1rem;}
+        .todo-modal-actions{display:flex;gap:.55rem;flex-wrap:wrap;align-items:center;justify-content:flex-end;padding:.22rem;border-radius:20px;background:linear-gradient(180deg,rgba(248,250,252,.96),rgba(226,232,240,.72));border:1px solid rgba(203,213,225,.85);box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
+        .todo-modal-action-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.72rem 1rem;border-radius:16px;border:1px solid #cbd5e1;background:linear-gradient(180deg,#ffffff,#eef4ff);color:#0f172a;font-size:.82rem;font-weight:800;cursor:pointer;box-shadow:0 12px 24px rgba(15,23,42,.08);}
+        .todo-modal-action-btn:hover{transform:translateY(-1px);}
+        .todo-modal-action-btn.primary{border-color:#93c5fd;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 14px 28px rgba(37,99,235,.24);}
+        .todo-modal-action-btn.close{border-color:rgba(148,163,184,.22);background:linear-gradient(180deg,rgba(255,255,255,.16) 0%,rgba(226,232,240,.08) 100%);color:#475569;box-shadow:inset 0 1px 0 rgba(255,255,255,.32);}
+        .todo-modal-action-btn.close::before{content:"✕";display:inline-flex;align-items:center;justify-content:center;width:1.1rem;height:1.1rem;border-radius:999px;background:rgba(71,85,105,.08);font-size:.72rem;line-height:1;}
+        .todo-quick-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.7rem;margin-bottom:1rem;}
         .todo-stat{padding:0.8rem 0.9rem;border-radius:16px;color:#fff;}
+        .todo-filter-stat{border:none;cursor:pointer;text-align:left;position:relative;overflow:hidden;transition:transform .16s ease, box-shadow .18s ease, filter .16s ease;}
+        .todo-filter-stat:hover{transform:translateY(-1px);filter:brightness(1.03);}
+        .todo-filter-stat.active{box-shadow:0 0 0 2px rgba(255,255,255,.72), 0 16px 28px rgba(15,23,42,.18);}
         .todo-stat-label{font-size:0.75rem;opacity:0.92;}
         .todo-stat-value{font-size:1.45rem;font-weight:800;margin-top:0.18rem;}
-        .todo-messenger-shell{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,0.9fr);gap:1rem;}
-        .todo-messenger-list{min-height:520px;max-height:calc(100vh - 220px);overflow:auto;border:1px solid #dbe5f0;border-radius:24px;padding:1rem;background:radial-gradient(circle at top left, rgba(14,165,233,0.12), transparent 30%), linear-gradient(180deg, #f8fbff, #eef6ff 48%, #f8fafc);display:flex;flex-direction:column;gap:0.9rem;}
+        .todo-stat-help{margin-top:0.28rem;font-size:0.75rem;font-weight:700;opacity:0.92;}
+        .todo-messenger-shell{display:flex;gap:1rem;align-items:stretch;height:min(68vh, 720px);}
+        .todo-messenger-list{flex:1 1 auto;min-width:0;height:100%;overflow:auto;border:1px solid #dbe5f0;border-radius:24px;padding:1rem;background:radial-gradient(circle at top left, rgba(14,165,233,0.12), transparent 30%), linear-gradient(180deg, #f8fbff, #eef6ff 48%, #f8fafc);display:flex;flex-direction:column;gap:0.9rem;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.55) transparent;transition:flex-basis .28s ease, width .28s ease;}
+        .todo-messenger-list::-webkit-scrollbar{width:8px;}
+        .todo-messenger-list::-webkit-scrollbar-track{background:transparent;}
+        .todo-messenger-list::-webkit-scrollbar-thumb{background:linear-gradient(180deg, rgba(148,163,184,.18), rgba(148,163,184,.58));border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
+        .todo-messenger-list::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg, rgba(148,163,184,.28), rgba(148,163,184,.72));border:2px solid transparent;background-clip:padding-box;}
+        .todo-composer-dock{position:relative;display:flex;align-items:stretch;justify-content:flex-end;min-width:0;flex:0 0 56px;max-width:56px;height:100%;transition:flex-basis .28s ease, max-width .28s ease;}
+        .todo-composer-dock.is-expanded{flex-basis:460px;max-width:460px;}
+        .todo-composer-rail{width:56px;height:100%;border:none;border-radius:22px 0 0 22px;background:linear-gradient(180deg,#1d4ed8 0%,#0f766e 100%);color:#eff6ff;box-shadow:0 18px 32px rgba(15,23,42,.2);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;flex-shrink:0;}
+        .todo-composer-rail::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at top, rgba(255,255,255,.26), transparent 34%);pointer-events:none;}
+        .todo-composer-rail-text{writing-mode:vertical-rl;text-orientation:mixed;font-size:.88rem;font-weight:900;letter-spacing:.08em;display:flex;align-items:center;gap:.55rem;}
+        .todo-composer-rail-text::before{content:"✎";font-size:1rem;transform:rotate(90deg);}
+        .todo-composer-dock.is-expanded .todo-composer-rail{box-shadow:none;}
+        .todo-composer-panel{flex:1 1 auto;min-width:0;height:100%;overflow:hidden;opacity:0;transform:translateX(18px);transition:opacity .2s ease,transform .26s ease;pointer-events:none;will-change:transform,opacity;}
+        .todo-composer-dock.is-expanded .todo-composer-panel{opacity:1;transform:translateX(0);pointer-events:auto;}
         .todo-message-row{display:flex;justify-content:flex-start;}
         .todo-message-row.is-left{justify-content:flex-start;}
         .todo-message-row.is-right{justify-content:flex-start;}
-        .todo-message-bubble{width:min(100%,620px);border-radius:22px;padding:1rem 1rem 0.9rem;background:#ffffff;border:1px solid #dbe5f0;box-shadow:0 12px 24px rgba(15,23,42,0.06);}
+        .todo-message-bubble{width:min(100%,860px);border-radius:22px;padding:1rem 1rem 0.9rem;background:#ffffff;border:1px solid #dbe5f0;box-shadow:0 12px 24px rgba(15,23,42,0.06);}
         .todo-message-bubble.is-due-soon{background:#fff7ed;border-color:#fdba74;}
         .todo-message-bubble.is-overdue{background:#fff1f2;border-color:#fda4af;}
         .todo-message-bubble.is-due-soon{background:#fff7ed;border-color:#fdba74;}
@@ -258,13 +281,14 @@
         .todo-chip.priority-high{background:#fee2e2;color:#b91c1c;}
         .todo-chip.priority-medium{background:#fef3c7;color:#b45309;}
         .todo-chip.priority-low{background:#dcfce7;color:#15803d;}
-        .todo-side-card{border:1px solid #e5e7eb;border-radius:20px;background:linear-gradient(180deg,#ffffff,#f8fafc);padding:1rem;}
+        .todo-side-card{height:100%;overflow:auto;border:1px solid #e5e7eb;border-radius:22px 0 0 22px;background:linear-gradient(180deg,#ffffff,#f8fafc);padding:1rem;}
+        .todo-composer-head{display:flex;justify-content:space-between;align-items:center;gap:0.7rem;margin-bottom:0.8rem;}
+        .todo-composer-head-actions{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;justify-content:flex-end;}
         .todo-form-grid{display:grid;gap:0.75rem;}
         .todo-form-grid label{display:block;margin-bottom:0.35rem;font-size:0.82rem;font-weight:700;color:#334155;}
         .todo-form-grid input[type="text"],.todo-form-grid input[type="date"],.todo-form-grid textarea{width:100%;padding:0.72rem 0.8rem;border:1px solid #cbd5e1;border-radius:12px;font:inherit;background:#fff;}
         .todo-form-grid select{width:100%;padding:0.72rem 0.8rem;border:1px solid #cbd5e1;border-radius:12px;font:inherit;background:#fff;}
-        .todo-form-grid textarea{min-height:110px;resize:vertical;}
-        .todo-status-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.55rem;}
+        .todo-form-grid textarea{min-height:190px;resize:vertical;}
         .todo-status-option{position:relative;}
         .todo-status-option input{position:absolute;opacity:0;pointer-events:none;}
         .todo-status-option span{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0.65rem 0.75rem;border-radius:14px;border:1px solid #cbd5e1;background:#fff;font-size:0.8rem;font-weight:800;color:#334155;text-align:center;cursor:pointer;transition:all .15s ease;}
@@ -273,12 +297,33 @@
         .todo-status-option.info-needed input:checked + span{background:#fef3c7;color:#b45309;border-color:#fcd34d;}
         .todo-status-option.completed input:checked + span{background:#dcfce7;color:#15803d;border-color:#86efac;}
         .todo-empty{padding:2rem 1rem;border:1px dashed #cbd5e1;border-radius:18px;text-align:center;color:#64748b;background:#f8fafc;}
+        .todo-filter-empty{display:none;padding:1rem 1.1rem;border:1px dashed #cbd5e1;border-radius:18px;text-align:center;color:#64748b;background:rgba(248,250,252,.76);font-size:.84rem;font-weight:700;}
+        .todo-filter-empty.is-visible{display:block;}
         .todo-modal-table td{vertical-align:top;font-size:0.85rem;}
         .todo-filter-bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.85rem;margin-bottom:1rem;padding:1rem 1.05rem;border:1px solid #dbe5f0;border-radius:20px;background:linear-gradient(180deg,#fbfdff,#f8fafc);box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
         .todo-filter-field{display:grid;gap:0.35rem;align-content:start;}
         .todo-filter-field label{font-size:0.76rem;font-weight:800;color:#475569;}
         .todo-filter-field input,.todo-filter-field select{width:100%;padding:0.62rem 0.72rem;border:1px solid #cbd5e1;border-radius:12px;background:#fff;font:inherit;}
         .todo-filter-actions{display:flex;align-items:flex-end;gap:0.45rem;flex-wrap:wrap;padding-top:1.5rem;}
+        .todo-completed-shell{display:grid;gap:1rem;}
+        .todo-completed-summary{display:flex;justify-content:space-between;align-items:center;gap:.9rem;flex-wrap:wrap;padding:1rem 1.05rem;border:1px solid #dbe5f0;border-radius:20px;background:linear-gradient(180deg,#fbfdff,#f8fafc);box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
+        .todo-completed-summary-copy{display:grid;gap:.22rem;}
+        .todo-completed-summary-title{font-size:.95rem;font-weight:800;color:#0f172a;}
+        .todo-completed-summary-desc{font-size:.8rem;color:#64748b;}
+        .todo-completed-count{display:inline-flex;align-items:center;gap:.48rem;padding:.55rem .82rem;border-radius:999px;background:#e0f2fe;color:#0c4a6e;font-size:.8rem;font-weight:900;}
+        .todo-completed-list{display:grid;gap:.85rem;}
+        .todo-completed-card{display:grid;grid-template-columns:minmax(120px,160px) minmax(0,1fr) auto;gap:1rem;align-items:start;padding:1rem 1.05rem;border:1px solid #dbe5f0;border-radius:22px;background:linear-gradient(180deg,#ffffff,#f8fafc);box-shadow:0 12px 24px rgba(15,23,42,.05);}
+        .todo-completed-dates{display:grid;gap:.3rem;}
+        .todo-completed-date-item{font-size:.78rem;color:#64748b;font-weight:700;}
+        .todo-completed-date-item strong{display:block;color:#0f172a;font-size:.95rem;}
+        .todo-completed-main{display:grid;gap:.5rem;min-width:0;}
+        .todo-completed-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:.85rem;flex-wrap:wrap;}
+        .todo-completed-title{font-size:1rem;font-weight:900;color:#0f172a;line-height:1.35;}
+        .todo-completed-sub{font-size:.8rem;color:#64748b;font-weight:700;}
+        .todo-completed-detail{color:#334155;font-size:.88rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+        .todo-completed-meta{display:flex;gap:.45rem;flex-wrap:wrap;}
+        .todo-completed-side{display:grid;gap:.55rem;justify-items:end;min-width:110px;}
+        .todo-completed-restore{min-width:108px;justify-content:center;}
         html[data-theme="dark"] .card{background:linear-gradient(180deg,rgba(18,26,42,0.98) 0%,rgba(15,23,38,0.98) 100%);box-shadow:0 18px 40px rgba(2,6,23,.34);border-color:rgba(148,163,184,.12);}
         html[data-theme="dark"] .card h2{border-bottom-color:#243041;color:var(--text-primary);}
         html[data-theme="dark"] th{background:var(--table-header-bg);color:var(--text-secondary);border-bottom-color:#273449;}
@@ -317,6 +362,11 @@
         html[data-theme="dark"] .nav-notify-btn:hover{background:#22314a;}
         html[data-theme="dark"] .nav-notify-menu,
         html[data-theme="dark"] .todo-modal{background:#111827;border-color:#263244;box-shadow:0 28px 70px rgba(2,6,23,.48);}
+        html[data-theme="dark"] .todo-modal-actions{background:linear-gradient(180deg,rgba(21,31,49,.92),rgba(15,23,42,.82));border-color:rgba(51,65,85,.92);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+        html[data-theme="dark"] .todo-modal-action-btn{border-color:#314155;background:linear-gradient(180deg,#172132,#101827);color:#e5eefc;box-shadow:0 12px 24px rgba(2,6,23,.22);}
+        html[data-theme="dark"] .todo-modal-action-btn.primary{border-color:#3b82f6;background:linear-gradient(135deg,#1d4ed8,#1e40af);color:#eff6ff;box-shadow:0 16px 28px rgba(29,78,216,.28);}
+        html[data-theme="dark"] .todo-modal-action-btn.close{border-color:rgba(100,116,139,.34);background:linear-gradient(180deg,rgba(30,41,59,.92),rgba(15,23,42,.78));color:#cbd5e1;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);}
+        html[data-theme="dark"] .todo-modal-action-btn.close::before{background:rgba(148,163,184,.1);color:#94a3b8;}
         html[data-theme="dark"] .modal{background:rgba(2,6,23,.68);}
         html[data-theme="dark"] .modal-content,
         html[data-theme="dark"] .modal-box{background:linear-gradient(180deg,#121a2a,#0f1726) !important;border-color:#263244 !important;box-shadow:0 28px 70px rgba(2,6,23,.52);}
@@ -346,9 +396,53 @@
         html[data-theme="dark"] .nav-notify-sub,
         html[data-theme="dark"] .nav-notify-time,
         html[data-theme="dark"] .todo-detail{color:#94a3b8;}
-        html[data-theme="dark"] .todo-stat{box-shadow:0 16px 30px rgba(2,6,23,.24);}
+        html[data-theme="dark"] .todo-stat{
+            position:relative;
+            overflow:hidden;
+            box-shadow:0 16px 30px rgba(2,6,23,.24), inset 0 1px 0 rgba(255,255,255,.08);
+            border:1px solid rgba(148,163,184,.16);
+        }
+        html[data-theme="dark"] .todo-stat::before{
+            content:"";
+            position:absolute;
+            inset:0;
+            background:radial-gradient(circle at 82% 18%, rgba(255,255,255,.18), transparent 30%);
+            pointer-events:none;
+            opacity:.9;
+        }
         html[data-theme="dark"] .todo-stat-label{color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(2,6,23,.24);}
         html[data-theme="dark"] .todo-stat-value{color:#ffffff;text-shadow:0 2px 6px rgba(2,6,23,.24);}
+        html[data-theme="dark"] .todo-filter-stat.active{box-shadow:0 0 0 2px rgba(191,219,254,.72), 0 18px 30px rgba(2,6,23,.28);}
+        html[data-theme="dark"] .todo-stat.processing{
+            background:
+                radial-gradient(circle at top right, rgba(56,189,248,.28), transparent 34%),
+                linear-gradient(135deg, #173a7a 0%, #1d4ed8 42%, #0f6d9a 100%) !important;
+            border-color:rgba(96,165,250,.26);
+        }
+        html[data-theme="dark"] .todo-stat.info-needed{
+            background:
+                radial-gradient(circle at top right, rgba(251,191,36,.22), transparent 34%),
+                linear-gradient(135deg, #6b3f12 0%, #c26a00 46%, #f59e0b 100%) !important;
+            border-color:rgba(251,191,36,.28);
+        }
+        html[data-theme="dark"] .todo-stat.completed{
+            background:
+                radial-gradient(circle at top right, rgba(134,239,172,.2), transparent 34%),
+                linear-gradient(135deg, #14532d 0%, #15803d 44%, #22c55e 100%) !important;
+            border-color:rgba(74,222,128,.26);
+        }
+        html[data-theme="dark"] .todo-stat.due-soon{
+            background:
+                radial-gradient(circle at top right, rgba(253,186,116,.24), transparent 34%),
+                linear-gradient(135deg, #7c2d12 0%, #c2410c 46%, #fb923c 100%) !important;
+            border-color:rgba(251,146,60,.28);
+        }
+        html[data-theme="dark"] .todo-stat.overdue{
+            background:
+                radial-gradient(circle at top right, rgba(251,113,133,.22), transparent 34%),
+                linear-gradient(135deg, #7f1d1d 0%, #be123c 46%, #fb7185 100%) !important;
+            border-color:rgba(251,113,133,.3);
+        }
         html[data-theme="dark"] .todo-stat.processing .todo-stat-label{color:#dbeafe;}
         html[data-theme="dark"] .todo-stat.info-needed .todo-stat-label,
         html[data-theme="dark"] .todo-stat.due-soon .todo-stat-label{color:#ffedd5;}
@@ -358,16 +452,29 @@
         html[data-theme="dark"] .todo-chip,
         html[data-theme="dark"] .todo-empty{background:#0f172a;border-color:#2a3648;color:#c7d3e3;}
         html[data-theme="dark"] .nav-notify-list,
-        html[data-theme="dark"] .todo-messenger-list{background:linear-gradient(180deg,#0f172a,#111827);}
+        html[data-theme="dark"] .todo-messenger-list{background:linear-gradient(180deg,#0f172a,#111827);scrollbar-color:rgba(71,85,105,.62) transparent;}
+        html[data-theme="dark"] .todo-messenger-list::-webkit-scrollbar-thumb{background:linear-gradient(180deg, rgba(71,85,105,.18), rgba(100,116,139,.56));border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
+        html[data-theme="dark"] .todo-messenger-list::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg, rgba(100,116,139,.3), rgba(148,163,184,.64));border:2px solid transparent;background-clip:padding-box;}
         html[data-theme="dark"] .nav-notify-item,
         html[data-theme="dark"] .todo-message-bubble,
         html[data-theme="dark"] .todo-side-card{background:#111827;border-color:#263244;}
+        html[data-theme="dark"] .todo-composer-rail{background:linear-gradient(180deg,#1e3a8a 0%,#0f766e 100%);box-shadow:0 20px 36px rgba(2,6,23,.36);}
         html[data-theme="dark"] .todo-message-bubble.status-processing{background:linear-gradient(180deg,rgba(37,99,235,.16),#111827 26%);border-color:rgba(147,197,253,.28);box-shadow:0 14px 28px rgba(37,99,235,.14);}
         html[data-theme="dark"] .todo-message-bubble.status-info-needed{background:linear-gradient(180deg,rgba(245,158,11,.16),#111827 26%);border-color:rgba(252,211,77,.34);box-shadow:0 14px 28px rgba(245,158,11,.14);}
         html[data-theme="dark"] .todo-message-bubble.status-completed{background:linear-gradient(180deg,rgba(34,197,94,.16),#111827 26%);border-color:rgba(134,239,172,.28);box-shadow:0 14px 28px rgba(34,197,94,.12);}
         html[data-theme="dark"] .nav-notify-item{border-bottom-color:#1f2937;}
         html[data-theme="dark"] .todo-messenger-list{border-color:#263244;}
         html[data-theme="dark"] .todo-filter-bar{background:linear-gradient(180deg,#101827,#0f172a);border-color:#263244;box-shadow:none;}
+        html[data-theme="dark"] .todo-completed-summary{background:linear-gradient(180deg,#101827,#0f172a);border-color:#263244;box-shadow:none;}
+        html[data-theme="dark"] .todo-completed-summary-title{color:#eff6ff;}
+        html[data-theme="dark"] .todo-completed-summary-desc{color:#94a3b8;}
+        html[data-theme="dark"] .todo-completed-count{background:rgba(37,99,235,.18);color:#bfdbfe;}
+        html[data-theme="dark"] .todo-completed-card{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 14px 28px rgba(2,6,23,.24);}
+        html[data-theme="dark"] .todo-completed-date-item{color:#8ea3bd;}
+        html[data-theme="dark"] .todo-completed-date-item strong{color:#eff6ff;}
+        html[data-theme="dark"] .todo-completed-title{color:#eff6ff;}
+        html[data-theme="dark"] .todo-completed-sub{color:#94a3b8;}
+        html[data-theme="dark"] .todo-completed-detail{color:#d6e2f0;}
         html[data-theme="dark"] .todo-status-btn{background:#0f172a;border-color:#314155;color:#c7d3e3;}
         html[data-theme="dark"] .todo-status-btn.active.processing{background:rgba(37,99,235,.18);color:#bfdbfe;border-color:rgba(147,197,253,.35);}
         html[data-theme="dark"] .todo-status-btn.active.info-needed{background:rgba(245,158,11,.18);color:#fcd34d;border-color:rgba(252,211,77,.35);}
@@ -375,6 +482,9 @@
         html[data-theme="dark"] .todo-chip.status-processing{background:rgba(37,99,235,.18);color:#bfdbfe;}
         html[data-theme="dark"] .todo-chip.status-info-needed{background:rgba(245,158,11,.18);color:#fcd34d;}
         html[data-theme="dark"] .todo-chip.status-completed{background:rgba(34,197,94,.18);color:#86efac;}
+        html[data-theme="dark"] .todo-chip.priority-high{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(248,113,113,.32);}
+        html[data-theme="dark"] .todo-chip.priority-medium{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(251,191,36,.32);}
+        html[data-theme="dark"] .todo-chip.priority-low{background:rgba(34,197,94,.18);color:#86efac;border:1px solid rgba(74,222,128,.28);}
         html[data-theme="dark"] .todo-status-option span{background:#0f172a;color:#dbe7f5;border-color:#314155;}
         html[data-theme="dark"] a{color:#93c5fd;}
         html[data-theme="dark"] .nav-brand,
@@ -386,9 +496,15 @@
             50%{transform:translateY(-1px) scale(1.02);box-shadow:0 18px 32px rgba(37,99,235,.28);}
         }
         @media (max-width: 960px) {
-            .todo-messenger-shell{grid-template-columns:1fr;}
-            .todo-messenger-list{min-height:360px;}
+            .todo-messenger-shell{display:grid;grid-template-columns:1fr;height:auto;}
+            .todo-composer-dock,.todo-composer-dock.is-expanded{min-width:100%;flex-basis:auto;max-width:none;}
+            .todo-composer-panel,.todo-composer-dock.is-expanded .todo-composer-panel{width:100%;opacity:1;transform:none;pointer-events:auto;}
+            .todo-composer-rail{display:none;}
+            .todo-side-card{border-radius:20px;}
+            .todo-messenger-list{min-height:360px;height:auto;}
             .todo-filter-bar{grid-template-columns:1fr 1fr;}
+            .todo-completed-card{grid-template-columns:1fr;}
+            .todo-completed-side{justify-items:start;min-width:0;}
         }
         @media (max-width: 640px) {
             .nav-notify-menu{
@@ -414,8 +530,9 @@
             }
             .todo-quick-stats{grid-template-columns:1fr;}
             .todo-modal-head{flex-direction:column;align-items:flex-start;}
+            .todo-modal-actions{width:100%;}
+            .todo-modal-action-btn{width:100%;}
             .todo-filter-bar{grid-template-columns:1fr;}
-            .todo-status-picker{grid-template-columns:1fr;}
         }
          
         h1{font-size:1.5rem;margin-bottom:1rem;}
@@ -686,40 +803,36 @@
                 <h3 style="margin:0;">업무 To-Do 리스트</h3>
                 <div style="margin-top:0.25rem;color:#64748b;font-size:0.84rem;">작업장 업무를 한 곳에서 확인하고 등록하거나 수정할 수 있습니다.</div>
             </div>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-                <button type="button" class="btn btn-small btn-secondary" onclick="openCompletedTodoModal()">완료 목록 {{ nav_completed_dashboard_todos|length }}</button>
-                <button type="button" class="btn btn-small btn-secondary" onclick="closeTodoMessenger()">닫기</button>
+            <div class="todo-modal-actions">
+                <button type="button" class="todo-modal-action-btn primary" onclick="openCompletedTodoModal()">완료 목록 {{ nav_completed_dashboard_todos|length }}</button>
+                <button type="button" class="todo-modal-action-btn close" onclick="closeTodoMessenger()">창 닫기</button>
             </div>
         </div>
         <div class="todo-quick-stats">
-            <div class="todo-stat processing" style="background:linear-gradient(135deg,#2563eb,#0ea5e9);">
+            <button type="button" class="todo-stat todo-filter-stat processing" data-filter="processing" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#2563eb,#0ea5e9);">
                 <div class="todo-stat-label">처리중</div>
-                <div class="todo-stat-value">{{ nav_processing_dashboard_todos|length }}</div>
-            </div>
-            <div class="todo-stat info-needed" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
+                <div class="todo-stat-help">처리중 목록만 보기</div>
+            </button>
+            <button type="button" class="todo-stat todo-filter-stat info-needed" data-filter="info_needed" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
                 <div class="todo-stat-label">정보 보강 필요</div>
-                <div class="todo-stat-value">{{ nav_info_needed_dashboard_todos|length }}</div>
-            </div>
-            <div class="todo-stat completed" style="background:linear-gradient(135deg,#16a34a,#22c55e);">
-                <div class="todo-stat-label">완료</div>
-                <div class="todo-stat-value">{{ nav_completed_dashboard_todos|length }}</div>
-            </div>
-            <div class="todo-stat due-soon" style="background:linear-gradient(135deg,#ea580c,#f59e0b);">
+                <div class="todo-stat-help">보강 필요한 항목만 보기</div>
+            </button>
+            <button type="button" class="todo-stat todo-filter-stat due-soon" data-filter="due_soon" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#ea580c,#f59e0b);">
                 <div class="todo-stat-label">마감 3일 전</div>
-                <div class="todo-stat-value">{{ nav_due_soon_dashboard_todos|length }}</div>
-            </div>
-            <div class="todo-stat overdue" style="background:linear-gradient(135deg,#dc2626,#fb7185);">
+                <div class="todo-stat-help">임박한 업무만 보기</div>
+            </button>
+            <button type="button" class="todo-stat todo-filter-stat overdue" data-filter="overdue" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#dc2626,#fb7185);">
                 <div class="todo-stat-label">기한 경과</div>
-                <div class="todo-stat-value">{{ nav_overdue_dashboard_todos|length }}</div>
-            </div>
+                <div class="todo-stat-help">지연된 업무만 보기</div>
+            </button>
         </div>
         <div class="todo-messenger-shell">
-            <div class="todo-messenger-list">
+            <div class="todo-messenger-list" id="todoMessengerList">
                 {% if nav_dashboard_todos %}
                     {% set current_todo_username = ((user.username if user else '') or '') %}
                     {% for todo in nav_dashboard_todos %}
                     {% set can_manage_todo = todo.created_by == current_todo_username %}
-                    <div class="todo-message-row {% if loop.index0 % 2 == 0 %}is-left{% else %}is-right{% endif %}">
+                    <div class="todo-message-row {% if loop.index0 % 2 == 0 %}is-left{% else %}is-right{% endif %}" data-todo-row="1" data-status="{{ todo.todo_status or 'processing' }}" data-due-soon="{{ '1' if todo.is_due_soon else '0' }}" data-overdue="{{ '1' if todo.is_overdue else '0' }}">
                         <div class="todo-message-bubble status-{{ todo.todo_status }} {% if todo.is_overdue %}is-overdue{% elif todo.is_due_soon %}is-due-soon{% endif %}">
                             <div class="todo-message-tools">
                                 {% if can_manage_todo %}
@@ -791,59 +904,54 @@
                         </div>
                     </div>
                     {% endfor %}
+                <div id="todoFilterEmpty" class="todo-filter-empty">선택한 조건에 맞는 업무가 없습니다.</div>
                 {% else %}
                 <div class="todo-empty" style="margin:auto 0;">현재 진행 중인 업무가 없습니다.</div>
                 {% endif %}
             </div>
-            <div class="todo-side-card">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:0.7rem;margin-bottom:0.8rem;">
-                    <h3 id="todoComposerTitle" style="margin:0;">해야 할 일 등록</h3>
-                    <button type="button" id="todoComposerCancel" class="btn btn-small btn-secondary" onclick="resetTodoForm()" style="display:none;">수정 취소</button>
-                </div>
-                <form id="dashboardTodoForm" method="POST" action="/dashboard/todos">
-                    <input type="hidden" name="next" value="{{ request.path }}#todo-messenger">
-                    <div class="todo-form-grid">
-                        <div>
-                            <label for="messengerTodoTitle">제목</label>
-                            <input id="messengerTodoTitle" type="text" name="title" maxlength="120" placeholder="예: 포장재 재고 확인" required>
-                        </div>
-                        <div>
-                            <label for="messengerTodoDetail">상세 내용</label>
-                            <textarea id="messengerTodoDetail" name="detail" maxlength="2000" placeholder="업무 배경이나 체크 포인트를 적어주세요."></textarea>
-                        </div>
-                        <div>
-                            <label>처리 상태</label>
-                            <div class="todo-status-picker">
-                                <label class="todo-status-option processing">
-                                    <input type="radio" name="todo_status" value="processing" id="todoStatusProcessing" checked>
-                                    <span>처리중</span>
-                                </label>
-                                <label class="todo-status-option info-needed">
-                                    <input type="radio" name="todo_status" value="info_needed" id="todoStatusInfoNeeded">
-                                    <span>정보 보강 필요</span>
-                                </label>
-                                <label class="todo-status-option completed">
-                                    <input type="radio" name="todo_status" value="completed" id="todoStatusCompleted">
-                                    <span>완료</span>
-                                </label>
+            <div id="todoComposerDock" class="todo-composer-dock">
+                <button type="button" class="todo-composer-rail" id="todoComposerRail" onclick="startTodoCreate()" aria-expanded="false" aria-controls="todoComposerPanel">
+                    <span class="todo-composer-rail-text">등록 열기</span>
+                </button>
+                <div id="todoComposerPanel" class="todo-composer-panel">
+                    <div class="todo-side-card">
+                        <div class="todo-composer-head">
+                            <h3 id="todoComposerTitle" style="margin:0;">해야 할 일 등록</h3>
+                            <div class="todo-composer-head-actions">
+                                <button type="button" id="todoComposerCancel" class="btn btn-small btn-secondary" onclick="resetTodoForm()" style="display:none;">수정 취소</button>
+                                <button type="button" id="todoComposerFold" class="btn btn-small btn-secondary" onclick="collapseTodoComposer()">접기</button>
                             </div>
                         </div>
-                        <div>
-                            <label for="messengerTodoDueDate">데드라인</label>
-                            <input id="messengerTodoDueDate" type="date" name="due_date">
-                        </div>
-                        <div>
-                            <label for="messengerTodoImportance">중요도</label>
-                            <select id="messengerTodoImportance" name="importance">
-                                <option value="">선택 안 함</option>
-                                <option value="high">상</option>
-                                <option value="medium">중</option>
-                                <option value="low">하</option>
-                            </select>
-                        </div>
-                        <button id="dashboardTodoSubmit" type="submit" class="btn" style="background:#0f766e;">업무 등록</button>
+                        <form id="dashboardTodoForm" method="POST" action="/dashboard/todos">
+                            <input type="hidden" name="next" value="{{ request.path }}#todo-messenger">
+                            <input type="hidden" name="todo_status" id="dashboardTodoStatus" value="processing">
+                            <div class="todo-form-grid">
+                                <div>
+                                    <label for="messengerTodoTitle">제목</label>
+                                    <input id="messengerTodoTitle" type="text" name="title" maxlength="120" placeholder="예: 포장재 재고 확인" required>
+                                </div>
+                                <div>
+                                    <label for="messengerTodoDetail">상세 내용</label>
+                                    <textarea id="messengerTodoDetail" name="detail" maxlength="2000" placeholder="업무 배경이나 체크 포인트를 적어주세요."></textarea>
+                                </div>
+                                <div>
+                                    <label for="messengerTodoDueDate">데드라인</label>
+                                    <input id="messengerTodoDueDate" type="date" name="due_date">
+                                </div>
+                                <div>
+                                    <label for="messengerTodoImportance">중요도</label>
+                                    <select id="messengerTodoImportance" name="importance">
+                                        <option value="">선택 안 함</option>
+                                        <option value="high">상</option>
+                                        <option value="medium">중</option>
+                                        <option value="low">하</option>
+                                    </select>
+                                </div>
+                                <button id="dashboardTodoSubmit" type="submit" class="btn" style="background:#0f766e;">업무 등록</button>
+                            </div>
+                        </form>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
@@ -856,96 +964,99 @@
                 <h3 style="margin:0;">완료된 업무 리스트</h3>
                 <div style="margin-top:0.25rem;color:#64748b;font-size:0.84rem;">일자 / 제목 / 상세 내용 / 완료 여부를 한 번에 확인할 수 있습니다.</div>
             </div>
-            <button type="button" class="btn btn-small btn-secondary" onclick="closeCompletedTodoModal()">닫기</button>
+            <div class="todo-modal-actions">
+                <button type="button" class="todo-modal-action-btn" onclick="openTodoMessenger()">진행 목록 보기</button>
+                <button type="button" class="todo-modal-action-btn close" onclick="closeCompletedTodoModal()">창 닫기</button>
+            </div>
         </div>
-        <form method="GET" action="{{ request.path }}#todo-completed" class="todo-filter-bar">
-            <div class="todo-filter-field">
-                <label for="todoCompletedFrom">완료일 시작</label>
-                <input id="todoCompletedFrom" type="date" name="todo_completed_from" value="{{ nav_todo_filters.completed_from }}">
-            </div>
-            <div class="todo-filter-field">
-                <label for="todoCompletedTo">완료일 종료</label>
-                <input id="todoCompletedTo" type="date" name="todo_completed_to" value="{{ nav_todo_filters.completed_to }}">
-            </div>
-            <div class="todo-filter-field">
-                <label for="todoCompletedKeyword">키워드</label>
-                <input id="todoCompletedKeyword" type="text" name="todo_completed_keyword" value="{{ nav_todo_filters.completed_keyword }}" placeholder="제목/상세 검색">
-            </div>
-            <div class="todo-filter-field">
-                <label for="todoCompletedImportance">중요도</label>
-                <select id="todoCompletedImportance" name="todo_completed_importance">
-                    <option value="">전체</option>
-                    <option value="high" {% if nav_todo_filters.completed_importance == 'high' %}selected{% endif %}>상</option>
-                    <option value="medium" {% if nav_todo_filters.completed_importance == 'medium' %}selected{% endif %}>중</option>
-                    <option value="low" {% if nav_todo_filters.completed_importance == 'low' %}selected{% endif %}>하</option>
-                </select>
-            </div>
-            <div class="todo-filter-field">
-                <label for="todoCompletedDoneBy">완료자</label>
-                <input id="todoCompletedDoneBy" type="text" name="todo_completed_done_by" value="{{ nav_todo_filters.completed_done_by }}" placeholder="완료자 검색">
-                <div class="todo-filter-actions">
-                    <button type="submit" class="btn btn-small">검색</button>
-                    <a href="{{ request.path }}#todo-completed" class="btn btn-small btn-secondary">초기화</a>
+        <div class="todo-completed-shell">
+            <form method="GET" action="{{ request.path }}#todo-completed" class="todo-filter-bar">
+                <div class="todo-filter-field">
+                    <label for="todoCompletedFrom">완료일 시작</label>
+                    <input id="todoCompletedFrom" type="date" name="todo_completed_from" value="{{ nav_todo_filters.completed_from }}">
                 </div>
+                <div class="todo-filter-field">
+                    <label for="todoCompletedTo">완료일 종료</label>
+                    <input id="todoCompletedTo" type="date" name="todo_completed_to" value="{{ nav_todo_filters.completed_to }}">
+                </div>
+                <div class="todo-filter-field">
+                    <label for="todoCompletedKeyword">키워드</label>
+                    <input id="todoCompletedKeyword" type="text" name="todo_completed_keyword" value="{{ nav_todo_filters.completed_keyword }}" placeholder="제목/상세 검색">
+                </div>
+                <div class="todo-filter-field">
+                    <label for="todoCompletedImportance">중요도</label>
+                    <select id="todoCompletedImportance" name="todo_completed_importance">
+                        <option value="">전체</option>
+                        <option value="high" {% if nav_todo_filters.completed_importance == 'high' %}selected{% endif %}>상</option>
+                        <option value="medium" {% if nav_todo_filters.completed_importance == 'medium' %}selected{% endif %}>중</option>
+                        <option value="low" {% if nav_todo_filters.completed_importance == 'low' %}selected{% endif %}>하</option>
+                    </select>
+                </div>
+                <div class="todo-filter-field">
+                    <label for="todoCompletedDoneBy">완료자</label>
+                    <input id="todoCompletedDoneBy" type="text" name="todo_completed_done_by" value="{{ nav_todo_filters.completed_done_by }}" placeholder="완료자 검색">
+                    <div class="todo-filter-actions">
+                        <button type="submit" class="btn btn-small">검색</button>
+                        <a href="{{ request.path }}#todo-completed" class="btn btn-small btn-secondary">초기화</a>
+                    </div>
+                </div>
+            </form>
+            <div class="todo-completed-summary">
+                <div class="todo-completed-summary-copy">
+                    <div class="todo-completed-summary-title">완료 업무를 더 빠르게 확인하세요</div>
+                    <div class="todo-completed-summary-desc">완료일, 완료자, 중요도와 복귀 가능 여부를 카드 단위로 한 번에 볼 수 있습니다.</div>
+                </div>
+                <div class="todo-completed-count">완료 항목 {{ nav_completed_dashboard_todos|length }}</div>
             </div>
-        </form>
-        {% if nav_completed_dashboard_todos %}
-        <div class="table-container">
-            <table class="todo-modal-table">
-                <thead>
-                    <tr>
-                        <th>일자</th>
-                        <th>제목</th>
-                        <th>상세 내용</th>
-                        <th>완료 여부</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% set current_todo_username = ((user.username if user else '') or '') %}
-                    {% for todo in nav_completed_dashboard_todos %}
-                    {% set can_manage_todo = todo.created_by == current_todo_username %}
-                    <tr>
-                        <td style="white-space:nowrap;">
-                            <div>등록 {{ (todo.created_at or '')[:10] or '-' }}</div>
-                            {% if todo.due_date %}<div>마감 {{ todo.due_date }}</div>{% endif %}
-                            {% if todo.done_at %}<div>완료 {{ todo.done_at[:10] }}</div>{% endif %}
-                        </td>
-                        <td>
-                            <strong>{{ todo.title }}</strong>
-                            {% if todo.done_by or todo.done_by_name %}
-                            <div style="margin-top:0.2rem;color:#64748b;font-size:0.78rem;">완료자 {{ todo.done_by_name or todo.done_by }}</div>
-                            {% endif %}
-                            {% if todo.importance %}
-                            <div style="margin-top:0.3rem;">
-                                <span class="todo-chip priority-{{ todo.importance }}">
-                                    중요도 {% if todo.importance == 'high' %}상{% elif todo.importance == 'medium' %}중{% else %}하{% endif %}
-                                </span>
+            {% if nav_completed_dashboard_todos %}
+            <div class="todo-completed-list">
+                {% set current_todo_username = ((user.username if user else '') or '') %}
+                {% for todo in nav_completed_dashboard_todos %}
+                {% set can_manage_todo = todo.created_by == current_todo_username %}
+                <div class="todo-completed-card">
+                    <div class="todo-completed-dates">
+                        <div class="todo-completed-date-item">등록<strong>{{ (todo.created_at or '')[:10] or '-' }}</strong></div>
+                        {% if todo.due_date %}<div class="todo-completed-date-item">마감<strong>{{ todo.due_date }}</strong></div>{% endif %}
+                        {% if todo.done_at %}<div class="todo-completed-date-item">완료<strong>{{ todo.done_at[:10] }}</strong></div>{% endif %}
+                    </div>
+                    <div class="todo-completed-main">
+                        <div class="todo-completed-title-row">
+                            <div>
+                                <div class="todo-completed-title">{{ todo.title }}</div>
+                                {% if todo.done_by or todo.done_by_name %}
+                                <div class="todo-completed-sub">완료자 {{ todo.done_by_name or todo.done_by }}</div>
+                                {% endif %}
                             </div>
-                            {% endif %}
-                        </td>
-                        <td style="white-space:pre-wrap;">{{ todo.detail or '-' }}</td>
-                        <td>
+                        </div>
+                        <div class="todo-completed-detail">{{ todo.detail or '-' }}</div>
+                        <div class="todo-completed-meta">
                             <span class="todo-chip status-completed">완료</span>
-                            {% if can_manage_todo %}
-                            <form method="POST" action="/dashboard/todos/{{ todo.id }}/toggle" style="margin-top:0.4rem;">
-                                <input type="hidden" name="todo_status" value="processing">
-                                <input type="hidden" name="next" value="{{ request.path }}#todo-completed">
-                                <button type="submit" class="btn btn-small btn-secondary">처리중 복귀</button>
-                            </form>
-                            {% else %}
-                            <div style="margin-top:0.4rem;">
-                                <span class="todo-chip">등록자만 복귀 가능</span>
-                            </div>
+                            {% if todo.importance %}
+                            <span class="todo-chip priority-{{ todo.importance }}">중요도 {% if todo.importance == 'high' %}상{% elif todo.importance == 'medium' %}중{% else %}하{% endif %}</span>
                             {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            {% if todo.due_date %}
+                            <span class="todo-chip">마감 {{ todo.due_date }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="todo-completed-side">
+                        {% if can_manage_todo %}
+                        <form method="POST" action="/dashboard/todos/{{ todo.id }}/toggle" style="margin:0;">
+                            <input type="hidden" name="todo_status" value="processing">
+                            <input type="hidden" name="next" value="{{ request.path }}#todo-completed">
+                            <button type="submit" class="btn btn-small btn-secondary todo-completed-restore">처리중 복귀</button>
+                        </form>
+                        {% else %}
+                        <span class="todo-chip">등록자만 복귀 가능</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="todo-empty">조건에 맞는 완료 업무가 없습니다.</div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="todo-empty">조건에 맞는 완료 업무가 없습니다.</div>
-        {% endif %}
     </div>
 </div>
 
@@ -996,11 +1107,44 @@ function closeTodoMessenger(event) {
     if (event && event.target && event.target.id !== 'todoMessengerBg') return;
     const modal = document.getElementById('todoMessengerBg');
     if (modal) modal.style.display = 'none';
+    resetTodoForm(false);
+    collapseTodoComposer(false);
     if (window.location.hash === '#todo-messenger' || window.location.hash === '#todo-completed') {
         history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
     }
 }
-function resetTodoForm() {
+function setTodoComposerExpanded(expanded) {
+    const dock = document.getElementById('todoComposerDock');
+    const shell = document.querySelector('#todoMessengerBg .todo-messenger-shell');
+    const rail = document.getElementById('todoComposerRail');
+    if (dock) dock.classList.toggle('is-expanded', !!expanded);
+    if (shell) shell.classList.toggle('composer-open', !!expanded);
+    if (rail) {
+        rail.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        const text = rail.querySelector('.todo-composer-rail-text');
+        if (text) text.textContent = expanded ? '접기' : '등록 열기';
+    }
+}
+function collapseTodoComposer(shouldReset = true) {
+    if (shouldReset) resetTodoForm(false);
+    setTodoComposerExpanded(false);
+}
+function expandTodoComposer(focusTitle = false) {
+    setTodoComposerExpanded(true);
+    if (focusTitle) {
+        document.getElementById('messengerTodoTitle')?.focus();
+    }
+}
+function startTodoCreate() {
+    const dock = document.getElementById('todoComposerDock');
+    if (dock && dock.classList.contains('is-expanded')) {
+        collapseTodoComposer();
+        return;
+    }
+    resetTodoForm(false);
+    expandTodoComposer(true);
+}
+function resetTodoForm(keepComposerOpen = false) {
     const form = document.getElementById('dashboardTodoForm');
     if (!form) return;
     form.action = '/dashboard/todos';
@@ -1013,8 +1157,11 @@ function resetTodoForm() {
     if (submit) submit.textContent = '업무 등록';
     if (cancel) cancel.style.display = 'none';
     if (importance) importance.value = '';
-    const defaultStatus = document.getElementById('todoStatusProcessing');
-    if (defaultStatus) defaultStatus.checked = true;
+    const statusInput = document.getElementById('dashboardTodoStatus');
+    if (statusInput) statusInput.value = 'processing';
+    if (!keepComposerOpen) {
+        setTodoComposerExpanded(false);
+    }
 }
 function startTodoEditFromButton(button) {
     if (!button) return;
@@ -1029,12 +1176,13 @@ function startTodoEditFromButton(button) {
 }
 function startTodoEdit(todoId, title, detail, dueDate, importance, status) {
     openTodoMessenger();
+    expandTodoComposer(false);
     const form = document.getElementById('dashboardTodoForm');
     const titleEl = document.getElementById('messengerTodoTitle');
     const detailEl = document.getElementById('messengerTodoDetail');
     const dueDateEl = document.getElementById('messengerTodoDueDate');
     const importanceEl = document.getElementById('messengerTodoImportance');
-    const statusEl = document.querySelector(`input[name="todo_status"][value="${status || 'processing'}"]`);
+    const statusInput = document.getElementById('dashboardTodoStatus');
     const composerTitle = document.getElementById('todoComposerTitle');
     const submit = document.getElementById('dashboardTodoSubmit');
     const cancel = document.getElementById('todoComposerCancel');
@@ -1045,11 +1193,47 @@ function startTodoEdit(todoId, title, detail, dueDate, importance, status) {
     detailEl.value = detail || '';
     dueDateEl.value = dueDate || '';
     if (importanceEl) importanceEl.value = importance || '';
-    if (statusEl) statusEl.checked = true;
+    if (statusInput) statusInput.value = status || 'processing';
     if (composerTitle) composerTitle.textContent = '등록된 업무 수정';
     if (submit) submit.textContent = '업무 수정';
     if (cancel) cancel.style.display = 'inline-flex';
     titleEl.focus();
+}
+let currentTodoListFilter = 'all';
+function applyTodoListFilter() {
+    const rows = Array.from(document.querySelectorAll('#todoMessengerList [data-todo-row="1"]'));
+    const empty = document.getElementById('todoFilterEmpty');
+    let visibleCount = 0;
+
+    rows.forEach((row) => {
+        const status = row.dataset.status || '';
+        const isDueSoon = row.dataset.dueSoon === '1';
+        const isOverdue = row.dataset.overdue === '1';
+        let visible = true;
+
+        if (currentTodoListFilter === 'processing' || currentTodoListFilter === 'info_needed' || currentTodoListFilter === 'completed') {
+            visible = status === currentTodoListFilter;
+        } else if (currentTodoListFilter === 'due_soon') {
+            visible = isDueSoon && !isOverdue;
+        } else if (currentTodoListFilter === 'overdue') {
+            visible = isOverdue;
+        }
+
+        row.style.display = visible ? '' : 'none';
+        if (visible) visibleCount += 1;
+    });
+
+    if (empty) {
+        empty.classList.toggle('is-visible', rows.length > 0 && visibleCount === 0);
+    }
+}
+function toggleTodoListFilter(button) {
+    const nextFilter = button?.dataset?.filter || 'all';
+    currentTodoListFilter = currentTodoListFilter === nextFilter ? 'all' : nextFilter;
+    document.querySelectorAll('.todo-filter-stat').forEach((el) => {
+        el.classList.toggle('active', currentTodoListFilter !== 'all' && (el.dataset.filter || '') === currentTodoListFilter);
+    });
+    applyTodoListFilter();
 }
 function openCompletedTodoModal() {
     const modal = document.getElementById('completedTodoModal');
@@ -1165,6 +1349,7 @@ if (window.location.hash === '#todo-completed') {
     openTodoMessenger();
     openCompletedTodoModal();
 }
+applyTodoListFilter();
 applyTheme(getCurrentTheme());
 </script>
 {% block extra_js %}{% endblock %}

@@ -10,25 +10,58 @@
     align-items: stretch;
 }
 .dashboard-summary-card {
+    position: relative;
+    overflow: hidden;
     color: #fff;
     padding: 1.25rem;
     border-radius: 18px;
     box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
 }
+.dashboard-summary-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.22), transparent 42%);
+    pointer-events: none;
+}
+.dashboard-summary-card.schedule {
+    background: linear-gradient(135deg,#667eea,#764ba2);
+}
+.dashboard-summary-card.low-stock {
+    background: linear-gradient(135deg,#f093fb,#f5576c);
+}
+.dashboard-summary-card.raw-shortage {
+    background: linear-gradient(135deg,#ef4444,#f59e0b);
+}
+.dashboard-summary-card.pending-issues {
+    background: linear-gradient(135deg,#4facfe,#00c6ff);
+}
+.dashboard-summary-card.monthly-production {
+    background: linear-gradient(135deg,#43e97b,#38f9d7);
+}
 .dashboard-summary-label {
+    position: relative;
+    z-index: 1;
     font-size: 0.8rem;
     opacity: 0.92;
     margin-bottom: 0.25rem;
 }
 .dashboard-summary-value {
+    position: relative;
+    z-index: 1;
     font-size: 2rem;
     font-weight: 800;
     margin: 0.25rem 0;
 }
 .dashboard-summary-link {
+    position: relative;
+    z-index: 1;
     color: rgba(255, 255, 255, 0.92);
     font-size: 0.78rem;
     text-decoration: none;
+}
+.dashboard-summary-link:hover {
+    color: #fff;
 }
 .dashboard-section-grid {
     display: grid;
@@ -149,19 +182,19 @@
     height: 100%;
     border-radius: 999px;
 }
-.todo-dashboard-card {
+.dashboard-todo-legacy .todo-dashboard-card {
     margin-bottom: 1.5rem;
 }
-.todo-dashboard-grid {
+.dashboard-todo-legacy .todo-dashboard-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.95fr);
     gap: 1rem;
 }
-.todo-list {
+.dashboard-todo-legacy .todo-list {
     display: grid;
     gap: 0.8rem;
 }
-.todo-item {
+.dashboard-todo-legacy .todo-item {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 0.8rem;
@@ -170,45 +203,45 @@
     border-radius: 18px;
     background: linear-gradient(180deg, #ffffff, #f8fafc);
 }
-.todo-item.is-due-soon {
+.dashboard-todo-legacy .todo-item.is-due-soon {
     border-color: #fdba74;
     background: linear-gradient(180deg, #fff9f2, #fff7ed);
 }
-.todo-item.is-overdue {
+.dashboard-todo-legacy .todo-item.is-overdue {
     border-color: #fca5a5;
     background: linear-gradient(180deg, #fff5f5, #fef2f2);
 }
-.todo-check {
+.dashboard-todo-legacy .todo-check {
     width: 1.15rem;
     height: 1.15rem;
     margin-top: 0.2rem;
     accent-color: #0f766e;
 }
-.todo-head {
+.dashboard-todo-legacy .todo-head {
     display: flex;
     justify-content: space-between;
     gap: 0.8rem;
     align-items: flex-start;
     margin-bottom: 0.3rem;
 }
-.todo-title {
+.dashboard-todo-legacy .todo-title {
     font-size: 1rem;
     font-weight: 800;
     color: #0f172a;
 }
-.todo-detail {
+.dashboard-todo-legacy .todo-detail {
     color: #475569;
     font-size: 0.88rem;
     line-height: 1.5;
     white-space: pre-wrap;
 }
-.todo-meta {
+.dashboard-todo-legacy .todo-meta {
     display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
     margin-top: 0.55rem;
 }
-.todo-chip {
+.dashboard-todo-legacy .todo-chip {
     display: inline-flex;
     align-items: center;
     padding: 0.2rem 0.55rem;
@@ -218,38 +251,38 @@
     background: #e2e8f0;
     color: #334155;
 }
-.todo-chip.due {
+.dashboard-todo-legacy .todo-chip.due {
     background: #dbeafe;
     color: #1d4ed8;
 }
-.todo-chip.due-soon {
+.dashboard-todo-legacy .todo-chip.due-soon {
     background: #ffedd5;
     color: #c2410c;
 }
-.todo-chip.overdue {
+.dashboard-todo-legacy .todo-chip.overdue {
     background: #fee2e2;
     color: #b91c1c;
 }
-.todo-side-card {
+.dashboard-todo-legacy .todo-side-card {
     border: 1px solid #e5e7eb;
     border-radius: 20px;
     background: #f8fafc;
     padding: 1rem;
 }
-.todo-form-grid {
+.dashboard-todo-legacy .todo-form-grid {
     display: grid;
     gap: 0.75rem;
 }
-.todo-form-grid label {
+.dashboard-todo-legacy .todo-form-grid label {
     display: block;
     margin-bottom: 0.35rem;
     font-size: 0.82rem;
     font-weight: 700;
     color: #334155;
 }
-.todo-form-grid input[type="text"],
-.todo-form-grid input[type="date"],
-.todo-form-grid textarea {
+.dashboard-todo-legacy .todo-form-grid input[type="text"],
+.dashboard-todo-legacy .todo-form-grid input[type="date"],
+.dashboard-todo-legacy .todo-form-grid textarea {
     width: 100%;
     padding: 0.72rem 0.8rem;
     border: 1px solid #cbd5e1;
@@ -257,31 +290,61 @@
     font: inherit;
     background: #fff;
 }
-.todo-form-grid textarea {
+.dashboard-todo-legacy .todo-form-grid textarea {
     min-height: 110px;
     resize: vertical;
 }
-.todo-quick-stats {
+html[data-theme="dark"] .dashboard-summary-card {
+    border: 1px solid rgba(148,163,184,0.18);
+    box-shadow: 0 24px 42px rgba(2, 6, 23, 0.34);
+}
+html[data-theme="dark"] .dashboard-summary-card::before {
+    background:
+        radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,0.05), transparent 55%);
+}
+html[data-theme="dark"] .dashboard-summary-card.schedule {
+    background: linear-gradient(135deg, #312e81 0%, #4338ca 48%, #1d4ed8 100%);
+}
+html[data-theme="dark"] .dashboard-summary-card.low-stock {
+    background: linear-gradient(135deg, #7c2d92 0%, #be185d 52%, #e11d48 100%);
+}
+html[data-theme="dark"] .dashboard-summary-card.raw-shortage {
+    background: linear-gradient(135deg, #7f1d1d 0%, #c2410c 52%, #f59e0b 100%);
+}
+html[data-theme="dark"] .dashboard-summary-card.pending-issues {
+    background: linear-gradient(135deg, #0f3b68 0%, #0369a1 52%, #0ea5e9 100%);
+}
+html[data-theme="dark"] .dashboard-summary-card.monthly-production {
+    background: linear-gradient(135deg, #14532d 0%, #0f766e 52%, #10b981 100%);
+}
+html[data-theme="dark"] .dashboard-summary-link {
+    color: rgba(226, 232, 240, 0.88);
+}
+html[data-theme="dark"] .dashboard-summary-link:hover {
+    color: #f8fafc;
+}
+.dashboard-todo-legacy .todo-quick-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.7rem;
     margin-bottom: 1rem;
 }
-.todo-stat {
+.dashboard-todo-legacy .todo-stat {
     padding: 0.8rem 0.9rem;
     border-radius: 16px;
     color: #fff;
 }
-.todo-stat-label {
+.dashboard-todo-legacy .todo-stat-label {
     font-size: 0.75rem;
     opacity: 0.92;
 }
-.todo-stat-value {
+.dashboard-todo-legacy .todo-stat-value {
     font-size: 1.45rem;
     font-weight: 800;
     margin-top: 0.18rem;
 }
-.todo-empty {
+.dashboard-todo-legacy .todo-empty {
     padding: 2rem 1rem;
     border: 1px dashed #cbd5e1;
     border-radius: 18px;
@@ -289,7 +352,7 @@
     color: #64748b;
     background: #f8fafc;
 }
-.todo-modal-bg {
+.dashboard-todo-legacy .todo-modal-bg {
     display: none;
     position: fixed;
     inset: 0;
@@ -299,7 +362,7 @@
     justify-content: center;
     z-index: 1200;
 }
-.todo-modal {
+.dashboard-todo-legacy .todo-modal {
     width: min(1100px, 100%);
     max-height: calc(100vh - 2rem);
     overflow: auto;
@@ -308,26 +371,26 @@
     box-shadow: 0 28px 70px rgba(15, 23, 42, 0.25);
     padding: 1.1rem;
 }
-.todo-modal-head {
+.dashboard-todo-legacy .todo-modal-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
     margin-bottom: 0.9rem;
 }
-.todo-modal-table td {
+.dashboard-todo-legacy .todo-modal-table td {
     vertical-align: top;
     font-size: 0.85rem;
 }
-.todo-messenger-modal {
+.dashboard-todo-legacy .todo-messenger-modal {
     width: min(1180px, 100%);
 }
-.todo-messenger-shell {
+.dashboard-todo-legacy .todo-messenger-shell {
     display: grid;
     grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
     gap: 1rem;
 }
-.todo-messenger-list {
+.dashboard-todo-legacy .todo-messenger-list {
     min-height: 520px;
     max-height: calc(100vh - 220px);
     overflow: auto;
@@ -341,16 +404,16 @@
     flex-direction: column;
     gap: 0.9rem;
 }
-.todo-message-row {
+.dashboard-todo-legacy .todo-message-row {
     display: flex;
 }
-.todo-message-row.is-left {
+.dashboard-todo-legacy .todo-message-row.is-left {
     justify-content: flex-start;
 }
-.todo-message-row.is-right {
+.dashboard-todo-legacy .todo-message-row.is-right {
     justify-content: flex-end;
 }
-.todo-message-bubble {
+.dashboard-todo-legacy .todo-message-bubble {
     width: min(100%, 620px);
     border-radius: 22px;
     padding: 1rem 1rem 0.9rem;
@@ -358,11 +421,11 @@
     border: 1px solid #dbe5f0;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
 }
-.todo-message-bubble.is-due-soon {
+.dashboard-todo-legacy .todo-message-bubble.is-due-soon {
     background: #fff7ed;
     border-color: #fdba74;
 }
-.todo-message-bubble.is-overdue {
+.dashboard-todo-legacy .todo-message-bubble.is-overdue {
     background: #fff1f2;
     border-color: #fda4af;
 }
@@ -372,12 +435,12 @@ html[data-theme="dark"] .dashboard-shortcut-btn{color:#eff6ff;}
 html[data-theme="dark"] #raw-shortage-card{background:linear-gradient(180deg,#121a2a,#101827);}
 html[data-theme="dark"] .raw-shortage-item,
 html[data-theme="dark"] .raw-shortage-meta-box,
-html[data-theme="dark"] .todo-item,
-html[data-theme="dark"] .todo-side-card,
-html[data-theme="dark"] .todo-modal,
-html[data-theme="dark"] .todo-message-bubble{background:#121a2a;border-color:#263244;box-shadow:0 14px 32px rgba(2,6,23,.28);}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-item,
+html[data-theme="dark"] .dashboard-todo-legacy .todo-side-card,
+html[data-theme="dark"] .dashboard-todo-legacy .todo-modal,
+html[data-theme="dark"] .dashboard-todo-legacy .todo-message-bubble{background:#121a2a;border-color:#263244;box-shadow:0 14px 32px rgba(2,6,23,.28);}
 html[data-theme="dark"] .raw-shortage-code,
-html[data-theme="dark"] .todo-chip{background:#162133;border-color:#263244;color:#c7d3e3;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-chip{background:#162133;border-color:#263244;color:#c7d3e3;}
 html[data-theme="dark"] .raw-shortage-item[style]{background:linear-gradient(180deg,#1a2436,#121a2a) !important;border-left-color:#f97316 !important;}
 html[data-theme="dark"] .raw-shortage-item strong[style]{color:#eff6ff !important;}
 html[data-theme="dark"] .raw-shortage-item .raw-shortage-badge[style]{background:rgba(249,115,22,.14) !important;color:#fdba74 !important;}
@@ -385,43 +448,43 @@ html[data-theme="dark"] #raw-shortage-card h2,
 html[data-theme="dark"] #raw-shortage-card strong,
 html[data-theme="dark"] #raw-shortage-card .raw-shortage-name{color:#eff6ff !important;}
 html[data-theme="dark"] .raw-shortage-meta-label,
-html[data-theme="dark"] .todo-form-grid label{color:#8ea3bd;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-form-grid label{color:#8ea3bd;}
 html[data-theme="dark"] .raw-shortage-meta-value,
-html[data-theme="dark"] .todo-title{color:#eff6ff;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-title{color:#eff6ff;}
 html[data-theme="dark"] .raw-shortage-progress{background:#223046;}
 html[data-theme="dark"] .raw-shortage-wrap{gap:1rem;}
 html[data-theme="dark"] .raw-shortage-meta-box{background:#162133 !important;border-color:#263244 !important;}
 html[data-theme="dark"] .raw-shortage-item .raw-shortage-meta-value[style]{color:#fdba74 !important;}
 html[data-theme="dark"] .raw-shortage-progress-bar{filter:saturate(.9) brightness(.92);}
-html[data-theme="dark"] .todo-item{background:linear-gradient(180deg,#121a2a,#101827);}
-html[data-theme="dark"] .todo-item.is-due-soon{background:linear-gradient(180deg,rgba(249,115,22,.14),#121a2a);border-color:rgba(251,146,60,.4);}
-html[data-theme="dark"] .todo-item.is-overdue{background:linear-gradient(180deg,rgba(239,68,68,.14),#121a2a);border-color:rgba(248,113,113,.38);}
-html[data-theme="dark"] .todo-detail{color:#c7d3e3;}
-html[data-theme="dark"] .todo-chip.due{background:rgba(37,99,235,.18);color:#bfdbfe;}
-html[data-theme="dark"] .todo-chip.due-soon{background:rgba(249,115,22,.16);color:#fdba74;}
-html[data-theme="dark"] .todo-chip.overdue{background:rgba(239,68,68,.16);color:#fda4af;}
-html[data-theme="dark"] .todo-empty{background:#162133;border-color:#314155;color:#8ea3bd;}
-html[data-theme="dark"] .todo-messenger-list{background:radial-gradient(circle at top left, rgba(14,165,233,0.12), transparent 30%), linear-gradient(180deg,#101827,#0f1726 48%,#121a2a);}
-html[data-theme="dark"] .todo-message-bubble.is-due-soon{background:linear-gradient(180deg,rgba(249,115,22,.14),#121a2a);border-color:rgba(251,146,60,.38);}
-html[data-theme="dark"] .todo-message-bubble.is-overdue{background:linear-gradient(180deg,rgba(239,68,68,.14),#121a2a);border-color:rgba(248,113,113,.38);}
-.todo-message-tools {
+html[data-theme="dark"] .dashboard-todo-legacy .todo-item{background:linear-gradient(180deg,#121a2a,#101827);}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-item.is-due-soon{background:linear-gradient(180deg,rgba(249,115,22,.14),#121a2a);border-color:rgba(251,146,60,.4);}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-item.is-overdue{background:linear-gradient(180deg,rgba(239,68,68,.14),#121a2a);border-color:rgba(248,113,113,.38);}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-detail{color:#c7d3e3;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-chip.due{background:rgba(37,99,235,.18);color:#bfdbfe;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-chip.due-soon{background:rgba(249,115,22,.16);color:#fdba74;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-chip.overdue{background:rgba(239,68,68,.16);color:#fda4af;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-empty{background:#162133;border-color:#314155;color:#8ea3bd;}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-messenger-list{background:radial-gradient(circle at top left, rgba(14,165,233,0.12), transparent 30%), linear-gradient(180deg,#101827,#0f1726 48%,#121a2a);}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-message-bubble.is-due-soon{background:linear-gradient(180deg,rgba(249,115,22,.14),#121a2a);border-color:rgba(251,146,60,.38);}
+html[data-theme="dark"] .dashboard-todo-legacy .todo-message-bubble.is-overdue{background:linear-gradient(180deg,rgba(239,68,68,.14),#121a2a);border-color:rgba(248,113,113,.38);}
+.dashboard-todo-legacy .todo-message-tools {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 0.8rem;
 }
-.todo-messenger-compose {
+.dashboard-todo-legacy .todo-messenger-compose {
     background: linear-gradient(180deg, #ffffff, #f8fafc);
 }
 @media (max-width: 960px) {
-    .todo-dashboard-grid {
+    .dashboard-todo-legacy .todo-dashboard-grid {
         grid-template-columns: 1fr;
     }
-    .todo-messenger-shell {
+    .dashboard-todo-legacy .todo-messenger-shell {
         grid-template-columns: 1fr;
     }
-    .todo-messenger-list {
+    .dashboard-todo-legacy .todo-messenger-list {
         min-height: 360px;
     }
 }
@@ -433,10 +496,10 @@ html[data-theme="dark"] .todo-message-bubble.is-overdue{background:linear-gradie
     .dashboard-shortcut-btn {
         width: 100%;
     }
-    .todo-quick-stats {
+    .dashboard-todo-legacy .todo-quick-stats {
         grid-template-columns: 1fr;
     }
-    .todo-head {
+    .dashboard-todo-legacy .todo-head {
         flex-direction: column;
     }
 }
@@ -445,27 +508,27 @@ html[data-theme="dark"] .todo-message-bubble.is-overdue{background:linear-gradie
 <h1>대시보드</h1>
 
 <div class="dashboard-summary-grid">
-    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+    <div class="dashboard-summary-card schedule">
         <div class="dashboard-summary-label">금주 스케줄</div>
         <div class="dashboard-summary-value">{{ schedules|length }}</div>
         <a class="dashboard-summary-link" href="/schedules">상세 보기</a>
     </div>
-    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#f093fb,#f5576c);">
+    <div class="dashboard-summary-card low-stock">
         <div class="dashboard-summary-label">재고 부족</div>
         <div class="dashboard-summary-value">{{ low_stock_materials|length }}</div>
         <a class="dashboard-summary-link" href="/materials{% if low_stock_material_ids_csv %}?shortage_ids={{ low_stock_material_ids_csv }}{% endif %}">부자재 보기</a>
     </div>
-    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#ef4444,#f59e0b);">
+    <div class="dashboard-summary-card raw-shortage">
         <div class="dashboard-summary-label">원초 부족</div>
         <div class="dashboard-summary-value">{{ raw_shortages|length }}</div>
         <a class="dashboard-summary-link" href="#raw-shortage-card">원초 보기</a>
     </div>
-    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#4facfe,#00c6ff);">
+    <div class="dashboard-summary-card pending-issues">
         <div class="dashboard-summary-label">진행 중 불출</div>
         <div class="dashboard-summary-value">{{ pending_issues|length }}</div>
         <a class="dashboard-summary-link" href="/materials?req_tab=issue&issue_status=pending">불출 보기</a>
     </div>
-    <div class="dashboard-summary-card" style="background:linear-gradient(135deg,#43e97b,#38f9d7);">
+    <div class="dashboard-summary-card monthly-production">
         <div class="dashboard-summary-label">이번달</div>
         <div class="dashboard-summary-value">
             {% set total = namespace(v=0) %}
