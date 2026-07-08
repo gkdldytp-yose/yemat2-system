@@ -694,6 +694,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {%- set is_admin  = _r == 'admin' -%}
 {%- set edit_completed = request.args.get('edit') == '1' -%}
 {%- set has_workplace_access = has_workplace_access if has_workplace_access is defined else true -%}
+{%- set can_manage_production = can_prod and has_workplace_access -%}
 {%- set can_edit = can_prod and has_workplace_access and (production.status != '완료' or edit_completed) -%}
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
@@ -702,7 +703,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         {% if production.status != '완료' and can_edit %}
         <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="openPlanEditModal()">생산계획 수정</button>
         {% endif %}
-        {% if production.status == '완료' and can_edit and not edit_completed %}
+        {% if production.status == '완료' and can_manage_production and not edit_completed %}
         <a href="/production/{{ production.id }}?edit=1" class="btn btn-small" style="background:#f59e0b;">✏️ 완료건 수정</a>
         {% elif edit_completed %}
         <a href="/production/{{ production.id }}" class="btn btn-small btn-secondary">수정 취소</a>
@@ -710,7 +711,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         {% if production.status == '완료' %}
         <a href="/production/{{ production.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ 생산일지 미리보기</a>
         {% endif %}
-        {% if can_edit %}
+        {% if can_manage_production %}
         <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% else %}생산건을 삭제할까요?{% endif %}')">
             <input type="hidden" name="next" value="/production{% if production.status == '완료' %}?tab=done{% endif %}">
             <button type="submit" class="btn btn-small btn-danger">삭제</button>

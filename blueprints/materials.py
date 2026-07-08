@@ -33,6 +33,23 @@ def _local_timestamp_str():
     return now_local().strftime('%Y-%m-%d %H:%M:%S')
 
 
+def _normalize_production_status(status_value):
+    s = (status_value or '').strip()
+    done = '완료'
+    planned = '예정'
+    in_progress = '진행중'
+    status_hex = s.encode('utf-8', errors='ignore').hex().upper() if s else ''
+    if not s:
+        return planned
+    if s == done or status_hex in {'EC9984EBA38C', '3FEABEA8ECA6BA'} or s == '?꾨즺' or '꾨즺' in s:
+        return done
+    if s == in_progress:
+        return in_progress
+    if s == planned or status_hex == 'EC9888ECA095' or s == '계획' or s == '?덈젙' or '덈젙' in s:
+        return planned
+    return s
+
+
 def _parse_manual_processed_at(raw_value):
     value = (raw_value or '').strip()
     if not value:
@@ -4158,56 +4175,95 @@ def raw_material_checksheet_preview(raw_material_id):
 
         cursor.execute(
             '''
-            WITH production_usage AS (
-                SELECT
-                    substr(p.production_date, 1, 10) as use_date,
-                    COALESCE(SUM(COALESCE(pmu.actual_quantity, 0)), 0) as used_quantity,
-                    GROUP_CONCAT(DISTINCT pr.name) as product_names,
-                    GROUP_CONCAT(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), char(31)) as usage_notes,
-                    COALESCE(rcn.note, '') as checksheet_note,
-                    1 as sort_group,
-                    'production' as log_kind
-                FROM production_material_usage pmu
-                JOIN productions p
-                  ON p.id = pmu.production_id
-                 AND COALESCE(p.production_date, '') <> ''
-                LEFT JOIN products pr ON pr.id = p.product_id
-                LEFT JOIN raw_material_checksheet_notes rcn
-                  ON rcn.raw_material_id = pmu.raw_material_id
-                  AND rcn.use_date = substr(p.production_date, 1, 10)
-                WHERE pmu.raw_material_id = ?
-                  AND COALESCE(p.status, '') = '완료'
-                  AND COALESCE(pmu.actual_quantity, 0) > 0
-                GROUP BY substr(p.production_date, 1, 10), COALESCE(rcn.note, '')
-            ),
-            export_usage AS (
-                SELECT
-                    substr(rml.created_at, 1, 10) as use_date,
-                    ABS(COALESCE(SUM(COALESCE(rml.quantity, 0)), 0)) as used_quantity,
-                    '' as product_names,
-                    '' as usage_notes,
-                    COALESCE(NULLIF(TRIM(rml.note), ''), '') as checksheet_note,
-                    2 as sort_group,
-                    'export' as log_kind
-                FROM raw_material_logs rml
-                WHERE rml.raw_material_id = ?
-                  AND COALESCE(rml.type, '') = 'export'
-                  AND COALESCE(rml.quantity, 0) < 0
-                GROUP BY substr(rml.created_at, 1, 10), COALESCE(NULLIF(TRIM(rml.note), ''), '')
-            )
-            SELECT *
-            FROM (
-                SELECT * FROM production_usage
-                UNION ALL
-                SELECT * FROM export_usage
-            ) logs
-            WHERE COALESCE(used_quantity, 0) > 0
-            ORDER BY use_date DESC, sort_group ASC
-            LIMIT 14
+            SELECT
+                substr(p.production_date, 1, 10) as use_date,
+                COALESCE(pmu.actual_quantity, 0) as used_quantity,
+                COALESCE(pr.name, '') as product_name,
+                COALESCE(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), '') as usage_note,
+                COALESCE(rcn.note, '') as checksheet_note,
+                COALESCE(p.status, '') as production_status
+            FROM production_material_usage pmu
+            JOIN productions p
+              ON p.id = pmu.production_id
+             AND COALESCE(p.production_date, '') <> ''
+            LEFT JOIN products pr ON pr.id = p.product_id
+            LEFT JOIN raw_material_checksheet_notes rcn
+              ON rcn.raw_material_id = pmu.raw_material_id
+              AND rcn.use_date = substr(p.production_date, 1, 10)
+            WHERE pmu.raw_material_id = ?
+              AND COALESCE(pmu.actual_quantity, 0) > 0
+            ORDER BY substr(p.production_date, 1, 10) DESC, p.id DESC, pmu.id DESC
             ''',
-            (raw_material_id, raw_material_id),
+            (raw_material_id,),
         )
-        usage_logs = [dict(row) for row in cursor.fetchall()]
+        production_usage_rows = [dict(row) for row in cursor.fetchall()]
+
+        production_usage_map = {}
+        done_status = _normalize_production_status('완료')
+        for row in production_usage_rows:
+            if _normalize_production_status(row.get('production_status')) != done_status:
+                continue
+            use_date = row.get('use_date') or ''
+            checksheet_note = (row.get('checksheet_note') or '').strip()
+            key = (use_date, checksheet_note)
+            entry = production_usage_map.setdefault(
+                key,
+                {
+                    'use_date': use_date,
+                    'used_quantity': 0.0,
+                    'product_names': [],
+                    'usage_notes': [],
+                    'checksheet_note': checksheet_note,
+                    'sort_group': 1,
+                    'log_kind': 'production',
+                },
+            )
+            entry['used_quantity'] += float(row.get('used_quantity') or 0)
+            product_name = (row.get('product_name') or '').strip()
+            if product_name and product_name not in entry['product_names']:
+                entry['product_names'].append(product_name)
+            usage_note = (row.get('usage_note') or '').strip()
+            if usage_note:
+                entry['usage_notes'].append(usage_note)
+
+        cursor.execute(
+            '''
+            SELECT
+                substr(rml.created_at, 1, 10) as use_date,
+                ABS(COALESCE(SUM(COALESCE(rml.quantity, 0)), 0)) as used_quantity,
+                '' as product_names,
+                '' as usage_notes,
+                COALESCE(NULLIF(TRIM(rml.note), ''), '') as checksheet_note,
+                2 as sort_group,
+                'export' as log_kind
+            FROM raw_material_logs rml
+            WHERE rml.raw_material_id = ?
+              AND COALESCE(rml.type, '') = 'export'
+              AND COALESCE(rml.quantity, 0) < 0
+            GROUP BY substr(rml.created_at, 1, 10), COALESCE(NULLIF(TRIM(rml.note), ''), '')
+            ''',
+            (raw_material_id,),
+        )
+        export_usage_rows = [dict(row) for row in cursor.fetchall()]
+
+        usage_logs = []
+        for entry in production_usage_map.values():
+            usage_logs.append(
+                {
+                    'use_date': entry['use_date'],
+                    'used_quantity': entry['used_quantity'],
+                    'product_names': ', '.join(entry['product_names']),
+                    'usage_notes': chr(31).join(entry['usage_notes']),
+                    'checksheet_note': entry['checksheet_note'],
+                    'sort_group': entry['sort_group'],
+                    'log_kind': entry['log_kind'],
+                }
+            )
+        usage_logs.extend(export_usage_rows)
+        usage_logs = [row for row in usage_logs if float(row.get('used_quantity') or 0) > 0]
+        usage_logs.sort(key=lambda row: int(row.get('sort_group') or 0))
+        usage_logs.sort(key=lambda row: row.get('use_date') or '', reverse=True)
+        usage_logs = usage_logs[:14]
 
         total_stock = float(raw['total_stock'] or 0)
         current_stock = float(raw['current_stock'] or 0)
@@ -4250,7 +4306,9 @@ def raw_material_checksheet_preview(raw_material_id):
             )
             running_after = max(running_after + used_qty, 0)
         usage_rows = list(reversed(reconstructed_rows))
-        target_usage_rows = 13
+        # Keep extra blank rows available so the print template can fill the page
+        # and then hide only the overflow rows in fitUsageRowsToSinglePage().
+        target_usage_rows = 12
         while len(usage_rows) < target_usage_rows:
             usage_rows.append(
                 {
