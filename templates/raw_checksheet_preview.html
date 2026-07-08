@@ -790,12 +790,40 @@ function getA4HeightPx() {
     return height;
 }
 
-function fitUsageRowsToSinglePage() {
-    if (!rawSheet) return;
+function setBlankRowsHidden(hidden) {
     const blankRows = Array.from(document.querySelectorAll('.usage-row[data-empty-row="1"]'));
+    blankRows.forEach((row) => row.classList.toggle('is-hidden-fit', Boolean(hidden)));
+    return blankRows;
+}
+
+function fitUsageRowsToSinglePage(options = {}) {
+    if (!rawSheet) return;
+    const forPrint = Boolean(options.forPrint);
+
+    const blankRows = setBlankRowsHidden(false);
     if (!blankRows.length) return;
 
-    blankRows.forEach((row) => row.classList.remove('is-hidden-fit'));
+    if (forPrint) {
+        let overflow = rawSheet.scrollHeight - rawSheet.clientHeight;
+        if (overflow <= 0) return;
+
+        let hiddenCount = 0;
+        for (let i = blankRows.length - 1; i >= 0; i -= 1) {
+            blankRows[i].classList.add('is-hidden-fit');
+            hiddenCount += 1;
+            overflow = rawSheet.scrollHeight - rawSheet.clientHeight;
+            if (overflow <= 0) {
+                break;
+            }
+        }
+
+        let extraToHide = 2;
+        for (let i = blankRows.length - hiddenCount - 1; i >= 0 && extraToHide > 0; i -= 1) {
+            blankRows[i].classList.add('is-hidden-fit');
+            extraToHide -= 1;
+        }
+        return;
+    }
 
     const maxHeight = getA4HeightPx();
     if (!Number.isFinite(maxHeight) || maxHeight <= 0) return;
@@ -886,7 +914,10 @@ async function toggleNoteEdit() {
 window.addEventListener('load', syncAllNoteEditors);
 window.addEventListener('load', applyPreviewZoom);
 window.addEventListener('resize', fitUsageRowsToSinglePage);
-window.addEventListener('beforeprint', fitUsageRowsToSinglePage);
+window.addEventListener('beforeprint', () => {
+    fitUsageRowsToSinglePage({ forPrint: true });
+});
+window.addEventListener('afterprint', fitUsageRowsToSinglePage);
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
