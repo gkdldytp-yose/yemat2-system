@@ -1229,13 +1229,15 @@ def _normalize_production_status(status_value):
     done = '\uC644\uB8CC'
     planned = '\uC608\uC815'
     in_progress = '\uC9C4\uD589\uC911'
+    broken_planned_statuses = {'?\ub349\uc819'}
+    broken_completed_statuses = {'?\uafa8\uc9ba', '\ufffd\u03f7\ufffd'}
     if not s:
         return planned
-    if s == done or s == '?\uafa8\uc9ba' or '\uafa8\uc9ba' in s:
+    if s in broken_completed_statuses or s == done or done in s:
         return done
     if s == in_progress:
         return in_progress
-    if s == planned or s == '\uACC4\uD68D' or s == '?\ub35c\uc82d' or '\ub35c\uc82d' in s:
+    if s in broken_planned_statuses or s == planned or s == '\uACC4\uD68D' or planned in s:
         return planned
     return s
 

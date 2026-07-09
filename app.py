@@ -233,26 +233,30 @@ def create_app():
 
     def _normalize_schedule_status(status_value):
         s = (status_value or '').strip()
+        broken_planned_statuses = {'?\ub349\uc819', '?\uafa8\uc9ba'}
+        broken_completed_statuses = {'?\ub8cc', '\ufffd\u03f7\ufffd'}
         if not s:
             return '예정'
-        if s == '완료' or '완료' in s:
+        if s in broken_completed_statuses or s == '완료' or '완료' in s:
             return '완료'
         if s == '진행중' or '진행중' in s:
             return '진행중'
-        if s in ('계획', '예정') or '예정' in s:
+        if s in broken_planned_statuses or s in ('계획', '예정') or '예정' in s:
             return '예정'
         return s
 
-    def _get_planned_product_box_map(cursor, workplace):
-        cursor.execute(
-            '''
+    def _get_planned_product_box_map(cursor, workplace, start_date=None, end_date=None):
+        query = '''
             SELECT product_id, planned_boxes, status
             FROM production_schedules
             WHERE workplace = ?
-            ORDER BY scheduled_date, id
-            ''',
-            (workplace,),
-        )
+        '''
+        params = [workplace]
+        if start_date and end_date:
+            query += '\n              AND scheduled_date BETWEEN ? AND ?'
+            params.extend([start_date, end_date])
+        query += '\n            ORDER BY scheduled_date, id'
+        cursor.execute(query, params)
         product_box_map = {}
         for row in cursor.fetchall():
             if _normalize_schedule_status(row['status']) != '예정':
@@ -265,7 +269,14 @@ def create_app():
         return product_box_map
 
     def _get_material_shortages(cursor, workplace):
-        product_box_map = _get_planned_product_box_map(cursor, workplace)
+        today = today_local()
+        week_end = today + timedelta(days=7)
+        product_box_map = _get_planned_product_box_map(
+            cursor,
+            workplace,
+            today.isoformat(),
+            week_end.isoformat(),
+        )
         if not product_box_map:
             return []
 
@@ -351,7 +362,14 @@ def create_app():
         return shortages
 
     def _get_raw_shortages(cursor, workplace):
-        product_box_map = _get_planned_product_box_map(cursor, workplace)
+        today = today_local()
+        week_end = today + timedelta(days=7)
+        product_box_map = _get_planned_product_box_map(
+            cursor,
+            workplace,
+            today.isoformat(),
+            week_end.isoformat(),
+        )
         if not product_box_map:
             return []
 

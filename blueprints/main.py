@@ -22,13 +22,15 @@ LOW_STOCK_MATERIAL_GROUP_ORDER = ['내포', '외포', '박스', '실리카', '�
 
 def _normalize_dashboard_schedule_status(status_value):
     s = (status_value or '').strip()
+    broken_planned_statuses = {'?\ub349\uc819', '?\uafa8\uc9ba'}
+    broken_completed_statuses = {'?\ub8cc', '\ufffd\u03f7\ufffd'}
     if not s:
         return '예정'
-    if s == '완료' or '완료' in s:
+    if s in broken_completed_statuses or s == '완료' or '완료' in s:
         return '완료'
     if s == '진행중':
         return '진행중'
-    if s in ('계획', '예정') or '예정' in s:
+    if s in broken_planned_statuses or s in ('계획', '예정') or '예정' in s:
         return '예정'
     return s
 
@@ -314,17 +316,24 @@ def index():
         WHERE ps.scheduled_date BETWEEN ? AND ? AND ps.workplace = ?
         ORDER BY ps.scheduled_date
     ''', (today.isoformat(), week_end.isoformat(), workplace))
-    schedules = cursor.fetchall()
+    schedule_rows = cursor.fetchall()
+    schedules = []
+    for row in schedule_rows:
+        schedule = dict(row)
+        normalized_status = _normalize_dashboard_schedule_status(schedule.get('status'))
+        schedule['display_status'] = normalized_status
+        schedules.append(schedule)
 
-    # 현재 등록된 예정 생산 일정 기준 원초 부족
+    # 금주 예정 생산 일정 기준 원초/부자재 부족
     cursor.execute(
         '''
         SELECT ps.product_id, ps.planned_boxes, ps.status
         FROM production_schedules ps
         WHERE ps.workplace = ?
+          AND ps.scheduled_date BETWEEN ? AND ?
         ORDER BY ps.scheduled_date, ps.id
         ''',
-        (workplace,),
+        (workplace, today.isoformat(), week_end.isoformat()),
     )
     product_box_map = {}
     for row in cursor.fetchall():
