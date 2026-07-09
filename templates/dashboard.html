@@ -562,12 +562,12 @@ html[data-theme="dark"] .dashboard-todo-legacy .todo-message-bubble.is-overdue{b
                         <td><strong>{{ s.product_name }}</strong></td>
                         <td>{{ s.planned_boxes }}</td>
                         <td>
-                            {% if s.status == '완료' %}
+                            {% if s.display_status == '완료' %}
                             <span class="badge badge-success">완료</span>
-                            {% elif s.status == '진행중' %}
+                            {% elif s.display_status == '진행중' %}
                             <span class="badge badge-warning">진행중</span>
                             {% else %}
-                            <span class="badge badge-info">{{ s.status }}</span>
+                            <span class="badge badge-info">{{ s.display_status }}</span>
                             {% endif %}
                         </td>
                     </tr>
