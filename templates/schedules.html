@@ -5977,7 +5977,10 @@ function renderSpecialNotePicker() {
             dayElement.classList.add('is-selected');
         }
         dayElement.onclick = function() {
-            if (specialNoteSelectedDates.has(dateStr)) {
+            const noteId = String(document.getElementById('specialNoteId')?.value || '').trim();
+            if (noteId) {
+                specialNoteSelectedDates = new Set([dateStr]);
+            } else if (specialNoteSelectedDates.has(dateStr)) {
                 specialNoteSelectedDates.delete(dateStr);
             } else {
                 specialNoteSelectedDates.add(dateStr);
@@ -6066,6 +6069,8 @@ function openSpecialNoteModal(defaultDate = '', note = null) {
         titleInput.value = String(note.title || '');
         contentInput.value = String(note.content || '');
         singleDateInput.value = String(note.note_date || defaultDate || '');
+        specialNoteSelectedDates = new Set([String(note.note_date || defaultDate || '').trim()].filter(Boolean));
+        renderSpecialNotePicker();
         if (modeBtn) {
             modeBtn.textContent = '수정 시 날짜 1개만 변경할 수 있습니다';
             modeBtn.classList.remove('is-active');
@@ -6102,6 +6107,11 @@ function openSpecialNoteModalFromScheduleModal() {
     const singleDateValue = String(document.getElementById('singleDateInput')?.value || '').trim();
     const multiDates = Array.from(selectedDates).sort();
     const defaultDate = singleDateValue || specialNoteDefaultDate || '';
+    const addModal = document.getElementById('addModal');
+    if (addModal) {
+        addModal.style.display = 'none';
+    }
+    clearSelection();
 
     openSpecialNoteModal(defaultDate);
 
@@ -6159,8 +6169,9 @@ async function saveSpecialNote(event) {
     const title = String(document.getElementById('specialNoteTitle').value || '').trim();
     const content = String(document.getElementById('specialNoteContent').value || '').trim();
     const singleDate = String(document.getElementById('specialNoteSingleDate').value || '').trim();
+    const selectedSingleDate = Array.from(specialNoteSelectedDates).sort()[0] || singleDate;
     const dates = noteId
-        ? [singleDate].filter(Boolean)
+        ? [specialNoteDateMode ? selectedSingleDate : singleDate].filter(Boolean)
         : (specialNoteDateMode ? Array.from(specialNoteSelectedDates).sort() : [singleDate].filter(Boolean));
 
     if (!dates.length) {
@@ -6971,7 +6982,8 @@ function renderCalendar() {
         dayNumber.textContent = day;
         dayHeader.appendChild(dayNumber);
 
-        if (workMeta.text) {
+        const workData = workDays[dateStr];
+        if (workData && workMeta.text) {
             const statusTag = document.createElement('span');
             statusTag.className = `work-status-tag ${workMeta.className}`.trim();
             statusTag.textContent = workMeta.text;
@@ -6988,7 +7000,6 @@ function renderCalendar() {
 
         dayElement.appendChild(dayHeader);
 
-        const workData = workDays[dateStr];
         if (workData && workData.holiday_caption) {
             const holidayCaption = document.createElement('div');
             holidayCaption.className = 'holiday-caption';
@@ -7092,7 +7103,7 @@ function renderCalendar() {
                 deleteBtn.className = 'calendar-delete-btn';
                 deleteBtn.disabled = isCompleted;
                 deleteBtn.title = isCompleted ? '완료 건은 삭제할 수 없습니다.' : (schedule.source === 'export' ? '수출 일정에서 이 날짜를 제외합니다.' : '삭제');
-                deleteBtn.textContent = '×';
+                deleteBtn.textContent = '🗑';
                 deleteBtn.onclick = function(event) {
                     event.stopPropagation();
                     deleteScheduleFromCalendar(schedule.id, isCompleted, schedule.source === 'export');
