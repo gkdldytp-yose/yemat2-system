@@ -18,6 +18,7 @@ from core import (
     db_connection,
     db_transaction,
     get_db,
+    get_effective_user_role,
     get_workplace,
     rows_to_dict,
     login_required,
@@ -32,6 +33,7 @@ from core import (
 
 bp = Blueprint('production', __name__)
 logger = logging.getLogger('yemat.waitress')
+SCHEDULE_ADMIN_PERMISSION_MESSAGE = '해당 작업에 대한 권한이 없습니다. 관리자에게 문의 부탁드립니다.'
 FIXED_PUBLIC_HOLIDAYS = {
     (1, 1): '\uC2E0\uC815',
     (3, 1): '\uC0BC\uC77C\uC808',
@@ -42,6 +44,16 @@ FIXED_PUBLIC_HOLIDAYS = {
     (10, 9): '\uD55C\uAE00\uB0A0',
     (12, 25): '\uC131\uD0C4\uC808',
 }
+
+
+def _has_schedule_admin_permission(workplace=None, user=None):
+    target_workplace = (workplace or get_workplace() or '').strip()
+    return get_effective_user_role(user or session.get('user'), target_workplace) == 'admin'
+
+
+def _require_schedule_admin_permission(workplace=None):
+    if not _has_schedule_admin_permission(workplace=workplace):
+        raise ValueError(SCHEDULE_ADMIN_PERMISSION_MESSAGE)
 
 
 YEAR_SPECIFIC_PUBLIC_HOLIDAYS = {
@@ -226,6 +238,53 @@ def _format_schedule_quantity(value):
         return '0'
 
 
+def _normalize_schedule_special_note_payload(row):
+    data = dict(row)
+    return {
+        'id': int(data.get('id') or 0),
+        'workplace': str(data.get('workplace') or '').strip(),
+        'note_date': str(data.get('note_date') or '').strip(),
+        'title': str(data.get('title') or '').strip(),
+        'content': str(data.get('content') or '').strip(),
+        'created_by': str(data.get('created_by') or '').strip(),
+        'updated_by': str(data.get('updated_by') or '').strip(),
+        'created_at': str(data.get('created_at') or '').strip(),
+        'updated_at': str(data.get('updated_at') or '').strip(),
+    }
+
+
+def _load_schedule_special_notes(cursor, workplace, start_date, end_date):
+    rows = cursor.execute(
+        '''
+        SELECT id, workplace, note_date, title, content, created_by, updated_by, created_at, updated_at
+        FROM schedule_special_notes
+        WHERE workplace = ?
+          AND note_date BETWEEN ? AND ?
+        ORDER BY note_date ASC, created_at ASC, id ASC
+        ''',
+        (workplace, start_date, end_date),
+    ).fetchall()
+    notes = [_normalize_schedule_special_note_payload(row) for row in rows]
+    grouped = defaultdict(list)
+    for note in notes:
+        grouped[note['note_date']].append(note)
+    return notes, grouped
+
+
+def _parse_schedule_special_note_dates(raw_dates):
+    values = raw_dates if isinstance(raw_dates, list) else [raw_dates]
+    parsed = []
+    seen = set()
+    for raw_value in values:
+        text = str(raw_value or '').strip()
+        if not text or text in seen:
+            continue
+        _parse_iso_date(text)
+        parsed.append(text)
+        seen.add(text)
+    return parsed
+
+
 def _get_schedule_work_status_meta(work_data):
     work_type = str((work_data or {}).get('type') or '').strip()
     overtime_hours = (work_data or {}).get('overtime_hours')
@@ -245,12 +304,13 @@ def _get_schedule_work_status_meta(work_data):
     return {'text': '', 'class_name': '', 'day_class': ''}
 
 
-def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days_data):
+def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days_data, special_notes_by_date=None):
     first_weekday, days_in_month = calendar.monthrange(year, month)
     first_weekday = (first_weekday + 1) % 7
     rows_by_date = defaultdict(list)
     for schedule in schedules_list:
         rows_by_date[str(schedule.get('scheduled_date') or '')].append(schedule)
+    special_notes_by_date = special_notes_by_date or {}
 
     html_parts = []
     for _ in range(first_weekday):
@@ -279,6 +339,20 @@ def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days
         holiday_caption = str(work_data.get('holiday_caption') or '').strip()
         if holiday_caption:
             html_parts.append(f'<div class="holiday-caption">{escape(holiday_caption)}</div>')
+        day_notes = special_notes_by_date.get(date_str) or []
+        if day_notes:
+            html_parts.append('<div class="day-special-notes">')
+            for note in day_notes:
+                note_id = int(note.get('id') or 0)
+                html_parts.append(
+                    f'<button type="button" class="special-note-item" onclick="event.stopPropagation(); openSpecialNoteModalById({note_id});">'
+                )
+                html_parts.append(f'<span class="special-note-title">{escape(str(note.get("title") or ""))}</span>')
+                html_parts.append(
+                    f'<span class="special-note-delete-btn" title="삭제" onclick="event.stopPropagation(); deleteSpecialNote({note_id});">×</span>'
+                )
+                html_parts.append('</button>')
+            html_parts.append('</div>')
         if day_rows:
             html_parts.append('<div class="day-schedules">')
             for schedule in day_rows:
@@ -326,23 +400,26 @@ def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days
     return Markup(''.join(html_parts))
 
 
-def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_data):
+def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_data, special_notes_by_date=None):
+    special_notes_by_date = special_notes_by_date or {}
     month_key = f'{year}-{month:02d}'
     monthly_rows = [
         schedule for schedule in schedules_list
         if str(schedule.get('scheduled_date') or '').startswith(month_key)
     ]
     monthly_rows.sort(key=lambda row: (str(row.get('scheduled_date') or ''), str(row.get('product_name') or '')))
-    if not monthly_rows:
+    note_dates = sorted(date_key for date_key in special_notes_by_date.keys() if str(date_key or '').startswith(month_key))
+    if not monthly_rows and not note_dates:
         return Markup('<div class="mobile-empty-state">이번 달에 등록된 생산 일정이 없습니다.</div>')
 
     weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일']
     grouped = defaultdict(list)
     for row in monthly_rows:
         grouped[str(row.get('scheduled_date') or '')].append(row)
+    all_dates = sorted(set(grouped.keys()) | set(note_dates))
 
     html_parts = []
-    for date_str in sorted(grouped.keys()):
+    for date_str in all_dates:
         current_date = datetime.strptime(date_str, '%Y-%m-%d')
         work_meta = _get_schedule_work_status_meta(work_days_data.get(date_str) or {})
         badge_class = f'work-status-tag {work_meta["class_name"]}'.strip() if work_meta['class_name'] else 'work-status-tag'
@@ -351,6 +428,13 @@ def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_d
         html_parts.append(f'<div class="mobile-day-date"><strong>{current_date.month}월 {current_date.day}일</strong><span>{weekdays[current_date.weekday()]}</span></div>')
         html_parts.append(f'<span class="{escape(badge_class)}">{escape(work_meta["text"] or "미지정")}</span>')
         html_parts.append('</div><div class="mobile-day-schedules">')
+        for note in special_notes_by_date.get(date_str) or []:
+            html_parts.append(
+                f'<button type="button" class="mobile-special-note-card" onclick="openSpecialNoteModalById({int(note.get("id") or 0)})">'
+            )
+            html_parts.append('<div class="mobile-special-note-label">특이사항</div>')
+            html_parts.append(f'<div class="mobile-special-note-title">{escape(str(note.get("title") or ""))}</div>')
+            html_parts.append('</button>')
         for schedule in grouped[date_str]:
             is_completed = bool(schedule.get('is_completed')) or str(schedule.get('status') or '').strip() == '완료'
             status_text = '완료' if is_completed else '예정'
@@ -2083,6 +2167,12 @@ def schedules():
             }
             for row in cursor.fetchall()
         }
+        special_notes_list, special_notes_by_date = _load_schedule_special_notes(
+            cursor,
+            workplace,
+            month_start.isoformat(),
+            month_end.isoformat(),
+        )
 
         cursor.execute(
             '''
@@ -2392,15 +2482,19 @@ def schedules():
 
     # 域뱀눖龜???怨쀬뵠?怨뺣즲 JSON??곗쨮 癰??
     work_days_json = json.dumps(work_days_data, ensure_ascii=False)
+    special_notes_json = json.dumps(special_notes_list, ensure_ascii=False)
     export_schedules_json = json.dumps(export_rows_json, ensure_ascii=False)
-    initial_calendar_html = _build_schedule_initial_calendar_html(year, month, schedules_list, work_days_data)
-    initial_mobile_calendar_html = _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_data)
+    initial_calendar_html = _build_schedule_initial_calendar_html(year, month, schedules_list, work_days_data, special_notes_by_date)
+    initial_mobile_calendar_html = _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_data, special_notes_by_date)
+    can_manage_schedule = _has_schedule_admin_permission(workplace=workplace, user=session.get('user'))
     return render_template(
         'schedules.html',
         user=session['user'],
         current_workplace=workplace,
+        can_manage_schedule=can_manage_schedule,
         schedules=schedules_view,
         schedules_json=schedules_json,
+        special_notes_json=special_notes_json,
         products=products,
         products_json=products_json,
         stats_products_json=stats_products_json,
@@ -3274,6 +3368,9 @@ def schedule_requirements_auto_purchase():
 def add_schedule():
     """Auto-generated docstring."""
     workplace = get_workplace()
+    if not _has_schedule_admin_permission(workplace=workplace):
+        safe_message = json.dumps(SCHEDULE_ADMIN_PERMISSION_MESSAGE, ensure_ascii=False)
+        return f"<script>alert({safe_message});history.back();</script>", 403
     product_id = (request.form.get('product_id') or '').strip()
     scheduled_dates = request.form.getlist('scheduled_dates')
     scheduled_dates = list(dict.fromkeys(d for d in scheduled_dates if d))
@@ -3516,6 +3613,97 @@ def delete_schedule(schedule_id):
         return _schedule_error_response(str(exc), view=request.args.get('view') or request.form.get('view') or 'calendar')
 
 
+@bp.route('/schedules/special-notes/save', methods=['POST'])
+@role_required('production')
+def save_schedule_special_note():
+    try:
+        payload = request.get_json(silent=True) or request.form
+        workplace = get_workplace()
+        _require_schedule_admin_permission(workplace)
+        note_id = int(payload.get('note_id') or 0)
+        title = str(payload.get('title') or '').strip()
+        content = str(payload.get('content') or '').strip()
+        dates = _parse_schedule_special_note_dates(payload.get('dates') or request.form.getlist('dates'))
+        if not title:
+            raise ValueError('특이사항 제목을 입력해 주세요.')
+        if not content:
+            raise ValueError('특이사항 내용을 입력해 주세요.')
+        if note_id <= 0 and not dates:
+            raise ValueError('등록 날짜를 선택해 주세요.')
+
+        user_name = str((session.get('user') or {}).get('name') or (session.get('user') or {}).get('username') or '').strip()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            if note_id > 0:
+                row = cursor.execute(
+                    'SELECT * FROM schedule_special_notes WHERE id = ? AND workplace = ?',
+                    (note_id, workplace),
+                ).fetchone()
+                if not row:
+                    raise ValueError('수정할 특이사항을 찾을 수 없습니다.')
+                target_date = dates[0] if dates else str(row['note_date'] or '').strip()
+                cursor.execute(
+                    '''
+                    UPDATE schedule_special_notes
+                    SET note_date = ?, title = ?, content = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND workplace = ?
+                    ''',
+                    (target_date, title, content, user_name, note_id, workplace),
+                )
+                audit_log(
+                    conn,
+                    'update',
+                    'schedule_special_note',
+                    note_id,
+                    {'note_date': target_date, 'title': title, 'content': content},
+                )
+                saved_ids = [note_id]
+            else:
+                saved_ids = []
+                for note_date in dates:
+                    cursor.execute(
+                        '''
+                        INSERT INTO schedule_special_notes (
+                            workplace, note_date, title, content, created_by, updated_by
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ''',
+                        (workplace, note_date, title, content, user_name, user_name),
+                    )
+                    created_id = int(cursor.lastrowid or 0)
+                    saved_ids.append(created_id)
+                    audit_log(
+                        conn,
+                        'create',
+                        'schedule_special_note',
+                        created_id,
+                        {'note_date': note_date, 'title': title, 'content': content},
+                    )
+        return jsonify({'ok': True, 'ids': saved_ids})
+    except ValueError as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
+
+@bp.route('/schedules/special-notes/delete/<int:note_id>', methods=['POST'])
+@role_required('production')
+def delete_schedule_special_note(note_id):
+    try:
+        workplace = get_workplace()
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            row = cursor.execute(
+                'SELECT * FROM schedule_special_notes WHERE id = ? AND workplace = ?',
+                (note_id, workplace),
+            ).fetchone()
+            if not row:
+                raise ValueError('삭제할 특이사항을 찾을 수 없습니다.')
+            cursor.execute('DELETE FROM schedule_special_notes WHERE id = ? AND workplace = ?', (note_id, workplace))
+            audit_log(conn, 'delete', 'schedule_special_note', note_id, {'before': dict(row)})
+        return jsonify({'ok': True})
+    except ValueError as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
+
 @bp.route('/schedules/export/<int:export_schedule_id>/restore-date', methods=['POST'])
 @role_required('production')
 def restore_export_schedule_date(export_schedule_id):
@@ -3595,6 +3783,9 @@ def schedule_detail(date):
 def add_schedule_to_date(date):
     """Auto-generated docstring."""
     workplace = get_workplace()
+    if not _has_schedule_admin_permission(workplace=workplace):
+        safe_message = json.dumps(SCHEDULE_ADMIN_PERMISSION_MESSAGE, ensure_ascii=False)
+        return f"<script>alert({safe_message});history.back();</script>", 403
     product_id = (request.form.get('product_id') or '').strip()
     planned_boxes = request.form.get('planned_boxes')
     production_lines = request.form.getlist('production_lines')
