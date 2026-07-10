@@ -152,6 +152,66 @@ body.modal-open {
     background: white !important;
     transform: translateY(-1px);
 }
+.calendar-special-btn {
+    gap: 0.75rem;
+    min-height: 56px;
+    padding: 0.82rem 1.15rem !important;
+    border-radius: 16px !important;
+    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 48%, #1d4ed8 100%) !important;
+    color: #f8fbff !important;
+    font-weight: 800 !important;
+    border: 1px solid rgba(125, 211, 252, 0.72) !important;
+    box-shadow: 0 16px 36px rgba(37, 99, 235, 0.3), 0 0 0 1px rgba(255,255,255,0.16) inset;
+    letter-spacing: -0.01em;
+}
+.calendar-special-btn:hover {
+    background: linear-gradient(135deg, #4cc9ff 0%, #2f7df6 48%, #2457d6 100%) !important;
+    color: #f8fbff !important;
+    border-color: rgba(147, 197, 253, 0.9) !important;
+    transform: translateY(-2px) scale(1.01);
+    filter: brightness(1.05);
+    box-shadow: 0 22px 40px rgba(37, 99, 235, 0.36), 0 0 0 1px rgba(255,255,255,0.2) inset;
+}
+.calendar-special-btn .special-btn-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.18);
+    font-size: 1rem;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.14) inset;
+}
+.calendar-special-btn .special-btn-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.08rem;
+    line-height: 1.15;
+}
+.calendar-special-btn .special-btn-title {
+    font-size: 1rem;
+    font-weight: 900;
+}
+.calendar-special-btn .special-btn-sub {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(239, 246, 255, 0.86);
+}
+.calendar-header-actions .calendar-special-btn {
+    min-width: 196px;
+}
+.schedule-special-cta-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin: -0.35rem 0 1rem;
+}
+.schedule-special-cta-wrap .calendar-special-btn {
+    width: 100%;
+    max-width: 240px;
+}
 .production-stats-view {
     padding: 1.5rem;
     background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.98));
@@ -359,9 +419,11 @@ body.modal-open {
     display: block;
     font-weight: 900;
     color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 .production-stats-sub {
     margin-top: 0.22rem;
@@ -1746,7 +1808,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     border-left: 4px solid #3b82f6;
     
     /* 내부 여백 증가로 가독성 향상 */
-    padding: 0.5rem 0.6rem; 
+    padding: 0.56rem 2.25rem 0.56rem 0.62rem; 
     
     /* 외부 여백 */
     margin: 5px auto;
@@ -1766,25 +1828,84 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0,0,0,0.12);
 }
+.day-special-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.38rem;
+    margin-bottom: 0.4rem;
+}
+.special-note-item {
+    position: relative;
+    display: block;
+    width: 96%;
+    margin: 0 auto;
+    padding: 0.6rem 1.95rem 0.6rem 0.84rem;
+    border: 1px solid #c7d2fe;
+    border-left: 5px solid #6366f1;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+    box-shadow: 0 8px 18px rgba(99, 102, 241, 0.12);
+    cursor: pointer;
+    text-align: left;
+}
+.special-note-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(99, 102, 241, 0.16);
+}
+.special-note-title {
+    display: block;
+    color: #312e81;
+    font-size: 0.96rem;
+    font-weight: 900;
+    line-height: 1.38;
+    letter-spacing: -0.01em;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+.special-note-delete-btn {
+    position: absolute;
+    top: 50%;
+    right: 0.45rem;
+    transform: translateY(-50%);
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 900;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
 .calendar-copy-btn,
 .calendar-delete-btn {
     position: absolute;
-    top: 4px;
+    top: 7px;
     border: none;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    padding: 2px 4px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    width: 1.65rem;
+    height: 1.65rem;
+    padding: 0;
     line-height: 1;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15);
 }
 .calendar-copy-btn {
-    right: 4px;
+    right: 7px;
     background: rgba(255,255,255,0.9);
 }
 .calendar-delete-btn {
-    right: 4px;
-    background: rgba(254, 226, 226, 0.95);
-    color: #b91c1c;
+    right: 7px;
+    background: rgba(255,245,245,0.98);
+    color: #e11d48;
+    border: 1px solid rgba(251, 113, 133, 0.18);
 }
 .calendar-delete-btn:disabled {
     cursor: not-allowed;
@@ -1811,9 +1932,12 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     font-weight: 700;
     color: #1e293b;
     line-height: 1.3;             /* 줄 높이 추가 */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding-right: 0.25rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .schedule-info {
@@ -1862,6 +1986,55 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 .tag-holiday { background-color: #f44336; }  /* 휴무 - 적색 */
 .tag-overtime { background-color: #ff9800; } /* 잔업 - 주황 */
 .tag-extra { background-color: #2196f3; }    /* 특근 - 파랑 */
+
+.special-note-modal .modal-content {
+    max-width: 620px;
+}
+.special-note-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+.special-note-summary {
+    display: none;
+    margin-bottom: 1rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+.mobile-special-note-card {
+    border: 1px solid #c7d2fe;
+    border-left: 5px solid #6366f1;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+    padding: 0.9rem 0.95rem;
+    box-shadow: 0 8px 18px rgba(99, 102, 241, 0.12);
+    cursor: pointer;
+}
+.mobile-special-note-label {
+    display: inline-flex;
+    padding: 0.18rem 0.48rem;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+.mobile-special-note-title {
+    margin-top: 0.45rem;
+    color: #312e81;
+    font-size: 0.93rem;
+    font-weight: 900;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
 
 .calendar-day.workday-work{background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);}
 .calendar-day.workday-holiday{background:linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);}
@@ -3640,6 +3813,24 @@ html[data-theme="dark"] .calendar-header a,
 html[data-theme="dark"] .calendar-action-btn{background:#152033 !important;border:1px solid #2b3648 !important;color:#e5eefc !important;box-shadow:none !important;}
 html[data-theme="dark"] .calendar-header a:hover,
 html[data-theme="dark"] .calendar-action-btn:hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
+html[data-theme="dark"] .calendar-special-btn{
+    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 48%, #1d4ed8 100%) !important;
+    color: #f8fbff !important;
+    border: 1px solid rgba(125, 211, 252, 0.72) !important;
+    box-shadow: 0 16px 36px rgba(37, 99, 235, 0.3), 0 0 0 1px rgba(255,255,255,0.16) inset !important;
+}
+html[data-theme="dark"] .calendar-special-btn:hover{
+    background: linear-gradient(135deg, #4cc9ff 0%, #2f7df6 48%, #2457d6 100%) !important;
+    color: #f8fbff !important;
+    border-color: rgba(147, 197, 253, 0.9) !important;
+    box-shadow: 0 22px 40px rgba(37, 99, 235, 0.36), 0 0 0 1px rgba(255,255,255,0.2) inset !important;
+}
+html[data-theme="dark"] .calendar-special-btn .special-btn-icon{
+    background: rgba(255,255,255,0.18);
+    color: #f8fbff;
+}
+html[data-theme="dark"] .calendar-special-btn .special-btn-title{color:#f8fbff;}
+html[data-theme="dark"] .calendar-special-btn .special-btn-sub{color:rgba(239,246,255,.86);}
 html[data-theme="dark"] .export-tab-btn{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
 html[data-theme="dark"] .export-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 14px 28px rgba(37,99,235,0.2);}
 html[data-theme="dark"] .export-filter-head{
@@ -3818,6 +4009,27 @@ html[data-theme="dark"] .schedule-item.done{
 }
 html[data-theme="dark"] .schedule-item .schedule-name{color:#eff6ff;}
 html[data-theme="dark"] .schedule-item .schedule-info span{color:#93c5fd !important;}
+html[data-theme="dark"] .special-note-item{
+    border-color:rgba(129,140,248,.34);
+    border-left-color:#818cf8;
+    background:linear-gradient(135deg, rgba(55,48,163,.34) 0%, rgba(30,41,59,.92) 100%);
+    box-shadow:0 10px 22px rgba(79,70,229,.24);
+}
+html[data-theme="dark"] .special-note-title{color:#eef2ff;}
+html[data-theme="dark"] .special-note-delete-btn{
+    background:rgba(129,140,248,.16);
+    color:#c7d2fe;
+}
+html[data-theme="dark"] .mobile-special-note-card{
+    border-color:rgba(129,140,248,.34);
+    border-left-color:#818cf8;
+    background:linear-gradient(135deg, rgba(55,48,163,.34) 0%, rgba(30,41,59,.92) 100%);
+}
+html[data-theme="dark"] .mobile-special-note-label{
+    background:rgba(129,140,248,.16);
+    color:#c7d2fe;
+}
+html[data-theme="dark"] .mobile-special-note-title{color:#eef2ff;}
 html[data-theme="dark"] .schedule-item .line-tag,
 html[data-theme="dark"] .schedule-item .line-badge,
 html[data-theme="dark"] .schedule-item .badge{
@@ -4353,9 +4565,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         color: #000 !important;
         font-weight: 800;
         font-size: 0.47rem !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
         margin-bottom: 0.01cm;
     }
     
@@ -4486,9 +4700,17 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <button onclick="changeMonth(1)">다음 ▶</button>
         </div>
         <div class="calendar-header-actions">
-            <button onclick="printCalendar()" class="calendar-action-btn">
+            <button type="button" onclick="openSpecialNoteModal()" class="calendar-action-btn calendar-special-btn">
+                <span class="special-btn-icon">✦</span>
+                <span class="special-btn-copy">
+                    <span class="special-btn-title">특이사항 등록</span>
+                    <span class="special-btn-sub">점검, 공지, 변경사항 빠른 등록</span>
+                </span>
+            </button>
+            <!--
                 🖨️ 인쇄
             </button>
+            -->
             {% if user.is_admin %}
             <a class="calendar-action-btn" href="{{ url_for('production.work_days', year=month_start.year, month=month_start.month) }}">
                 📅 근무일 관리
@@ -5185,6 +5407,15 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         <span class="close" onclick="closeModal()">&times;</span>
         <h2 style="margin-bottom: 1.5rem;">스케줄 추가</h2>
         
+        <div class="schedule-special-cta-wrap">
+            <button type="button" class="calendar-action-btn calendar-special-btn" onclick="openSpecialNoteModalFromScheduleModal()">
+                <span class="special-btn-icon">✦</span>
+                <span class="special-btn-copy">
+                    <span class="special-btn-title">특이사항 등록</span>
+                    <span class="special-btn-sub">선택한 날짜로 바로 등록</span>
+                </span>
+            </button>
+        </div>
         <form method="POST" action="/schedules/add" id="scheduleForm" class="schedule-add-form">
             <!-- 상품 검색 -->
             <div class="form-group">
@@ -5295,6 +5526,53 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 </div>
 
 <!-- 스케줄 복사 모달 -->
+<div id="specialNoteModal" class="modal special-note-modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeSpecialNoteModal()">&times;</span>
+        <div class="special-note-toolbar">
+            <h2 id="specialNoteModalTitle">특이사항 등록</h2>
+        </div>
+        <div id="specialNoteSummary" class="special-note-summary"></div>
+        <form id="specialNoteForm">
+            <input type="hidden" id="specialNoteId">
+            <div class="form-group">
+                <label>등록 날짜 *</label>
+                <div class="schedule-date-toolbar">
+                    <button type="button" onclick="toggleSpecialNoteDateMode()" id="specialNoteDateModeBtn" class="schedule-date-mode-btn">여러 날짜 선택 모드</button>
+                    <span id="specialNoteDatesCount" class="schedule-date-count"></span>
+                </div>
+                <div id="specialNotePicker" class="schedule-date-picker" style="display:none;">
+                    <div class="schedule-date-picker-head">
+                        <button type="button" onclick="changeSpecialNotePickerMonth(-1)" class="schedule-date-nav-btn">◀</button>
+                        <span id="specialNotePickerMonth" class="schedule-date-picker-month"></span>
+                        <button type="button" onclick="changeSpecialNotePickerMonth(1)" class="schedule-date-nav-btn">▶</button>
+                    </div>
+                    <div class="schedule-date-weekdays">
+                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                    </div>
+                    <div id="specialNotePickerDays" class="schedule-date-days"></div>
+                    <div class="schedule-date-picker-actions">
+                        <button type="button" onclick="clearSpecialNoteDates()" class="schedule-date-clear-btn">선택 초기화</button>
+                    </div>
+                </div>
+                <input type="date" id="specialNoteSingleDate" required>
+            </div>
+            <div class="form-group">
+                <label>제목 *</label>
+                <input type="text" id="specialNoteTitle" required placeholder="예: 원료 입고 지연, 라인 점검">
+            </div>
+            <div class="form-group">
+                <label>내용 *</label>
+                <textarea id="specialNoteContent" rows="5" required placeholder="해당 날짜에 확인해야 할 내용을 간단히 적어주세요."></textarea>
+            </div>
+            <div style="text-align: right; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeSpecialNoteModal()">취소</button>
+                <button type="submit" class="btn" id="specialNoteSubmitBtn">등록</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="copyModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeCopyModal()">&times;</span>
@@ -5443,10 +5721,13 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 <script>
 // 스케줄 데이터 (서버에서 전달)
 const schedules = {{ schedules_json|safe }};
+let specialNotes = {{ special_notes_json|safe }};
 const allProducts = {{ products_json|safe }};
 const allStatsProducts = {{ stats_products_json|safe }};
 const workDays = {{ work_days_json|safe }};
 const exportSchedules = {{ export_schedules_json|safe }};
+const CAN_MANAGE_SCHEDULE = {{ can_manage_schedule|tojson }};
+const SCHEDULE_ADMIN_PERMISSION_MESSAGE = '해당 작업에 대한 권한이 없습니다. 관리자에게 문의 부탁드립니다.';
 const exportCompletedSchedules = exportSchedules.filter((row) => Boolean(row.is_completed) && String(row.completed_date || '').trim());
 let exportUnitMode = 'container';
 let currentYear = {{ month_start.year }};
@@ -5470,6 +5751,11 @@ let currentStatsDetailProductId = null;
 let currentStatsDetailProductName = '';
 let statsDetailRequestSeq = 0;
 let statsProductSearchOpenMode = false;
+let specialNoteDateMode = false;
+let specialNotePickerYear = currentYear;
+let specialNotePickerMonth = currentMonth;
+let specialNoteSelectedDates = new Set();
+let specialNoteDefaultDate = '';
 
 function getActiveView() {
     const params = new URLSearchParams(window.location.search);
@@ -5505,6 +5791,8 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+/*
+/*
 function getWorkStatusMeta(dateStr) {
     const workData = workDays[dateStr];
     if (!workData) {
@@ -5528,10 +5816,434 @@ function formatMobileDateLabel(dateStr) {
     };
 }
 
+*/
+/*
+function getWorkStatusMeta(dateStr) {
+    const workData = workDays[dateStr];
+    if (!workData) {
+        return { text: '미지정', className: '' };
+    }
+    if (workData.type === 'work') return { text: '근무', className: 'tag-work' };
+    if (workData.type === 'holiday') return { text: '휴무', className: 'tag-holiday' };
+    if (workData.type === 'overtime') {
+        const overtimeHours = Number(workData.overtime_hours ?? workData.hours ?? 0);
+        return { text: overtimeHours > 0 ? `잔업(${overtimeHours}h)` : '잔업', className: 'tag-overtime' };
+    }
+    if (workData.type === 'extra') return { text: '특근', className: 'tag-extra' };
+    return { text: '미지정', className: '' };
+}
+
+function formatMobileDateLabel(dateStr) {
+    const date = new Date(`${dateStr}T00:00:00`);
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    return {
+        dateText: `${date.getMonth() + 1}월 ${date.getDate()}일`,
+        weekdayText: `${weekdays[date.getDay()]}요일`
+    };
+}
+
+*/
+function getWorkStatusMeta(dateStr) {
+    const workData = workDays[dateStr];
+    if (!workData) {
+        return { text: '\uBBF8\uC9C0\uC815', className: '' };
+    }
+    if (workData.type === 'work') return { text: '\uADFC\uBB34', className: 'tag-work' };
+    if (workData.type === 'holiday') return { text: '\uD734\uBB34', className: 'tag-holiday' };
+    if (workData.type === 'overtime') {
+        const overtimeHours = Number(workData.overtime_hours ?? workData.hours ?? 0);
+        return { text: overtimeHours > 0 ? `\uC794\uC5C5(${overtimeHours}h)` : '\uC794\uC5C5', className: 'tag-overtime' };
+    }
+    if (workData.type === 'extra') return { text: '\uD2B9\uADFC', className: 'tag-extra' };
+    return { text: '\uBBF8\uC9C0\uC815', className: '' };
+}
+
+function formatMobileDateLabel(dateStr) {
+    const date = new Date(`${dateStr}T00:00:00`);
+    const weekdays = ['\uC77C', '\uC6D4', '\uD654', '\uC218', '\uBAA9', '\uAE08', '\uD1A0'];
+    return {
+        dateText: `${date.getMonth() + 1}\uC6D4 ${date.getDate()}\uC77C`,
+        weekdayText: `${weekdays[date.getDay()]}\uC694\uC77C`
+    };
+}
+
 function formatQuantity(value) {
     const num = Number(value || 0);
     if (!Number.isFinite(num)) return '-';
     return num.toLocaleString('ko-KR');
+}
+
+function syncModalOpenState() {
+    const hasOpenModal = Array.from(document.querySelectorAll('.modal')).some((modal) => modal.style.display === 'block');
+    document.body.classList.toggle('modal-open', hasOpenModal);
+}
+
+function ensureScheduleAdminPermission() {
+    if (CAN_MANAGE_SCHEDULE) return true;
+    alert(SCHEDULE_ADMIN_PERMISSION_MESSAGE);
+    return false;
+}
+
+function getSpecialNotesForDate(dateStr) {
+    return specialNotes
+        .filter((note) => String(note.note_date || '') === String(dateStr || ''))
+        .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+}
+
+function getSpecialNoteById(noteId) {
+    const targetId = Number(noteId || 0);
+    return specialNotes.find((note) => Number(note.id || 0) === targetId) || null;
+}
+
+function resetSpecialNoteModal() {
+    document.getElementById('specialNoteId').value = '';
+    document.getElementById('specialNoteTitle').value = '';
+    document.getElementById('specialNoteContent').value = '';
+    document.getElementById('specialNoteSingleDate').value = '';
+    document.getElementById('specialNoteModalTitle').textContent = '특이사항 등록';
+    document.getElementById('specialNoteSubmitBtn').textContent = '등록';
+    specialNoteDateMode = true;
+    specialNoteSelectedDates = new Set();
+    specialNotePickerYear = currentYear;
+    specialNotePickerMonth = currentMonth;
+    const picker = document.getElementById('specialNotePicker');
+    const singleDateInput = document.getElementById('specialNoteSingleDate');
+    const modeBtn = document.getElementById('specialNoteDateModeBtn');
+    if (picker) picker.style.display = 'block';
+    if (singleDateInput) {
+        singleDateInput.style.display = 'none';
+        singleDateInput.disabled = true;
+        singleDateInput.removeAttribute('required');
+    }
+    if (modeBtn) {
+        modeBtn.textContent = '단일 날짜 선택 모드';
+        modeBtn.classList.add('is-active');
+        modeBtn.disabled = false;
+    }
+    renderSpecialNotePicker();
+    updateSpecialNoteDateSummary();
+}
+
+function updateSpecialNoteDateSummary() {
+    const countEl = document.getElementById('specialNoteDatesCount');
+    const summaryEl = document.getElementById('specialNoteSummary');
+    const singleDateInput = document.getElementById('specialNoteSingleDate');
+    const selectedDateValues = specialNoteDateMode
+        ? Array.from(specialNoteSelectedDates).sort()
+        : [String(singleDateInput?.value || '').trim()].filter(Boolean);
+
+    if (countEl) {
+        countEl.textContent = specialNoteDateMode && selectedDateValues.length
+            ? `선택 날짜 ${selectedDateValues.length}개`
+            : '';
+    }
+
+    if (!summaryEl) return;
+    if (!selectedDateValues.length) {
+        summaryEl.textContent = '등록할 날짜를 선택해 주세요.';
+        return;
+    }
+    if (selectedDateValues.length === 1) {
+        summaryEl.textContent = `${selectedDateValues[0]} 날짜에 특이사항이 등록됩니다.`;
+        return;
+    }
+    summaryEl.textContent = `${selectedDateValues[0]} 외 ${selectedDateValues.length - 1}개 날짜에 같은 특이사항이 등록됩니다.`;
+}
+
+function renderSpecialNotePicker() {
+    const firstDay = new Date(specialNotePickerYear, specialNotePickerMonth - 1, 1);
+    const lastDay = new Date(specialNotePickerYear, specialNotePickerMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    const container = document.getElementById('specialNotePickerDays');
+    if (!container) return;
+
+    document.getElementById('specialNotePickerMonth').textContent = `${specialNotePickerYear}년 ${specialNotePickerMonth}월`;
+    container.innerHTML = '';
+
+    for (let i = 0; i < startingDayOfWeek; i += 1) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'schedule-date-empty';
+        container.appendChild(emptyDay);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const dateStr = `${specialNotePickerYear}-${String(specialNotePickerMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayElement = document.createElement('button');
+        dayElement.type = 'button';
+        dayElement.className = 'schedule-date-cell';
+        dayElement.textContent = day;
+        if (specialNoteSelectedDates.has(dateStr)) {
+            dayElement.classList.add('is-selected');
+        }
+        dayElement.onclick = function() {
+            if (specialNoteSelectedDates.has(dateStr)) {
+                specialNoteSelectedDates.delete(dateStr);
+            } else {
+                specialNoteSelectedDates.add(dateStr);
+            }
+            renderSpecialNotePicker();
+            updateSpecialNoteDateSummary();
+        };
+        container.appendChild(dayElement);
+    }
+}
+
+function clearSpecialNoteDates() {
+    specialNoteSelectedDates.clear();
+    renderSpecialNotePicker();
+    updateSpecialNoteDateSummary();
+}
+
+function changeSpecialNotePickerMonth(delta) {
+    specialNotePickerMonth += delta;
+    if (specialNotePickerMonth < 1) {
+        specialNotePickerMonth = 12;
+        specialNotePickerYear -= 1;
+    } else if (specialNotePickerMonth > 12) {
+        specialNotePickerMonth = 1;
+        specialNotePickerYear += 1;
+    }
+    renderSpecialNotePicker();
+}
+
+function toggleSpecialNoteDateMode() {
+    const noteId = String(document.getElementById('specialNoteId').value || '').trim();
+    if (noteId) return;
+
+    specialNoteDateMode = !specialNoteDateMode;
+    const picker = document.getElementById('specialNotePicker');
+    const singleDateInput = document.getElementById('specialNoteSingleDate');
+    const modeBtn = document.getElementById('specialNoteDateModeBtn');
+
+    if (specialNoteDateMode) {
+        const currentValue = String(singleDateInput?.value || '').trim();
+        specialNoteSelectedDates = new Set(currentValue ? [currentValue] : []);
+        if (picker) picker.style.display = 'block';
+        if (singleDateInput) {
+            singleDateInput.style.display = 'none';
+            singleDateInput.disabled = true;
+            singleDateInput.removeAttribute('required');
+        }
+        if (modeBtn) {
+            modeBtn.textContent = '단일 날짜 선택 모드';
+            modeBtn.classList.add('is-active');
+        }
+        renderSpecialNotePicker();
+    } else {
+        const firstSelectedDate = Array.from(specialNoteSelectedDates).sort()[0] || '';
+        if (picker) picker.style.display = 'none';
+        if (singleDateInput) {
+            singleDateInput.style.display = 'block';
+            singleDateInput.disabled = false;
+            singleDateInput.setAttribute('required', 'required');
+            singleDateInput.value = firstSelectedDate;
+        }
+        if (modeBtn) {
+            modeBtn.textContent = '여러 날짜 선택 모드';
+            modeBtn.classList.remove('is-active');
+        }
+    }
+
+    updateSpecialNoteDateSummary();
+}
+
+function openSpecialNoteModal(defaultDate = '', note = null) {
+    if (!ensureScheduleAdminPermission()) return;
+    resetSpecialNoteModal();
+
+    const modal = document.getElementById('specialNoteModal');
+    const singleDateInput = document.getElementById('specialNoteSingleDate');
+    const titleInput = document.getElementById('specialNoteTitle');
+    const contentInput = document.getElementById('specialNoteContent');
+    const noteIdInput = document.getElementById('specialNoteId');
+    const modeBtn = document.getElementById('specialNoteDateModeBtn');
+
+    if (note) {
+        noteIdInput.value = String(note.id || '');
+        document.getElementById('specialNoteModalTitle').textContent = '특이사항 수정';
+        document.getElementById('specialNoteSubmitBtn').textContent = '수정';
+        titleInput.value = String(note.title || '');
+        contentInput.value = String(note.content || '');
+        singleDateInput.value = String(note.note_date || defaultDate || '');
+        if (modeBtn) {
+            modeBtn.textContent = '수정 시 날짜 1개만 변경할 수 있습니다';
+            modeBtn.classList.remove('is-active');
+            modeBtn.disabled = true;
+        }
+    } else {
+        const initialDate = String(defaultDate || specialNoteDefaultDate || '').trim();
+        if (initialDate) {
+            singleDateInput.value = initialDate;
+            if (specialNoteDateMode) {
+                specialNoteSelectedDates = new Set([initialDate]);
+                renderSpecialNotePicker();
+            }
+        }
+    }
+
+    updateSpecialNoteDateSummary();
+    modal.style.display = 'block';
+    syncModalOpenState();
+    setTimeout(() => titleInput.focus(), 50);
+}
+
+function openSpecialNoteModalById(noteId) {
+    const note = getSpecialNoteById(noteId);
+    if (!note) {
+        alert('특이사항 정보를 찾을 수 없습니다.');
+        return;
+    }
+    openSpecialNoteModal(String(note.note_date || ''), note);
+}
+
+function openSpecialNoteModalFromScheduleModal() {
+    if (!ensureScheduleAdminPermission()) return;
+    const singleDateValue = String(document.getElementById('singleDateInput')?.value || '').trim();
+    const multiDates = Array.from(selectedDates).sort();
+    const defaultDate = singleDateValue || specialNoteDefaultDate || '';
+
+    openSpecialNoteModal(defaultDate);
+
+    if (dateSelectMode && multiDates.length > 0) {
+        specialNoteDateMode = true;
+        specialNoteSelectedDates = new Set(multiDates);
+        const picker = document.getElementById('specialNotePicker');
+        const singleDateInput = document.getElementById('specialNoteSingleDate');
+        const modeBtn = document.getElementById('specialNoteDateModeBtn');
+        if (picker) picker.style.display = 'block';
+        if (singleDateInput) {
+            singleDateInput.style.display = 'none';
+            singleDateInput.disabled = true;
+            singleDateInput.removeAttribute('required');
+        }
+        if (modeBtn) {
+            modeBtn.textContent = '단일 날짜 선택 모드';
+            modeBtn.classList.add('is-active');
+        }
+        renderSpecialNotePicker();
+        updateSpecialNoteDateSummary();
+    } else if (defaultDate) {
+        specialNoteDateMode = false;
+        const picker = document.getElementById('specialNotePicker');
+        const singleDateInput = document.getElementById('specialNoteSingleDate');
+        const modeBtn = document.getElementById('specialNoteDateModeBtn');
+        specialNoteSelectedDates = new Set([defaultDate]);
+        if (picker) picker.style.display = 'none';
+        if (singleDateInput) {
+            singleDateInput.style.display = 'block';
+            singleDateInput.disabled = false;
+            singleDateInput.setAttribute('required', 'required');
+            singleDateInput.value = defaultDate;
+        }
+        if (modeBtn) {
+            modeBtn.textContent = '여러 날짜 선택 모드';
+            modeBtn.classList.remove('is-active');
+        }
+        updateSpecialNoteDateSummary();
+    }
+}
+
+function closeSpecialNoteModal() {
+    const modal = document.getElementById('specialNoteModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    syncModalOpenState();
+}
+
+async function saveSpecialNote(event) {
+    event.preventDefault();
+    if (!ensureScheduleAdminPermission()) return;
+
+    const noteId = String(document.getElementById('specialNoteId').value || '').trim();
+    const title = String(document.getElementById('specialNoteTitle').value || '').trim();
+    const content = String(document.getElementById('specialNoteContent').value || '').trim();
+    const singleDate = String(document.getElementById('specialNoteSingleDate').value || '').trim();
+    const dates = noteId
+        ? [singleDate].filter(Boolean)
+        : (specialNoteDateMode ? Array.from(specialNoteSelectedDates).sort() : [singleDate].filter(Boolean));
+
+    if (!dates.length) {
+        alert('특이사항 등록 날짜를 선택해 주세요.');
+        return;
+    }
+    if (!title) {
+        alert('특이사항 제목을 입력해 주세요.');
+        return;
+    }
+    if (!content) {
+        alert('특이사항 내용을 입력해 주세요.');
+        return;
+    }
+
+    const submitBtn = document.getElementById('specialNoteSubmitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = noteId ? '수정 중...' : '등록 중...';
+
+    try {
+        const response = await fetch('/schedules/special-notes/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                note_id: noteId || null,
+                title,
+                content,
+                dates,
+            }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+            throw new Error(payload.message || '특이사항 저장 중 오류가 발생했습니다.');
+        }
+
+        if (noteId) {
+            const targetId = Number(noteId);
+            specialNotes = specialNotes.map((note) => (
+                Number(note.id || 0) === targetId
+                    ? { ...note, title, content, note_date: dates[0] }
+                    : note
+            ));
+        } else {
+            const savedIds = Array.isArray(payload.ids) ? payload.ids : [];
+            const newNotes = dates.map((dateValue, index) => ({
+                id: savedIds[index],
+                workplace: CURRENT_SCHEDULE_WORKPLACE,
+                note_date: dateValue,
+                title,
+                content,
+            }));
+            specialNotes = [...specialNotes, ...newNotes];
+        }
+
+        closeSpecialNoteModal();
+        renderCalendar();
+    } catch (error) {
+        alert(error.message || '특이사항 저장 중 오류가 발생했습니다.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+}
+
+async function deleteSpecialNote(noteId) {
+    if (!confirm('이 특이사항을 삭제하시겠습니까?')) return;
+
+    try {
+        const response = await fetch(`/schedules/special-notes/delete/${noteId}`, {
+            method: 'POST',
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+            throw new Error(payload.message || '특이사항 삭제 중 오류가 발생했습니다.');
+        }
+
+        specialNotes = specialNotes.filter((note) => Number(note.id || 0) !== Number(noteId || 0));
+        closeSpecialNoteModal();
+        renderCalendar();
+    } catch (error) {
+        alert(error.message || '특이사항 삭제 중 오류가 발생했습니다.');
+    }
 }
 
 function openScheduleDetail(schedule) {
@@ -6116,6 +6828,296 @@ function renderCalendar() {
 }
 
 // 월 변경
+function renderMobileScheduleList() {
+    const mobileList = document.getElementById('mobileCalendarList');
+    if (!mobileList) return;
+
+    const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    const monthlySchedules = schedules
+        .filter((schedule) => String(schedule.scheduled_date || '').startsWith(monthKey))
+        .sort((a, b) => {
+            if (a.scheduled_date !== b.scheduled_date) {
+                return String(a.scheduled_date).localeCompare(String(b.scheduled_date));
+            }
+            return String(a.product_name || '').localeCompare(String(b.product_name || ''));
+        });
+    const monthlyNotes = specialNotes
+        .filter((note) => String(note.note_date || '').startsWith(monthKey))
+        .sort((a, b) => {
+            if (String(a.note_date || '') !== String(b.note_date || '')) {
+                return String(a.note_date || '').localeCompare(String(b.note_date || ''));
+            }
+            return Number(a.id || 0) - Number(b.id || 0);
+        });
+
+    if (!monthlySchedules.length && !monthlyNotes.length) {
+        mobileList.innerHTML = '<div class="mobile-empty-state">이번 달에 등록된 생산 일정이 없습니다.</div>';
+        return;
+    }
+
+    const grouped = new Map();
+    monthlySchedules.forEach((schedule) => {
+        const key = schedule.scheduled_date;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(schedule);
+    });
+    monthlyNotes.forEach((note) => {
+        const key = note.note_date;
+        if (!grouped.has(key)) grouped.set(key, []);
+    });
+
+    let html = '';
+    Array.from(grouped.keys()).sort().forEach((dateStr) => {
+        const items = grouped.get(dateStr) || [];
+        const notes = getSpecialNotesForDate(dateStr);
+        const dateMeta = formatMobileDateLabel(dateStr);
+        const workMeta = getWorkStatusMeta(dateStr);
+        const badgeClass = workMeta.className ? `work-status-tag ${workMeta.className}` : 'work-status-tag';
+
+        const notesHtml = notes.map((note) => `
+            <button type="button" class="mobile-special-note-card" onclick="event.stopPropagation(); openSpecialNoteModalById(${Number(note.id || 0)})">
+                <div class="mobile-special-note-label">특이사항</div>
+                <div class="mobile-special-note-title">${escapeHtml(note.title || '')}</div>
+            </button>
+        `).join('');
+
+        const cardsHtml = items.map((schedule) => {
+            const isCompleted = Boolean(schedule.is_completed) || String(schedule.status || '').trim() === '완료';
+            const statusText = isCompleted ? '완료' : '예정';
+            const statusClass = isCompleted ? 'done' : 'planned';
+            const actualBoxes = isCompleted ? formatQuantity(schedule.actual_boxes) : '-';
+            const plannedBoxes = formatQuantity(schedule.planned_boxes);
+            const lineText = schedule.line ? `라인 ${escapeHtml(schedule.line)}` : '-';
+            const exportBadge = schedule.source === 'export'
+                ? `<div class="req-muted" style="margin-top:0.2rem;color:#1d4ed8;font-weight:700;">${schedule.export_container_label ? `수출 ${escapeHtml(schedule.export_container_label)}` : '수출'}</div>`
+                : '';
+            const detailUrl = schedule.production_id
+                ? `/production/${schedule.production_id}`
+                : `/schedules/${schedule.scheduled_date}`;
+
+            return `
+                <div class="mobile-schedule-card ${isCompleted ? 'done' : ''}" data-detail-url="${detailUrl}">
+                    <div class="mobile-schedule-top">
+                        <div class="mobile-schedule-name">${escapeHtml(schedule.product_name || '')}${exportBadge}</div>
+                        <span class="mobile-status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="mobile-schedule-meta">
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">날짜</span><span class="mobile-meta-value">${dateMeta.dateText}</span></div>
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">요일</span><span class="mobile-meta-value">${dateMeta.weekdayText}</span></div>
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">계획수량</span><span class="mobile-meta-value">${plannedBoxes}박스</span></div>
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">실제수량</span><span class="mobile-meta-value">${actualBoxes === '-' ? '-' : `${actualBoxes}박스`}</span></div>
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">라인</span><span class="mobile-meta-value">${lineText}</span></div>
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">상태</span><span class="mobile-meta-value">${statusText}</span></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        html += `
+            <section class="mobile-day-group">
+                <div class="mobile-day-header">
+                    <div class="mobile-day-date">
+                        <strong>${dateMeta.dateText}</strong>
+                        <span>${dateMeta.weekdayText}</span>
+                    </div>
+                    <span class="${badgeClass}">${workMeta.text}</span>
+                </div>
+                <div class="mobile-day-schedules">${notesHtml}${cardsHtml}</div>
+            </section>
+        `;
+    });
+
+    mobileList.innerHTML = html;
+    mobileList.querySelectorAll('.mobile-schedule-card').forEach((card) => {
+        card.addEventListener('click', function() {
+            const detailUrl = this.getAttribute('data-detail-url');
+            if (detailUrl) window.location.href = detailUrl;
+        });
+    });
+}
+
+function renderCalendar() {
+    const firstDay = new Date(currentYear, currentMonth - 1, 1);
+    const lastDay = new Date(currentYear, currentMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    const calendarDays = document.getElementById('calendarDays');
+    if (!calendarDays) return;
+
+    calendarDays.innerHTML = '';
+
+    for (let i = 0; i < startingDayOfWeek; i += 1) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day other-month';
+        calendarDays.appendChild(emptyDay);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const workMeta = getWorkStatusMeta(dateStr);
+        const workdayClass = workMeta.className ? workMeta.className.replace('tag-', 'workday-') : '';
+        const dayElement = document.createElement('div');
+        dayElement.className = ['calendar-day', workdayClass].filter(Boolean).join(' ');
+        dayElement.onclick = function() { openAddModal(dateStr); };
+
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'day-header';
+        dayHeader.style.display = 'flex';
+        dayHeader.style.justifyContent = 'space-between';
+        dayHeader.style.alignItems = 'center';
+
+        const dayNumber = document.createElement('div');
+        dayNumber.className = 'day-number';
+        dayNumber.textContent = day;
+        dayHeader.appendChild(dayNumber);
+
+        if (workMeta.text) {
+            const statusTag = document.createElement('span');
+            statusTag.className = `work-status-tag ${workMeta.className}`.trim();
+            statusTag.textContent = workMeta.text;
+            dayHeader.appendChild(statusTag);
+        }
+
+        const daySchedules = schedules.filter((schedule) => String(schedule.scheduled_date || '') === dateStr);
+        if (daySchedules.length > 0) {
+            const countBadge = document.createElement('span');
+            countBadge.className = 'schedule-count';
+            countBadge.textContent = `${daySchedules.length}건`;
+            dayHeader.appendChild(countBadge);
+        }
+
+        dayElement.appendChild(dayHeader);
+
+        const workData = workDays[dateStr];
+        if (workData && workData.holiday_caption) {
+            const holidayCaption = document.createElement('div');
+            holidayCaption.className = 'holiday-caption';
+            holidayCaption.textContent = workData.holiday_caption;
+            dayElement.appendChild(holidayCaption);
+        }
+
+        const dayNotes = getSpecialNotesForDate(dateStr);
+        if (dayNotes.length > 0) {
+            const notesContainer = document.createElement('div');
+            notesContainer.className = 'day-special-notes';
+            dayNotes.forEach((note) => {
+                const noteButton = document.createElement('button');
+                noteButton.type = 'button';
+                noteButton.className = 'special-note-item';
+                noteButton.onclick = function(event) {
+                    event.stopPropagation();
+                    openSpecialNoteModalById(note.id);
+                };
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'special-note-title';
+                titleSpan.textContent = String(note.title || '');
+
+                const deleteBtn = document.createElement('span');
+                deleteBtn.className = 'special-note-delete-btn';
+                deleteBtn.textContent = '×';
+                deleteBtn.title = '삭제';
+                deleteBtn.onclick = function(event) {
+                    event.stopPropagation();
+                    deleteSpecialNote(note.id);
+                };
+
+                noteButton.appendChild(titleSpan);
+                noteButton.appendChild(deleteBtn);
+                notesContainer.appendChild(noteButton);
+            });
+            dayElement.appendChild(notesContainer);
+        }
+
+        if (daySchedules.length > 0) {
+            const schedulesContainer = document.createElement('div');
+            schedulesContainer.className = 'day-schedules';
+            daySchedules.forEach((schedule) => {
+                const isCompleted = Boolean(schedule.is_completed) || String(schedule.status || '').trim() === '완료';
+                const lineText = String(schedule.line || '').trim();
+                const scheduleItem = document.createElement('div');
+                scheduleItem.className = isCompleted ? 'schedule-item done' : 'schedule-item';
+                scheduleItem.style.position = 'relative';
+                scheduleItem.style.cursor = 'pointer';
+                scheduleItem.onclick = function(event) {
+                    event.stopPropagation();
+                    openScheduleDetail(schedule);
+                };
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'schedule-name';
+                nameDiv.textContent = String(schedule.product_name || '');
+                scheduleItem.appendChild(nameDiv);
+
+                if (schedule.source === 'export') {
+                    const exportBadge = document.createElement('span');
+                    exportBadge.className = 'done-badge';
+                    exportBadge.style.background = '#dbeafe';
+                    exportBadge.style.color = '#1d4ed8';
+                    exportBadge.textContent = schedule.export_container_label ? `수출 ${schedule.export_container_label}` : '수출';
+                    scheduleItem.appendChild(exportBadge);
+                }
+                if (isCompleted) {
+                    const doneBadge = document.createElement('span');
+                    doneBadge.className = 'done-badge';
+                    doneBadge.textContent = '완료';
+                    scheduleItem.appendChild(doneBadge);
+                }
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'schedule-info';
+                const boxesSpan = document.createElement('span');
+                boxesSpan.style.color = '#3b82f6';
+                boxesSpan.textContent = isCompleted
+                    ? `실제 ${formatQuantity(schedule.actual_boxes)}박스`
+                    : `계획 ${formatQuantity(schedule.planned_boxes)}박스`;
+                infoDiv.appendChild(boxesSpan);
+
+                if (lineText) {
+                    const lineContainer = document.createElement('div');
+                    lineContainer.className = 'line-container';
+                    lineText.split(',').map((value) => value.trim()).filter(Boolean).forEach((lineValue) => {
+                        const tag = document.createElement('span');
+                        tag.className = 'line-tag';
+                        tag.textContent = `L${lineValue}`;
+                        lineContainer.appendChild(tag);
+                    });
+                    infoDiv.appendChild(lineContainer);
+                }
+
+                scheduleItem.appendChild(infoDiv);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'calendar-delete-btn';
+                deleteBtn.disabled = isCompleted;
+                deleteBtn.title = isCompleted ? '완료 건은 삭제할 수 없습니다.' : (schedule.source === 'export' ? '수출 일정에서 이 날짜를 제외합니다.' : '삭제');
+                deleteBtn.textContent = '×';
+                deleteBtn.onclick = function(event) {
+                    event.stopPropagation();
+                    deleteScheduleFromCalendar(schedule.id, isCompleted, schedule.source === 'export');
+                };
+                scheduleItem.appendChild(deleteBtn);
+                schedulesContainer.appendChild(scheduleItem);
+            });
+            dayElement.appendChild(schedulesContainer);
+        }
+
+        calendarDays.appendChild(dayElement);
+    }
+
+    const totalRendered = startingDayOfWeek + daysInMonth;
+    const trailingDays = (7 - (totalRendered % 7)) % 7;
+    for (let i = 0; i < trailingDays; i += 1) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day other-month';
+        calendarDays.appendChild(emptyDay);
+    }
+
+    document.getElementById('currentMonth').textContent = `${currentYear}년 ${currentMonth}월`;
+    renderMobileScheduleList();
+}
+
 function changeMonth(delta) {
     currentMonth += delta;
     if (currentMonth < 1) {
@@ -7122,7 +8124,10 @@ async function loadStatsDetailData() {
 
 // 모달 관리
 function openAddModal(selectedDate = null) {
+    if (!ensureScheduleAdminPermission()) return;
     document.getElementById('addModal').style.display = 'block';
+    specialNoteDefaultDate = selectedDate || '';
+    syncModalOpenState();
     const singleDateInput = document.getElementById('singleDateInput');
     if (singleDateInput) {
         singleDateInput.value = selectedDate || '';
@@ -7146,9 +8151,10 @@ function openAddModal(selectedDate = null) {
         document.getElementById('productSearch').focus();
     }, 100);
 }
-function closeModal() {
+function closeModal() {
     document.getElementById('addModal').style.display = 'none';
     clearSelection();
+    syncModalOpenState();
 }
 
 // 모든 상품 보기 (검색창 포커스 시)
@@ -7229,6 +8235,10 @@ function clearSelection() {
 }
 
 document.getElementById('scheduleForm').addEventListener('submit', function(event) {
+    if (!ensureScheduleAdminPermission()) {
+        event.preventDefault();
+        return;
+    }
     const productId = document.getElementById('productId').value.trim();
     if (!productId) {
         event.preventDefault();
@@ -7279,6 +8289,8 @@ document.getElementById('exportContainerCountInput').addEventListener('input', f
 document.addEventListener('DOMContentLoaded', function() {
     resetExportCompletedMonthFilter();
     switchExportScheduleTab('active');
+    document.getElementById('specialNoteForm')?.addEventListener('submit', saveSpecialNote);
+    document.getElementById('specialNoteSingleDate')?.addEventListener('change', updateSpecialNoteDateSummary);
     const activeView = getActiveView();
     if (activeView !== 'calendar') {
         switchView(activeView);
@@ -7287,14 +8299,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 모달 외부 클릭 시 닫기
 window.onclick = function(event) {
-    const addModal = document.getElementById('addModal');
+    const addModal = document.getElementById('addModal');
+    const specialNoteModal = document.getElementById('specialNoteModal');
     const copyModal = document.getElementById('copyModal');
     const exportModal = document.getElementById('exportModal');
     const statsDetailModal = document.getElementById('statsDetailModal');
     
     if (event.target == addModal) {
         closeModal();
-    }
+    }
+    if (event.target == specialNoteModal) {
+        closeSpecialNoteModal();
+    }
     if (event.target == copyModal) {
         closeCopyModal();
     }
@@ -7308,7 +8324,12 @@ window.onclick = function(event) {
 
 document.addEventListener('keydown', function(event) {
     if (event.key !== 'Escape') return;
+    const specialNoteModal = document.getElementById('specialNoteModal');
     const statsDetailModal = document.getElementById('statsDetailModal');
+    if (specialNoteModal && specialNoteModal.style.display === 'block') {
+        closeSpecialNoteModal();
+        return;
+    }
     if (statsDetailModal && statsDetailModal.style.display === 'block') {
         closeStatsDetailModal();
     }

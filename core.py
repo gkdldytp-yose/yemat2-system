@@ -992,6 +992,41 @@ def _ensure_production_schema(conn):
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_production_schedules_workplace_date ON production_schedules(workplace, scheduled_date)"
         )
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS schedule_special_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workplace TEXT NOT NULL,
+                note_date TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_by TEXT,
+                updated_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        note_cols = [row['name'] for row in conn.execute("PRAGMA table_info(schedule_special_notes)").fetchall()]
+        if 'workplace' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN workplace TEXT NOT NULL DEFAULT ''")
+        if 'note_date' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN note_date TEXT NOT NULL DEFAULT ''")
+        if 'title' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN title TEXT NOT NULL DEFAULT ''")
+        if 'content' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN content TEXT NOT NULL DEFAULT ''")
+        if 'created_by' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN created_by TEXT")
+        if 'updated_by' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN updated_by TEXT")
+        if 'created_at' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if 'updated_at' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_schedule_special_notes_workplace_date ON schedule_special_notes(workplace, note_date)"
+        )
 
         cols = [row['name'] for row in conn.execute("PRAGMA table_info(productions)").fetchall()]
         if 'schedule_id' not in cols:
