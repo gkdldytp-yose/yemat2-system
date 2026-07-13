@@ -578,6 +578,13 @@ body.modal-open {
 .stats-detail-product-option:hover {
     background: rgba(14,165,233,0.08);
 }
+.stats-detail-product-code {
+    display: block;
+    margin-top: 0.18rem;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
 .stats-detail-product-empty {
     padding: 0.9rem;
     color: #64748b;
@@ -2007,6 +2014,200 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     font-size: 0.84rem;
     font-weight: 800;
 }
+.special-note-color-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+}
+.special-note-color-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.special-note-color-chip {
+    display: grid;
+    gap: 0.22rem;
+    min-height: 72px;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid #dbe4f0;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.special-note-color-chip strong {
+    font-size: 0.92rem;
+}
+.special-note-color-chip span {
+    font-size: 0.76rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+.special-note-color-option input:checked + .special-note-color-chip {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
+}
+.special-note-color-option[data-color="blue"] .special-note-color-chip {
+    border-left: 5px solid #2563eb;
+}
+.special-note-color-option[data-color="blue"] input:checked + .special-note-color-chip {
+    border-color: rgba(37, 99, 235, 0.34);
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+}
+.special-note-color-option[data-color="amber"] .special-note-color-chip {
+    border-left: 5px solid #d97706;
+}
+.special-note-color-option[data-color="amber"] input:checked + .special-note-color-chip {
+    border-color: rgba(217, 119, 6, 0.34);
+    background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+}
+.special-note-color-option[data-color="rose"] .special-note-color-chip {
+    border-left: 5px solid #e11d48;
+}
+.special-note-color-option[data-color="rose"] input:checked + .special-note-color-chip {
+    border-color: rgba(225, 29, 72, 0.34);
+    background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
+}
+.special-note-detail {
+    display: none;
+}
+.special-note-detail-card {
+    display: grid;
+    gap: 1.1rem;
+    padding: 1.35rem;
+    border: 1px solid rgba(96, 165, 250, 0.28);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(238, 244, 255, 0.96) 100%);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+.special-note-detail-meta {
+    display: grid;
+    gap: 1rem;
+}
+.special-note-detail-date {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-height: 38px;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(59, 130, 246, 0.08));
+    color: #1d4ed8;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 0.01em;
+}
+.special-note-detail-row {
+    display: grid;
+    gap: 0.5rem;
+}
+.special-note-detail-label {
+    color: #3b82f6;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.special-note-detail-value {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+.special-note-detail-title {
+    font-size: 1.28rem;
+    line-height: 1.4;
+}
+.special-note-detail-content {
+    min-height: 132px;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.76);
+    font-size: 1.02rem;
+    line-height: 1.72;
+}
+.special-note-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.7rem;
+    margin-top: 1.15rem;
+    flex-wrap: wrap;
+}
+.special-note-detail-actions .btn {
+    min-width: 88px;
+    min-height: 42px;
+    border-radius: 14px;
+    font-weight: 800;
+}
+.special-note-type-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 32px;
+    padding: 0.38rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 900;
+}
+.special-note-item.note-color-blue,
+.mobile-special-note-card.note-color-blue {
+    border-color: #c7d2fe;
+    border-left-color: #6366f1;
+    background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+    box-shadow: 0 8px 18px rgba(99, 102, 241, 0.12);
+}
+.special-note-item.note-color-blue .special-note-title,
+.mobile-special-note-card.note-color-blue .mobile-special-note-title,
+.special-note-type-badge.note-color-blue {
+    color: #312e81;
+}
+.special-note-type-badge.note-color-blue {
+    background: rgba(99, 102, 241, 0.14);
+}
+.special-note-item.note-color-amber,
+.mobile-special-note-card.note-color-amber {
+    border-color: #fde68a;
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    box-shadow: 0 8px 18px rgba(245, 158, 11, 0.14);
+}
+.special-note-item.note-color-amber .special-note-title,
+.mobile-special-note-card.note-color-amber .mobile-special-note-title,
+.special-note-type-badge.note-color-amber {
+    color: #92400e;
+}
+.special-note-type-badge.note-color-amber {
+    background: rgba(245, 158, 11, 0.16);
+}
+.mobile-special-note-card.note-color-amber .mobile-special-note-label {
+    background: rgba(245, 158, 11, 0.16);
+    color: #92400e;
+}
+.special-note-item.note-color-rose,
+.mobile-special-note-card.note-color-rose {
+    border-color: #fecdd3;
+    border-left-color: #f43f5e;
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    box-shadow: 0 8px 18px rgba(244, 63, 94, 0.14);
+}
+.special-note-item.note-color-rose .special-note-title,
+.mobile-special-note-card.note-color-rose .mobile-special-note-title,
+.special-note-type-badge.note-color-rose {
+    color: #9f1239;
+}
+.special-note-type-badge.note-color-rose {
+    background: rgba(244, 63, 94, 0.14);
+}
+.mobile-special-note-card.note-color-rose .mobile-special-note-label {
+    background: rgba(244, 63, 94, 0.14);
+    color: #9f1239;
+}
 .mobile-special-note-card {
     border: 1px solid #c7d2fe;
     border-left: 5px solid #6366f1;
@@ -2034,6 +2235,34 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     white-space: normal;
     word-break: keep-all;
     overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+    .special-note-color-grid {
+        grid-template-columns: 1fr;
+    }
+    .special-note-modal .modal-content {
+        width: min(100%, 96vw);
+        padding: 1.1rem;
+    }
+    .special-note-detail-card {
+        padding: 1rem;
+        border-radius: 18px;
+    }
+    .special-note-detail-title {
+        font-size: 1.08rem;
+    }
+    .special-note-detail-content {
+        min-height: 110px;
+        padding: 0.9rem;
+        font-size: 0.95rem;
+    }
+    .special-note-detail-actions {
+        justify-content: stretch;
+    }
+    .special-note-detail-actions .btn {
+        flex: 1 1 120px;
+    }
 }
 
 .calendar-day.workday-work{background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);}
@@ -4025,11 +4254,106 @@ html[data-theme="dark"] .mobile-special-note-card{
     border-left-color:#818cf8;
     background:linear-gradient(135deg, rgba(55,48,163,.34) 0%, rgba(30,41,59,.92) 100%);
 }
+html[data-theme="dark"] .special-note-item.note-color-blue,
+html[data-theme="dark"] .mobile-special-note-card.note-color-blue{
+    border-color:rgba(96,165,250,.34);
+    border-left-color:#60a5fa;
+    background:linear-gradient(135deg, rgba(30,64,175,.34) 0%, rgba(30,41,59,.94) 100%);
+    box-shadow:0 10px 22px rgba(37,99,235,.24);
+}
+html[data-theme="dark"] .special-note-item.note-color-blue .special-note-title,
+html[data-theme="dark"] .mobile-special-note-card.note-color-blue .mobile-special-note-title{
+    color:#dbeafe;
+}
+html[data-theme="dark"] .special-note-item.note-color-blue .special-note-delete-btn{
+    background:rgba(96,165,250,.18);
+    color:#dbeafe;
+}
+html[data-theme="dark"] .mobile-special-note-card.note-color-blue .mobile-special-note-label{
+    background:rgba(96,165,250,.18);
+    color:#dbeafe;
+}
+html[data-theme="dark"] .special-note-detail-card{
+    border-color:rgba(96,165,250,.28);
+    background:linear-gradient(180deg, rgba(15,23,42,.96) 0%, rgba(30,41,59,.94) 100%);
+    box-shadow:0 18px 36px rgba(2, 6, 23, 0.34);
+}
+html[data-theme="dark"] .special-note-color-chip{
+    background:#162133;
+    border-color:#2b3648;
+    box-shadow:0 8px 18px rgba(2, 6, 23, 0.24);
+}
+html[data-theme="dark"] .special-note-color-chip span{
+    color:#8ea3bd;
+}
+html[data-theme="dark"] .special-note-color-option[data-color="blue"] input:checked + .special-note-color-chip{
+    background:linear-gradient(180deg, rgba(30,64,175,.42) 0%, rgba(30,41,59,.98) 100%);
+}
+html[data-theme="dark"] .special-note-color-option[data-color="amber"] input:checked + .special-note-color-chip{
+    background:linear-gradient(180deg, rgba(146,64,14,.38) 0%, rgba(30,41,59,.98) 100%);
+}
+html[data-theme="dark"] .special-note-color-option[data-color="rose"] input:checked + .special-note-color-chip{
+    background:linear-gradient(180deg, rgba(159,18,57,.4) 0%, rgba(30,41,59,.98) 100%);
+}
+html[data-theme="dark"] .special-note-detail-label{
+    color:#93c5fd;
+}
+html[data-theme="dark"] .special-note-detail-date{
+    background:linear-gradient(135deg, rgba(59,130,246,.22), rgba(14,165,233,.12));
+    color:#dbeafe;
+}
+html[data-theme="dark"] .special-note-detail-value{
+    color:#eef2ff;
+}
+html[data-theme="dark"] .special-note-detail-content{
+    border-color:rgba(148, 163, 184, 0.18);
+    background:rgba(15, 23, 42, 0.58);
+}
+html[data-theme="dark"] .special-note-type-badge.note-color-blue{
+    background:rgba(99,102,241,.2);
+    color:#c7d2fe;
+}
+html[data-theme="dark"] .special-note-type-badge.note-color-amber{
+    background:rgba(245,158,11,.2);
+    color:#fde68a;
+}
+html[data-theme="dark"] .mobile-special-note-card.note-color-amber .mobile-special-note-label{
+    background:rgba(245,158,11,.18);
+    color:#fde68a;
+}
+html[data-theme="dark"] .special-note-type-badge.note-color-rose{
+    background:rgba(244,63,94,.18);
+    color:#fecdd3;
+}
+html[data-theme="dark"] .mobile-special-note-card.note-color-rose .mobile-special-note-label{
+    background:rgba(244,63,94,.18);
+    color:#fecdd3;
+}
 html[data-theme="dark"] .mobile-special-note-label{
     background:rgba(129,140,248,.16);
     color:#c7d2fe;
 }
 html[data-theme="dark"] .mobile-special-note-title{color:#eef2ff;}
+html[data-theme="dark"] .special-note-item.note-color-amber,
+html[data-theme="dark"] .mobile-special-note-card.note-color-amber{
+    border-color:rgba(245,158,11,.34);
+    border-left-color:#f59e0b;
+    background:linear-gradient(135deg, rgba(146,64,14,.32) 0%, rgba(30,41,59,.92) 100%);
+}
+html[data-theme="dark"] .special-note-item.note-color-amber .special-note-title,
+html[data-theme="dark"] .mobile-special-note-card.note-color-amber .mobile-special-note-title{
+    color:#fde68a;
+}
+html[data-theme="dark"] .special-note-item.note-color-rose,
+html[data-theme="dark"] .mobile-special-note-card.note-color-rose{
+    border-color:rgba(244,63,94,.3);
+    border-left-color:#f43f5e;
+    background:linear-gradient(135deg, rgba(159,18,57,.34) 0%, rgba(30,41,59,.92) 100%);
+}
+html[data-theme="dark"] .special-note-item.note-color-rose .special-note-title,
+html[data-theme="dark"] .mobile-special-note-card.note-color-rose .mobile-special-note-title{
+    color:#fecdd3;
+}
 html[data-theme="dark"] .schedule-item .line-tag,
 html[data-theme="dark"] .schedule-item .line-badge,
 html[data-theme="dark"] .schedule-item .badge{
@@ -5533,8 +5857,61 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <h2 id="specialNoteModalTitle">특이사항 등록</h2>
         </div>
         <div id="specialNoteSummary" class="special-note-summary"></div>
+        <div id="specialNoteDetailView" class="special-note-detail">
+            <div class="special-note-detail-card">
+                <div class="special-note-detail-meta">
+                    <div class="special-note-detail-row">
+                        <div class="special-note-detail-label">분류</div>
+                        <div id="specialNoteDetailType" class="special-note-type-badge note-color-blue">일반</div>
+                    </div>
+                    <div class="special-note-detail-row">
+                        <div class="special-note-detail-label">등록 날짜</div>
+                        <div id="specialNoteDetailDate" class="special-note-detail-value special-note-detail-date"></div>
+                    </div>
+                    <div class="special-note-detail-row">
+                        <div class="special-note-detail-label">제목</div>
+                        <div id="specialNoteDetailTitle" class="special-note-detail-value special-note-detail-title"></div>
+                    </div>
+                    <div class="special-note-detail-row">
+                        <div class="special-note-detail-label">내용</div>
+                        <div id="specialNoteDetailContent" class="special-note-detail-value special-note-detail-content"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="special-note-detail-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeSpecialNoteModal()">닫기</button>
+                <button type="button" class="btn btn-danger" id="specialNoteDeleteBtn" onclick="deleteCurrentSpecialNote()">삭제</button>
+                <button type="button" class="btn" id="specialNoteEditBtn" onclick="openSpecialNoteEditMode()">수정</button>
+            </div>
+        </div>
         <form id="specialNoteForm">
             <input type="hidden" id="specialNoteId">
+            <div class="form-group">
+                <label>특이사항 분류 *</label>
+                <div class="special-note-color-grid">
+                    <label class="special-note-color-option" data-color="blue">
+                        <input type="radio" name="specialNoteColor" value="blue" checked>
+                        <span class="special-note-color-chip">
+                            <strong>일반</strong>
+                            <span>기본 안내나 공유용</span>
+                        </span>
+                    </label>
+                    <label class="special-note-color-option" data-color="amber">
+                        <input type="radio" name="specialNoteColor" value="amber">
+                        <span class="special-note-color-chip">
+                            <strong>주의</strong>
+                            <span>확인 필요 사항</span>
+                        </span>
+                    </label>
+                    <label class="special-note-color-option" data-color="rose">
+                        <input type="radio" name="specialNoteColor" value="rose">
+                        <span class="special-note-color-chip">
+                            <strong>중요</strong>
+                            <span>일정 영향이 큰 사항</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
             <div class="form-group">
                 <label>등록 날짜 *</label>
                 <div class="schedule-date-toolbar">
@@ -5566,7 +5943,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 <textarea id="specialNoteContent" rows="5" required placeholder="해당 날짜에 확인해야 할 내용을 간단히 적어주세요."></textarea>
             </div>
             <div style="text-align: right; margin-top: 1rem;">
-                <button type="button" class="btn btn-secondary" onclick="closeSpecialNoteModal()">취소</button>
+                <button type="button" class="btn btn-secondary" onclick="cancelSpecialNoteEdit()">취소</button>
                 <button type="submit" class="btn" id="specialNoteSubmitBtn">등록</button>
             </div>
         </form>
@@ -5756,6 +6133,13 @@ let specialNotePickerYear = currentYear;
 let specialNotePickerMonth = currentMonth;
 let specialNoteSelectedDates = new Set();
 let specialNoteDefaultDate = '';
+let specialNoteModalMode = 'create';
+let activeSpecialNoteId = null;
+const SPECIAL_NOTE_COLOR_META = {
+    blue: { label: '일반', className: 'note-color-blue' },
+    amber: { label: '주의', className: 'note-color-amber' },
+    rose: { label: '중요', className: 'note-color-rose' },
+};
 
 function getActiveView() {
     const params = new URLSearchParams(window.location.search);
@@ -5895,13 +6279,75 @@ function getSpecialNoteById(noteId) {
     return specialNotes.find((note) => Number(note.id || 0) === targetId) || null;
 }
 
+function normalizeSpecialNoteColor(value) {
+    const color = String(value || '').trim().toLowerCase();
+    if (color === 'red') return 'rose';
+    return SPECIAL_NOTE_COLOR_META[color] ? color : 'blue';
+}
+
+function getSpecialNoteColorMeta(value) {
+    return SPECIAL_NOTE_COLOR_META[normalizeSpecialNoteColor(value)] || SPECIAL_NOTE_COLOR_META.blue;
+}
+
+function getSelectedSpecialNoteColor() {
+    const selectedInput = document.querySelector('input[name="specialNoteColor"]:checked');
+    return normalizeSpecialNoteColor(selectedInput?.value || 'blue');
+}
+
+function setSelectedSpecialNoteColor(value) {
+    const color = normalizeSpecialNoteColor(value);
+    const target = document.querySelector(`input[name="specialNoteColor"][value="${color}"]`);
+    if (target) target.checked = true;
+}
+
+function setSpecialNoteModalMode(mode) {
+    specialNoteModalMode = mode;
+    const detailView = document.getElementById('specialNoteDetailView');
+    const form = document.getElementById('specialNoteForm');
+    const summary = document.getElementById('specialNoteSummary');
+    const editBtn = document.getElementById('specialNoteEditBtn');
+    const deleteBtn = document.getElementById('specialNoteDeleteBtn');
+
+    if (detailView) {
+        detailView.style.display = mode === 'detail' ? 'block' : 'none';
+    }
+    if (form) {
+        form.style.display = mode === 'detail' ? 'none' : 'block';
+    }
+    if (summary) {
+        summary.style.display = mode === 'detail' ? 'none' : '';
+    }
+    if (editBtn) {
+        editBtn.style.display = mode === 'detail' && CAN_MANAGE_SCHEDULE ? '' : 'none';
+    }
+    if (deleteBtn) {
+        deleteBtn.style.display = mode === 'detail' && CAN_MANAGE_SCHEDULE ? '' : 'none';
+    }
+}
+
+function populateSpecialNoteDetail(note) {
+    if (!note) return;
+    const colorMeta = getSpecialNoteColorMeta(note.note_color);
+    const typeEl = document.getElementById('specialNoteDetailType');
+    document.getElementById('specialNoteModalTitle').textContent = '특이사항 상세보기';
+    if (typeEl) {
+        typeEl.textContent = colorMeta.label;
+        typeEl.className = `special-note-type-badge ${colorMeta.className}`;
+    }
+    document.getElementById('specialNoteDetailDate').textContent = String(note.note_date || '-');
+    document.getElementById('specialNoteDetailTitle').textContent = String(note.title || '-');
+    document.getElementById('specialNoteDetailContent').textContent = String(note.content || '-');
+}
+
 function resetSpecialNoteModal() {
+    activeSpecialNoteId = null;
     document.getElementById('specialNoteId').value = '';
     document.getElementById('specialNoteTitle').value = '';
     document.getElementById('specialNoteContent').value = '';
     document.getElementById('specialNoteSingleDate').value = '';
     document.getElementById('specialNoteModalTitle').textContent = '특이사항 등록';
     document.getElementById('specialNoteSubmitBtn').textContent = '등록';
+    setSelectedSpecialNoteColor('blue');
     specialNoteDateMode = true;
     specialNoteSelectedDates = new Set();
     specialNotePickerYear = currentYear;
@@ -5920,6 +6366,7 @@ function resetSpecialNoteModal() {
         modeBtn.classList.add('is-active');
         modeBtn.disabled = false;
     }
+    setSpecialNoteModalMode('create');
     renderSpecialNotePicker();
     updateSpecialNoteDateSummary();
 }
@@ -6063,9 +6510,11 @@ function openSpecialNoteModal(defaultDate = '', note = null) {
     const modeBtn = document.getElementById('specialNoteDateModeBtn');
 
     if (note) {
+        activeSpecialNoteId = Number(note.id || 0) || null;
         noteIdInput.value = String(note.id || '');
         document.getElementById('specialNoteModalTitle').textContent = '특이사항 수정';
         document.getElementById('specialNoteSubmitBtn').textContent = '수정';
+        setSelectedSpecialNoteColor(note.note_color);
         titleInput.value = String(note.title || '');
         contentInput.value = String(note.content || '');
         singleDateInput.value = String(note.note_date || defaultDate || '');
@@ -6076,6 +6525,7 @@ function openSpecialNoteModal(defaultDate = '', note = null) {
             modeBtn.classList.remove('is-active');
             modeBtn.disabled = true;
         }
+        setSpecialNoteModalMode('edit');
     } else {
         const initialDate = String(defaultDate || specialNoteDefaultDate || '').trim();
         if (initialDate) {
@@ -6085,6 +6535,7 @@ function openSpecialNoteModal(defaultDate = '', note = null) {
                 renderSpecialNotePicker();
             }
         }
+        setSpecialNoteModalMode('create');
     }
 
     updateSpecialNoteDateSummary();
@@ -6099,7 +6550,42 @@ function openSpecialNoteModalById(noteId) {
         alert('특이사항 정보를 찾을 수 없습니다.');
         return;
     }
+    resetSpecialNoteModal();
+    activeSpecialNoteId = Number(note.id || 0) || null;
+    populateSpecialNoteDetail(note);
+    setSpecialNoteModalMode('detail');
+    const modal = document.getElementById('specialNoteModal');
+    if (!modal) return;
+    modal.style.display = 'block';
+    syncModalOpenState();
+}
+
+function openSpecialNoteEditMode() {
+    if (!activeSpecialNoteId) return;
+    const note = getSpecialNoteById(activeSpecialNoteId);
+    if (!note) {
+        alert('특이사항 정보를 찾을 수 없습니다.');
+        closeSpecialNoteModal();
+        return;
+    }
     openSpecialNoteModal(String(note.note_date || ''), note);
+}
+
+function deleteCurrentSpecialNote() {
+    if (!activeSpecialNoteId) return;
+    deleteSpecialNote(activeSpecialNoteId);
+}
+
+function cancelSpecialNoteEdit() {
+    if (specialNoteModalMode === 'edit' && activeSpecialNoteId) {
+        const note = getSpecialNoteById(activeSpecialNoteId);
+        if (note) {
+            populateSpecialNoteDetail(note);
+            setSpecialNoteModalMode('detail');
+            return;
+        }
+    }
+    closeSpecialNoteModal();
 }
 
 function openSpecialNoteModalFromScheduleModal() {
@@ -6158,6 +6644,8 @@ function closeSpecialNoteModal() {
     const modal = document.getElementById('specialNoteModal');
     if (!modal) return;
     modal.style.display = 'none';
+    activeSpecialNoteId = null;
+    setSpecialNoteModalMode('create');
     syncModalOpenState();
 }
 
@@ -6166,6 +6654,7 @@ async function saveSpecialNote(event) {
     if (!ensureScheduleAdminPermission()) return;
 
     const noteId = String(document.getElementById('specialNoteId').value || '').trim();
+    const noteColor = getSelectedSpecialNoteColor();
     const title = String(document.getElementById('specialNoteTitle').value || '').trim();
     const content = String(document.getElementById('specialNoteContent').value || '').trim();
     const singleDate = String(document.getElementById('specialNoteSingleDate').value || '').trim();
@@ -6198,6 +6687,7 @@ async function saveSpecialNote(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 note_id: noteId || null,
+                note_color: noteColor,
                 title,
                 content,
                 dates,
@@ -6212,15 +6702,17 @@ async function saveSpecialNote(event) {
             const targetId = Number(noteId);
             specialNotes = specialNotes.map((note) => (
                 Number(note.id || 0) === targetId
-                    ? { ...note, title, content, note_date: dates[0] }
+                    ? { ...note, note_color: noteColor, title, content, note_date: dates[0] }
                     : note
             ));
+            activeSpecialNoteId = targetId;
         } else {
             const savedIds = Array.isArray(payload.ids) ? payload.ids : [];
             const newNotes = dates.map((dateValue, index) => ({
                 id: savedIds[index],
                 workplace: CURRENT_SCHEDULE_WORKPLACE,
                 note_date: dateValue,
+                note_color: noteColor,
                 title,
                 content,
             }));
@@ -6886,8 +7378,8 @@ function renderMobileScheduleList() {
         const badgeClass = workMeta.className ? `work-status-tag ${workMeta.className}` : 'work-status-tag';
 
         const notesHtml = notes.map((note) => `
-            <button type="button" class="mobile-special-note-card" onclick="event.stopPropagation(); openSpecialNoteModalById(${Number(note.id || 0)})">
-                <div class="mobile-special-note-label">특이사항</div>
+            <button type="button" class="mobile-special-note-card ${getSpecialNoteColorMeta(note.note_color).className}" onclick="event.stopPropagation(); openSpecialNoteModalById(${Number(note.id || 0)})">
+                <div class="mobile-special-note-label">${escapeHtml(getSpecialNoteColorMeta(note.note_color).label)}</div>
                 <div class="mobile-special-note-title">${escapeHtml(note.title || '')}</div>
             </button>
         `).join('');
@@ -7014,7 +7506,7 @@ function renderCalendar() {
             dayNotes.forEach((note) => {
                 const noteButton = document.createElement('button');
                 noteButton.type = 'button';
-                noteButton.className = 'special-note-item';
+                noteButton.className = `special-note-item ${getSpecialNoteColorMeta(note.note_color).className}`;
                 noteButton.onclick = function(event) {
                     event.stopPropagation();
                     openSpecialNoteModalById(note.id);
@@ -7922,6 +8414,7 @@ function renderStatsProductResults(products) {
                 data-product-name="${escapeHtml(product.name || '')}"
                 onclick="selectStatsProductFromButton(this)">
             ${escapeHtml(product.name || '')}
+            ${product.code ? `<span class="stats-detail-product-code">${escapeHtml(product.code || '')}</span>` : ''}
         </button>
     `).join('');
     wrap.style.display = 'block';
@@ -7944,7 +8437,11 @@ function filterStatsProducts() {
         renderStatsProductResults(allStatsProducts || []);
         return;
     }
-    const filtered = (allStatsProducts || []).filter((product) => String(product.name || '').toLowerCase().includes(keyword));
+    const filtered = (allStatsProducts || []).filter((product) => {
+        const name = String(product.name || '').toLowerCase();
+        const code = String(product.code || '').toLowerCase();
+        return name.includes(keyword) || code.includes(keyword);
+    });
     renderStatsProductResults(filtered);
 }
 

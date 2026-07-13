@@ -440,6 +440,41 @@ def journals():
             for row in cursor.fetchall()
             if int(row['raw_material_id'] or 0) > 0
         }
+        cursor.execute(
+            '''
+            SELECT
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date, '') as receiving_date,
+                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
+                MAX(substr(p.production_date, 1, 10)) as last_production_date,
+                SUM(COALESCE(pmu.actual_quantity, 0)) as used_quantity
+            FROM production_material_usage pmu
+            JOIN productions p
+              ON p.id = pmu.production_id
+             AND COALESCE(p.production_date, '') != ''
+            LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+            WHERE COALESCE(p.workplace, '') = ?
+              AND COALESCE(p.entry_mode, '') = 'register'
+              AND COALESCE(p.status, '') = '완료'
+              AND pmu.raw_material_id IS NOT NULL
+              AND COALESCE(pmu.actual_quantity, 0) > 0
+            GROUP BY
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date, ''),
+                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '')
+            ''',
+            (workplace,),
+        )
+        raw_register_lot_dates = {}
+        for row in cursor.fetchall():
+            lot_key = ((row['receiving_date'] or '').strip(), (row['car_number'] or '').strip())
+            if not lot_key[0] or not lot_key[1]:
+                continue
+            if float(row['used_quantity'] or 0) <= 0:
+                continue
+            raw_register_lot_dates[lot_key] = (row['last_production_date'] or '').strip()
+
+        def _raw_lot_key(row):
+            return ((row.get('receiving_date') or '').strip(), (row.get('car_number') or '').strip())
+
         raw_active_items = [row for row in raw_all_items if float(row.get('current_stock') or 0) > 0]
         raw_done_items = [
             row for row in raw_all_items
@@ -447,12 +482,16 @@ def journals():
             and (
                 float(row.get('used_quantity') or 0) > 0
                 or int(row.get('id') or 0) in exported_raw_ids
+                or _raw_lot_key(row) in raw_register_lot_dates
             )
         ]
         for row in raw_active_items:
             row['journal_date'] = (row.get('receiving_date') or '').strip()
         for row in raw_done_items:
-            row['journal_date'] = raw_last_log_dates.get(int(row.get('id') or 0), '')
+            row['journal_date'] = (
+                raw_register_lot_dates.get(_raw_lot_key(row))
+                or raw_last_log_dates.get(int(row.get('id') or 0), '')
+            )
         raw_active_available_dates = sorted(
             {row['journal_date'] for row in raw_active_items if row.get('journal_date')},
             reverse=True,
@@ -852,6 +891,7 @@ def material_checksheet_preview():
     workplace = get_workplace()
     selected_date = (request.args.get('date') or today_local().isoformat()).strip()
     material_scope = (request.args.get('scope') or 'yemat').strip().lower()
+    selected_production_id = int(request.args.get('production_id') or 0) if str(request.args.get('production_id') or '').strip().isdigit() else 0
     if material_scope not in ('yemat', 'sinan'):
         material_scope = 'yemat'
     try:
@@ -868,6 +908,7 @@ def material_checksheet_preview():
             SELECT
                 p.id as production_id,
                 p.status,
+                COALESCE(p.entry_mode, '') as entry_mode,
                 pmu.id as production_usage_id,
                 pmu.material_id as id,
                 COALESCE(m.code, '') as code,
@@ -875,6 +916,9 @@ def material_checksheet_preview():
                 COALESCE(m.category, '') as category,
                 COALESCE(m.unit, '') as unit,
                 COALESCE(s.name, '') as supplier_name,
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as override_receiving_date,
+                COALESCE(NULLIF(TRIM(pmu.override_manufacture_date), ''), '') as override_manufacture_date,
+                COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), '') as override_expiry_date,
                 COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as qty
             FROM production_material_usage pmu
             JOIN productions p ON p.id = pmu.production_id
@@ -884,12 +928,87 @@ def material_checksheet_preview():
               ON pmlu.production_usage_id = pmu.id
             WHERE p.workplace = ?
               AND COALESCE(p.production_date, '') = ?
+              AND (? <= 0 OR p.id = ?)
               AND pmu.material_id IS NOT NULL
             ORDER BY pmu.material_id, pmu.id
             ''',
-            (workplace, selected_date),
+            (workplace, selected_date, selected_production_id, selected_production_id),
         )
         material_rows = [dict(row) for row in cursor.fetchall()]
+
+        register_mode_rows = [
+            row for row in material_rows
+            if str(row.get('entry_mode') or '').strip().lower() == 'register'
+        ]
+        direct_usage_mode = bool(register_mode_rows)
+        if direct_usage_mode:
+            rows = []
+            for row in material_rows:
+                if not _normalize_completed_status(row.get('status')):
+                    continue
+                if not _base_material_category(row.get('category')):
+                    continue
+                if _material_checksheet_scope(row.get('code')) != material_scope:
+                    continue
+                qty = float(row.get('qty') or 0.0)
+                if qty <= 0:
+                    continue
+                receiving_date = (row.get('override_receiving_date') or '').strip()
+                manufacture_date = (row.get('override_manufacture_date') or '').strip()
+                expiry_date = (row.get('override_expiry_date') or '').strip()
+                expiry_or_mfg = f'(\uc18c) {expiry_date}' if expiry_date else (f'(\uc81c) {manufacture_date}' if manufacture_date else '')
+                rows.append(
+                    {
+                        'code': row.get('code') or '',
+                        'name': row.get('name') or '',
+                        'category': row.get('category') or '',
+                        'unit': row.get('unit') or '',
+                        'supplier_name': row.get('supplier_name') or '',
+                        'receiving_date': receiving_date,
+                        'expiry_or_mfg': expiry_or_mfg,
+                        'opening_stock': _round_1(qty),
+                        'received_today': _round_1(0),
+                        'outgoing_today': _round_1(qty),
+                        'closing_stock': _round_1(0),
+                        'note': '\ub4f1\ub85d\ubaa8\ub4dc' if str(row.get('entry_mode') or '').strip().lower() == 'register' else '',
+                    }
+                )
+
+            oil_rows = [row for row in rows if not _is_salt_material_category(row.get('category'))]
+            salt_rows = [row for row in rows if _is_salt_material_category(row.get('category'))]
+            salt_rows.sort(
+                key=lambda row: (
+                    1 if not (row.get('receiving_date') or '').strip() else 0,
+                    (row.get('receiving_date') or '').strip(),
+                    row.get('name') or '',
+                )
+            )
+            min_rows = max(12, len(rows))
+            middle_blank_count = max(0, min_rows - len(oil_rows) - len(salt_rows))
+            blank_row = {'code': '', 'name': '', 'category': '', 'unit': '', 'supplier_name': '', 'receiving_date': '', 'expiry_or_mfg': '', 'opening_stock': '', 'received_today': '', 'outgoing_today': '', 'closing_stock': '', 'note': ''}
+            rows = oil_rows + [dict(blank_row) for _ in range(middle_blank_count)] + salt_rows
+            while len(rows) < min_rows:
+                rows.append(dict(blank_row))
+
+            author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''
+            weekday_labels = ['\uc6d4', '\ud654', '\uc218', '\ubaa9', '\uae08', '\ud1a0', '\uc77c']
+            period_text = f'{report_date.year}\ub144 {report_date.month}\uc6d4 {report_date.day}\uc77c ({weekday_labels[report_date.weekday()]}\uc694\uc77c)'
+            workplace_title = _format_print_workplace(workplace).replace('\uc2e0\uad00 2\uce35', '\uc2e0\uad00_2F').replace('\uc2e0\uad00 1\uce35', '\uc2e0\uad00_1F').replace('2\uce35', '2F').replace('1\uce35', '1F')
+            if workplace_title:
+                workplace_title = f'{workplace_title} \uc870\ubbf8\uae40 \uc791\uc5c5\uc7a5'
+            scope_label = '\uc2e0\uc548' if material_scope == 'sinan' else '\uc608\ub9db'
+
+            return render_template(
+                'material_checksheet_preview.html',
+                user=session['user'],
+                report_date=selected_date,
+                period_text=period_text,
+                workplace_title=workplace_title,
+                author_name=author_name,
+                rows=rows[:max(min_rows, len(rows))],
+                material_scope=material_scope,
+                scope_label=scope_label,
+            )
 
         completed_production_ids = set()
         material_map = {}
@@ -1791,11 +1910,14 @@ def production_print(production_id):
     # 원재료(원초) 사용 내역
     cursor.execute(
         '''
-        SELECT pmu.*, rm.car_number, rm.receiving_date
+        SELECT
+            pmu.*,
+            COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), rm.car_number) as car_number,
+            COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date) as receiving_date
         FROM production_material_usage pmu
         LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
         WHERE pmu.production_id = ? AND pmu.raw_material_id IS NOT NULL
-        ORDER BY rm.receiving_date ASC, rm.id ASC
+        ORDER BY COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date) ASC, rm.id ASC
         ''',
         (production_id,),
     )
@@ -1817,9 +1939,9 @@ def production_print(production_id):
             m.unit,
             pmlu.quantity as lot_used_quantity,
             ml.lot as lot_no,
-            ml.receiving_date as lot_receiving_date,
-            ml.manufacture_date as lot_manufacture_date,
-            ml.expiry_date as lot_expiry_date,
+            COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), ml.receiving_date) as lot_receiving_date,
+            COALESCE(NULLIF(TRIM(pmu.override_manufacture_date), ''), ml.manufacture_date) as lot_manufacture_date,
+            COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), ml.expiry_date) as lot_expiry_date,
             ml.lot_seq
         FROM production_material_usage pmu
         LEFT JOIN materials m ON pmu.material_id = m.id
@@ -1828,7 +1950,7 @@ def production_print(production_id):
         LEFT JOIN material_lots ml
           ON ml.id = pmlu.material_lot_id
         WHERE pmu.production_id = ? AND pmu.material_id IS NOT NULL
-        ORDER BY m.category, m.name, COALESCE(ml.receiving_date, ''), COALESCE(ml.lot_seq, 0), pmu.id
+        ORDER BY m.category, m.name, COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), ml.receiving_date, ''), COALESCE(ml.lot_seq, 0), pmu.id
         ''',
         (production_id,),
     )

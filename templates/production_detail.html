@@ -698,7 +698,12 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {%- set can_edit = can_prod and has_workplace_access and (production.status != '완료' or edit_completed) -%}
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
-    <h1>🏭 생산 상세</h1>
+    <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+        <h1 style="margin:0;">🏭 생산 상세</h1>
+        {% if production.entry_mode_meta.label %}
+        <span style="display:inline-flex;align-items:center;padding:0.36rem 0.78rem;border-radius:999px;background:#ede9fe;color:#6d28d9;font-size:0.82rem;font-weight:800;">{{ production.entry_mode_meta.label }}</span>
+        {% endif %}
+    </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
         {% if production.status != '완료' and can_edit %}
         <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="openPlanEditModal()">생산계획 수정</button>
@@ -712,7 +717,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         <a href="/production/{{ production.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ 생산일지 미리보기</a>
         {% endif %}
         {% if can_manage_production %}
-        <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% else %}생산건을 삭제할까요?{% endif %}')">
+        <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}{% if production.entry_mode == 'register' %}등록모드 생산건을 삭제할까요?\n재고는 변경되지 않습니다.{% else %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% endif %}{% else %}생산건을 삭제할까요?{% endif %}')">
             <input type="hidden" name="next" value="/production{% if production.status == '완료' %}?tab=done{% endif %}">
             <button type="submit" class="btn btn-small btn-danger">삭제</button>
         </form>
@@ -729,6 +734,11 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 
 {% if production.status == '완료' %}
 <div style="background:#e8f5e9;border:2px solid #27ae60;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;text-align:center;font-weight:600;color:#27ae60;">✅ 생산 완료</div>
+{% endif %}
+{% if production.entry_mode == 'register' %}
+<div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:0.9rem 1rem;margin-bottom:1.25rem;color:#5b21b6;font-weight:700;">
+    등록 모드로 입력된 생산건입니다. 재고 차감 없이 사용 내역만 기록되며, 캘린더·통계·생산일지에는 일반 생산건과 동일하게 반영됩니다.
+</div>
 {% endif %}
 
 {% set selected_plan_lines = production.line.split(',') if production.line else [] %}
@@ -791,7 +801,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 {% if production.product_id %}
                 <div class="product-title-actions">
                     {% if production.spec_sheet_stored_name %}
-                    <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id) }}" target="_blank" rel="noopener" class="product-spec-btn view">사양서 보기</a>
+                    <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id, view_only=1) }}" target="_blank" rel="noopener" class="product-spec-btn view">사양서 보기</a>
                     {% elif can_prod %}
                     <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id) }}" target="_blank" rel="noopener" class="product-spec-btn register">사양서 등록</a>
                     {% endif %}
@@ -800,7 +810,15 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             </div>
         </div>
         <div class="info-item"><div class="lbl">생산번호</div><div class="val">PROD-{{ production.id }}</div></div>
-        <div class="info-item"><div class="lbl">생산일</div><div class="val">{{ production.production_date }}</div></div>
+        <div class="info-item">
+            <div class="lbl">생산일</div>
+            {% if can_edit and production.entry_mode == 'register' %}
+            <input type="date" class="note-textarea auto-grow" name="production_date" required value="{{ production.production_date }}" style="min-height:42px;height:42px;">
+            <div class="display-readonly-hint">등록모드 생산건은 수정 저장 시 생산일도 함께 변경됩니다.</div>
+            {% else %}
+            <div class="val">{{ production.production_date }}</div>
+            {% endif %}
+        </div>
         <div class="info-item"><div class="lbl">생산 라인</div><div class="val">{{ ('라인 ' ~ production.line.replace(',', ', 라인 ')) if production.line else '-' }}</div></div>
         <div class="info-item"><div class="lbl">상태</div><div class="val">
             {% if production.status == '완료' %}<span class="badge badge-success">완료</span>
@@ -1139,7 +1157,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% endif %}
 
 {% set calc_base_boxes = production.actual_boxes or production.planned_boxes %}
-{% set mat_list = material_usage | selectattr('material_id') | list %}
+{% set mat_list = (detail_material_usage|default(material_usage)) | selectattr('material_id') | list %}
 {% if mat_list %}
 {% set base_cats = ['기름','소금'] %}
 {% set pack_keys = ['내포','외포','박스','트레이','실리카'] %}
@@ -1191,6 +1209,9 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <td>
                 {% if not can_edit %}
                 {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                {% elif can_edit and (u.aggregate_count|default(1)) > 1 %}
+                {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                <div style="font-size:0.72rem;color:#8fb3d9;margin-top:0.2rem;">{{ u.aggregate_count }}개 로트 합산</div>
                 {% elif can_edit %}
                 <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
                 {% else %}
@@ -1200,7 +1221,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
             <td id="yld_{{ u.id }}">{% if u.yield_rate %}<strong>{{ u.yield_rate|round(1) }}%</strong>{% else %}-{% endif %}</td>
         </tr>
-        {% if can_edit and u.has_lot_info_gap and u.lot_info_gap %}
+        {% if can_edit and (u.aggregate_count|default(1)) == 1 and u.has_lot_info_gap and u.lot_info_gap %}
         <tr class="lot-gap-row">
             <td colspan="6">
                 <div class="lot-gap-panel">
@@ -1283,6 +1304,9 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <td>
                 {% if not can_edit %}
                 {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                {% elif can_edit and (u.aggregate_count|default(1)) > 1 %}
+                {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                <div style="font-size:0.72rem;color:#8fb3d9;margin-top:0.2rem;">{{ u.aggregate_count }}개 로트 합산</div>
                 {% elif can_edit %}
                 <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
                 {% else %}
@@ -1292,7 +1316,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
             <td id="yld_{{ u.id }}">{% if u.yield_rate %}<strong>{{ u.yield_rate|round(1) }}%</strong>{% else %}-{% endif %}</td>
         </tr>
-        {% if can_edit and u.has_lot_info_gap and u.lot_info_gap %}
+        {% if can_edit and (u.aggregate_count|default(1)) == 1 and u.has_lot_info_gap and u.lot_info_gap %}
         <tr class="lot-gap-row">
             <td colspan="6">
                 <div class="lot-gap-panel">

@@ -112,6 +112,25 @@
     opacity:0;
     pointer-events:none;
 }
+.production-register-mode-shortcut{
+    display:inline-flex;
+    align-items:center;
+    gap:0.38rem;
+    min-height:36px;
+    padding:0 0.82rem;
+    border-radius:999px;
+    border:1px solid rgba(34,211,238,0.45);
+    background:linear-gradient(135deg,#0f766e,#0891b2);
+    color:#ecfeff !important;
+    font-size:0.82rem;
+    font-weight:900;
+    text-decoration:none;
+    box-shadow:0 10px 22px rgba(8,145,178,0.18);
+}
+.production-register-mode-shortcut:hover{
+    transform:translateY(-1px);
+    box-shadow:0 14px 28px rgba(8,145,178,0.24);
+}
 .production-month-calendar{
     position:absolute;
     top:calc(100% + 10px);
@@ -516,9 +535,15 @@ html[data-theme="dark"] .search-empty{color:#8ea3bd;}
 {% block content %}
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
 {%- set can_prod  = _r in ['admin','production'] -%}
+{%- set can_use_register_mode = (user is defined and (user.is_admin or user.can_integrated_management)) -%}
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-    <h1 style="margin:0;">🏭 생산 관리</h1>
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <h1 style="margin:0;">🏭 생산 관리</h1>
+        {% if can_use_register_mode %}
+        <a href="{{ url_for('production.production_register_mode', next=url_for('admin.integrated_management', tab='productions', prod_tab='done')) }}" class="production-register-mode-shortcut">생산 등록 모드 사용</a>
+        {% endif %}
+    </div>
     <div style="display:flex;gap:0.5rem;">
         {% if can_prod %}
         <a href="/production/add" class="btn btn-small">+ 등록</a>
@@ -603,7 +628,12 @@ html[data-theme="dark"] .search-empty{color:#8ea3bd;}
                 <article class="production-day-item">
                     <div class="production-item-main">
                         <div class="production-item-top">
-                            <strong class="production-item-name">{{ prod.product_name }}</strong>
+                            <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
+                                <strong class="production-item-name">{{ prod.product_name }}</strong>
+                                {% if prod.entry_mode_meta.label %}
+                                <span class="badge badge-info" style="background:#ede9fe;color:#6d28d9;">{{ prod.entry_mode_meta.label }}</span>
+                                {% endif %}
+                            </div>
                             <span class="production-item-id">PROD-{{ prod.id }}</span>
                         </div>
                         <div class="production-item-meta">
