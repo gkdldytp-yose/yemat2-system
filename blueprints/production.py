@@ -25,6 +25,7 @@ from core import (
     role_required,
     rollback_db,
     audit_log,
+    WORKPLACES,
     SHARED_WORKPLACE,
     SHARED_MATERIAL_CATEGORIES,
     today_local,
@@ -211,6 +212,139 @@ def _ensure_auto_work_days_for_month(conn, cursor, year, month):
         conn.commit()
 
 
+def _parse_work_time_hours(work_time):
+    text = str(work_time or '').strip()
+    if not text:
+        return 0.0
+    normalized = text.replace('：', ':').replace('～', '~').replace('–', '-').replace('—', '-')
+    range_match = re.search(r'(\d{1,2})(?::(\d{1,2}))?\s*[~-]\s*(\d{1,2})(?::(\d{1,2}))?', normalized)
+    if range_match:
+        start_hour = int(range_match.group(1))
+        start_minute = int(range_match.group(2) or 0)
+        end_hour = int(range_match.group(3))
+        end_minute = int(range_match.group(4) or 0)
+        start_total = start_hour * 60 + start_minute
+        end_total = end_hour * 60 + end_minute
+        if end_total < start_total:
+            end_total += 24 * 60
+        return max((end_total - start_total) / 60.0, 0.0)
+    number_match = re.search(r'(\d+(?:\.\d+)?)', normalized)
+    if number_match:
+        try:
+            return max(float(number_match.group(1)), 0.0)
+        except ValueError:
+            return 0.0
+    return 0.0
+
+
+def _format_work_hours(value):
+    try:
+        numeric = float(value or 0)
+    except (TypeError, ValueError):
+        numeric = 0.0
+    if numeric.is_integer():
+        return str(int(numeric))
+    return f'{numeric:.1f}'.rstrip('0').rstrip('.')
+
+
+def _sync_register_mode_work_day(cursor, production_date, work_time, production_id=None):
+    work_date = _parse_iso_date(production_date)
+    worked_hours = _parse_work_time_hours(work_time)
+    if worked_hours <= 0:
+        return None
+
+    cursor.execute('SELECT type, overtime_hours, note FROM work_days WHERE date = ?', (work_date.isoformat(),))
+    existing = cursor.fetchone()
+    existing_type = (existing['type'] if existing else '') or ''
+    existing_note = (existing['note'] if existing else '') or ''
+    existing_overtime = 0.0
+    try:
+        existing_overtime = float(existing['overtime_hours'] if existing else 0 or 0)
+    except (TypeError, ValueError):
+        existing_overtime = 0.0
+
+    is_holiday = existing_type == 'holiday' or bool(_get_auto_holiday_name(work_date))
+    overtime_hours = max(round(worked_hours - 8, 2), 0.0)
+    if is_holiday:
+        next_type = 'extra'
+        next_overtime = overtime_hours
+        auto_note = f'등록모드 생산건 자동 특근 등록'
+    elif overtime_hours > 0:
+        next_type = 'overtime'
+        next_overtime = max(existing_overtime, overtime_hours)
+        auto_note = f'등록모드 생산건 자동 잔업 등록 ({_format_work_hours(overtime_hours)}h)'
+    else:
+        return None
+
+    if production_id:
+        auto_note += f': PROD-{production_id}'
+    if work_time:
+        auto_note += f' / 작업시간 {work_time}'
+    next_note = existing_note.strip()
+    if auto_note not in next_note:
+        next_note = f'{next_note}\n{auto_note}'.strip() if next_note else auto_note
+
+    if existing:
+        if existing_type == 'extra' and next_type == 'overtime':
+            next_type = 'extra'
+        cursor.execute(
+            '''
+            UPDATE work_days
+            SET type = ?, overtime_hours = ?, note = ?
+            WHERE date = ?
+            ''',
+            (next_type, next_overtime, next_note, work_date.isoformat()),
+        )
+    else:
+        cursor.execute(
+            '''
+            INSERT INTO work_days (date, type, overtime_hours, note)
+            VALUES (?, ?, ?, ?)
+            ''',
+            (work_date.isoformat(), next_type, next_overtime, next_note),
+        )
+    return {'date': work_date.isoformat(), 'type': next_type, 'overtime_hours': next_overtime}
+
+
+def _cleanup_register_mode_work_day(cursor, production_date, production_id):
+    try:
+        work_date = _parse_iso_date(production_date)
+    except Exception:
+        work_date = None
+    if not work_date or not production_id:
+        return
+
+    date_key = work_date.isoformat()
+    cursor.execute('SELECT type, overtime_hours, note FROM work_days WHERE date = ?', (date_key,))
+    existing = cursor.fetchone()
+    if not existing:
+        return
+
+    marker = f'PROD-{production_id}'
+    note_lines = [
+        line
+        for line in (existing['note'] or '').splitlines()
+        if not ('등록모드 생산건 자동' in line and marker in line)
+    ]
+    cleaned_note = '\n'.join(line for line in note_lines if line.strip()).strip()
+    if cleaned_note:
+        cursor.execute('UPDATE work_days SET note = ? WHERE date = ?', (cleaned_note, date_key))
+        return
+
+    holiday_name = _get_auto_holiday_name(work_date)
+    if holiday_name:
+        cursor.execute(
+            '''
+            UPDATE work_days
+            SET type = 'holiday', overtime_hours = 0, note = ?
+            WHERE date = ?
+            ''',
+            (f'자동 등록: {holiday_name}', date_key),
+        )
+    else:
+        cursor.execute('DELETE FROM work_days WHERE date = ?', (date_key,))
+
+
 def _parse_iso_date(raw_value):
     text = (raw_value or '').strip()
     if not text:
@@ -244,6 +378,7 @@ def _normalize_schedule_special_note_payload(row):
         'id': int(data.get('id') or 0),
         'workplace': str(data.get('workplace') or '').strip(),
         'note_date': str(data.get('note_date') or '').strip(),
+        'note_color': _normalize_schedule_special_note_color(data.get('note_color')),
         'title': str(data.get('title') or '').strip(),
         'content': str(data.get('content') or '').strip(),
         'created_by': str(data.get('created_by') or '').strip(),
@@ -253,10 +388,29 @@ def _normalize_schedule_special_note_payload(row):
     }
 
 
+def _normalize_schedule_special_note_color(value):
+    color = str(value or '').strip().lower()
+    if color in {'amber', 'red'}:
+        return 'rose' if color == 'red' else 'amber'
+    if color not in {'blue', 'amber', 'rose'}:
+        return 'blue'
+    return color
+
+
+def _get_schedule_special_note_color_meta(value):
+    color = _normalize_schedule_special_note_color(value)
+    meta = {
+        'blue': {'label': '일반', 'class_name': 'note-color-blue'},
+        'amber': {'label': '주의', 'class_name': 'note-color-amber'},
+        'rose': {'label': '중요', 'class_name': 'note-color-rose'},
+    }
+    return meta.get(color, meta['blue'])
+
+
 def _load_schedule_special_notes(cursor, workplace, start_date, end_date):
     rows = cursor.execute(
         '''
-        SELECT id, workplace, note_date, title, content, created_by, updated_by, created_at, updated_at
+        SELECT id, workplace, note_date, note_color, title, content, created_by, updated_by, created_at, updated_at
         FROM schedule_special_notes
         WHERE workplace = ?
           AND note_date BETWEEN ? AND ?
@@ -344,8 +498,9 @@ def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days
             html_parts.append('<div class="day-special-notes">')
             for note in day_notes:
                 note_id = int(note.get('id') or 0)
+                color_meta = _get_schedule_special_note_color_meta(note.get('note_color'))
                 html_parts.append(
-                    f'<button type="button" class="special-note-item" onclick="event.stopPropagation(); openSpecialNoteModalById({note_id});">'
+                    f'<button type="button" class="special-note-item {escape(color_meta["class_name"])}" onclick="event.stopPropagation(); openSpecialNoteModalById({note_id});">'
                 )
                 html_parts.append(f'<span class="special-note-title">{escape(str(note.get("title") or ""))}</span>')
                 html_parts.append(
@@ -365,6 +520,11 @@ def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days
                     f'<div class="{item_classes}" style="position:relative;cursor:pointer;" onclick="event.stopPropagation(); window.location.href=\'{escape(detail_url)}\';">'
                 )
                 html_parts.append(f'<div class="schedule-name">{escape(str(schedule.get("product_name") or ""))}</div>')
+                entry_meta = _get_production_entry_mode_meta(schedule.get('entry_mode'))
+                if entry_meta['label']:
+                    html_parts.append(
+                        f'<span class="done-badge" style="background:#ede9fe;color:#5b21b6;">{escape(entry_meta["label"])}</span>'
+                    )
                 if str(schedule.get('source') or '') == 'export':
                     label = str(schedule.get('export_container_label') or '').strip()
                     badge_text = f'수출 {label}' if label else '수출'
@@ -429,10 +589,11 @@ def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_d
         html_parts.append(f'<span class="{escape(badge_class)}">{escape(work_meta["text"] or "미지정")}</span>')
         html_parts.append('</div><div class="mobile-day-schedules">')
         for note in special_notes_by_date.get(date_str) or []:
+            color_meta = _get_schedule_special_note_color_meta(note.get('note_color'))
             html_parts.append(
-                f'<button type="button" class="mobile-special-note-card" onclick="openSpecialNoteModalById({int(note.get("id") or 0)})">'
+                f'<button type="button" class="mobile-special-note-card {escape(color_meta["class_name"])}" onclick="openSpecialNoteModalById({int(note.get("id") or 0)})">'
             )
-            html_parts.append('<div class="mobile-special-note-label">특이사항</div>')
+            html_parts.append(f'<div class="mobile-special-note-label">{escape(color_meta["label"])}</div>')
             html_parts.append(f'<div class="mobile-special-note-title">{escape(str(note.get("title") or ""))}</div>')
             html_parts.append('</button>')
         for schedule in grouped[date_str]:
@@ -444,6 +605,11 @@ def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_d
             html_parts.append(f'<div class="mobile-schedule-card{" done" if is_completed else ""}" data-detail-url="{escape(detail_url)}" onclick="window.location.href=\'{escape(detail_url)}\'">')
             html_parts.append('<div class="mobile-schedule-top">')
             html_parts.append(f'<div class="mobile-schedule-name">{escape(str(schedule.get("product_name") or ""))}')
+            entry_meta = _get_production_entry_mode_meta(schedule.get('entry_mode'))
+            if entry_meta['label']:
+                html_parts.append(
+                    f'<div class="req-muted" style="margin-top:0.2rem;color:#7c3aed;font-weight:800;">{escape(entry_meta["label"])}</div>'
+                )
             if str(schedule.get('source') or '') == 'export':
                 label = str(schedule.get('export_container_label') or '').strip()
                 badge_text = f'수출 {label}' if label else '수출'
@@ -1326,6 +1492,28 @@ def _normalize_production_status(status_value):
     return s
 
 
+def _normalize_production_entry_mode(entry_mode):
+    return 'register' if str(entry_mode or '').strip().lower() == 'register' else 'standard'
+
+
+def _is_register_entry_mode(entry_mode):
+    return _normalize_production_entry_mode(entry_mode) == 'register'
+
+
+def _get_production_entry_mode_meta(entry_mode):
+    if _is_register_entry_mode(entry_mode):
+        return {
+            'mode': 'register',
+            'label': '등록모드',
+            'class_name': 'register-mode',
+        }
+    return {
+        'mode': 'standard',
+        'label': '',
+        'class_name': '',
+    }
+
+
 def _normalize_workplace_key(workplace_value):
     return ''.join(str(workplace_value or '').strip().lower().split())
 
@@ -1341,18 +1529,39 @@ def _has_production_workplace_access(viewer_workplace, production_workplace):
 def _load_schedule_stats_products(cursor, workplace):
     cursor.execute(
         '''
-        SELECT DISTINCT
-            p.id,
-            p.name
+        SELECT
+            pr.product_id as id,
+            COALESCE(NULLIF(TRIM(p.name), ''), '미등록 상품') as name,
+            COALESCE(NULLIF(TRIM(p.code), ''), printf('P%05d', pr.product_id)) as code,
+            pr.status as production_status,
+            MAX(pr.production_date) as latest_production_date
         FROM productions pr
-        JOIN products p ON p.id = pr.product_id
-        WHERE COALESCE(NULLIF(TRIM(pr.workplace), ''), '') = ?
-          AND COALESCE(NULLIF(TRIM(pr.status), ''), '') = '?꾨즺'
-        ORDER BY p.name ASC, p.id ASC
+        LEFT JOIN products p ON p.id = pr.product_id
+        WHERE COALESCE(NULLIF(TRIM(pr.workplace), ''), ?) = ?
+          AND pr.product_id IS NOT NULL
+        GROUP BY pr.product_id, p.name, p.code, pr.status
+        ORDER BY name ASC, pr.product_id ASC
         ''',
-        (workplace,),
+        (workplace, workplace),
     )
-    return [dict(row) for row in cursor.fetchall()]
+    products = {}
+    done_status = _normalize_production_status('\uC644\uB8CC')
+    for row in cursor.fetchall():
+        item = dict(row)
+        product_id = int(item.get('id') or 0)
+        if product_id <= 0:
+            continue
+        if _normalize_production_status(item.get('production_status')) != done_status:
+            continue
+        current = products.get(product_id)
+        if not current or (item.get('latest_production_date') or '') > (current.get('latest_production_date') or ''):
+            products[product_id] = {
+                'id': product_id,
+                'name': item.get('name') or f'상품 {product_id}',
+                'code': item.get('code') or f'P{product_id:05d}',
+                'latest_production_date': item.get('latest_production_date') or '',
+            }
+    return sorted(products.values(), key=lambda item: (item.get('name') or '', item.get('code') or '', item.get('id') or 0))
 
 
 def _build_production_expiry_rows(production_row, default_expiry_date=''):
@@ -1398,6 +1607,20 @@ def _build_production_expiry_rows(production_row, default_expiry_date=''):
             }
         )
     return rows, visible_count
+
+
+def _calculate_product_expiry_date(production_date, expiry_months):
+    production_date = (production_date or '').strip()
+    try:
+        prod_dt = datetime.strptime(production_date, '%Y-%m-%d').date()
+        expiry_months = int(expiry_months or 12)
+        month_index = (prod_dt.month - 1) + expiry_months
+        expiry_year = prod_dt.year + (month_index // 12)
+        expiry_month = (month_index % 12) + 1
+        expiry_day = min(prod_dt.day, calendar.monthrange(expiry_year, expiry_month)[1])
+        return (date(expiry_year, expiry_month, expiry_day) - timedelta(days=1)).isoformat()
+    except Exception:
+        return production_date
 
 
 def _get_product_raw_options(product_row):
@@ -2138,7 +2361,8 @@ def schedules():
                 p.name as product_name,
                 COALESCE(ps.production_id, pr.id) as linked_production_id,
                 pr.actual_boxes as prod_actual_boxes,
-                pr.status as prod_status
+                pr.status as prod_status,
+                pr.entry_mode as entry_mode
             FROM production_schedules ps
             LEFT JOIN products p ON ps.product_id = p.id
             LEFT JOIN productions pr ON pr.schedule_id = ps.id
@@ -3623,6 +3847,7 @@ def save_schedule_special_note():
         note_id = int(payload.get('note_id') or 0)
         title = str(payload.get('title') or '').strip()
         content = str(payload.get('content') or '').strip()
+        note_color = _normalize_schedule_special_note_color(payload.get('note_color'))
         dates = _parse_schedule_special_note_dates(payload.get('dates') or request.form.getlist('dates'))
         if not title:
             raise ValueError('특이사항 제목을 입력해 주세요.')
@@ -3645,17 +3870,17 @@ def save_schedule_special_note():
                 cursor.execute(
                     '''
                     UPDATE schedule_special_notes
-                    SET note_date = ?, title = ?, content = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                    SET note_date = ?, note_color = ?, title = ?, content = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ? AND workplace = ?
                     ''',
-                    (target_date, title, content, user_name, note_id, workplace),
+                    (target_date, note_color, title, content, user_name, note_id, workplace),
                 )
                 audit_log(
                     conn,
                     'update',
                     'schedule_special_note',
                     note_id,
-                    {'note_date': target_date, 'title': title, 'content': content},
+                    {'note_date': target_date, 'note_color': note_color, 'title': title, 'content': content},
                 )
                 saved_ids = [note_id]
             else:
@@ -3664,11 +3889,11 @@ def save_schedule_special_note():
                     cursor.execute(
                         '''
                         INSERT INTO schedule_special_notes (
-                            workplace, note_date, title, content, created_by, updated_by
+                            workplace, note_date, note_color, title, content, created_by, updated_by
                         )
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                         ''',
-                        (workplace, note_date, title, content, user_name, user_name),
+                        (workplace, note_date, note_color, title, content, user_name, user_name),
                     )
                     created_id = int(cursor.lastrowid or 0)
                     saved_ids.append(created_id)
@@ -3677,7 +3902,7 @@ def save_schedule_special_note():
                         'create',
                         'schedule_special_note',
                         created_id,
-                        {'note_date': note_date, 'title': title, 'content': content},
+                        {'note_date': note_date, 'note_color': note_color, 'title': title, 'content': content},
                     )
         return jsonify({'ok': True, 'ids': saved_ids})
     except ValueError as exc:
@@ -4294,6 +4519,8 @@ def production_list():
     all_rows = [dict(r) for r in cursor.fetchall()]
     for row in all_rows:
         row['status'] = _normalize_production_status(row.get('status'))
+        row['entry_mode'] = _normalize_production_entry_mode(row.get('entry_mode'))
+        row['entry_mode_meta'] = _get_production_entry_mode_meta(row.get('entry_mode'))
 
     done_rows = [r for r in all_rows if r.get('status') == done_status]
     active_rows = [r for r in all_rows if r.get('status') != done_status]
@@ -4516,6 +4743,540 @@ def add_production():
     return redirect(url_for('production.production_detail', production_id=production_id))
 
 
+@bp.route('/production/register-mode', methods=['GET', 'POST'])
+@login_required
+def production_register_mode():
+    requested_workplace = (request.values.get('wp') or '').strip()
+    session_workplace = (get_workplace() or session.get('workplace') or '').strip()
+    user_payload = session.get('user') or {}
+    user_workplaces = [
+        str(item or '').strip()
+        for item in (user_payload.get('workplaces') or [])
+        if str(item or '').strip()
+    ]
+    if user_payload.get('is_admin') or user_payload.get('can_integrated_management'):
+        available_workplaces = list(WORKPLACES)
+    else:
+        available_workplaces = user_workplaces or ([session_workplace] if session_workplace else list(WORKPLACES))
+    if session_workplace and session_workplace not in available_workplaces:
+        available_workplaces.insert(0, session_workplace)
+    workplace = requested_workplace if requested_workplace in available_workplaces else (session_workplace or (available_workplaces[0] if available_workplaces else ''))
+
+    def _to_float(value, default=0.0):
+        try:
+            return float(str(value or '').replace(',', '').strip() or default)
+        except (TypeError, ValueError):
+            return float(default)
+
+    if request.method == 'POST':
+        product_id = int(request.form.get('product_id') or 0)
+        production_date = (request.form.get('production_date') or '').strip()
+        actual_boxes = _to_float(request.form.get('actual_boxes'), 0)
+        line_values = _normalize_line_values(request.form.getlist('production_lines'))
+        line_text = ','.join(line_values)
+        note = (request.form.get('note') or '').strip()
+        supply_people = int(request.form.get('supply_people') or 0) if str(request.form.get('supply_people') or '').strip() else None
+        packing_people = int(request.form.get('packing_people') or 0) if str(request.form.get('packing_people') or '').strip() else None
+        outer_packing_people = int(request.form.get('outer_packing_people') or 0) if str(request.form.get('outer_packing_people') or '').strip() else None
+        work_time = (request.form.get('work_time') or '').strip()
+        personnel_note = (request.form.get('personnel_note') or '').strip()
+        next_url = (request.form.get('next') or '').strip()
+
+        if product_id <= 0:
+            return "<script>alert('품목을 선택해 주세요.'); window.history.back();</script>"
+        if not production_date:
+            return "<script>alert('생산일을 입력해 주세요.'); window.history.back();</script>"
+        if actual_boxes <= 0:
+            return "<script>alert('생산 박스 수를 1 이상 입력해 주세요.'); window.history.back();</script>"
+
+        conn = get_db()
+        begin_db_transaction(conn)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute('SELECT expiry_months FROM products WHERE id = ?', (product_id,))
+            product_row = cursor.fetchone()
+            default_expiry_date = _calculate_product_expiry_date(
+                production_date,
+                product_row['expiry_months'] if product_row else 12,
+            )
+            use_custom_expiry = (request.form.get('use_custom_expiry') or '').strip() == '1'
+            expiry_dates = [
+                (request.form.get('expiry_date') or '').strip(),
+                (request.form.get('expiry_date_2') or '').strip(),
+                (request.form.get('expiry_date_3') or '').strip(),
+            ]
+            expiry_box_values = [
+                (request.form.get('expiry_boxes_1') or '').strip(),
+                (request.form.get('expiry_boxes_2') or '').strip(),
+                (request.form.get('expiry_boxes_3') or '').strip(),
+            ]
+            parsed_expiry_boxes = [None, None, None]
+            if use_custom_expiry:
+                import re
+                for idx, raw_box in enumerate(expiry_box_values):
+                    expiry_dates[idx] = expiry_dates[idx].strip()
+                    if not expiry_dates[idx] and not raw_box:
+                        continue
+                    if not expiry_dates[idx] or not raw_box:
+                        rollback_db(conn)
+                        return f"<script>alert('{idx + 1}번째 소비기한과 박스 수를 함께 입력해 주세요.'); window.history.back();</script>"
+                    if not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_dates[idx]):
+                        rollback_db(conn)
+                        return f"<script>alert('{idx + 1}번째 소비기한은 YYYY-MM-DD 형식으로 입력해 주세요.'); window.history.back();</script>"
+                    box_value = _to_float(raw_box, 0)
+                    if box_value <= 0:
+                        rollback_db(conn)
+                        return f"<script>alert('{idx + 1}번째 소비기한 박스 수는 0보다 커야 합니다.'); window.history.back();</script>"
+                    parsed_expiry_boxes[idx] = box_value
+                if parsed_expiry_boxes[0] is None:
+                    rollback_db(conn)
+                    return "<script>alert('첫 번째 소비기한과 박스 수를 입력해 주세요.'); window.history.back();</script>"
+                actual_boxes = round(sum(float(value or 0) for value in parsed_expiry_boxes), 4)
+            else:
+                expiry_dates = [default_expiry_date, '', '']
+                parsed_expiry_boxes = [actual_boxes, None, None]
+
+            cursor.execute(
+                '''
+                INSERT INTO productions (
+                    product_id, production_date, planned_boxes, actual_boxes, status, note, workplace, raw_sok_mode, entry_mode,
+                    supply_line, supply_people, packing_line, packing_people, outer_packing_line, outer_packing_people, work_time, personnel_note,
+                    expiry_date, expiry_date_2, expiry_date_3, expiry_boxes_1, expiry_boxes_2, expiry_boxes_3
+                )
+                VALUES (?, ?, ?, ?, '완료', ?, ?, 1, 'register', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    product_id,
+                    production_date,
+                    actual_boxes,
+                    actual_boxes,
+                    note,
+                    workplace,
+                    line_text,
+                    supply_people,
+                    line_text,
+                    packing_people,
+                    line_text,
+                    outer_packing_people,
+                    work_time,
+                    personnel_note,
+                    expiry_dates[0],
+                    expiry_dates[1],
+                    expiry_dates[2],
+                    parsed_expiry_boxes[0],
+                    parsed_expiry_boxes[1],
+                    parsed_expiry_boxes[2],
+                ),
+            )
+            production_id = cursor.lastrowid
+
+            cursor.execute(
+                '''
+                INSERT INTO production_schedules (
+                    product_id, scheduled_date, planned_boxes, status, note, production_id, line, workplace
+                )
+                VALUES (?, ?, ?, '완료', ?, ?, ?, ?)
+                ''',
+                (product_id, production_date, actual_boxes, note, production_id, line_text, workplace),
+            )
+            schedule_id = cursor.lastrowid
+            cursor.execute('UPDATE productions SET schedule_id = ? WHERE id = ?', (schedule_id, production_id))
+            auto_work_day = _sync_register_mode_work_day(cursor, production_date, work_time, production_id)
+
+            raw_ids = request.form.getlist('raw_material_id[]')
+            raw_codes = request.form.getlist('raw_material_code[]')
+            raw_names = request.form.getlist('raw_material_name[]')
+            raw_expected = request.form.getlist('raw_expected_quantity[]')
+            raw_actual = request.form.getlist('raw_actual_quantity[]')
+            raw_notes = request.form.getlist('raw_usage_note[]')
+            raw_receiving_dates = request.form.getlist('raw_override_receiving_date[]')
+            raw_car_numbers = request.form.getlist('raw_override_car_number[]')
+            for raw_id, raw_code, raw_name, expected_qty, actual_qty, usage_note, override_receiving_date, override_car_number in zip(raw_ids, raw_codes, raw_names, raw_expected, raw_actual, raw_notes, raw_receiving_dates, raw_car_numbers):
+                actual_value = round(_to_float(actual_qty, 0), 4)
+                expected_value = round(_to_float(expected_qty, actual_value), 4)
+                if actual_value <= 0 and expected_value <= 0:
+                    continue
+                if expected_value <= 0 and actual_value > 0:
+                    expected_value = actual_value
+                raw_code = (raw_code or '').strip()
+                raw_name = (raw_name or '').strip()
+                resolved_raw_id = int(raw_id or 0) if str(raw_id or '').strip().isdigit() else 0
+                if not raw_name and resolved_raw_id > 0:
+                    cursor.execute('SELECT name, code FROM raw_materials WHERE id = ?', (resolved_raw_id,))
+                    raw_row = cursor.fetchone()
+                    raw_name = (raw_row['name'] if raw_row else '') or ''
+                    raw_code = raw_code or ((raw_row['code'] if raw_row else '') or '')
+                if resolved_raw_id <= 0 and (raw_code or raw_name):
+                    clean_receiving_date = (override_receiving_date or '').strip()
+                    clean_car_number = (override_car_number or '').strip()
+                    cursor.execute(
+                        '''
+                        SELECT id
+                        FROM raw_materials
+                        WHERE COALESCE(workplace, '') = ?
+                          AND COALESCE(NULLIF(TRIM(code), ''), '') = ?
+                          AND COALESCE(NULLIF(TRIM(name), ''), '') = ?
+                          AND COALESCE(NULLIF(TRIM(receiving_date), ''), '') = ?
+                          AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = ?
+                        ORDER BY id DESC
+                        LIMIT 1
+                        ''',
+                        (workplace, raw_code, raw_name, clean_receiving_date, clean_car_number),
+                    )
+                    existing_raw = cursor.fetchone()
+                    if existing_raw:
+                        resolved_raw_id = existing_raw['id']
+                    else:
+                        cursor.execute(
+                            '''
+                            INSERT INTO raw_materials
+                            (
+                                name, code, lot, sheets_per_sok, receiving_date, ja_ho, car_number,
+                                total_stock, current_stock, used_quantity, workplace
+                            )
+                            VALUES (?, ?, NULL, 0, ?, ?, ?, 0, 0, 0, ?)
+                            ''',
+                            (
+                                raw_name or raw_code or '등록모드 원초',
+                                raw_code or None,
+                                clean_receiving_date or None,
+                                clean_car_number or None,
+                                clean_car_number or None,
+                                workplace,
+                            ),
+                        )
+                        resolved_raw_id = cursor.lastrowid
+                loss_quantity = round(actual_value - expected_value, 4)
+                yield_rate = round(expected_value / actual_value * 100, 2) if actual_value > 0 and expected_value > 0 else None
+                cursor.execute(
+                    '''
+                    INSERT INTO production_material_usage
+                    (
+                        production_id, material_id, raw_material_id, raw_material_name,
+                        expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note,
+                        override_receiving_date, override_expiry_date, override_car_number
+                    )
+                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+                    ''',
+                    (
+                        production_id,
+                        resolved_raw_id if resolved_raw_id > 0 else None,
+                        raw_name or None,
+                        expected_value,
+                        actual_value,
+                        loss_quantity,
+                        yield_rate,
+                        (usage_note or '').strip(),
+                        (override_receiving_date or '').strip(),
+                        (override_car_number or '').strip(),
+                    ),
+                )
+
+            material_ids = request.form.getlist('material_id[]')
+            material_expected = request.form.getlist('material_expected_quantity[]')
+            material_actual = request.form.getlist('material_actual_quantity[]')
+            material_actual_units = request.form.getlist('material_actual_unit[]')
+            material_receiving_dates = request.form.getlist('material_override_receiving_date[]')
+            material_expiry_dates = request.form.getlist('material_override_expiry_date[]')
+            material_manufacture_dates = request.form.getlist('material_override_manufacture_date[]')
+            if len(material_actual_units) < len(material_ids):
+                material_actual_units.extend(['kg'] * (len(material_ids) - len(material_actual_units)))
+            for material_id, expected_qty, actual_qty, actual_unit, override_receiving_date, override_expiry_date, override_manufacture_date in zip(material_ids, material_expected, material_actual, material_actual_units, material_receiving_dates, material_expiry_dates, material_manufacture_dates):
+                resolved_material_id = int(material_id or 0) if str(material_id or '').strip().isdigit() else 0
+                if resolved_material_id <= 0:
+                    continue
+                actual_value = round(_to_float(actual_qty, 0), 4)
+                if (actual_unit or '').strip().upper() == 'L':
+                    cursor.execute('SELECT COALESCE(name, "") as name FROM materials WHERE id = ?', (resolved_material_id,))
+                    material_row = cursor.fetchone()
+                    if material_row and '참기름' in (material_row['name'] or ''):
+                        actual_value = round(actual_value * 0.92, 4)
+                expected_value = round(_to_float(expected_qty, actual_value), 4)
+                if actual_value <= 0 and expected_value <= 0:
+                    continue
+                loss_quantity = round(actual_value - expected_value, 4)
+                yield_rate = round(expected_value / actual_value * 100, 2) if actual_value > 0 and expected_value > 0 else None
+                cursor.execute(
+                    '''
+                    INSERT INTO production_material_usage
+                    (
+                        production_id, material_id, raw_material_name, expected_quantity, actual_quantity,
+                        loss_quantity, yield_rate, usage_note, override_receiving_date, override_expiry_date, override_manufacture_date, override_car_number
+                    )
+                    VALUES (?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)
+                    ''',
+                    (
+                        production_id,
+                        resolved_material_id,
+                        expected_value,
+                        actual_value,
+                        loss_quantity,
+                        yield_rate,
+                        (override_receiving_date or '').strip(),
+                        (override_expiry_date or '').strip(),
+                        (override_manufacture_date or '').strip(),
+                    ),
+                )
+
+            audit_log(
+                conn,
+                'create',
+                'production',
+                production_id,
+                {
+                    'product_id': product_id,
+                    'production_date': production_date,
+                    'actual_boxes': actual_boxes,
+                    'line': line_text,
+                    'note': note,
+                    'supply_people': supply_people,
+                    'packing_people': packing_people,
+                    'outer_packing_people': outer_packing_people,
+                    'work_time': work_time,
+                    'personnel_note': personnel_note,
+                    'workplace': workplace,
+                    'schedule_id': schedule_id,
+                    'entry_mode': 'register',
+                    'auto_work_day': auto_work_day,
+                },
+            )
+            commit_db(conn)
+        except Exception:
+            rollback_db(conn)
+            raise
+        finally:
+            close_db(conn)
+
+        flash('생산 등록 모드로 저장되었습니다.', 'success')
+        redirect_kwargs = {'registered': 1}
+        if workplace:
+            redirect_kwargs['wp'] = workplace
+        if next_url:
+            redirect_kwargs['next'] = next_url
+        return redirect(url_for('production.production_register_mode', **redirect_kwargs))
+
+    next_url = (request.args.get('next') or '').strip()
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT DISTINCT p.id, p.name, p.code, p.box_quantity, COALESCE(p.expiry_months, 12) as expiry_months, p.workplace
+            FROM products p
+            WHERE COALESCE(p.workplace, '') = ?
+               OR EXISTS (
+                   SELECT 1
+                   FROM productions pr
+                   WHERE pr.product_id = p.id
+                     AND COALESCE(pr.workplace, '') = ?
+               )
+            ORDER BY
+                CASE WHEN COALESCE(p.workplace, '') = ? THEN 0 ELSE 1 END,
+                p.name
+            ''',
+            (workplace, workplace, workplace),
+        )
+        products = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute(
+            '''
+            SELECT
+                b.product_id,
+                rm.id as raw_material_id,
+                rm.name as raw_material_name,
+                COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_material_code,
+                COALESCE(NULLIF(TRIM(rm.code), ''), '') as raw_material_code_key,
+                COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
+                COALESCE(rm.receiving_date, '') as receiving_date,
+                b.quantity_per_box
+            FROM bom b
+            JOIN raw_materials rm ON b.raw_material_id = rm.id
+            JOIN products p ON p.id = b.product_id
+            WHERE COALESCE(p.workplace, '') = ?
+               OR EXISTS (
+                   SELECT 1
+                   FROM productions pr
+                   WHERE pr.product_id = p.id
+                     AND COALESCE(pr.workplace, '') = ?
+               )
+            ORDER BY b.product_id, rm.name
+            ''',
+            (workplace, workplace),
+        )
+        raw_bom_rows = []
+        seen_raw_bom_keys = set()
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            raw_key = (
+                int(row_dict['product_id']),
+                (row_dict.get('raw_material_code_key') or row_dict.get('raw_material_name') or '').strip(),
+            )
+            if raw_key in seen_raw_bom_keys:
+                continue
+            seen_raw_bom_keys.add(raw_key)
+            row_dict.pop('raw_material_code_key', None)
+            raw_bom_rows.append(row_dict)
+
+        cursor.execute(
+            '''
+            SELECT
+                b.product_id,
+                b.material_id,
+                m.name as material_name,
+                COALESCE(NULLIF(TRIM(m.code), ''), printf('MAT%05d', m.id)) as material_code,
+                COALESCE(m.unit, 'EA') as unit,
+                COALESCE(m.category, '') as material_category,
+                b.quantity_per_box,
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
+            FROM bom b
+            JOIN materials m ON b.material_id = m.id
+            JOIN products p ON p.id = b.product_id
+            WHERE COALESCE(p.workplace, '') = ?
+               OR EXISTS (
+                   SELECT 1
+                   FROM productions pr
+                   WHERE pr.product_id = p.id
+                     AND COALESCE(pr.workplace, '') = ?
+               )
+            ORDER BY b.product_id, material_category, material_name
+            ''',
+            (workplace, workplace),
+        )
+        material_bom_rows = [
+            dict(row)
+            for row in _filter_selected_variant_bom_rows(cursor.fetchall())
+        ]
+
+        cursor.execute(
+            '''
+            SELECT
+                MIN(id) as id,
+                MIN(name) as name,
+                COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', MIN(id))) as code,
+                MIN(COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''))) as car_number,
+                MAX(receiving_date) as receiving_date
+            FROM raw_materials
+            WHERE workplace = ?
+            GROUP BY COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id))
+            ORDER BY MIN(name)
+            ''',
+            (workplace,),
+        )
+        raw_catalog = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute(
+            '''
+            SELECT id, name, code, unit, category, workplace
+            FROM materials
+            WHERE workplace = ? OR workplace = ?
+            ORDER BY name
+            ''',
+            (workplace, SHARED_WORKPLACE),
+        )
+        material_catalog = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute(
+            '''
+            SELECT
+                pr.product_id,
+                pmu.raw_material_id,
+                COALESCE(NULLIF(TRIM(rm.code), ''), '') as raw_material_code,
+                COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), NULLIF(TRIM(rm.name), ''), '') as raw_material_name,
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as receiving_date,
+                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') as car_number,
+                COALESCE(pmu.actual_quantity, 0) as actual_quantity,
+                COALESCE(pmu.usage_note, '') as usage_note
+            FROM production_material_usage pmu
+            JOIN productions pr ON pr.id = pmu.production_id
+            LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+            WHERE COALESCE(pr.workplace, '') = ?
+              AND COALESCE(pr.entry_mode, '') = 'register'
+              AND pmu.material_id IS NULL
+            ORDER BY pr.id DESC, pmu.id DESC
+            ''',
+            (workplace,),
+        )
+        last_raw_defaults = {}
+        for row in cursor.fetchall():
+            product_key = str(row['product_id'])
+            bucket = last_raw_defaults.setdefault(product_key, {'by_id': {}, 'by_code': {}, 'by_name': {}})
+            default_value = {
+                'receiving_date': row['receiving_date'] or '',
+                'car_number': row['car_number'] or '',
+                'actual_quantity': row['actual_quantity'] or 0,
+                'usage_note': row['usage_note'] or '',
+            }
+            raw_id = str(row['raw_material_id'] or '')
+            raw_code = (row['raw_material_code'] or '').strip()
+            raw_name = (row['raw_material_name'] or '').strip()
+            if raw_id and raw_id not in bucket['by_id']:
+                bucket['by_id'][raw_id] = default_value
+            if raw_code and raw_code not in bucket['by_code']:
+                bucket['by_code'][raw_code] = default_value
+            if raw_name and raw_name not in bucket['by_name']:
+                bucket['by_name'][raw_name] = default_value
+
+        cursor.execute(
+            '''
+            SELECT
+                pr.product_id,
+                pmu.material_id,
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as receiving_date,
+                COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), '') as expiry_date,
+                COALESCE(NULLIF(TRIM(pmu.override_manufacture_date), ''), '') as manufacture_date,
+                COALESCE(pmu.actual_quantity, 0) as actual_quantity
+            FROM production_material_usage pmu
+            JOIN productions pr ON pr.id = pmu.production_id
+            WHERE COALESCE(pr.workplace, '') = ?
+              AND COALESCE(pr.entry_mode, '') = 'register'
+              AND pmu.material_id IS NOT NULL
+            ORDER BY pr.id DESC, pmu.id DESC
+            ''',
+            (workplace,),
+        )
+        last_material_defaults = {}
+        for row in cursor.fetchall():
+            product_key = str(row['product_id'])
+            material_key = str(row['material_id'] or '')
+            if not material_key:
+                continue
+            bucket = last_material_defaults.setdefault(product_key, {})
+            if material_key not in bucket:
+                bucket[material_key] = {
+                    'receiving_date': row['receiving_date'] or '',
+                    'expiry_date': row['expiry_date'] or '',
+                    'manufacture_date': row['manufacture_date'] or '',
+                    'actual_quantity': row['actual_quantity'] or 0,
+                }
+
+    raw_bom_map = defaultdict(list)
+    for row in raw_bom_rows:
+        raw_bom_map[int(row['product_id'])].append(row)
+
+    material_bom_map = defaultdict(list)
+    for row in material_bom_rows:
+        material_bom_map[int(row['product_id'])].append(row)
+
+    return render_template(
+        'production_register_mode.html',
+        user=session['user'],
+        today=today_local(),
+        products=products,
+        products_json=json.dumps(products, ensure_ascii=False),
+        raw_bom_json=json.dumps(raw_bom_map, ensure_ascii=False),
+        material_bom_json=json.dumps(material_bom_map, ensure_ascii=False),
+        last_raw_defaults_json=json.dumps(last_raw_defaults, ensure_ascii=False),
+        last_material_defaults_json=json.dumps(last_material_defaults, ensure_ascii=False),
+        raw_catalog_json=json.dumps(raw_catalog, ensure_ascii=False),
+        material_catalog_json=json.dumps(material_catalog, ensure_ascii=False),
+        next_url=next_url,
+        workplace=workplace,
+        available_workplaces=available_workplaces,
+        available_workplaces_json=json.dumps(available_workplaces, ensure_ascii=False),
+    )
+
+
 @bp.route('/production/<int:production_id>')
 @login_required
 def production_detail(production_id):
@@ -4571,6 +5332,8 @@ def production_detail(production_id):
 
     production = dict(production)
     production['status'] = _normalize_production_status(production.get('status'))
+    production['entry_mode'] = _normalize_production_entry_mode(production.get('entry_mode'))
+    production['entry_mode_meta'] = _get_production_entry_mode_meta(production.get('entry_mode'))
     done_status = _normalize_production_status('\uC644\uB8CC')
     viewer_workplace = (get_workplace() or session.get('workplace') or '').strip()
     production_workplace = (production.get('workplace') or '').strip()
@@ -4611,6 +5374,14 @@ def production_detail(production_id):
     except Exception:
         calculated_expiry_date = production['production_date'] or ''
     expiry_rows, expiry_visible_count = _build_production_expiry_rows(production, calculated_expiry_date)
+    if _is_register_entry_mode(production.get('entry_mode')):
+        register_actual_boxes = _coerce_float(production.get('actual_boxes')) or _coerce_float(production.get('planned_boxes'))
+        has_expiry_box = any(_coerce_float(row.get('boxes')) > 0 for row in expiry_rows)
+        if register_actual_boxes > 0 and expiry_rows and not has_expiry_box:
+            expiry_rows[0]['boxes'] = register_actual_boxes
+            expiry_rows[0]['export_boxes'] = register_actual_boxes
+            expiry_rows[0]['has_value'] = True
+            expiry_visible_count = max(expiry_visible_count, 1)
     production['sample_excluded_total'] = round(
         sum(float(row.get('sample_boxes') or 0) for row in expiry_rows),
         1,
@@ -4639,8 +5410,8 @@ def production_detail(production_id):
                    pmu.expected_quantity as expected_quantity,
                    pmu.yield_rate as yield_rate,
                    COALESCE(rm.name, pmu.raw_material_name, '(??????癒?겧)') as rm_name, 
-                   rm.car_number, 
-                   rm.receiving_date,
+                   COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), rm.car_number) as car_number, 
+                   COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date) as receiving_date,
                    COALESCE(rm.current_stock, 0) as current_stock
             FROM production_material_usage pmu
             LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
@@ -4768,8 +5539,8 @@ def production_detail(production_id):
                 pmu.raw_material_id as rm_id,
                 ? as quantity_per_box,
                 COALESCE(rm.name, pmu.raw_material_name, '(원초)') as rm_name,
-                COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
-                rm.receiving_date,
+                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date) as receiving_date,
                 (
                     COALESCE(rm.current_stock, 0)
                     + CASE WHEN ? = 1 THEN SUM(COALESCE(pmu.actual_quantity, 0)) ELSE 0 END
@@ -4780,7 +5551,7 @@ def production_detail(production_id):
             LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
             WHERE pmu.production_id = ?
               AND pmu.raw_material_id IS NOT NULL
-            GROUP BY pmu.raw_material_id, rm.id, rm.name, rm.car_number, rm.receiving_date, rm.current_stock, pmu.raw_material_name
+            GROUP BY pmu.raw_material_id, rm.id, rm.name, rm.car_number, rm.receiving_date, rm.current_stock, pmu.raw_material_name, pmu.override_car_number, pmu.override_receiving_date
             ORDER BY
                 CASE WHEN rm.receiving_date IS NULL OR TRIM(rm.receiving_date) = '' THEN 1 ELSE 0 END ASC,
                 rm.receiving_date ASC,
@@ -4903,7 +5674,10 @@ def production_detail(production_id):
                COALESCE(pmu.raw_material_name, m.name) as material_name,
                COALESCE(m.code, '') as material_code,
                COALESCE(m.unit, '-') as unit,
-               COALESCE(m.category, '원초') as category
+               COALESCE(m.category, '원초') as category,
+               COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as override_receiving_date,
+               COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), '') as override_expiry_date,
+               COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') as override_car_number
         FROM production_material_usage pmu
         LEFT JOIN materials m ON pmu.material_id = m.id
         WHERE pmu.production_id = ?
@@ -4952,6 +5726,54 @@ def production_detail(production_id):
             row['current_stock'] = 0.0
             row['lot_info_gap'] = None
             row['has_lot_info_gap'] = False
+        row['display_receiving_date'] = row.get('override_receiving_date') or ''
+        row['display_expiry_date'] = row.get('override_expiry_date') or ''
+
+    detail_material_usage = material_usage
+    if _is_register_entry_mode(production.get('entry_mode')):
+        grouped_material_usage = {}
+        for row in material_usage:
+            material_id = int(row.get('material_id') or 0)
+            if material_id <= 0:
+                continue
+            entry = grouped_material_usage.get(material_id)
+            if not entry:
+                entry = dict(row)
+                entry['expected_quantity'] = 0.0
+                entry['actual_quantity'] = 0.0
+                entry['loss_quantity'] = 0.0
+                entry['yield_rate'] = None
+                entry['aggregate_count'] = 0
+                entry['source_ids'] = []
+                entry['has_lot_info_gap'] = False
+                entry['lot_info_gap'] = None
+                grouped_material_usage[material_id] = entry
+            expected_qty = _coerce_float(row.get('expected_quantity'))
+            actual_qty = _coerce_float(row.get('actual_quantity'))
+            entry['expected_quantity'] += expected_qty
+            entry['actual_quantity'] += actual_qty
+            entry['aggregate_count'] += 1
+            if row.get('id') is not None:
+                entry['source_ids'].append(row.get('id'))
+            if row.get('base_sort_key') is not None:
+                entry['base_sort_key'] = min(entry.get('base_sort_key', row.get('base_sort_key')), row.get('base_sort_key'))
+        for entry in grouped_material_usage.values():
+            expected_qty = round(_coerce_float(entry.get('expected_quantity')), 4)
+            actual_qty = round(_coerce_float(entry.get('actual_quantity')), 4)
+            entry['expected_quantity'] = expected_qty
+            entry['actual_quantity'] = actual_qty
+            entry['loss_quantity'] = round(actual_qty - expected_qty, 4)
+            entry['yield_rate'] = round(expected_qty / actual_qty * 100, 2) if actual_qty > 0 and expected_qty > 0 else None
+        raw_usage_rows = [dict(row) for row in material_usage if int(row.get('material_id') or 0) <= 0]
+        detail_material_usage = raw_usage_rows + sorted(
+            grouped_material_usage.values(),
+            key=lambda item: (
+                item.get('base_sort_key') if item.get('base_sort_key') is not None else 999,
+                item.get('material_name') or '',
+                item.get('id') or 0,
+            ),
+        )
+
     raw_saved_map = {}
     for row in material_usage:
         if row['raw_material_id'] and row['actual_quantity'] is not None:
@@ -5012,24 +5834,72 @@ def production_detail(production_id):
 
     raw_checksheet_options = []
     seen_raw_ids = set()
-    for rm in bom_raw_items:
-        raw_id = int(rm['rm_id'] or 0)
-        if raw_id <= 0 or raw_id in seen_raw_ids:
-            continue
-        saved_entry = raw_saved_map.get(raw_id) or {}
-        used_qty = float(saved_entry.get('qty') or 0)
-        if production['status'] == '\uC644\uB8CC' and used_qty <= 0:
-            continue
-        seen_raw_ids.add(raw_id)
-        raw_checksheet_options.append(
-            {
-                'id': raw_id,
-                'name': rm['rm_name'] or '',
-                'car_number': rm['car_number'] or '',
-                'receiving_date': rm['receiving_date'] or '',
-                'url': url_for('materials.raw_material_checksheet_preview', raw_material_id=raw_id),
-            }
-        )
+    if _is_register_entry_mode(production.get('entry_mode')):
+        seen_raw_lot_keys = set()
+        for row in material_usage:
+            raw_id = int(row.get('raw_material_id') or 0)
+            if raw_id <= 0:
+                continue
+            used_qty = float(row.get('actual_quantity') or 0)
+            if production['status'] == '\uC644\uB8CC' and used_qty <= 0:
+                continue
+            receiving_date = (row.get('override_receiving_date') or row.get('display_receiving_date') or '').strip()
+            car_number = (row.get('override_car_number') or '').strip()
+            lot_key = (receiving_date, car_number) if receiving_date or car_number else (f'id:{raw_id}', '')
+            if lot_key in seen_raw_lot_keys:
+                continue
+            seen_raw_lot_keys.add(lot_key)
+            raw_checksheet_options.append(
+                {
+                    'id': raw_id,
+                    'name': row.get('material_name') or row.get('raw_material_name') or '',
+                    'car_number': car_number,
+                    'receiving_date': receiving_date,
+                    'url': url_for(
+                        'materials.raw_material_checksheet_preview',
+                        raw_material_id=raw_id,
+                        production_id=production_id,
+                        lot_receiving_date=receiving_date,
+                        lot_car_number=car_number,
+                    ),
+                }
+            )
+    else:
+        for rm in bom_raw_items:
+            raw_id = int(rm['rm_id'] or 0)
+            if raw_id <= 0 or raw_id in seen_raw_ids:
+                continue
+            saved_entry = raw_saved_map.get(raw_id) or {}
+            used_qty = float(saved_entry.get('qty') or 0)
+            if production['status'] == '\uC644\uB8CC' and used_qty <= 0:
+                continue
+            seen_raw_ids.add(raw_id)
+            raw_checksheet_options.append(
+                {
+                    'id': raw_id,
+                    'name': rm['rm_name'] or '',
+                    'car_number': rm['car_number'] or '',
+                    'receiving_date': rm['receiving_date'] or '',
+                    'url': url_for('materials.raw_material_checksheet_preview', raw_material_id=raw_id, production_id=production_id),
+                }
+            )
+        for row in material_usage:
+            raw_id = int(row.get('raw_material_id') or 0)
+            if raw_id <= 0 or raw_id in seen_raw_ids:
+                continue
+            used_qty = float(row.get('actual_quantity') or 0)
+            if production['status'] == '\uC644\uB8CC' and used_qty <= 0:
+                continue
+            seen_raw_ids.add(raw_id)
+            raw_checksheet_options.append(
+                {
+                    'id': raw_id,
+                    'name': row.get('material_name') or row.get('raw_material_name') or '',
+                    'car_number': row.get('override_car_number') or '',
+                    'receiving_date': row.get('override_receiving_date') or '',
+                    'url': url_for('materials.raw_material_checksheet_preview', raw_material_id=raw_id, production_id=production_id),
+                }
+            )
 
     material_scope = 'yemat'
     for row in material_usage:
@@ -5042,6 +5912,7 @@ def production_detail(production_id):
         'printouts.material_checksheet_preview',
         date=production['production_date'],
         scope=material_scope,
+        production_id=production_id,
     )
     packaging_checksheet_url = url_for(
         'printouts.packaging_checksheet_preview',
@@ -5057,6 +5928,7 @@ def production_detail(production_id):
         viewer_workplace=viewer_workplace,
         has_workplace_access=has_workplace_access,
         material_usage=material_usage,
+        detail_material_usage=detail_material_usage,
         bom_raw_items=bom_raw_items,
         calculated_expiry_date=calculated_expiry_date,
         raw_saved_map=raw_saved_map,
@@ -5283,7 +6155,7 @@ def update_production_usage(production_id):
         cursor.execute(
             '''
             SELECT pr.planned_boxes, pr.product_id, pr.production_date, pr.status, pr.raw_sok_mode,
-                   pr.workplace,
+                   pr.workplace, pr.entry_mode,
                    p.expiry_months, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
                    p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3
             FROM productions pr
@@ -5306,7 +6178,22 @@ def update_production_usage(production_id):
             )
         workplace_location_id = _get_inventory_location_id(cursor, current_workplace) if current_workplace else None
         production_status = _normalize_production_status(prod_row['status'] if prod_row and prod_row['status'] else '')
+        production_entry_mode = _normalize_production_entry_mode(prod_row['entry_mode'] if prod_row else '')
+        skip_stock_impact = _is_register_entry_mode(production_entry_mode)
         is_completed_status = production_status == _normalize_production_status('\uC644\uB8CC')
+        current_production_date = (prod_row['production_date'] if prod_row and prod_row['production_date'] else '').strip()
+        effective_production_date = current_production_date
+        if skip_stock_impact and not apply_usage_id:
+            requested_production_date = (request.form.get('production_date') or '').strip()
+            if not requested_production_date:
+                rollback_db(conn)
+                return "<script>alert('생산일을 입력해 주세요.'); window.history.back();</script>"
+            try:
+                datetime.strptime(requested_production_date, '%Y-%m-%d')
+            except ValueError:
+                rollback_db(conn)
+                return "<script>alert('생산일 형식을 확인해 주세요.'); window.history.back();</script>"
+            effective_production_date = requested_production_date
 
         if apply_usage_id:
             cursor.execute(
@@ -5355,7 +6242,7 @@ def update_production_usage(production_id):
         expiry_date_3_input = (request.form.get('expiry_date_3') or '').strip()
         requested_raw_sok_mode = (request.form.get('raw_sok_mode') or '').strip() or str(prod_row['raw_sok_mode'] or 1)
 
-        production_date_str = prod_row['production_date'] if prod_row and prod_row['production_date'] else ''
+        production_date_str = effective_production_date
         expiry_months = int(prod_row['expiry_months'] or 12) if prod_row else 12
         default_expiry_date = production_date_str
         raw_sok_mode, active_raw_option, raw_options = _resolve_raw_sok_mode(dict(prod_row) if prod_row else {}, requested_raw_sok_mode)
@@ -5493,7 +6380,8 @@ def update_production_usage(production_id):
         cursor.execute(
             '''
             UPDATE productions
-            SET supply_line = ?, supply_people = ?,
+            SET production_date = ?,
+                supply_line = ?, supply_people = ?,
                 packing_line = ?, packing_people = ?,
                 outer_packing_line = ?, outer_packing_people = ?,
                 work_time = ?, personnel_note = ?, expiry_date = ?, expiry_date_2 = ?, expiry_date_3 = ?,
@@ -5503,6 +6391,7 @@ def update_production_usage(production_id):
             WHERE id = ?
             ''',
             (
+                effective_production_date,
                 planned_line,
                 supply_people,
                 planned_line,
@@ -5524,6 +6413,18 @@ def update_production_usage(production_id):
                 production_id,
             ),
         )
+        if skip_stock_impact:
+            cursor.execute(
+                '''
+                UPDATE production_schedules
+                SET scheduled_date = ?
+                WHERE production_id = ?
+                   OR id = (SELECT schedule_id FROM productions WHERE id = ?)
+                ''',
+                (effective_production_date, production_id, production_id),
+            )
+            _cleanup_register_mode_work_day(cursor, current_production_date, production_id)
+            _sync_register_mode_work_day(cursor, effective_production_date, work_time, production_id)
 
         # 1. ??쇱젫 獄쏅벡????롮쨮 ??됯맒?????????疫꿸퀣??usage ??낅쑓??꾨뱜
         if actual_boxes > 0:
@@ -5593,32 +6494,33 @@ def update_production_usage(production_id):
                 (production_id,),
             )
         else:
-            touched_material_ids |= _rollback_material_lot_usage_for_production(cursor, production_id, 'resave')
-            if is_completed_status:
-                _rollback_raw_usage_for_production(
-                    cursor,
-                    production_id,
-                    session.get('user', {}).get('username'),
-                    note_prefix='production_edit',
-                )
-            if is_completed_status and not touched_material_ids:
-                cursor.execute(
-                    '''
-                    SELECT material_id, COALESCE(actual_quantity, 0) as qty
-                    FROM production_material_usage
-                    WHERE production_id = ?
-                      AND material_id IS NOT NULL
-                      AND COALESCE(actual_quantity, 0) > 0
-                    ''',
-                    (production_id,),
-                )
-                legacy_rows = cursor.fetchall()
-                for legacy in legacy_rows:
-                    cursor.execute(
-                        'UPDATE materials SET current_stock = current_stock + ? WHERE id = ?',
-                        (legacy['qty'], legacy['material_id']),
+            if not skip_stock_impact:
+                touched_material_ids |= _rollback_material_lot_usage_for_production(cursor, production_id, 'resave')
+                if is_completed_status:
+                    _rollback_raw_usage_for_production(
+                        cursor,
+                        production_id,
+                        session.get('user', {}).get('username'),
+                        note_prefix='production_edit',
                     )
-                    touched_material_ids.add(legacy['material_id'])
+                if is_completed_status and not touched_material_ids:
+                    cursor.execute(
+                        '''
+                        SELECT material_id, COALESCE(actual_quantity, 0) as qty
+                        FROM production_material_usage
+                        WHERE production_id = ?
+                          AND material_id IS NOT NULL
+                          AND COALESCE(actual_quantity, 0) > 0
+                        ''',
+                        (production_id,),
+                    )
+                    legacy_rows = cursor.fetchall()
+                    for legacy in legacy_rows:
+                        cursor.execute(
+                            'UPDATE materials SET current_stock = current_stock + ? WHERE id = ?',
+                            (legacy['qty'], legacy['material_id']),
+                        )
+                        touched_material_ids.add(legacy['material_id'])
 
         # ???癒?겧 ?????븃??野껓쭩?(筌△몿而??袁⑸퓠 ?믪눘? 筌ｋ똾寃?
         raw_requests = []
@@ -5717,7 +6619,7 @@ def update_production_usage(production_id):
                         }
                     )
 
-        if save_action != 'temp' and insufficient_raw:
+        if save_action != 'temp' and not skip_stock_impact and insufficient_raw:
             if conn:
                 try:
                     rollback_db(conn)
@@ -5749,7 +6651,7 @@ def update_production_usage(production_id):
         boxes_for_need = actual_boxes if actual_boxes > 0 else planned_boxes
         total_need = per_box * boxes_for_need
 
-        if save_action != 'temp':
+        if save_action != 'temp' and not skip_stock_impact:
             cursor.execute(
                 '''
                 SELECT id, material_id
@@ -5885,29 +6787,9 @@ def update_production_usage(production_id):
                 )
                 continue
 
-            consumed = _consume_raw_by_code_fifo(
-                cursor,
-                req['source_rm_id'],
-                actual_qty,
-                production_id,
-                session['user']['username'],
-            )
-            if not consumed:
-                continue
-            expected_remain = expected_qty
-            consumed_total = sum(float(seg['quantity'] or 0) for seg in consumed)
-            for i, seg in enumerate(consumed):
-                seg_qty = float(seg['quantity'] or 0)
-                if seg_qty <= 0:
-                    continue
-                if i == len(consumed) - 1:
-                    seg_expected = max(expected_remain, 0.0)
-                else:
-                    ratio = seg_qty / consumed_total if consumed_total > 0 else 0
-                    seg_expected = round(expected_qty * ratio, 4)
-                    expected_remain -= seg_expected
-                seg_loss = seg_qty - seg_expected
-                seg_yield = round(seg_expected / seg_qty * 100, 2) if seg_qty > 0 and seg_expected > 0 else None
+            if skip_stock_impact:
+                seg_loss = actual_qty - expected_qty
+                seg_yield = round(expected_qty / actual_qty * 100, 2) if actual_qty > 0 and expected_qty > 0 else None
                 cursor.execute(
                     '''
                     INSERT INTO production_material_usage
@@ -5916,15 +6798,56 @@ def update_production_usage(production_id):
                     ''',
                     (
                         production_id,
-                        seg['raw_material_id'],
-                        seg['raw_material_name'],
-                        seg_expected,
-                        seg_qty,
+                        req['source_rm_id'],
+                        req['name'],
+                        expected_qty,
+                        actual_qty,
                         seg_loss,
                         seg_yield,
                         req.get('note', ''),
                     ),
                 )
+            else:
+                consumed = _consume_raw_by_code_fifo(
+                    cursor,
+                    req['source_rm_id'],
+                    actual_qty,
+                    production_id,
+                    session['user']['username'],
+                )
+                if not consumed:
+                    continue
+                expected_remain = expected_qty
+                consumed_total = sum(float(seg['quantity'] or 0) for seg in consumed)
+                for i, seg in enumerate(consumed):
+                    seg_qty = float(seg['quantity'] or 0)
+                    if seg_qty <= 0:
+                        continue
+                    if i == len(consumed) - 1:
+                        seg_expected = max(expected_remain, 0.0)
+                    else:
+                        ratio = seg_qty / consumed_total if consumed_total > 0 else 0
+                        seg_expected = round(expected_qty * ratio, 4)
+                        expected_remain -= seg_expected
+                    seg_loss = seg_qty - seg_expected
+                    seg_yield = round(seg_expected / seg_qty * 100, 2) if seg_qty > 0 and seg_expected > 0 else None
+                    cursor.execute(
+                        '''
+                        INSERT INTO production_material_usage
+                        (production_id, material_id, raw_material_id, raw_material_name, expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note)
+                        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
+                        ''',
+                        (
+                            production_id,
+                            seg['raw_material_id'],
+                            seg['raw_material_name'],
+                            seg_expected,
+                            seg_qty,
+                            seg_loss,
+                            seg_yield,
+                            req.get('note', ''),
+                        ),
+                    )
 
         # 3. ??곗뺘 ??癒?삺 ??쇨텢??몄쎗 筌ｌ꼶??
         for key in request.form:
@@ -5961,7 +6884,7 @@ def update_production_usage(production_id):
                 )
 
                 # ??癒?삺 ????筌△몿而?
-                if save_action != 'temp' and row['material_id']:
+                if save_action != 'temp' and row['material_id'] and not skip_stock_impact:
                     consumed_lots = _consume_material_fifo(
                         cursor,
                         production_id,
@@ -6000,6 +6923,7 @@ def update_production_usage(production_id):
                 production_id,
                 {
                     'save_action': 'temp',
+                    'production_date': effective_production_date,
                     'actual_boxes': actual_boxes,
                     'expiry_date': expiry_date,
                     'raw_entries': raw_entries,
@@ -6025,7 +6949,7 @@ def update_production_usage(production_id):
                 (production_id,),
             )
 
-        if save_action != 'temp' and touched_material_ids:
+        if save_action != 'temp' and touched_material_ids and not skip_stock_impact:
             for material_id in touched_material_ids:
                 _sync_material_stock_with_lots(conn, material_id)
 
@@ -6037,6 +6961,7 @@ def update_production_usage(production_id):
             {
                 'actual_boxes': actual_boxes,
                 'planned_boxes': planned_boxes,
+                'production_date': effective_production_date,
                 'expiry_date': expiry_date,
                 'raw_entries': raw_entries,
             },
@@ -6110,9 +7035,10 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
         return False
 
     status = _normalize_production_status(prod['status'])
+    entry_mode = _normalize_production_entry_mode(prod['entry_mode'])
     product_id, schedule_id = prod['product_id'], prod['schedule_id']
 
-    if status == '?꾨즺':
+    if status == '?꾨즺' and not _is_register_entry_mode(entry_mode):
         cursor.execute(
             '''
             SELECT raw_material_id, material_id, actual_quantity

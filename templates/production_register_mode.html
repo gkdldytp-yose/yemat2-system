@@ -1,0 +1,1363 @@
+{% extends "base.html" %}
+{% block title %}생산 등록 모드{% endblock %}
+{% block extra_css %}
+<style>
+.register-shell{display:flex;flex-direction:column;gap:1rem;}
+.register-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.register-title{margin:0;color:#eff6ff;font-size:1.65rem;font-weight:900;letter-spacing:0;}
+.register-subtitle{margin:.35rem 0 0;color:#9fb2cb;font-size:.92rem;line-height:1.55;}
+.register-badge{display:inline-flex;align-items:center;padding:.32rem .7rem;border-radius:999px;background:#164e63;color:#a5f3fc;font-size:.78rem;font-weight:900;border:1px solid rgba(34,211,238,.25);}
+.register-success{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.85rem 1rem;border:1px solid #22c55e;border-radius:8px;background:linear-gradient(180deg,rgba(20,83,45,.35),rgba(6,78,59,.25));color:#dcfce7;box-shadow:0 0 0 1px rgba(34,197,94,.18),0 0 18px rgba(34,197,94,.12);}
+.register-success strong{color:#bbf7d0;}
+.register-success span{color:#a7f3d0;font-size:.88rem;font-weight:700;}
+.step-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:1rem;align-items:start;}
+.step-nav{position:sticky;top:1rem;display:flex;flex-direction:column;gap:.55rem;padding:1rem;border:1px solid #26364d;border-radius:8px;background:#101827;}
+.step-nav-btn{display:flex;align-items:center;justify-content:space-between;gap:.55rem;width:100%;padding:.75rem .8rem;border:1px solid #2b3b52;border-radius:8px;background:#121d2e;color:#9fb2cb;text-align:left;font-weight:800;cursor:pointer;}
+.step-nav-btn.active{background:#0f2f3a;border-color:#22d3ee;color:#eff6ff;}
+.step-nav-btn.done .step-state{background:#14532d;color:#bbf7d0;}
+.step-index{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:999px;background:#1d2940;color:#93c5fd;font-size:.75rem;flex:0 0 auto;}
+.step-label{flex:1;}
+.step-state{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:.2rem .45rem;border-radius:999px;background:#1d2940;color:#9fb2cb;font-size:.7rem;}
+.step-panel{display:none;border:1px solid #26364d;border-radius:8px;background:linear-gradient(180deg,#111a29,#0c1422);padding:1.2rem;box-shadow:0 18px 36px rgba(2,6,23,.25);}
+.step-panel.active{display:block;}
+.step-panel h2{margin:0 0 .8rem;color:#eff6ff;font-size:1.08rem;}
+.step-panel-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.8rem;}
+.step-panel-title-row h2{margin:0;}
+.workplace-switch-wrap{position:relative;display:flex;align-items:flex-end;flex-direction:column;gap:.45rem;}
+.workplace-switch-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 .9rem;border:1px solid #334155;border-radius:8px;background:#132033;color:#dbe7f5;font-size:.84rem;font-weight:900;cursor:pointer;}
+.workplace-switch-btn:hover{border-color:#22d3ee;color:#eff6ff;background:#12313b;}
+.workplace-switch-panel{display:none;position:absolute;top:calc(100% + .45rem);right:0;z-index:30;width:min(320px,80vw);padding:.8rem;border:1px solid #35506b;border-radius:10px;background:#101827;box-shadow:0 18px 34px rgba(2,6,23,.38);}
+.workplace-switch-panel.open{display:block;}
+.workplace-switch-panel label{display:block;color:#c8d5e6;font-size:.78rem;font-weight:900;margin-bottom:.4rem;}
+.workplace-switch-actions{display:flex;justify-content:flex-end;gap:.45rem;margin-top:.6rem;}
+.workplace-current-badge{display:inline-flex;align-items:center;padding:.25rem .55rem;border-radius:999px;background:#0f2f3a;color:#a5f3fc;border:1px solid rgba(34,211,238,.24);font-size:.72rem;font-weight:900;}
+.step-note{margin:0 0 1rem;color:#8ea3bd;font-size:.86rem;line-height:1.5;}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;}
+.field-grid.three{grid-template-columns:repeat(3,minmax(0,1fr));}
+.field{display:flex;flex-direction:column;gap:.38rem;}
+.field.full{grid-column:1 / -1;}
+.field label{color:#c8d5e6;font-size:.8rem;font-weight:800;}
+.field.required label::after{content:" *";color:#67e8f9;text-shadow:0 0 10px rgba(34,211,238,.85);}
+.register-input,.register-select,.register-textarea{width:100%;box-sizing:border-box;border:1px solid #314155;border-radius:8px;background:#0f1827;color:#eff6ff;padding:.72rem .78rem;font-size:.92rem;}
+.field.required .register-input,
+.field.required .register-select,
+.field.required .register-textarea,
+.register-input.required-input,
+.register-select.required-input,
+.register-textarea.required-input{
+    border-color:#22d3ee;
+    box-shadow:0 0 0 1px rgba(34,211,238,.28),0 0 16px rgba(34,211,238,.18),inset 0 0 18px rgba(34,211,238,.04);
+}
+.register-textarea{min-height:86px;resize:vertical;}
+.ko-first-input{ime-mode:active;}
+.register-input:focus,.register-select:focus,.register-textarea:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.14);}
+.date-field-head{display:flex;align-items:center;justify-content:space-between;gap:.4rem;min-height:18px;}
+.date-field-head label{min-width:0;}
+.date-unknown-wrap{display:block;}
+.date-unknown-wrap .register-input{min-width:0;width:100%;}
+.unknown-date-btn{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 .52rem;border:1px solid #334155;border-radius:999px;background:#17233a;color:#cbd5e1;font-size:.7rem;font-weight:900;cursor:pointer;white-space:nowrap;}
+.unknown-date-btn.active{border-color:#22c55e;background:#123124;color:#bbf7d0;box-shadow:0 0 14px rgba(34,197,94,.12);}
+.product-search-wrap{position:relative;}
+.product-search-drop{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;max-height:260px;overflow:auto;border:1px solid #35506b;border-radius:8px;background:#101a2b;box-shadow:0 18px 32px rgba(2,6,23,.32);}
+.product-search-option{padding:.78rem .85rem;border-bottom:1px solid rgba(148,163,184,.12);cursor:pointer;}
+.product-search-option:hover{background:#152235;}
+.product-search-option strong{display:block;color:#eff6ff;}
+.product-search-meta{margin-top:.22rem;color:#8ea3bd;font-size:.76rem;}
+.line-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;}
+.line-item{display:flex;align-items:center;gap:.48rem;padding:.68rem .72rem;border:1px solid #314155;border-radius:8px;background:#0f1827;color:#dbe7f5;font-weight:800;}
+.line-item input{width:17px;height:17px;accent-color:#0891b2;}
+.line-item:has(input:checked){border-color:#22d3ee;background:#12313b;color:#eff6ff;}
+.summary-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;margin-top:1rem;}
+.summary-cell{padding:.75rem .85rem;border:1px solid #28384f;border-radius:8px;background:#101827;}
+.summary-cell.important{border-color:#22d3ee;box-shadow:0 0 0 1px rgba(34,211,238,.22),0 0 18px rgba(34,211,238,.12);}
+.summary-cell span{display:block;color:#8ea3bd;font-size:.72rem;font-weight:800;}
+.summary-cell strong{display:block;margin-top:.25rem;color:#eff6ff;font-size:.98rem;}
+.expiry-register-panel{grid-column:1 / -1;padding:.9rem;border:1px solid #26364d;border-radius:8px;background:#0d1725;}
+.expiry-register-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;flex-wrap:wrap;}
+.expiry-register-title{color:#eff6ff;font-size:.9rem;font-weight:900;}
+.expiry-register-desc{margin-top:.24rem;color:#8ea3bd;font-size:.78rem;line-height:1.45;}
+.expiry-auto-card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem;margin-top:.8rem;}
+.expiry-auto-item{padding:.75rem;border:1px solid #22d3ee;border-radius:8px;background:#101827;box-shadow:0 0 14px rgba(34,211,238,.12);}
+.expiry-auto-item span{display:block;color:#8ea3bd;font-size:.72rem;font-weight:800;}
+.expiry-auto-item strong{display:block;margin-top:.24rem;color:#a5f3fc;font-size:1rem;}
+.expiry-custom-panel{display:none;margin-top:.85rem;gap:.55rem;}
+.expiry-custom-panel.open{display:flex;flex-direction:column;}
+.expiry-custom-row{display:grid;grid-template-columns:1fr;gap:.55rem;padding:.65rem;border:1px solid #26364d;border-radius:8px;background:#101827;}
+.expiry-custom-line{display:grid;grid-template-columns:1.15fr .82fr .82fr .78fr minmax(160px,1.25fr);gap:.45rem;align-items:end;}
+.expiry-segment-field{display:flex;flex-direction:column;gap:.24rem;}
+.expiry-segment-field span{color:#8ea3bd;font-size:.68rem;font-weight:900;}
+.expiry-segment-field input{text-align:center;text-transform:uppercase;}
+.expiry-preview{color:#a5f3fc;font-size:.78rem;font-weight:900;}
+.expiry-custom-total{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.65rem .75rem;border:1px solid #334155;border-radius:8px;background:#111d2f;color:#dbe7f5;font-size:.84rem;font-weight:900;}
+.usage-list{display:flex;flex-direction:column;gap:.7rem;}
+.material-lot-group{display:flex;flex-direction:column;gap:.55rem;}
+.material-lot-tools{display:flex;align-items:center;justify-content:space-between;gap:.55rem;padding:.55rem .7rem;border:1px solid #26364d;border-radius:8px;background:#0d1725;color:#9fb2cb;font-size:.78rem;font-weight:800;}
+.lot-count-badge{display:inline-flex;align-items:center;padding:.18rem .5rem;border-radius:999px;background:#17233a;color:#a5f3fc;border:1px solid rgba(34,211,238,.22);}
+.sesame-unit-toggle{display:none;align-items:center;gap:.35rem;padding:.28rem;border:1px solid #334155;border-radius:999px;background:#0d1725;}
+.sesame-unit-toggle.show{display:inline-flex;}
+.sesame-unit-toggle button{min-width:42px;height:26px;border:none;border-radius:999px;background:transparent;color:#8ea3bd;font-size:.72rem;font-weight:900;cursor:pointer;}
+.sesame-unit-toggle button.active{background:#0891b2;color:#fff;box-shadow:0 0 12px rgba(34,211,238,.2);}
+.usage-card{display:grid;grid-template-columns:minmax(190px,1.25fr) repeat(auto-fit,minmax(128px,1fr));gap:.7rem;align-items:end;padding:.9rem;border:1px solid #26364d;border-radius:8px;background:#101827;}
+.usage-card:hover{border-color:#36506f;background:#111d2f;}
+.usage-card.raw,.usage-card.pack{grid-template-columns:minmax(190px,1.25fr) repeat(auto-fit,minmax(128px,1fr));}
+.usage-name{align-self:center;min-width:0;}
+.usage-name strong{display:block;color:#eff6ff;word-break:break-word;}
+.usage-name span{display:block;margin-top:.22rem;color:#8ea3bd;font-size:.76rem;}
+.usage-actions{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.7rem;flex-wrap:wrap;}
+.calc-box{min-height:43px;display:flex;align-items:center;padding:.72rem .78rem;border:1px solid #314155;border-radius:8px;background:#0d1725;color:#eff6ff;font-weight:900;box-sizing:border-box;}
+.calc-box.need{border-color:#22d3ee;color:#a5f3fc;box-shadow:0 0 14px rgba(34,211,238,.13);}
+.calc-box.loss.good{border-color:#22c55e;color:#bbf7d0;}
+.calc-box.loss.warn{border-color:#f59e0b;color:#fde68a;}
+.calc-box.loss.bad{border-color:#ef4444;color:#fecaca;box-shadow:0 0 14px rgba(239,68,68,.16);}
+.calc-box.yield.good{border-color:#22c55e;color:#bbf7d0;}
+.calc-box.yield.warn{border-color:#f59e0b;color:#fde68a;}
+.calc-box.yield.bad{border-color:#ef4444;color:#fecaca;}
+.calc-unit{margin-left:.25rem;color:#8ea3bd;font-size:.78rem;font-weight:800;}
+.ghost-btn,.primary-btn,.secondary-btn,.danger-lite-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 .9rem;border-radius:8px;border:1px solid transparent;font-size:.84rem;font-weight:900;text-decoration:none;cursor:pointer;}
+.ghost-btn{background:#132033;border-color:#334155;color:#dbe7f5;}
+.primary-btn{background:#0891b2;color:#fff;}
+.secondary-btn{background:#223148;border-color:#334155;color:#dbe7f5;}
+.danger-lite-btn{background:#3b1d26;border-color:#7f1d1d;color:#fecdd3;}
+.empty-state{padding:1rem;border:1px dashed #334155;border-radius:8px;color:#8ea3bd;text-align:center;background:#101827;}
+.step-actions{display:flex;justify-content:space-between;gap:.6rem;margin-top:1rem;flex-wrap:wrap;}
+.finish-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1rem;flex-wrap:wrap;}
+.hidden-field{display:none!important;}
+html:not([data-theme="dark"]) .register-title{color:#0f172a;text-shadow:none;}
+html:not([data-theme="dark"]) .register-subtitle{color:#52637a;}
+html:not([data-theme="dark"]) .register-badge{background:linear-gradient(135deg,#0e7490,#0891b2);color:#ecfeff;border-color:rgba(14,116,144,.2);box-shadow:0 8px 18px rgba(8,145,178,.18);}
+html:not([data-theme="dark"]) .register-success{background:linear-gradient(180deg,#f0fdf4,#dcfce7);border-color:#86efac;color:#166534;box-shadow:0 8px 22px rgba(34,197,94,.12);}
+html:not([data-theme="dark"]) .register-success strong{color:#166534;}
+html:not([data-theme="dark"]) .register-success span{color:#15803d;}
+html:not([data-theme="dark"]) .step-nav{background:#ffffff;border-color:#d7e3f0;box-shadow:0 18px 34px rgba(15,23,42,.08);}
+html:not([data-theme="dark"]) .step-nav-btn{background:#f8fbff;border-color:#dbe7f5;color:#334155;}
+html:not([data-theme="dark"]) .step-nav-btn:hover{background:#eff6ff;border-color:#bfdbfe;}
+html:not([data-theme="dark"]) .step-nav-btn.active{background:linear-gradient(135deg,#e0f7ff,#f0fdff);border-color:#06b6d4;color:#0f172a;box-shadow:0 0 0 1px rgba(6,182,212,.16),0 12px 22px rgba(6,182,212,.12);}
+html:not([data-theme="dark"]) .step-nav-btn.done .step-state{background:#dcfce7;color:#166534;}
+html:not([data-theme="dark"]) .step-index{background:#e0f2fe;color:#0369a1;}
+html:not([data-theme="dark"]) .step-state{background:#e8eef7;color:#475569;}
+html:not([data-theme="dark"]) .step-panel{background:linear-gradient(180deg,#ffffff,#f8fbff);border-color:#d7e3f0;box-shadow:0 20px 44px rgba(15,23,42,.08);}
+html:not([data-theme="dark"]) .step-panel h2{color:#0f172a;}
+html:not([data-theme="dark"]) .workplace-switch-btn,
+html:not([data-theme="dark"]) .ghost-btn,
+html:not([data-theme="dark"]) .secondary-btn{background:#eef6ff;border-color:#cbdff4;color:#1e3a5f;}
+html:not([data-theme="dark"]) .workplace-switch-btn:hover,
+html:not([data-theme="dark"]) .ghost-btn:hover,
+html:not([data-theme="dark"]) .secondary-btn:hover{background:#dff3ff;border-color:#67e8f9;color:#0f172a;}
+html:not([data-theme="dark"]) .workplace-switch-panel{background:#ffffff;border-color:#cbdff4;box-shadow:0 20px 38px rgba(15,23,42,.14);}
+html:not([data-theme="dark"]) .workplace-switch-panel label{color:#1e293b;}
+html:not([data-theme="dark"]) .workplace-current-badge{background:#e0f7ff;color:#0e7490;border-color:rgba(6,182,212,.28);}
+html:not([data-theme="dark"]) .step-note{color:#52637a;}
+html:not([data-theme="dark"]) .field label{color:#243449;}
+html:not([data-theme="dark"]) .field.required label::after{color:#0891b2;text-shadow:0 0 8px rgba(8,145,178,.22);}
+html:not([data-theme="dark"]) .register-input,
+html:not([data-theme="dark"]) .register-select,
+html:not([data-theme="dark"]) .register-textarea{background:#ffffff;border-color:#cbd8e6;color:#0f172a;box-shadow:inset 0 1px 0 rgba(15,23,42,.02);}
+html:not([data-theme="dark"]) .register-input::placeholder,
+html:not([data-theme="dark"]) .register-textarea::placeholder{color:#94a3b8;}
+html:not([data-theme="dark"]) .field.required .register-input,
+html:not([data-theme="dark"]) .field.required .register-select,
+html:not([data-theme="dark"]) .field.required .register-textarea,
+html:not([data-theme="dark"]) .register-input.required-input,
+html:not([data-theme="dark"]) .register-select.required-input,
+html:not([data-theme="dark"]) .register-textarea.required-input{border-color:#06b6d4;box-shadow:0 0 0 1px rgba(6,182,212,.24),0 0 14px rgba(6,182,212,.12);}
+html:not([data-theme="dark"]) .register-input:focus,
+html:not([data-theme="dark"]) .register-select:focus,
+html:not([data-theme="dark"]) .register-textarea:focus{border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.16);}
+html:not([data-theme="dark"]) .unknown-date-btn{background:#eef2f7;border-color:#cbd5e1;color:#475569;}
+html:not([data-theme="dark"]) .unknown-date-btn.active{background:#dcfce7;border-color:#22c55e;color:#166534;box-shadow:0 0 12px rgba(34,197,94,.12);}
+html:not([data-theme="dark"]) .product-search-drop{background:#ffffff;border-color:#cbdff4;box-shadow:0 18px 32px rgba(15,23,42,.14);}
+html:not([data-theme="dark"]) .product-search-option{border-bottom-color:#e2e8f0;}
+html:not([data-theme="dark"]) .product-search-option:hover{background:#f0f9ff;}
+html:not([data-theme="dark"]) .product-search-option strong{color:#0f172a;}
+html:not([data-theme="dark"]) .product-search-meta{color:#64748b;}
+html:not([data-theme="dark"]) .line-item{background:#ffffff;border-color:#cbd8e6;color:#1e293b;}
+html:not([data-theme="dark"]) .line-item:has(input:checked){background:#e0f7ff;border-color:#06b6d4;color:#0f172a;}
+html:not([data-theme="dark"]) .summary-cell,
+html:not([data-theme="dark"]) .expiry-register-panel,
+html:not([data-theme="dark"]) .expiry-custom-row,
+html:not([data-theme="dark"]) .material-lot-tools,
+html:not([data-theme="dark"]) .usage-card,
+html:not([data-theme="dark"]) .empty-state{background:#ffffff;border-color:#d7e3f0;color:#334155;}
+html:not([data-theme="dark"]) .usage-card:hover{background:#f8fbff;border-color:#b8cbe2;}
+html:not([data-theme="dark"]) .summary-cell.important,
+html:not([data-theme="dark"]) .expiry-auto-item{border-color:#06b6d4;box-shadow:0 0 0 1px rgba(6,182,212,.16),0 12px 24px rgba(6,182,212,.08);}
+html:not([data-theme="dark"]) .summary-cell span,
+html:not([data-theme="dark"]) .expiry-auto-item span,
+html:not([data-theme="dark"]) .expiry-register-desc,
+html:not([data-theme="dark"]) .expiry-segment-field span,
+html:not([data-theme="dark"]) .usage-name span,
+html:not([data-theme="dark"]) .calc-unit{color:#64748b;}
+html:not([data-theme="dark"]) .summary-cell strong,
+html:not([data-theme="dark"]) .expiry-register-title,
+html:not([data-theme="dark"]) .usage-name strong{color:#0f172a;}
+html:not([data-theme="dark"]) .expiry-auto-item{background:#f8fdff;}
+html:not([data-theme="dark"]) .expiry-auto-item strong,
+html:not([data-theme="dark"]) .expiry-preview{color:#0e7490;}
+html:not([data-theme="dark"]) .expiry-custom-total{background:#f8fbff;border-color:#cbd8e6;color:#1e293b;}
+html:not([data-theme="dark"]) .lot-count-badge{background:#e0f7ff;color:#0e7490;border-color:rgba(6,182,212,.24);}
+html:not([data-theme="dark"]) .sesame-unit-toggle{background:#f8fbff;border-color:#cbd8e6;}
+html:not([data-theme="dark"]) .sesame-unit-toggle button{color:#64748b;}
+html:not([data-theme="dark"]) .sesame-unit-toggle button.active{background:#0891b2;color:#ffffff;}
+html:not([data-theme="dark"]) .calc-box{background:#f8fbff;border-color:#cbd8e6;color:#0f172a;}
+html:not([data-theme="dark"]) .calc-box.need{border-color:#06b6d4;color:#0e7490;background:#ecfeff;}
+html:not([data-theme="dark"]) .calc-box.loss.good,
+html:not([data-theme="dark"]) .calc-box.yield.good{border-color:#22c55e;color:#166534;background:#f0fdf4;}
+html:not([data-theme="dark"]) .calc-box.loss.warn,
+html:not([data-theme="dark"]) .calc-box.yield.warn{border-color:#f59e0b;color:#92400e;background:#fffbeb;}
+html:not([data-theme="dark"]) .calc-box.loss.bad,
+html:not([data-theme="dark"]) .calc-box.yield.bad{border-color:#ef4444;color:#b91c1c;background:#fff1f2;}
+html:not([data-theme="dark"]) .primary-btn{background:linear-gradient(135deg,#0891b2,#06b6d4);color:#ffffff;box-shadow:0 10px 18px rgba(8,145,178,.18);}
+html:not([data-theme="dark"]) .danger-lite-btn{background:#fff1f2;border-color:#fecdd3;color:#be123c;}
+html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;background:#f8fbff;}
+@media (max-width: 980px){
+    .step-layout{grid-template-columns:1fr;}
+    .step-nav{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+    .usage-card,.usage-card.raw,.usage-card.pack{grid-template-columns:1fr;}
+}
+@media (max-width: 640px){
+    .field-grid,.field-grid.three,.summary-strip,.step-nav{grid-template-columns:1fr;}
+    .step-panel-title-row{flex-direction:column;}
+    .workplace-switch-wrap{align-items:stretch;width:100%;}
+    .workplace-switch-panel{position:static;width:auto;}
+    .expiry-auto-card,.expiry-custom-row{grid-template-columns:1fr;}
+    .expiry-custom-line{grid-template-columns:1fr 1fr;}
+    .line-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .register-title{font-size:1.35rem;}
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="register-shell">
+    <div class="register-head">
+        <div>
+            <span class="register-badge">생산 등록 모드</span>
+            <h1 class="register-title">생산일지 기준으로 빠르게 등록</h1>
+            <p class="register-subtitle">재고 차감 없이 과거 생산 이력을 등록합니다. 입력한 원초와 자재 추적 정보는 생산일지 출력에 함께 반영됩니다.</p>
+        </div>
+        <a href="{{ next_url or '/integrated-management?tab=productions&prod_tab=done' }}" class="secondary-btn">취소</a>
+    </div>
+
+    {% if request.args.get('registered') == '1' %}
+    <div class="register-success">
+        <strong>정상 등록되었습니다.</strong>
+        <span>다음 생산건을 바로 이어서 입력할 수 있습니다.</span>
+    </div>
+    {% endif %}
+
+    <form method="POST" id="registerModeForm" novalidate>
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="wp" value="{{ workplace }}">
+        <input type="hidden" name="product_id" id="productId" required>
+
+        <div class="step-layout">
+            <div class="step-nav" aria-label="등록 단계">
+                <button type="button" class="step-nav-btn active" data-step-nav="0" onclick="goStep(0)"><span class="step-index">1</span><span class="step-label">기본 정보</span><span class="step-state">입력</span></button>
+                <button type="button" class="step-nav-btn" data-step-nav="1" onclick="goStep(1)"><span class="step-index">2</span><span class="step-label">인원관리</span><span class="step-state">대기</span></button>
+                <button type="button" class="step-nav-btn" data-step-nav="2" onclick="goStep(2)"><span class="step-index">3</span><span class="step-label">원초</span><span class="step-state">대기</span></button>
+                <button type="button" class="step-nav-btn" data-step-nav="3" onclick="goStep(3)"><span class="step-index">4</span><span class="step-label">원자재</span><span class="step-state">대기</span></button>
+                <button type="button" class="step-nav-btn" data-step-nav="4" onclick="goStep(4)"><span class="step-index">5</span><span class="step-label">부재료</span><span class="step-state">대기</span></button>
+                <button type="button" class="step-nav-btn" data-step-nav="5" onclick="goStep(5)"><span class="step-index">6</span><span class="step-label">저장</span><span class="step-state">대기</span></button>
+            </div>
+
+            <div>
+                <section class="step-panel active" data-step-panel="0">
+                    <div class="step-panel-title-row">
+                        <div>
+                            <h2>기본 정보</h2>
+                            <span class="workplace-current-badge">현재 기준: {{ workplace }}</span>
+                        </div>
+                        <div class="workplace-switch-wrap">
+                            <button type="button" class="workplace-switch-btn" onclick="toggleWorkplaceSwitch()">작업장 변경</button>
+                            <div class="workplace-switch-panel" id="workplaceSwitchPanel">
+                                <label for="registerWorkplaceSelect">등록할 작업장 선택</label>
+                                <select id="registerWorkplaceSelect" class="register-select">
+                                    {% for wp in available_workplaces %}
+                                    <option value="{{ wp }}" {% if wp == workplace %}selected{% endif %}>{{ wp }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div style="margin-top:.45rem;color:#8ea3bd;font-size:.74rem;line-height:1.45;">선택한 작업장 기준으로 제품 목록과 생산 이력을 다시 불러옵니다.</div>
+                                <div class="workplace-switch-actions">
+                                    <button type="button" class="secondary-btn" onclick="toggleWorkplaceSwitch(false)">취소</button>
+                                    <button type="button" class="primary-btn" onclick="applyWorkplaceSwitch()">적용</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="step-note">품목과 생산일, 생산 수량을 먼저 선택하면 다음 단계의 사용량이 자동으로 준비됩니다.</p>
+                    <div class="field-grid">
+                        <div class="field full required">
+                            <label>품목 선택</label>
+                            <div class="product-search-wrap">
+                                <input type="text" id="productSearch" class="register-input required-input" placeholder="품목명 또는 코드 검색" autocomplete="off" oninput="filterProducts()" onfocus="showAllProducts()">
+                                <div id="productSearchDrop" class="product-search-drop"></div>
+                            </div>
+                        </div>
+                        <div class="field required">
+                            <label>생산일</label>
+                            <input type="date" name="production_date" id="productionDate" class="register-input required-input" value="{{ today }}" required onchange="syncExpiryInputs()">
+                        </div>
+                        <div class="field required">
+                            <label>생산 박스 수</label>
+                            <input type="number" name="actual_boxes" id="actualBoxes" class="register-input required-input" min="0" step="0.1" value="0" required oninput="syncExpiryInputs(); renderUsageRows()">
+                        </div>
+                        <div class="expiry-register-panel">
+                            <input type="hidden" name="use_custom_expiry" id="useCustomExpiry" value="0">
+                            <div class="expiry-register-head">
+                                <div>
+                                    <div class="expiry-register-title">소비기한 자동 기록</div>
+                                    <div class="expiry-register-desc">기본은 생산일자 기준 제품 기본정보의 소비기한에서 1일을 뺀 날짜로 자동 저장됩니다.</div>
+                                </div>
+                                <button type="button" class="ghost-btn" id="toggleExpiryBtn" onclick="toggleCustomExpiry()">소비기한 변경</button>
+                            </div>
+                            <div class="expiry-auto-card">
+                                <div class="expiry-auto-item"><span>자동 소비기한</span><strong id="autoExpiryDateText">-</strong></div>
+                                <div class="expiry-auto-item"><span>기록 박스 수</span><strong id="autoExpiryBoxesText">0 BOX</strong></div>
+                            </div>
+                            <div class="expiry-custom-panel" id="customExpiryPanel">
+                                {% for idx in range(1, 4) %}
+                                <div class="expiry-custom-row">
+                                    <label>{{ ['첫 번째', '두 번째', '세 번째'][idx - 1] }} 소비기한</label>
+                                    <input type="hidden"
+                                           name="{{ 'expiry_date' if idx == 1 else 'expiry_date_' ~ idx }}"
+                                           id="registerExpiryDate{{ idx }}"
+                                           class="js-custom-expiry"
+                                           disabled>
+                                    <div class="expiry-custom-line" data-expiry-segments="{{ idx }}">
+                                        <label class="expiry-segment-field">
+                                            <span>년도</span>
+                                            <input type="text" inputmode="numeric" maxlength="4" id="registerExpiryYear{{ idx }}" class="register-input js-custom-expiry-part" disabled placeholder="2027" oninput="syncExpirySegment({{ idx }}, this)">
+                                        </label>
+                                        <label class="expiry-segment-field">
+                                            <span>월</span>
+                                            <input type="text" inputmode="numeric" maxlength="2" id="registerExpiryMonth{{ idx }}" class="register-input js-custom-expiry-part" disabled placeholder="06" oninput="syncExpirySegment({{ idx }}, this)">
+                                        </label>
+                                        <label class="expiry-segment-field">
+                                            <span>일</span>
+                                            <input type="text" inputmode="numeric" maxlength="2" id="registerExpiryDay{{ idx }}" class="register-input js-custom-expiry-part" disabled placeholder="27" oninput="syncExpirySegment({{ idx }}, this)">
+                                        </label>
+                                        <label class="expiry-segment-field">
+                                            <span>알파벳</span>
+                                            <input type="text" maxlength="1" id="registerExpirySuffix{{ idx }}" class="register-input js-custom-expiry-part" disabled placeholder="A" oninput="syncExpirySegment({{ idx }}, this)">
+                                        </label>
+                                        <label class="expiry-segment-field">
+                                            <span>박스 수</span>
+                                            <input type="number"
+                                                   name="expiry_boxes_{{ idx }}"
+                                                   id="registerExpiryBoxes{{ idx }}"
+                                                   class="register-input js-custom-expiry"
+                                                   min="0"
+                                                   step="0.1"
+                                                   disabled
+                                                   oninput="syncCustomExpiryTotal()"
+                                                   placeholder="0">
+                                        </label>
+                                    </div>
+                                    <div class="expiry-preview" id="registerExpiryPreview{{ idx }}">-</div>
+                                </div>
+                                {% endfor %}
+                                <div class="expiry-custom-total">
+                                    <span>소비기한별 박스 합계</span>
+                                    <strong id="customExpiryTotalText">0 BOX</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field full">
+                            <label>생산 라인</label>
+                            <div class="line-grid">
+                                {% for line in range(1, 13) %}
+                                <label class="line-item"><input type="checkbox" name="production_lines" value="{{ line }}"><span>라인 {{ line }}</span></label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="field full">
+                            <label>비고</label>
+                            <textarea name="note" class="register-textarea ko-first-input" lang="ko" inputmode="text" autocomplete="off" placeholder="생산일지 비고 또는 과거 등록 사유"></textarea>
+                        </div>
+                    </div>
+                    <div class="summary-strip">
+                        <div class="summary-cell important"><span>선택 품목</span><strong id="summaryProductName">미선택</strong></div>
+                        <div class="summary-cell"><span>박스당 수량</span><strong id="summaryBoxQuantity">-</strong></div>
+                        <div class="summary-cell important"><span>총 생산 수량</span><strong id="summaryTotalUnits">0</strong></div>
+                    </div>
+                    <div class="step-actions"><span></span><button type="button" class="primary-btn" onclick="completeAndNext(0)">다음</button></div>
+                </section>
+
+                <section class="step-panel" data-step-panel="1">
+                    <h2>인원관리</h2>
+                    <p class="step-note">생산일지에서 확인되는 작업 시간과 투입 인원을 입력합니다.</p>
+                    <div class="field-grid">
+                        <div class="field"><label>작업 시간</label><input type="text" name="work_time" class="register-input" placeholder="예: 08:30~17:30"></div>
+                        <div class="field"><label>공급 인원</label><input type="number" name="supply_people" class="register-input" min="0" step="1" placeholder="0"></div>
+                        <div class="field"><label>내포장 인원</label><input type="number" name="packing_people" class="register-input" min="0" step="1" placeholder="0"></div>
+                        <div class="field"><label>외포장 인원</label><input type="number" name="outer_packing_people" class="register-input" min="0" step="1" placeholder="0"></div>
+                        <div class="field full"><label>인원관리 비고</label><textarea name="personnel_note" class="register-textarea" placeholder="인원 특이사항 또는 작업 메모"></textarea></div>
+                    </div>
+                    <div class="step-actions"><button type="button" class="secondary-btn" onclick="goStep(0)">이전</button><button type="button" class="primary-btn" onclick="completeAndNext(1)">다음</button></div>
+                </section>
+
+                <section class="step-panel" data-step-panel="2">
+                    <h2>원초 사용 내역</h2>
+                    <p class="step-note">생산일지에 보이는 원초의 입고일, 자호, 실제 사용량을 입력합니다.</p>
+                    <div id="rawUsageWrap" class="usage-list"></div>
+                    <div class="usage-actions"><button type="button" class="ghost-btn" onclick="addExtraRawRow()">원초 추가</button></div>
+                    <div class="step-actions"><button type="button" class="secondary-btn" onclick="goStep(1)">이전</button><button type="button" class="primary-btn" onclick="completeAndNext(2)">다음</button></div>
+                </section>
+
+                <section class="step-panel" data-step-panel="3">
+                    <h2>원자재 사용 내역</h2>
+                    <p class="step-note">기름, 소금 등 원자재는 입고일과 소비기한을 함께 입력할 수 있습니다.</p>
+                    <div id="baseMaterialUsageWrap" class="usage-list"></div>
+                    <div class="usage-actions"><button type="button" class="ghost-btn" onclick="addExtraMaterialRow('base')">원자재 추가</button></div>
+                    <div class="step-actions"><button type="button" class="secondary-btn" onclick="goStep(2)">이전</button><button type="button" class="primary-btn" onclick="completeAndNext(3)">다음</button></div>
+                </section>
+
+                <section class="step-panel" data-step-panel="4">
+                    <h2>부재료 사용 내역</h2>
+                    <p class="step-note">포장재 등 부재료는 입고일과 실제 사용량 중심으로 입력합니다.</p>
+                    <div id="packMaterialUsageWrap" class="usage-list"></div>
+                    <div class="usage-actions"><button type="button" class="ghost-btn" onclick="addExtraMaterialRow('pack')">부재료 추가</button></div>
+                    <div class="step-actions"><button type="button" class="secondary-btn" onclick="goStep(3)">이전</button><button type="button" class="primary-btn" onclick="completeAndNext(4)">다음</button></div>
+                </section>
+
+                <section class="step-panel" data-step-panel="5">
+                    <h2>저장 전 확인</h2>
+                    <p class="step-note">등록 모드는 재고를 차감하지 않고 생산 완료 이력과 사용 내역만 저장합니다.</p>
+                    <div class="summary-strip">
+                        <div class="summary-cell"><span>품목</span><strong id="confirmProductName">미선택</strong></div>
+                        <div class="summary-cell"><span>생산일</span><strong id="confirmDate">-</strong></div>
+                        <div class="summary-cell"><span>박스 수</span><strong id="confirmBoxes">0</strong></div>
+                    </div>
+                    <div class="finish-actions">
+                        <button type="button" class="secondary-btn" onclick="goStep(4)">이전</button>
+                        <button type="submit" class="primary-btn">등록모드로 저장</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const products = {{ products_json|safe }};
+const rawBomMap = {{ raw_bom_json|safe }};
+const materialBomMap = {{ material_bom_json|safe }};
+const lastRawDefaults = {{ last_raw_defaults_json|safe }};
+const lastMaterialDefaults = {{ last_material_defaults_json|safe }};
+const rawCatalog = {{ raw_catalog_json|safe }};
+const materialCatalog = {{ material_catalog_json|safe }};
+const baseMaterialKeywords = ['기름', '유지', '소금'];
+const SESAME_OIL_KG_PER_LITER = 0.92;
+const currentRegisterWorkplace = {{ workplace|tojson }};
+let selectedProduct = null;
+let currentStep = 0;
+const completedSteps = new Set();
+let materialLotGroupSeq = 0;
+let rawLotGroupSeq = 0;
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function toNumber(value) {
+    const numeric = parseFloat(String(value ?? '').replace(/,/g, '').trim());
+    return Number.isFinite(numeric) ? numeric : 0;
+}
+function formatQty(value) {
+    const numeric = toNumber(value);
+    return numeric.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+function currentBoxes() {
+    return Math.max(toNumber(document.getElementById('actualBoxes').value), 0);
+}
+function toggleWorkplaceSwitch(forceState = null) {
+    const panel = document.getElementById('workplaceSwitchPanel');
+    if (!panel) return;
+    const open = forceState === null ? !panel.classList.contains('open') : !!forceState;
+    panel.classList.toggle('open', open);
+}
+function applyWorkplaceSwitch() {
+    const select = document.getElementById('registerWorkplaceSelect');
+    const targetWorkplace = select ? String(select.value || '').trim() : '';
+    if (!targetWorkplace || targetWorkplace === currentRegisterWorkplace) {
+        toggleWorkplaceSwitch(false);
+        return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    params.set('wp', targetWorkplace);
+    const nextValue = document.querySelector('input[name="next"]')?.value || '';
+    if (nextValue) params.set('next', nextValue);
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+}
+function formatDateValue(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+function calculateAutoExpiryDate() {
+    const productionDate = document.getElementById('productionDate').value;
+    if (!productionDate) return '';
+    const expiryMonths = selectedProduct ? Math.max(parseInt(selectedProduct.expiry_months || 12, 10) || 12, 0) : 12;
+    const [year, month, day] = productionDate.split('-').map((part) => parseInt(part, 10));
+    if (!year || !month || !day) return productionDate;
+    const targetMonthIndex = (month - 1) + expiryMonths;
+    const targetYear = year + Math.floor(targetMonthIndex / 12);
+    const targetMonth = (targetMonthIndex % 12) + 1;
+    const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+    const targetDate = new Date(targetYear, targetMonth - 1, Math.min(day, lastDay));
+    targetDate.setDate(targetDate.getDate() - 1);
+    return formatDateValue(targetDate);
+}
+function isCustomExpiryEnabled() {
+    return document.getElementById('useCustomExpiry').value === '1';
+}
+function splitExpiryValue(value) {
+    const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})([A-Za-z]?)$/);
+    if (!match) return { year: '', month: '', day: '', suffix: '' };
+    return { year: match[1], month: match[2], day: match[3], suffix: (match[4] || '').toUpperCase() };
+}
+function setExpirySegmentValue(index, value) {
+    const parts = splitExpiryValue(value);
+    const fields = {
+        year: document.getElementById(`registerExpiryYear${index}`),
+        month: document.getElementById(`registerExpiryMonth${index}`),
+        day: document.getElementById(`registerExpiryDay${index}`),
+        suffix: document.getElementById(`registerExpirySuffix${index}`),
+    };
+    if (fields.year) fields.year.value = parts.year;
+    if (fields.month) fields.month.value = parts.month;
+    if (fields.day) fields.day.value = parts.day;
+    if (fields.suffix) fields.suffix.value = parts.suffix;
+    syncExpirySegment(index);
+}
+function syncExpirySegment(index, inputEl = null) {
+    if (inputEl) {
+        if (inputEl.id.includes('Suffix')) {
+            inputEl.value = String(inputEl.value || '').replace(/[^A-Za-z]/g, '').slice(0, 1).toUpperCase();
+        } else {
+            inputEl.value = String(inputEl.value || '').replace(/\D/g, '').slice(0, inputEl.maxLength || 4);
+        }
+    }
+    const yearRaw = String(document.getElementById(`registerExpiryYear${index}`)?.value || '');
+    const monthRaw = String(document.getElementById(`registerExpiryMonth${index}`)?.value || '');
+    const dayRaw = String(document.getElementById(`registerExpiryDay${index}`)?.value || '');
+    const suffix = String(document.getElementById(`registerExpirySuffix${index}`)?.value || '').toUpperCase();
+    const hidden = document.getElementById(`registerExpiryDate${index}`);
+    const preview = document.getElementById(`registerExpiryPreview${index}`);
+    const complete = yearRaw.length === 4 && monthRaw.length >= 1 && dayRaw.length >= 1;
+    const year = yearRaw;
+    const month = monthRaw.padStart(2, '0');
+    const day = dayRaw.padStart(2, '0');
+    const value = complete ? `${year}-${month}-${day}${suffix}` : '';
+    if (hidden) hidden.value = value;
+    if (preview) preview.textContent = value || '-';
+    syncCustomExpiryTotal(false);
+}
+function syncExpiryInputs() {
+    const autoDate = calculateAutoExpiryDate();
+    const boxes = currentBoxes();
+    const autoDateText = document.getElementById('autoExpiryDateText');
+    const autoBoxesText = document.getElementById('autoExpiryBoxesText');
+    if (autoDateText) autoDateText.textContent = autoDate || '-';
+    if (autoBoxesText) autoBoxesText.textContent = `${formatQty(boxes)} BOX`;
+    if (!isCustomExpiryEnabled()) return;
+    const firstBoxes = document.getElementById('registerExpiryBoxes1');
+    if (autoDate && !document.getElementById('registerExpiryDate1')?.value) setExpirySegmentValue(1, autoDate);
+    if (firstBoxes && toNumber(firstBoxes.value) <= 0 && boxes > 0) firstBoxes.value = String(boxes);
+    syncCustomExpiryTotal(false);
+}
+function toggleCustomExpiry() {
+    const hidden = document.getElementById('useCustomExpiry');
+    const panel = document.getElementById('customExpiryPanel');
+    const button = document.getElementById('toggleExpiryBtn');
+    const willEnable = hidden.value !== '1';
+    hidden.value = willEnable ? '1' : '0';
+    panel.classList.toggle('open', willEnable);
+    button.textContent = willEnable ? '자동 소비기한 사용' : '소비기한 변경';
+    document.querySelectorAll('.js-custom-expiry').forEach((field) => {
+        field.disabled = !willEnable;
+    });
+    document.querySelectorAll('.js-custom-expiry-part').forEach((field) => {
+        field.disabled = !willEnable;
+    });
+    syncExpiryInputs();
+}
+function syncCustomExpiryTotal(updateUsage = true) {
+    if (!isCustomExpiryEnabled()) return;
+    let total = 0;
+    for (let index = 1; index <= 3; index += 1) {
+        total += toNumber(document.getElementById(`registerExpiryBoxes${index}`)?.value);
+    }
+    const totalText = document.getElementById('customExpiryTotalText');
+    if (totalText) totalText.textContent = `${formatQty(total)} BOX`;
+    const actualBoxesEl = document.getElementById('actualBoxes');
+    if (actualBoxesEl && total > 0) {
+        actualBoxesEl.value = String(Math.round(total * 100) / 100);
+        updateSummary();
+        if (updateUsage) renderUsageRows();
+    }
+}
+function validateCustomExpiry() {
+    if (!isCustomExpiryEnabled()) return true;
+    let hasFirst = false;
+    let total = 0;
+    for (let index = 1; index <= 3; index += 1) {
+        const dateInput = document.getElementById(`registerExpiryDate${index}`);
+        const boxInput = document.getElementById(`registerExpiryBoxes${index}`);
+        const dateValue = String(dateInput?.value || '').trim();
+        const boxValue = toNumber(boxInput?.value);
+        if (!dateValue && boxValue <= 0) continue;
+        if (!dateValue || boxValue <= 0) {
+            alert(`${index}번째 소비기한과 박스 수를 함께 입력해 주세요.`);
+            (dateValue ? boxInput : document.getElementById(`registerExpiryYear${index}`))?.focus();
+            return false;
+        }
+        if (index === 1) hasFirst = true;
+        total += boxValue;
+    }
+    if (!hasFirst || total <= 0) {
+        alert('첫 번째 소비기한과 박스 수를 입력해 주세요.');
+        document.getElementById('registerExpiryYear1')?.focus();
+        return false;
+    }
+    syncCustomExpiryTotal(false);
+    return true;
+}
+function isBaseMaterial(row) {
+    const text = `${row.material_category || ''} ${row.material_name || ''}`;
+    const keywords = ['기름', '오일', '소금', '천일염', '정제염'];
+    return keywords.some((keyword) => text.includes(keyword));
+}
+function isSaltMaterial(row) {
+    const text = `${row.material_category || ''} ${row.material_name || ''}`;
+    return text.includes('소금') || text.includes('천일염') || text.includes('정제염');
+}
+function isSesameOilMaterial(row) {
+    const text = `${row.material_category || ''} ${row.material_name || ''}`;
+    return text.includes('참기름');
+}
+function isBoxPackagingMaterial(row) {
+    const text = `${row.material_category || row.category || ''} ${row.material_name || row.name || ''}`.toLowerCase();
+    return ['박스', 'box', 'carton'].some((word) => text.includes(word.toLowerCase()));
+}
+function sesameUnitStorageKey() {
+    return 'yemat-register-mode-sesame-unit';
+}
+function getSavedSesameUnit() {
+    const saved = localStorage.getItem(sesameUnitStorageKey());
+    return saved === 'L' ? 'L' : 'kg';
+}
+function setSavedSesameUnit(unit) {
+    localStorage.setItem(sesameUnitStorageKey(), unit === 'L' ? 'L' : 'kg');
+}
+function materialInputToKg(card, value) {
+    if (!card || card.dataset.sesame !== '1') return toNumber(value);
+    const inputUnit = card.querySelector('input[name="material_actual_unit[]"]')?.value || 'kg';
+    const numeric = toNumber(value);
+    return inputUnit === 'L' ? numeric * SESAME_OIL_KG_PER_LITER : numeric;
+}
+function materialKgToInput(card, value) {
+    if (!card || card.dataset.sesame !== '1') return toNumber(value);
+    const inputUnit = card.querySelector('input[name="material_actual_unit[]"]')?.value || 'kg';
+    const numeric = toNumber(value);
+    return inputUnit === 'L' ? numeric / SESAME_OIL_KG_PER_LITER : numeric;
+}
+function refreshSesameUnitUi(card) {
+    if (!card) return;
+    const toggle = card.querySelector('.sesame-unit-toggle');
+    const hidden = card.querySelector('input[name="material_actual_unit[]"]');
+    const isSesame = card.dataset.sesame === '1';
+    const unit = hidden?.value || 'kg';
+    if (toggle) {
+        toggle.classList.toggle('show', isSesame);
+        toggle.querySelectorAll('button[data-unit]').forEach((button) => {
+            button.classList.toggle('active', button.dataset.unit === unit);
+        });
+    }
+}
+function setMaterialInputUnit(buttonEl, unit) {
+    const card = buttonEl.closest('.usage-card');
+    if (!card) return;
+    const nextUnit = unit === 'L' ? 'L' : 'kg';
+    const groupEl = card.closest('.material-lot-group');
+    const cards = groupEl
+        ? Array.from(groupEl.querySelectorAll('.usage-card[data-lot-card="material"][data-sesame="1"]'))
+        : [card];
+    const kgValues = cards.map((item) => materialInputToKg(item, item.querySelector('input[name="material_actual_quantity[]"]')?.value));
+    cards.forEach((item, index) => {
+        const hidden = item.querySelector('input[name="material_actual_unit[]"]');
+        const input = item.querySelector('input[name="material_actual_quantity[]"]');
+        if (hidden) hidden.value = nextUnit;
+        if (input) input.value = materialKgToInput(item, kgValues[index]).toFixed(4).replace(/\.?0+$/, '');
+        refreshSesameUnitUi(item);
+        if (input) updateLossForCard(input);
+    });
+    setSavedSesameUnit(nextUnit);
+    if (groupEl) {
+        groupEl.dataset.totalActual = String(kgValues.reduce((sum, value) => sum + toNumber(value), 0));
+    }
+}
+function materialDateMode(row, mode) {
+    if (mode !== 'base') return 'receivingOnly';
+    return isSaltMaterial(row) ? 'manufacture' : 'expiry';
+}
+function packSortRank(row) {
+    const text = `${row.material_category || ''} ${row.material_name || ''}`;
+    const ranks = [
+        ['inner', ['내포', '내포장', '파우치', 'pouch']],
+        ['outer', ['외포', '외포장']],
+        ['box', ['박스', 'box', 'carton']],
+        ['silica', ['실리카', 'silica']],
+        ['tray', ['트레이', 'tray']],
+    ];
+    const lowered = text.toLowerCase();
+    const foundIndex = ranks.findIndex(([, words]) => words.some((word) => lowered.includes(word.toLowerCase())));
+    return foundIndex >= 0 ? foundIndex : ranks.length;
+}
+function maxUnlockedStep() {
+    let max = 0;
+    for (let index = 0; index < 5; index += 1) {
+        if (completedSteps.has(index)) {
+            max = index + 1;
+        } else {
+            break;
+        }
+    }
+    return max;
+}
+function goStep(step) {
+    const unlocked = maxUnlockedStep();
+    if (step > unlocked) {
+        alert('현재 단계를 완료하면 다음 단계가 열립니다.');
+        step = unlocked;
+    }
+    currentStep = Math.max(0, Math.min(5, step));
+    document.querySelectorAll('[data-step-panel]').forEach((panel) => panel.classList.toggle('active', Number(panel.dataset.stepPanel) === currentStep));
+    document.querySelectorAll('[data-step-nav]').forEach((button) => {
+        const index = Number(button.dataset.stepNav);
+        button.classList.toggle('active', index === currentStep);
+        button.classList.toggle('done', completedSteps.has(index));
+        button.querySelector('.step-state').textContent = completedSteps.has(index) ? '완료' : (index === currentStep ? '입력' : '대기');
+    });
+    if (currentStep === 5) updateConfirm();
+}
+function completeAndNext(step) {
+    if (step === 0 && !validateBaseStep()) return;
+    if (step === 2 && !validateRawStep()) return;
+    completedSteps.add(step);
+    goStep(step + 1);
+}
+function validateBaseStep() {
+    if (!document.getElementById('productId').value) {
+        alert('품목을 먼저 선택해 주세요.');
+        document.getElementById('productSearch').focus();
+        return false;
+    }
+    if (!document.getElementById('productionDate').value) {
+        alert('생산일을 입력해 주세요.');
+        return false;
+    }
+    if (!validateCustomExpiry()) {
+        return false;
+    }
+    if (currentBoxes() <= 0) {
+        alert('생산 박스 수를 확인해 주세요.');
+        return false;
+    }
+    return true;
+}
+function validateRawStep() {
+    const rawGroups = Array.from(document.querySelectorAll('.raw-lot-group'));
+    const missingGroup = rawGroups.find((group) => !group.querySelector('.usage-card[data-lot-card="raw"]'));
+    if (missingGroup) {
+        const button = missingGroup.querySelector('button[onclick*="addRawLot"]');
+        goStep(2);
+        setTimeout(() => button && button.focus(), 80);
+        alert('필요 원초의 로트를 1개 이상 추가해 주세요.');
+        return false;
+    }
+    return true;
+}
+function validateRequiredFields() {
+    if (!validateBaseStep()) return false;
+    if (!validateRawStep()) return false;
+    const fields = Array.from(document.querySelectorAll('#registerModeForm .required-input'))
+        .filter((field) => !field.disabled && field.type !== 'hidden');
+    const emptyField = fields.find((field) => {
+        if (field.id === 'productSearch') return !document.getElementById('productId').value;
+        return String(field.value || '').trim() === '';
+    });
+    if (!emptyField) return true;
+    const panel = emptyField.closest('[data-step-panel]');
+    const step = panel ? Number(panel.dataset.stepPanel) : currentStep;
+    completedSteps.add(0);
+    for (let index = 1; index < step; index += 1) completedSteps.add(index);
+    goStep(step);
+    setTimeout(() => emptyField.focus(), 80);
+    alert('필수 입력값을 확인해 주세요.');
+    return false;
+}
+function updateSummary() {
+    const boxes = currentBoxes();
+    const name = selectedProduct ? selectedProduct.name : '미선택';
+    const boxQty = selectedProduct ? `${formatQty(selectedProduct.box_quantity)}개` : '-';
+    const totalUnits = selectedProduct ? `${formatQty(boxes * toNumber(selectedProduct.box_quantity))}개` : '0';
+    document.getElementById('summaryProductName').textContent = name;
+    document.getElementById('summaryBoxQuantity').textContent = boxQty;
+    document.getElementById('summaryTotalUnits').textContent = totalUnits;
+}
+function updateConfirm() {
+    document.getElementById('confirmProductName').textContent = selectedProduct ? selectedProduct.name : '미선택';
+    document.getElementById('confirmDate').textContent = document.getElementById('productionDate').value || '-';
+    document.getElementById('confirmBoxes').textContent = `${formatQty(currentBoxes())} 박스`;
+}
+function renderProductOptions(list) {
+    const drop = document.getElementById('productSearchDrop');
+    drop.innerHTML = list.length ? list.map((product) => `
+        <div class="product-search-option" onclick="selectProduct(${product.id})">
+            <strong>${escapeHtml(product.name)}</strong>
+            <div class="product-search-meta">${escapeHtml(product.code || '-')} · 박스당 ${formatQty(product.box_quantity)}개</div>
+        </div>
+    `).join('') : '<div class="product-search-option"><strong>검색 결과가 없습니다</strong><div class="product-search-meta">품목명 또는 코드를 다시 확인해 주세요.</div></div>';
+    drop.style.display = 'block';
+}
+function showAllProducts() {
+    renderProductOptions(products);
+}
+function filterProducts() {
+    const query = document.getElementById('productSearch').value.trim().toLowerCase();
+    renderProductOptions(products.filter((product) => String(product.name || '').toLowerCase().includes(query) || String(product.code || '').toLowerCase().includes(query)));
+}
+function selectProduct(productId) {
+    selectedProduct = products.find((item) => Number(item.id) === Number(productId)) || null;
+    document.getElementById('productId').value = selectedProduct ? selectedProduct.id : '';
+    document.getElementById('productSearch').value = selectedProduct ? selectedProduct.name : '';
+    document.getElementById('productSearchDrop').style.display = 'none';
+    completedSteps.clear();
+    updateSummary();
+    syncExpiryInputs();
+    renderUsageRows();
+    goStep(0);
+}
+function usageExpected(row) {
+    return (toNumber(row.quantity_per_box) * currentBoxes()).toFixed(2).replace(/\.00$/, '');
+}
+function selectedProductIdKey() {
+    return String(document.getElementById('productId').value || '');
+}
+function lastRawDefault(row) {
+    const bucket = lastRawDefaults[selectedProductIdKey()] || {};
+    const byId = bucket.by_id || {};
+    const byCode = bucket.by_code || {};
+    const byName = bucket.by_name || {};
+    const rawId = String(row.raw_material_id || '');
+    const rawCode = String(row.raw_material_code || '').trim();
+    const rawName = String(row.raw_material_name || '').trim();
+    return (rawId && byId[rawId]) || (rawCode && byCode[rawCode]) || (rawName && byName[rawName]) || {};
+}
+function lastMaterialDefault(row) {
+    const bucket = lastMaterialDefaults[selectedProductIdKey()] || {};
+    return bucket[String(row.material_id || '')] || {};
+}
+function formatSignedQty(value) {
+    const numeric = toNumber(value);
+    const sign = numeric > 0 ? '+' : '';
+    return `${sign}${formatQty(numeric)}`;
+}
+function lossClass(value) {
+    const numeric = toNumber(value);
+    if (numeric > 0) return 'bad';
+    if (numeric < 0) return 'warn';
+    return 'good';
+}
+function updateLossForCard(inputEl) {
+    const card = inputEl.closest('.usage-card');
+    if (!card) return;
+    const need = toNumber(card.dataset.need);
+    const actual = inputEl.name === 'material_actual_quantity[]' ? materialInputToKg(card, inputEl.value) : toNumber(inputEl.value);
+    const loss = actual - need;
+    const yieldRate = actual > 0 && need > 0 ? (need / actual * 100) : 0;
+    const lossEl = card.querySelector('.js-loss-value');
+    if (lossEl) {
+        lossEl.className = `calc-box loss ${lossClass(loss)} js-loss-value`;
+        lossEl.innerHTML = `${formatSignedQty(loss)}<span class="calc-unit">${escapeHtml(card.dataset.unit || '')}</span>`;
+    }
+    const yieldEl = card.querySelector('.js-yield-value');
+    if (yieldEl) {
+        const yieldClass = yieldRate >= 98 ? 'good' : (yieldRate >= 90 ? 'warn' : 'bad');
+        yieldEl.className = `calc-box yield ${yieldClass} js-yield-value`;
+        yieldEl.innerHTML = `${formatQty(yieldRate.toFixed(1))}<span class="calc-unit">%</span>`;
+    }
+}
+function updateExpectedForCard(inputEl) {
+    const card = inputEl.closest('.usage-card');
+    if (!card) return;
+    const unit = card.dataset.unit || '';
+    const expected = toNumber(inputEl.value);
+    card.dataset.need = String(expected);
+    const needEl = card.querySelector('.js-need-value');
+    if (needEl) {
+        needEl.innerHTML = `${formatQty(expected)}<span class="calc-unit">${escapeHtml(unit)}</span>`;
+    }
+    const actualInput = card.querySelector('.js-actual-input');
+    if (actualInput) updateLossForCard(actualInput);
+}
+function updateMaterialLotGroup(groupEl) {
+    if (!groupEl) return;
+    const cards = Array.from(groupEl.querySelectorAll('.usage-card[data-lot-card="material"]'));
+    if (!cards.length) return;
+    const totalNeed = toNumber(groupEl.dataset.totalNeed);
+    const totalActual = toNumber(groupEl.dataset.totalActual || groupEl.dataset.totalNeed);
+    const count = cards.length;
+    const splitNeed = count > 0 ? totalNeed / count : totalNeed;
+    const splitActualKg = count > 0 ? totalActual / count : totalActual;
+    cards.forEach((card, index) => {
+        card.dataset.need = String(splitNeed);
+        const expectedInput = card.querySelector('input[name="material_expected_quantity[]"]');
+        const actualInput = card.querySelector('input[name="material_actual_quantity[]"]');
+        const needEl = card.querySelector('.js-need-value');
+        const lotLabel = card.querySelector('.js-lot-label');
+        if (expectedInput) expectedInput.value = splitNeed.toFixed(4).replace(/\.?0+$/, '');
+        if (actualInput) actualInput.value = materialKgToInput(card, splitActualKg).toFixed(4).replace(/\.?0+$/, '');
+        if (needEl) needEl.innerHTML = `${formatQty(splitNeed)}<span class="calc-unit">${escapeHtml(card.dataset.unit || '')}</span>`;
+        if (lotLabel) lotLabel.textContent = `로트 ${index + 1}`;
+        if (actualInput) updateLossForCard(actualInput);
+    });
+    const countEl = groupEl.querySelector('.js-lot-count');
+    if (countEl) countEl.textContent = `${count}개 로트`;
+}
+function updateMaterialActualForLot(inputEl) {
+    const groupEl = inputEl.closest('.material-lot-group');
+    if (!groupEl) {
+        updateLossForCard(inputEl);
+        return;
+    }
+    const cards = Array.from(groupEl.querySelectorAll('.usage-card[data-lot-card="material"]'));
+    groupEl.dataset.totalActual = String(materialInputToKg(inputEl.closest('.usage-card'), inputEl.value));
+    if (cards.length > 1) {
+        updateMaterialLotGroup(groupEl);
+        return;
+    }
+    updateLossForCard(inputEl);
+}
+function commitMaterialActualForLot(inputEl) {
+    const groupEl = inputEl.closest('.material-lot-group');
+    if (!groupEl) {
+        updateLossForCard(inputEl);
+        return;
+    }
+    groupEl.dataset.totalActual = String(materialInputToKg(inputEl.closest('.usage-card'), inputEl.value));
+    updateMaterialLotGroup(groupEl);
+}
+function updateRawLotGroup(groupEl) {
+    if (!groupEl) return;
+    const cards = Array.from(groupEl.querySelectorAll('.usage-card[data-lot-card="raw"]'));
+    const totalNeed = toNumber(groupEl.dataset.totalNeed);
+    const totalActual = cards.reduce((sum, card) => {
+        const input = card.querySelector('input[name="raw_actual_quantity[]"]');
+        return sum + toNumber(input ? input.value : 0);
+    }, 0);
+    const loss = totalActual - totalNeed;
+    const yieldRate = totalActual > 0 && totalNeed > 0 ? (totalNeed / totalActual * 100) : 0;
+    const actualEl = groupEl.querySelector('.js-raw-total-actual');
+    const lossEl = groupEl.querySelector('.js-raw-total-loss');
+    const yieldEl = groupEl.querySelector('.js-raw-total-yield');
+    const countEl = groupEl.querySelector('.js-lot-count');
+    if (actualEl) actualEl.innerHTML = `${formatQty(totalActual)}<span class="calc-unit">속</span>`;
+    if (lossEl) {
+        lossEl.className = `calc-box loss ${lossClass(loss)} js-raw-total-loss`;
+        lossEl.innerHTML = `${formatSignedQty(loss)}<span class="calc-unit">속</span>`;
+    }
+    if (yieldEl) {
+        const yieldClass = yieldRate >= 98 ? 'good' : (yieldRate >= 90 ? 'warn' : 'bad');
+        yieldEl.className = `calc-box yield ${yieldClass} js-raw-total-yield`;
+        yieldEl.innerHTML = `${formatQty(yieldRate.toFixed(1))}<span class="calc-unit">%</span>`;
+    }
+    if (countEl) countEl.textContent = `${cards.length}개 로트`;
+}
+function updateRawActualForLot(inputEl) {
+    const groupEl = inputEl.closest('.raw-lot-group');
+    if (!groupEl) {
+        updateLossForCard(inputEl);
+        return;
+    }
+    updateRawLotGroup(groupEl);
+}
+function removeRawLot(buttonEl) {
+    const groupEl = buttonEl.closest('.raw-lot-group');
+    const card = buttonEl.closest('.usage-card');
+    if (!groupEl || !card) return;
+    card.remove();
+    updateRawLotGroup(groupEl);
+}
+function dateInputHtml(name, value, label, required = true, options = {}) {
+    const unknownDefault = Boolean(options.unknownDefault);
+    const inputValue = unknownDefault ? '' : (value || '');
+    const requiredClass = required && !unknownDefault ? 'required-input' : '';
+    const readonlyAttr = unknownDefault ? ' readonly' : '';
+    const previousValueAttr = value ? ` data-previous-value="${escapeHtml(value)}"` : '';
+    return `
+        <div class="field ${required ? 'required' : ''}">
+            <div class="date-field-head">
+                <label>${escapeHtml(label)}</label>
+                <button type="button" class="unknown-date-btn ${unknownDefault ? 'active' : ''}" onclick="toggleUnknownDate(this)">${unknownDefault ? '입력' : '모름'}</button>
+            </div>
+            <div class="date-unknown-wrap">
+                <input type="date" class="register-input ${requiredClass}" name="${escapeHtml(name)}" value="${escapeHtml(inputValue)}" data-date-label="${escapeHtml(label)}"${previousValueAttr}${readonlyAttr}>
+            </div>
+        </div>
+    `;
+}
+function setUnknownDateField(field, unknown) {
+    const buttonEl = field ? field.querySelector('.unknown-date-btn') : null;
+    const input = field ? field.querySelector('.date-unknown-wrap input') : null;
+    if (!buttonEl || !input) return;
+    buttonEl.classList.toggle('active', unknown);
+    if (unknown) {
+        input.dataset.previousValue = input.value || input.dataset.previousValue || '';
+        input.value = '';
+        input.readOnly = true;
+        input.classList.remove('required-input');
+        buttonEl.textContent = '입력';
+    } else {
+        input.readOnly = false;
+        input.value = input.dataset.previousValue || '';
+        input.classList.add('required-input');
+        buttonEl.textContent = '모름';
+    }
+}
+function toggleUnknownDate(buttonEl) {
+    const field = buttonEl.closest('.field');
+    const shouldUnknown = !buttonEl.classList.contains('active');
+    setUnknownDateField(field, shouldUnknown);
+    const input = field ? field.querySelector('.date-unknown-wrap input') : null;
+    if (!shouldUnknown && input) input.focus();
+}
+function removeMaterialLot(buttonEl) {
+    const groupEl = buttonEl.closest('.material-lot-group');
+    const card = buttonEl.closest('.usage-card');
+    if (!groupEl || !card) return;
+    if (groupEl.querySelectorAll('.usage-card[data-lot-card="material"]').length <= 1) {
+        alert('기본 로트는 삭제할 수 없습니다.');
+        return;
+    }
+    card.remove();
+    updateMaterialLotGroup(groupEl);
+}
+function updateAllLosses() {
+    document.querySelectorAll('.usage-card .js-actual-input').forEach((input) => updateLossForCard(input));
+    document.querySelectorAll('.material-lot-group').forEach(updateMaterialLotGroup);
+}
+function rawCard(row) {
+    const expected = usageExpected(row);
+    const defaults = lastRawDefault(row);
+    const receivingDate = defaults.receiving_date || row.receiving_date || '';
+    const carNumber = defaults.car_number || row.car_number || '';
+    const actualValue = defaults.actual_quantity ? String(defaults.actual_quantity) : expected;
+    const groupId = `raw-lot-${++rawLotGroupSeq}`;
+    return `
+        <div class="raw-lot-group material-lot-group" data-lot-group="${groupId}" data-total-need="${escapeHtml(expected)}">
+            <div class="material-lot-tools">
+                <span><strong>${escapeHtml(row.raw_material_name || '원초')}</strong> 필요 원초 <span class="lot-count-badge">${escapeHtml(row.raw_material_code || '-')}</span> <span class="lot-count-badge js-lot-count">0개 로트</span></span>
+                <button type="button" class="ghost-btn" onclick="addRawLot(this)">로트 추가</button>
+            </div>
+            <div class="usage-card raw" data-need="${expected}" data-unit="속">
+                <div class="usage-name">
+                    <strong>${escapeHtml(row.raw_material_name || '원초')}</strong>
+                    <span>${escapeHtml(row.raw_material_code || '-')}</span>
+                </div>
+                <div class="field"><label>필요량</label><div class="calc-box need">${formatQty(expected)}<span class="calc-unit">속</span></div></div>
+                <div class="field"><label>총 실제 사용량</label><div class="calc-box need js-raw-total-actual">0<span class="calc-unit">속</span></div></div>
+                <div class="field"><label>총 로스량</label><div class="calc-box loss warn js-raw-total-loss">${formatSignedQty(-toNumber(expected))}<span class="calc-unit">속</span></div></div>
+                <div class="field"><label>전체 수율</label><div class="calc-box yield bad js-raw-total-yield">0<span class="calc-unit">%</span></div></div>
+            </div>
+            <div class="raw-lot-list usage-list"
+                 data-raw-material-id="${escapeHtml(row.raw_material_id || '')}"
+                 data-raw-material-code="${escapeHtml(row.raw_material_code || '')}"
+                 data-raw-material-name="${escapeHtml(row.raw_material_name || '')}"
+                 data-default-receiving-date="${escapeHtml(receivingDate)}"
+                 data-default-car-number="${escapeHtml(carNumber)}"
+                 data-default-actual="${escapeHtml(actualValue)}"
+                 data-default-note="${escapeHtml(defaults.usage_note || '')}"></div>
+        </div>
+    `;
+}
+function materialCard(row, mode) {
+    const expected = usageExpected(row);
+    const showExpiry = mode === 'base';
+    const unit = row.unit || '';
+    const defaults = lastMaterialDefault(row);
+    const receivingDate = defaults.receiving_date || '';
+    const expiryDate = defaults.expiry_date || '';
+    const manufactureDate = defaults.manufacture_date || '';
+    const actualValue = defaults.actual_quantity ? String(defaults.actual_quantity) : expected;
+    const groupId = `material-lot-${++materialLotGroupSeq}`;
+    const lotCard = materialLotCardHtml(row, mode, groupId, {
+        receivingDate,
+        expiryDate,
+        manufactureDate,
+        expectedValue: expected,
+        actualValue,
+        canRemove: false,
+    });
+    return `
+        <div class="material-lot-group" data-lot-group="${groupId}" data-total-need="${escapeHtml(expected)}" data-total-actual="${escapeHtml(actualValue)}">
+            <div class="material-lot-tools">
+                <span><strong>${escapeHtml(row.material_name || '자재')}</strong> 로트별 입력 <span class="lot-count-badge js-lot-count">1개 로트</span></span>
+                <button type="button" class="ghost-btn" onclick="addMaterialLot(this)">로트 추가</button>
+            </div>
+            ${lotCard}
+        </div>
+    `;
+}
+function materialLotCardHtml(row, mode, groupId, options = {}) {
+    const showExpiry = mode === 'base';
+    const dateMode = materialDateMode(row, mode);
+    const unit = row.unit || '';
+    const isSesame = isSesameOilMaterial(row);
+    const defaultReceivingUnknown = mode === 'pack' && isBoxPackagingMaterial(row);
+    const inputUnit = isSesame ? (options.inputUnit || getSavedSesameUnit()) : 'kg';
+    const expectedValue = options.expectedValue || usageExpected(row);
+    const actualValue = options.actualValue || expectedValue;
+    const dateFields = dateMode === 'manufacture'
+        ? `${dateInputHtml('material_override_manufacture_date[]', options.manufactureDate || '', '제조일')}<input type="hidden" name="material_override_expiry_date[]" value="">`
+        : (dateMode === 'expiry'
+            ? `<input type="hidden" name="material_override_manufacture_date[]" value="">${dateInputHtml('material_override_expiry_date[]', options.expiryDate || '', '소비기한')}`
+            : '<input type="hidden" name="material_override_manufacture_date[]" value=""><input type="hidden" name="material_override_expiry_date[]" value="">');
+    return `
+        <div class="usage-card ${showExpiry ? '' : 'pack'}" data-lot-card="material" data-lot-group="${escapeHtml(groupId)}" data-need="${escapeHtml(expectedValue)}" data-unit="${escapeHtml(unit)}" data-mode="${escapeHtml(mode)}" data-sesame="${isSesame ? '1' : '0'}">
+            <div class="usage-name">
+                <strong>${escapeHtml(row.material_name || '자재')} <span class="lot-count-badge js-lot-label">로트 1</span></strong>
+                <span>${escapeHtml(row.material_code || '-')} ${unit ? `· ${escapeHtml(unit)}` : ''}</span>
+                <input type="hidden" name="material_id[]" value="${escapeHtml(row.material_id || '')}">
+                <input type="hidden" name="material_expected_quantity[]" value="${escapeHtml(expectedValue)}">
+                <input type="hidden" name="material_actual_unit[]" value="${escapeHtml(inputUnit)}">
+            </div>
+            <div class="field required">
+                <div class="date-field-head">
+                    <label>실제 사용량</label>
+                    <span class="sesame-unit-toggle ${isSesame ? 'show' : ''}">
+                        <button type="button" data-unit="kg" class="${inputUnit === 'kg' ? 'active' : ''}" onclick="setMaterialInputUnit(this, 'kg')">kg</button>
+                        <button type="button" data-unit="L" class="${inputUnit === 'L' ? 'active' : ''}" onclick="setMaterialInputUnit(this, 'L')">L</button>
+                    </span>
+                </div>
+                <input type="number" inputmode="decimal" class="register-input required-input js-actual-input" name="material_actual_quantity[]" step="any" min="0" value="${escapeHtml(materialKgToInput({ dataset: { sesame: isSesame ? '1' : '0' }, querySelector: () => ({ value: inputUnit }) }, actualValue).toFixed(4).replace(/\.?0+$/, ''))}" oninput="updateMaterialActualForLot(this)" onchange="commitMaterialActualForLot(this)" onblur="commitMaterialActualForLot(this)">
+            </div>
+            ${dateInputHtml('material_override_receiving_date[]', options.receivingDate || '', '입고일', true, { unknownDefault: defaultReceivingUnknown })}
+            ${dateFields}
+            <div class="field"><label>필요량</label><div class="calc-box need js-need-value">${formatQty(expectedValue)}<span class="calc-unit">${escapeHtml(unit)}</span></div></div>
+            <div class="field"><label>로스량</label><div class="calc-box loss good js-loss-value">0<span class="calc-unit">${escapeHtml(unit)}</span></div></div>
+            <div class="field"><label>수율</label><div class="calc-box yield good js-yield-value">100<span class="calc-unit">%</span></div></div>
+            ${options.canRemove ? '<button type="button" class="danger-lite-btn" onclick="removeMaterialLot(this)">로트 삭제</button>' : ''}
+        </div>
+    `;
+}
+function rawLotCardHtml(row, options = {}) {
+    return `
+        <div class="usage-card raw" data-lot-card="raw" data-unit="속">
+            <div class="usage-name">
+                <strong>${escapeHtml(row.raw_material_name || '원초')} <span class="lot-count-badge js-lot-label">로트</span></strong>
+                <span>${escapeHtml(row.raw_material_code || '-')}</span>
+                <input type="hidden" name="raw_material_id[]" value="${escapeHtml(row.raw_material_id || '')}">
+                <input type="hidden" name="raw_material_code[]" value="${escapeHtml(row.raw_material_code || '')}">
+                <input type="hidden" name="raw_material_name[]" value="${escapeHtml(row.raw_material_name || '')}">
+                <input type="hidden" name="raw_expected_quantity[]" value="0">
+            </div>
+            <div class="field required"><label>입고일</label><input type="date" class="register-input required-input" name="raw_override_receiving_date[]" value="${escapeHtml(options.receivingDate || '')}"></div>
+            <div class="field required"><label>자호</label><input type="text" class="register-input required-input" name="raw_override_car_number[]" value="${escapeHtml(options.carNumber || '')}" placeholder="자호"></div>
+            <div class="field required"><label>실제 사용량</label><input type="number" inputmode="decimal" class="register-input required-input js-actual-input" name="raw_actual_quantity[]" step="any" min="0" value="${escapeHtml(options.actualValue || '0')}" oninput="updateRawActualForLot(this)"></div>
+            <div class="field"><label>메모</label><textarea class="register-textarea usage-note" name="raw_usage_note[]" placeholder="필요 시 입력">${escapeHtml(options.note || '')}</textarea></div>
+            <button type="button" class="danger-lite-btn" onclick="removeRawLot(this)">로트 삭제</button>
+        </div>
+    `;
+}
+function addRawLot(buttonEl) {
+    const groupEl = buttonEl.closest('.raw-lot-group');
+    const list = groupEl ? groupEl.querySelector('.raw-lot-list') : null;
+    if (!groupEl || !list) return;
+    const existingCount = list.querySelectorAll('.usage-card[data-lot-card="raw"]').length;
+    const row = {
+        raw_material_id: list.dataset.rawMaterialId || '',
+        raw_material_code: list.dataset.rawMaterialCode || '',
+        raw_material_name: list.dataset.rawMaterialName || '',
+    };
+    const remainingNeed = Math.max(
+        toNumber(groupEl.dataset.totalNeed) - Array.from(list.querySelectorAll('input[name="raw_actual_quantity[]"]')).reduce((sum, input) => sum + toNumber(input.value), 0),
+        0
+    );
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = rawLotCardHtml(row, {
+        receivingDate: existingCount === 0 ? (list.dataset.defaultReceivingDate || '') : '',
+        carNumber: existingCount === 0 ? (list.dataset.defaultCarNumber || '') : '',
+        actualValue: existingCount === 0 ? (list.dataset.defaultActual || remainingNeed || '0') : (remainingNeed || '0'),
+        note: existingCount === 0 ? (list.dataset.defaultNote || '') : '',
+    });
+    const card = wrapper.firstElementChild;
+    list.appendChild(card);
+    list.querySelectorAll('.js-lot-label').forEach((label, index) => { label.textContent = `로트 ${index + 1}`; });
+    updateRawLotGroup(groupEl);
+}
+function renderUsageRows() {
+    updateSummary();
+    rawLotGroupSeq = 0;
+    materialLotGroupSeq = 0;
+    const productId = Number(document.getElementById('productId').value || 0);
+    const rawRows = productId ? (rawBomMap[String(productId)] || []) : [];
+    const materialRows = productId ? (materialBomMap[String(productId)] || []) : [];
+    const baseRows = materialRows.filter(isBaseMaterial);
+    const packRows = materialRows
+        .filter((row) => !isBaseMaterial(row))
+        .sort((a, b) => packSortRank(a) - packSortRank(b) || String(a.material_name || '').localeCompare(String(b.material_name || '')));
+    document.getElementById('rawUsageWrap').innerHTML = rawRows.length ? rawRows.map(rawCard).join('') + '<div id="extraRawRows" class="usage-list"></div>' : '<div class="empty-state">기본 원초가 없습니다. 필요하면 원초를 추가해 주세요.</div><div id="extraRawRows" class="usage-list"></div>';
+    document.getElementById('baseMaterialUsageWrap').innerHTML = baseRows.length ? baseRows.map((row) => materialCard(row, 'base')).join('') + '<div id="extraBaseMaterialRows" class="usage-list"></div>' : '<div class="empty-state">기본 원자재가 없습니다. 필요하면 직접 추가해 주세요.</div><div id="extraBaseMaterialRows" class="usage-list"></div>';
+    document.getElementById('packMaterialUsageWrap').innerHTML = packRows.length ? packRows.map((row) => materialCard(row, 'pack')).join('') + '<div id="extraPackMaterialRows" class="usage-list"></div>' : '<div class="empty-state">기본 부재료가 없습니다. 필요하면 직접 추가해 주세요.</div><div id="extraPackMaterialRows" class="usage-list"></div>';
+    updateAllLosses();
+}
+function rawSelectOptions() {
+    return rawCatalog.map((item) => `<option value="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name || '')}" data-car="${escapeHtml(item.car_number || '')}" data-date="${escapeHtml(item.receiving_date || '')}">${escapeHtml(item.name || '')} (${escapeHtml(item.code || '-')})</option>`).join('');
+}
+function materialSelectOptions(mode) {
+    const rows = materialCatalog.filter((item) => mode === 'base' ? isBaseMaterial({ material_category: item.category, material_name: item.name }) : !isBaseMaterial({ material_category: item.category, material_name: item.name }));
+    return rows.map((item) => `<option value="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name || '')}" data-category="${escapeHtml(item.category || '')}" data-unit="${escapeHtml(item.unit || '')}">${escapeHtml(item.name || '')} (${escapeHtml(item.code || '-')}${item.unit ? ` / ${escapeHtml(item.unit)}` : ''})</option>`).join('');
+}
+function addExtraRawRow() {
+    const target = document.getElementById('extraRawRows');
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+        <div class="usage-card raw" data-need="0" data-unit="속">
+            <div class="usage-name">
+                <strong>추가 원초</strong><span>작업장 원초가 없어도 코드/명칭으로 등록</span>
+                <input type="hidden" name="raw_material_id[]" value="">
+                <div class="field required"><label>원초코드</label><input type="text" class="register-input required-input" name="raw_material_code[]" placeholder="예: A05_S"></div>
+                <div class="field required"><label>원초명</label><input type="text" class="register-input required-input" name="raw_material_name[]" placeholder="원초명"></div>
+                <div class="field required"><label>필요량</label><input type="number" class="register-input required-input js-expected-input" name="raw_expected_quantity[]" step="0.01" min="0" value="0" oninput="updateExpectedForCard(this)"></div>
+            </div>
+            <div class="field required"><label>입고일</label><input type="date" class="register-input required-input" name="raw_override_receiving_date[]" value=""></div>
+            <div class="field required"><label>자호</label><input type="text" class="register-input required-input" name="raw_override_car_number[]" value=""></div>
+            <div class="field"><label>필요량 확인</label><div class="calc-box need js-need-value">0<span class="calc-unit">속</span></div></div>
+            <div class="field required"><label>실제 사용량</label><input type="number" class="register-input required-input js-actual-input" name="raw_actual_quantity[]" step="0.01" min="0" value="0" oninput="updateLossForCard(this)"></div>
+            <div class="field"><label>로스량</label><div class="calc-box loss good js-loss-value">0<span class="calc-unit">속</span></div></div>
+            <div class="field"><label>수율</label><div class="calc-box yield good js-yield-value">0<span class="calc-unit">%</span></div></div>
+            <div class="field"><label>메모</label><textarea class="register-textarea usage-note" name="raw_usage_note[]"></textarea><button type="button" class="danger-lite-btn" onclick="this.closest('.usage-card').remove()">삭제</button></div>
+        </div>`;
+    const card = wrapper.firstElementChild;
+    target.appendChild(card);
+    updateLossForCard(card.querySelector('.js-actual-input'));
+}
+function syncRawSelect(selectEl) {
+    const option = selectEl.options[selectEl.selectedIndex];
+    const card = selectEl.closest('.usage-card');
+    card.querySelector('input[name="raw_material_name[]"]').value = option.dataset.name || '';
+    card.querySelector('input[name="raw_override_car_number[]"]').value = option.dataset.car || '';
+    card.querySelector('input[name="raw_override_receiving_date[]"]').value = option.dataset.date || '';
+}
+function syncMaterialSelect(selectEl) {
+    const option = selectEl.options[selectEl.selectedIndex];
+    const card = selectEl.closest('.usage-card');
+    const unit = option.dataset.unit || '';
+    const selectedMaterial = { material_category: option.dataset.category || '', material_name: option.dataset.name || '' };
+    const isSesame = isSesameOilMaterial(selectedMaterial);
+    card.dataset.unit = unit;
+    card.dataset.sesame = isSesame ? '1' : '0';
+    const hiddenUnit = card.querySelector('input[name="material_actual_unit[]"]');
+    if (hiddenUnit) hiddenUnit.value = isSesame ? getSavedSesameUnit() : 'kg';
+    card.querySelectorAll('.calc-unit').forEach((el) => { el.textContent = el.textContent === '%' ? '%' : unit; });
+    refreshSesameUnitUi(card);
+    const isSalt = isSaltMaterial(selectedMaterial);
+    const manufactureField = card.querySelector('[data-extra-manufacture-field]');
+    const expiryField = card.querySelector('[data-extra-expiry-field]');
+    if (manufactureField && expiryField) {
+        const manufactureInput = manufactureField.querySelector('input');
+        const expiryInput = expiryField.querySelector('input');
+        manufactureField.classList.toggle('hidden-field', !isSalt);
+        expiryField.classList.toggle('hidden-field', isSalt);
+        if (manufactureInput) manufactureInput.classList.toggle('required-input', isSalt);
+        if (expiryInput) expiryInput.classList.toggle('required-input', !isSalt);
+    }
+    const receivingInput = card.querySelector('input[name="material_override_receiving_date[]"]');
+    const receivingField = receivingInput ? receivingInput.closest('.field') : null;
+    if (receivingField && card.classList.contains('pack')) {
+        setUnknownDateField(receivingField, isBoxPackagingMaterial(selectedMaterial));
+    }
+    const actualInput = card.querySelector('.js-actual-input');
+    if (actualInput) updateLossForCard(actualInput);
+}
+function addMaterialLot(buttonEl) {
+    const groupEl = buttonEl.closest('.material-lot-group');
+    const firstCard = groupEl ? groupEl.querySelector('.usage-card[data-lot-card="material"]') : null;
+    if (!groupEl || !firstCard) return;
+    const currentActualInputs = Array.from(groupEl.querySelectorAll('input[name="material_actual_quantity[]"]'));
+    if (currentActualInputs.length) {
+        groupEl.dataset.totalActual = String(currentActualInputs.reduce((sum, input) => sum + materialInputToKg(input.closest('.usage-card'), input.value), 0));
+    }
+    const row = {
+        material_id: firstCard.querySelector('input[name="material_id[]"]').value,
+        material_name: firstCard.querySelector('.usage-name strong').childNodes[0].textContent.trim(),
+        material_code: firstCard.querySelector('.usage-name span').textContent.split('·')[0].trim(),
+        unit: firstCard.dataset.unit || '',
+    };
+    const mode = firstCard.dataset.mode || 'base';
+    const groupId = groupEl.dataset.lotGroup;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = materialLotCardHtml(row, mode, groupId, {
+        expectedValue: groupEl.dataset.totalNeed || '0',
+        actualValue: groupEl.dataset.totalActual || groupEl.dataset.totalNeed || '0',
+        inputUnit: firstCard.querySelector('input[name="material_actual_unit[]"]')?.value || 'kg',
+        canRemove: true,
+    });
+    groupEl.appendChild(wrapper.firstElementChild);
+    updateMaterialLotGroup(groupEl);
+}
+function addExtraMaterialRow(mode) {
+    const target = document.getElementById(mode === 'base' ? 'extraBaseMaterialRows' : 'extraPackMaterialRows');
+    const wrapper = document.createElement('div');
+    const showExpiry = mode === 'base';
+    wrapper.innerHTML = `
+        <div class="usage-card ${showExpiry ? '' : 'pack'}" data-need="0" data-unit="" data-mode="${escapeHtml(mode)}">
+            <div class="usage-name">
+                <strong>추가 ${showExpiry ? '원자재' : '부재료'}</strong><span>생산일지 기준 직접 선택</span>
+                <select class="register-select" name="material_id[]" onchange="syncMaterialSelect(this)"><option value="">자재 선택</option>${materialSelectOptions(mode)}</select>
+                <input type="hidden" name="material_actual_unit[]" value="kg">
+            </div>
+            <div class="field required">
+                <div class="date-field-head">
+                    <label>실제 사용량</label>
+                    <span class="sesame-unit-toggle">
+                        <button type="button" data-unit="kg" class="active" onclick="setMaterialInputUnit(this, 'kg')">kg</button>
+                        <button type="button" data-unit="L" onclick="setMaterialInputUnit(this, 'L')">L</button>
+                    </span>
+                </div>
+                <input type="number" inputmode="decimal" class="register-input required-input js-actual-input" name="material_actual_quantity[]" step="any" min="0" value="0" oninput="updateMaterialActualForLot(this)" onchange="commitMaterialActualForLot(this)" onblur="commitMaterialActualForLot(this)">
+            </div>
+            ${dateInputHtml('material_override_receiving_date[]', '', '입고일')}
+            ${showExpiry ? `<div data-extra-manufacture-field class="hidden-field">${dateInputHtml('material_override_manufacture_date[]', '', '제조일')}</div><div data-extra-expiry-field>${dateInputHtml('material_override_expiry_date[]', '', '소비기한')}</div>` : '<input type="hidden" name="material_override_manufacture_date[]" value=""><input type="hidden" name="material_override_expiry_date[]" value="">'}
+            <div class="field required"><label>필요량</label><input type="number" inputmode="decimal" class="register-input required-input js-expected-input" name="material_expected_quantity[]" step="any" min="0" value="0" oninput="updateExpectedForCard(this)"></div>
+            <div class="field"><label>필요량 확인</label><div class="calc-box need js-need-value">0<span class="calc-unit"></span></div></div>
+            <div class="field"><label>로스량</label><div class="calc-box loss good js-loss-value">0<span class="calc-unit"></span></div></div>
+            <div class="field"><label>수율</label><div class="calc-box yield good js-yield-value">0<span class="calc-unit">%</span></div></div>
+            <button type="button" class="danger-lite-btn" onclick="this.closest('.usage-card').remove()">삭제</button>
+        </div>`;
+    const card = wrapper.firstElementChild;
+    target.appendChild(card);
+    updateLossForCard(card.querySelector('.js-actual-input'));
+}
+document.getElementById('registerModeForm').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    if (event.target && event.target.tagName === 'TEXTAREA') return;
+    event.preventDefault();
+});
+document.getElementById('registerModeForm').addEventListener('submit', (event) => {
+    if (!validateRequiredFields()) {
+        event.preventDefault();
+    }
+});
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.product-search-wrap')) {
+        document.getElementById('productSearchDrop').style.display = 'none';
+    }
+});
+updateSummary();
+syncExpiryInputs();
+renderUsageRows();
+goStep(0);
+</script>
+{% endblock %}

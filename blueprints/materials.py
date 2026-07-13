@@ -4150,59 +4150,164 @@ def raw_material_detail(raw_material_id):
 @login_required
 def raw_material_checksheet_preview(raw_material_id):
     workplace = get_workplace()
+    production_id = int(request.args.get('production_id') or 0) if str(request.args.get('production_id') or '').strip().isdigit() else 0
+    requested_receiving_date = (request.args.get('lot_receiving_date') or '').strip()
+    requested_car_number = (request.args.get('lot_car_number') or '').strip()
     conn_context = db_connection()
     conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            '''
+        raw_sql = '''
             SELECT
-                id, workplace, name, code, lot, receiving_date,
-                COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as car_number,
-                COALESCE(sheets_per_sok, 0) as sheets_per_sok,
-                COALESCE(total_stock, 0) as total_stock,
-                COALESCE(current_stock, 0) as current_stock,
-                COALESCE(used_quantity, 0) as used_quantity
-            FROM raw_materials
-            WHERE id = ?
-              AND workplace = ?
-            ''',
-            (raw_material_id, workplace),
-        )
+                rm.id, rm.workplace, rm.name, rm.code, rm.lot, rm.receiving_date,
+                COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), '')) as car_number,
+                COALESCE(rm.sheets_per_sok, 0) as sheets_per_sok,
+                COALESCE(rm.total_stock, 0) as total_stock,
+                COALESCE(rm.current_stock, 0) as current_stock,
+                COALESCE(rm.used_quantity, 0) as used_quantity
+            FROM raw_materials rm
+            WHERE rm.id = ?
+              AND (
+                    COALESCE(rm.workplace, '') = ?
+                    OR (
+                        ? > 0
+                        AND EXISTS (
+                            SELECT 1
+                            FROM production_material_usage pmu
+                            JOIN productions p ON p.id = pmu.production_id
+                            WHERE pmu.raw_material_id = rm.id
+                              AND pmu.production_id = ?
+                              AND COALESCE(p.workplace, '') = ?
+                        )
+                    )
+              )
+        '''
+        cursor.execute(raw_sql, (raw_material_id, workplace, production_id, production_id, workplace))
         raw = cursor.fetchone()
         if not raw:
             abort(404)
 
-        cursor.execute(
-            '''
-            SELECT
-                substr(p.production_date, 1, 10) as use_date,
-                COALESCE(pmu.actual_quantity, 0) as used_quantity,
-                COALESCE(pr.name, '') as product_name,
-                COALESCE(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), '') as usage_note,
-                COALESCE(rcn.note, '') as checksheet_note,
-                COALESCE(p.status, '') as production_status
-            FROM production_material_usage pmu
-            JOIN productions p
-              ON p.id = pmu.production_id
-             AND COALESCE(p.production_date, '') <> ''
-            LEFT JOIN products pr ON pr.id = p.product_id
-            LEFT JOIN raw_material_checksheet_notes rcn
-              ON rcn.raw_material_id = pmu.raw_material_id
-              AND rcn.use_date = substr(p.production_date, 1, 10)
-            WHERE pmu.raw_material_id = ?
-              AND COALESCE(pmu.actual_quantity, 0) > 0
-            ORDER BY substr(p.production_date, 1, 10) DESC, p.id DESC, pmu.id DESC
-            ''',
-            (raw_material_id,),
-        )
+        aggregate_register_lot = False
+        if production_id > 0:
+            cursor.execute('SELECT COALESCE(entry_mode, "") as entry_mode FROM productions WHERE id = ?', (production_id,))
+            production_row = cursor.fetchone()
+            aggregate_register_lot = (production_row and (production_row['entry_mode'] or '').strip().lower() == 'register')
+
+        raw_receiving_date = requested_receiving_date or (raw['receiving_date'] or '').strip()
+        raw_car_number = requested_car_number or (raw['car_number'] or '').strip()
+        raw_code = (raw['code'] or '').strip()
+        lot_raw_ids = [int(raw_material_id)]
+        lot_total_stock = float(raw['total_stock'] or 0)
+        lot_current_stock = float(raw['current_stock'] or 0)
+        if raw_receiving_date and raw_car_number:
+            cursor.execute(
+                '''
+                SELECT id, COALESCE(total_stock, 0) as total_stock, COALESCE(current_stock, 0) as current_stock
+                FROM raw_materials
+                WHERE COALESCE(workplace, '') = ?
+                  AND COALESCE(receiving_date, '') = ?
+                  AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = ?
+                ''',
+                (workplace, raw_receiving_date, raw_car_number),
+            )
+            lot_rows = [dict(row) for row in cursor.fetchall()]
+            if lot_rows:
+                lot_raw_ids = [int(row['id']) for row in lot_rows if int(row['id'] or 0) > 0]
+                lot_total_stock = sum(float(row.get('total_stock') or 0) for row in lot_rows)
+                lot_current_stock = sum(float(row.get('current_stock') or 0) for row in lot_rows)
+        if aggregate_register_lot and raw_receiving_date and raw_car_number:
+            cursor.execute(
+                '''
+                SELECT
+                    p.id as production_id,
+                    substr(p.production_date, 1, 10) as use_date,
+                    COALESCE(pmu.actual_quantity, 0) as used_quantity,
+                    COALESCE(pr.name, '') as product_name,
+                    COALESCE(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), '') as usage_note,
+                    COALESCE(rcn.note, '') as checksheet_note,
+                    COALESCE(p.status, '') as production_status
+                FROM production_material_usage pmu
+                JOIN productions p
+                  ON p.id = pmu.production_id
+                 AND COALESCE(p.production_date, '') <> ''
+                LEFT JOIN products pr ON pr.id = p.product_id
+                LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                LEFT JOIN raw_material_checksheet_notes rcn
+                  ON rcn.raw_material_id = pmu.raw_material_id
+                  AND rcn.use_date = substr(p.production_date, 1, 10)
+                WHERE COALESCE(p.workplace, '') = ?
+                  AND LOWER(COALESCE(p.entry_mode, '')) = 'register'
+                  AND COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date, '') = ?
+                  AND COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') = ?
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                ORDER BY substr(p.production_date, 1, 10) DESC, p.id DESC, pmu.id DESC
+                ''',
+                (workplace, raw_receiving_date, raw_car_number),
+            )
+        else:
+            cursor.execute(
+                '''
+                SELECT
+                    p.id as production_id,
+                    substr(p.production_date, 1, 10) as use_date,
+                    COALESCE(pmu.actual_quantity, 0) as used_quantity,
+                    COALESCE(pr.name, '') as product_name,
+                    COALESCE(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), '') as usage_note,
+                    COALESCE(rcn.note, '') as checksheet_note,
+                    COALESCE(p.status, '') as production_status
+                FROM production_material_usage pmu
+                JOIN productions p
+                  ON p.id = pmu.production_id
+                 AND COALESCE(p.production_date, '') <> ''
+                LEFT JOIN products pr ON pr.id = p.product_id
+                LEFT JOIN raw_material_checksheet_notes rcn
+                  ON rcn.raw_material_id = pmu.raw_material_id
+                  AND rcn.use_date = substr(p.production_date, 1, 10)
+                WHERE pmu.raw_material_id = ?
+                  AND (? <= 0 OR pmu.production_id = ?)
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                ORDER BY substr(p.production_date, 1, 10) DESC, p.id DESC, pmu.id DESC
+                ''',
+                (raw_material_id, production_id, production_id),
+            )
         production_usage_rows = [dict(row) for row in cursor.fetchall()]
+        if aggregate_register_lot and production_id > 0 and not production_usage_rows:
+            cursor.execute(
+                '''
+                SELECT
+                    p.id as production_id,
+                    substr(p.production_date, 1, 10) as use_date,
+                    COALESCE(pmu.actual_quantity, 0) as used_quantity,
+                    COALESCE(pr.name, '') as product_name,
+                    COALESCE(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), '') as usage_note,
+                    COALESCE(rcn.note, '') as checksheet_note,
+                    COALESCE(p.status, '') as production_status
+                FROM production_material_usage pmu
+                JOIN productions p
+                  ON p.id = pmu.production_id
+                 AND COALESCE(p.production_date, '') <> ''
+                LEFT JOIN products pr ON pr.id = p.product_id
+                LEFT JOIN raw_material_checksheet_notes rcn
+                  ON rcn.raw_material_id = pmu.raw_material_id
+                  AND rcn.use_date = substr(p.production_date, 1, 10)
+                WHERE pmu.raw_material_id = ?
+                  AND pmu.production_id = ?
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                ORDER BY substr(p.production_date, 1, 10) DESC, p.id DESC, pmu.id DESC
+                ''',
+                (raw_material_id, production_id),
+            )
+            production_usage_rows = [dict(row) for row in cursor.fetchall()]
 
         production_usage_map = {}
+        register_production_used_total = 0.0
         done_status = _normalize_production_status('완료')
         for row in production_usage_rows:
-            if _normalize_production_status(row.get('production_status')) != done_status:
+            is_selected_register_row = aggregate_register_lot and production_id > 0 and int(row.get('production_id') or 0) == production_id
+            if _normalize_production_status(row.get('production_status')) != done_status and not is_selected_register_row:
                 continue
+            if aggregate_register_lot:
+                register_production_used_total += float(row.get('used_quantity') or 0)
             use_date = row.get('use_date') or ''
             checksheet_note = (row.get('checksheet_note') or '').strip()
             key = (use_date, checksheet_note)
@@ -4226,8 +4331,9 @@ def raw_material_checksheet_preview(raw_material_id):
             if usage_note:
                 entry['usage_notes'].append(usage_note)
 
+        lot_placeholders = ','.join(['?'] * len(lot_raw_ids))
         cursor.execute(
-            '''
+            f'''
             SELECT
                 substr(rml.created_at, 1, 10) as use_date,
                 ABS(COALESCE(SUM(COALESCE(rml.quantity, 0)), 0)) as used_quantity,
@@ -4237,12 +4343,12 @@ def raw_material_checksheet_preview(raw_material_id):
                 2 as sort_group,
                 'export' as log_kind
             FROM raw_material_logs rml
-            WHERE rml.raw_material_id = ?
+            WHERE rml.raw_material_id IN ({lot_placeholders})
               AND COALESCE(rml.type, '') = 'export'
               AND COALESCE(rml.quantity, 0) < 0
             GROUP BY substr(rml.created_at, 1, 10), COALESCE(NULLIF(TRIM(rml.note), ''), '')
             ''',
-            (raw_material_id,),
+            lot_raw_ids,
         )
         export_usage_rows = [dict(row) for row in cursor.fetchall()]
 
@@ -4265,11 +4371,18 @@ def raw_material_checksheet_preview(raw_material_id):
         usage_logs.sort(key=lambda row: row.get('use_date') or '', reverse=True)
         usage_logs = usage_logs[:14]
 
-        total_stock = float(raw['total_stock'] or 0)
-        current_stock = float(raw['current_stock'] or 0)
+        total_stock = lot_total_stock
+        current_stock = lot_current_stock
+        if aggregate_register_lot:
+            total_stock = register_production_used_total
         reconstructed_rows = []
-        running_after = current_stock
-        for log in usage_logs:
+        if aggregate_register_lot:
+            display_logs = sorted(usage_logs, key=lambda row: row.get('use_date') or '')
+            running_before = total_stock
+        else:
+            display_logs = usage_logs
+            running_after = current_stock
+        for log in display_logs:
             used_qty = float(log.get('used_quantity') or 0)
             log_kind = str(log.get('log_kind') or 'production').strip()
             default_note = ', '.join([x.strip() for x in (log.get('product_names') or '').split(',') if x.strip()])
@@ -4294,18 +4407,24 @@ def raw_material_checksheet_preview(raw_material_id):
                 display_used_qty = 0.0
                 move_text = f'원초 반출 {used_qty:,.0f}속'
                 note = f'{move_text} / {note}' if note else move_text
+            if aggregate_register_lot:
+                row_stock = max(running_before - used_qty, 0)
+                running_before = row_stock
+            else:
+                row_stock = running_after
             reconstructed_rows.append(
                 {
                     'use_date': log.get('use_date') or '',
-                    'site_stock': f'{running_after:,.0f}',
+                    'site_stock': f'{row_stock:,.0f}',
                     'warehouse_stock': f'{0:,.0f}',
-                    'total_stock': f'{running_after:,.0f}',
+                    'total_stock': f'{row_stock:,.0f}',
                     'used_quantity': f'{display_used_qty:,.0f}',
                     'note': note,
                 }
             )
-            running_after = max(running_after + used_qty, 0)
-        usage_rows = list(reversed(reconstructed_rows))
+            if not aggregate_register_lot:
+                running_after = max(running_after + used_qty, 0)
+        usage_rows = reconstructed_rows if aggregate_register_lot else list(reversed(reconstructed_rows))
         # Keep extra blank rows available so the print template can fill the page
         # and then hide only the overflow rows in fitUsageRowsToSinglePage().
         target_usage_rows = 12
@@ -4321,21 +4440,36 @@ def raw_material_checksheet_preview(raw_material_id):
                 }
             )
 
-        all_dates = [d for d in [raw['receiving_date']] + [row['use_date'] for row in usage_rows if row['use_date']] if d]
-        if all_dates:
-            period_text = f"{min(all_dates)} ~ {max(all_dates)}"
+        use_dates = [row['use_date'] for row in usage_rows if row['use_date']]
+        if raw_receiving_date or use_dates:
+            start_text = raw_receiving_date or min(use_dates)
+            end_text = max(use_dates) if use_dates else start_text
+            period_text = f"{start_text} ~ {end_text}"
         else:
             period_text = '-'
 
         sheets_per_sok = float(raw['sheets_per_sok'] or 0)
+        if aggregate_register_lot and raw_code:
+            cursor.execute(
+                '''
+                SELECT COALESCE(MAX(COALESCE(sheets_per_sok, 0)), 0) as sheets_per_sok
+                FROM raw_materials
+                WHERE COALESCE(workplace, '') = ?
+                  AND COALESCE(NULLIF(TRIM(code), ''), '') = ?
+                  AND COALESCE(sheets_per_sok, 0) > 0
+                ''',
+                (workplace, raw_code),
+            )
+            sheet_row = cursor.fetchone()
+            sheets_per_sok = float(sheet_row['sheets_per_sok'] or 0) if sheet_row else sheets_per_sok
         box_qty = (total_stock / sheets_per_sok) if sheets_per_sok > 0 else 0
         workplace_title = str(workplace or '').replace('2층', '2F').replace('1층', '1F')
         author_name = (session.get('user', {}) or {}).get('name') or (session.get('user', {}) or {}).get('username') or ''
 
         intake = {
-            'receiving_date': raw['receiving_date'] or '',
+            'receiving_date': raw_receiving_date,
             'name': raw['name'] or '',
-            'car_number': raw['car_number'] or '',
+            'car_number': raw_car_number,
             'sheets_per_sok_text': f'{sheets_per_sok:,.0f}' if sheets_per_sok else '',
             'box_quantity_text': f'{box_qty:,.0f}' if box_qty else '',
             'total_stock_text': f'{total_stock:,.0f}' if total_stock else '',

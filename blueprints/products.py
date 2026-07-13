@@ -487,16 +487,15 @@ def upload_product_spec_sheet(product_id):
 @bp.route('/products/<int:product_id>/spec-sheet/view')
 @login_required
 def view_product_spec_sheet(product_id):
-    workplace = get_workplace()
     with db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             '''
             SELECT spec_sheet_file_name, spec_sheet_stored_name
             FROM products
-            WHERE id = ? AND workplace = ?
+            WHERE id = ?
             ''',
-            (product_id, workplace),
+            (product_id,),
         )
         product_row = cursor.fetchone()
     if not product_row or not (product_row['spec_sheet_stored_name'] or '').strip():
@@ -514,15 +513,16 @@ def view_product_spec_sheet(product_id):
 @login_required
 def manage_product_spec_sheet(product_id):
     workplace = get_workplace()
+    view_only = request.args.get('view_only') == '1'
     with db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             '''
-            SELECT id, name, code, spec_sheet_file_name, spec_sheet_stored_name, spec_sheet_uploaded_at
+            SELECT id, name, code, workplace, spec_sheet_file_name, spec_sheet_stored_name, spec_sheet_uploaded_at
             FROM products
-            WHERE id = ? AND workplace = ?
+            WHERE id = ?
             ''',
-            (product_id, workplace),
+            (product_id,),
         )
         product = cursor.fetchone()
     if not product:
@@ -530,11 +530,16 @@ def manage_product_spec_sheet(product_id):
 
     user = session.get('user') or {}
     role = user.get('role') or ('admin' if user.get('is_admin') else 'readonly')
-    can_edit = role in ['admin', 'production']
+    can_edit = (
+        not view_only
+        and role in ['admin', 'production']
+        and (product['workplace'] or '') == (workplace or '')
+    )
     return render_template(
         'product_spec_sheet_popup.html',
         product=product,
         can_edit=can_edit,
+        view_only=view_only,
     )
 
 @bp.route('/products/add', methods=['POST'])

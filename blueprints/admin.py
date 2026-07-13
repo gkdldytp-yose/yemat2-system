@@ -3774,6 +3774,7 @@ def integrated_management():
                 pr.workplace,
                 pr.production_date,
                 pr.status,
+                pr.entry_mode,
                 pr.planned_boxes,
                 pr.actual_boxes,
                 pr.work_time,

@@ -998,6 +998,7 @@ def _ensure_production_schema(conn):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 workplace TEXT NOT NULL,
                 note_date TEXT NOT NULL,
+                note_color TEXT NOT NULL DEFAULT 'blue',
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 created_by TEXT,
@@ -1012,6 +1013,8 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN workplace TEXT NOT NULL DEFAULT ''")
         if 'note_date' not in note_cols:
             conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN note_date TEXT NOT NULL DEFAULT ''")
+        if 'note_color' not in note_cols:
+            conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN note_color TEXT NOT NULL DEFAULT 'blue'")
         if 'title' not in note_cols:
             conn.execute("ALTER TABLE schedule_special_notes ADD COLUMN title TEXT NOT NULL DEFAULT ''")
         if 'content' not in note_cols:
@@ -1071,7 +1074,13 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE productions ADD COLUMN sample_excluded_boxes_3 REAL")
         if 'raw_sok_mode' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN raw_sok_mode INTEGER DEFAULT 1")
+        if 'entry_mode' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN entry_mode TEXT NOT NULL DEFAULT 'standard'")
         conn.execute("UPDATE productions SET raw_sok_mode = 1 WHERE raw_sok_mode IS NULL OR raw_sok_mode < 1")
+        conn.execute(
+            "UPDATE productions SET entry_mode = 'standard' "
+            "WHERE COALESCE(NULLIF(TRIM(entry_mode), ''), '') = ''"
+        )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_productions_export_schedule ON productions(export_schedule_id, production_date)"
         )
@@ -1089,6 +1098,14 @@ def _ensure_production_schema(conn):
         usage_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_material_usage)").fetchall()]
         if 'usage_note' not in usage_cols:
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN usage_note TEXT")
+        if 'override_receiving_date' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_receiving_date TEXT")
+        if 'override_expiry_date' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_expiry_date TEXT")
+        if 'override_manufacture_date' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_manufacture_date TEXT")
+        if 'override_car_number' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_car_number TEXT")
     except Exception:
         pass
     _production_schema_checked = True
