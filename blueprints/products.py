@@ -1,4 +1,6 @@
 ﻿from flask import Blueprint, render_template, request, redirect, url_for, session, send_file
+import sqlite3
+
 from fractions import Fraction
 from pathlib import Path
 from uuid import uuid4
@@ -352,6 +354,50 @@ def _parse_non_negative_float_field(raw_value, label):
     return round(value + 1e-9, 4)
 
 
+def _normalize_set_item_type(raw_value, category=''):
+    value = str(raw_value or '').strip().lower()
+    normalized_category = str(category or '').strip()
+    if normalized_category != '세트':
+        return ''
+    if value in {'finished', '완제품'}:
+        return 'finished'
+    if value in {'semi', '반제품'}:
+        return 'semi'
+    return ''
+
+
+def _is_finished_set_product(product_row):
+    if not product_row:
+        return False
+    return (
+        str(product_row.get('category') or '').strip() == '세트'
+        and _normalize_set_item_type(product_row.get('set_item_type'), '세트') == 'finished'
+    )
+
+
+def _load_component_product_candidates(cursor, workplace, current_product_id=0):
+    cursor.execute(
+        '''
+        SELECT
+            p.id,
+            p.code,
+            p.name,
+            p.category,
+            COALESCE(ps.current_stock, 0) AS current_stock
+        FROM products p
+        LEFT JOIN product_stocks ps
+          ON ps.product_id = p.id
+         AND ps.workplace = ?
+        WHERE p.workplace = ?
+          AND COALESCE(p.set_item_type, '') = 'semi'
+          AND p.id != ?
+        ORDER BY p.name ASC, p.id ASC
+        ''',
+        (workplace, workplace, current_product_id),
+    )
+    return [dict(row) for row in cursor.fetchall()]
+
+
 def _build_spec_sheet_name(product_id, original_name):
     suffix = Path(original_name or '').suffix.lower() or '.pdf'
     return f'product_{product_id}_{uuid4().hex}{suffix}'
@@ -548,25 +594,49 @@ def add_product():
     """?곹뭹 異붽?"""
     workplace = get_workplace()
     name = (request.form.get('name') or '').strip()
-    code = (request.form.get('code') or '').strip()
-    description = request.form.get('description')
+    code = (request.form.get('code') or '').strip() or None
+    description = (request.form.get('description') or '').strip() or None
     category = (request.form.get('category') or '기타').strip() or '기타'
+    set_item_type = _normalize_set_item_type(request.form.get('set_item_type'), category)
     try:
-        box_quantity = _parse_positive_int_field(request.form.get('box_quantity', 1), '박스당 낱봉')
-        sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack', 24), '매수')
-        cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet', 9), '절단')
+        if set_item_type == 'finished':
+            box_quantity = 1
+            sheets_per_pack = 0
+            cuts_per_sheet = 0
+        else:
+            box_quantity = _parse_positive_int_field(request.form.get('box_quantity', 1), '박스당 낱봉')
+            sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack', 24), '매수')
+            cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet', 9), '절단')
     except ValueError as e:
         return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
     try:
         with db_transaction() as conn:
             cursor = conn.cursor()
+            cursor.execute('SELECT id FROM products WHERE name = ?', (name,))
+            if cursor.fetchone():
+                raise ValueError(f'이미 등록된 상품명입니다: {name}')
+            if code:
+                cursor.execute('SELECT id FROM products WHERE code = ?', (code,))
+                if cursor.fetchone():
+                    raise ValueError(f'이미 사용 중인 코드입니다: {code}')
             cursor.execute('''
-                INSERT INTO products (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet))
+                INSERT INTO products (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet, set_item_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, code, description, box_quantity, category, workplace, sheets_per_pack, cuts_per_sheet, set_item_type))
         return redirect(url_for('products.products'))
+    except ValueError as e:
+        return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
+    except sqlite3.IntegrityError as e:
+        error_text = str(e)
+        if 'products.code' in error_text:
+            message = f'이미 사용 중인 코드입니다: {code or "(빈 코드)"}'
+        elif 'products.name' in error_text:
+            message = f'이미 등록된 상품명입니다: {name}'
+        else:
+            message = f'상품 등록 중 오류가 발생했습니다: {error_text}'
+        return f"<meta charset='utf-8'><script>alert({message!r}); history.back();</script>"
     except Exception as e:
-        return f"?먮윭: {e}", 400
+        return "<meta charset='utf-8'><script>alert('상품 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'); history.back();</script>", 400
 
 @bp.route('/products/<int:product_id>/delete', methods=['POST'])
 @role_required('production')
@@ -581,6 +651,9 @@ def delete_product(product_id):
         with db_transaction() as conn:
             cursor = conn.cursor()
             cursor.execute('DELETE FROM bom WHERE product_id = ?', (product_id,))
+            cursor.execute('DELETE FROM bom WHERE component_product_id = ?', (product_id,))
+            cursor.execute('DELETE FROM product_stocks WHERE product_id = ?', (product_id,))
+            cursor.execute('DELETE FROM product_stock_logs WHERE product_id = ?', (product_id,))
             cursor.execute('DELETE FROM products WHERE id = ?', (product_id,))
     except ValueError as e:
         return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
@@ -620,22 +693,30 @@ def product_bom(product_id):
             SELECT b.*, 
                    COALESCE(b.quantity_per_box_expr, '') as quantity_per_box_expr,
                    m.name as material_name, m.unit, m.category,
+                   cp.name as component_product_name,
+                   cp.code as component_product_code,
+                   COALESCE(cps.current_stock, 0) as component_current_stock,
                    rm.name as raw_material_display_name,
                    rm.code as raw_code,
                    rm.lot as raw_lot,
                    rm.sheets_per_sok,
-                   rm.receiving_date as raw_receiving_date,
-                   rm.car_number as raw_car_number
+                    rm.receiving_date as raw_receiving_date,
+                    rm.car_number as raw_car_number
             FROM bom b
             LEFT JOIN materials m ON b.material_id = m.id
+            LEFT JOIN products cp ON cp.id = b.component_product_id
+            LEFT JOIN product_stocks cps
+              ON cps.product_id = cp.id
+             AND cps.workplace = ?
             LEFT JOIN raw_materials rm ON b.raw_material_id = rm.id
             WHERE b.product_id = ?
             ORDER BY
                 {bom_sort},
+                CASE WHEN b.component_product_id IS NOT NULL THEN 0 ELSE 1 END,
                 COALESCE(m.category, ''),
-                COALESCE(m.name, rm.name, ''),
+                COALESCE(cp.name, m.name, rm.name, ''),
                 b.id
-        '''.format(bom_sort=BOM_CATEGORY_SORT_CASE), (product_id,))
+        '''.format(bom_sort=BOM_CATEGORY_SORT_CASE), (workplace, product_id))
         bom_items = cursor.fetchall()
         grouped_bom_items = []
         raw_item_indexes = {}
@@ -695,6 +776,7 @@ def product_bom(product_id):
             ORDER BY code ASC
         ''', (workplace,))
         raw_materials = cursor.fetchall()
+        component_candidates = _load_component_product_candidates(cursor, workplace, product_id)
 
     return_to = _clean_next_url(request.args.get('return_to'), url_for('products.products'))
 
@@ -704,6 +786,7 @@ def product_bom(product_id):
                           bom_items=grouped_bom_items,
                           materials=materials,
                           raw_materials=raw_materials,
+                          component_candidates=component_candidates,
                           silica_options=silica_options,
                           pouch_options=pouch_options,
                           effective_selected_silica_id=effective_selected_silica_id,
@@ -715,6 +798,7 @@ def product_bom(product_id):
 def update_product_info(product_id):
     """?곹뭹 湲곕낯 ?뺣낫 ?낅뜲?댄듃"""
     category = (request.form.get('category') or '기타').strip() or '기타'
+    set_item_type = _normalize_set_item_type(request.form.get('set_item_type'), category)
     raw_option_values = _parse_raw_option_values(request.form)
     first_option, second_option, third_option = raw_option_values
     sok_per_box = first_option['sok'] if first_option['sok'] is not None else 0
@@ -724,9 +808,19 @@ def update_product_info(product_id):
     sheets_per_pack_3 = third_option['sheets']
     expiry_months = request.form.get('expiry_months', 12)
     try:
-        box_quantity = _parse_positive_int_field(request.form.get('box_quantity'), '박스당 낱봉')
-        base_sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack'), '매수')
-        cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet'), '절단')
+        if set_item_type == 'finished':
+            box_quantity = 1
+            base_sheets_per_pack = 0
+            cuts_per_sheet = 0
+            sok_per_box = 0
+            sok_per_box_2 = None
+            sok_per_box_3 = None
+            sheets_per_pack_2 = None
+            sheets_per_pack_3 = None
+        else:
+            box_quantity = _parse_positive_int_field(request.form.get('box_quantity'), '박스당 낱봉')
+            base_sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack'), '매수')
+            cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet'), '절단')
     except ValueError as e:
         return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
     sheets_per_pack = first_option['sheets'] if first_option['sheets'] is not None else base_sheets_per_pack
@@ -743,12 +837,12 @@ def update_product_info(product_id):
             UPDATE products
             SET box_quantity = ?, sheets_per_pack = ?, cuts_per_sheet = ?, category = ?,
                 sok_per_box = ?, sok_per_box_2 = ?, sok_per_box_3 = ?,
-                sheets_per_pack_2 = ?, sheets_per_pack_3 = ?, expiry_months = ?
+                sheets_per_pack_2 = ?, sheets_per_pack_3 = ?, expiry_months = ?, set_item_type = ?
             WHERE id = ?
         ''', (
             box_quantity, sheets_per_pack, cuts_per_sheet, category,
             sok_per_box, sok_per_box_2, sok_per_box_3,
-            sheets_per_pack_2, sheets_per_pack_3, expiry_months, product_id
+            sheets_per_pack_2, sheets_per_pack_3, expiry_months, set_item_type, product_id
         ))
 
     return redirect(_product_bom_url(product_id, request.form.get('return_to')))
@@ -800,6 +894,29 @@ def add_bom_individual(product_id):
                         ''',
                         (product_id, raw_id, qty, qty, qty_expr),
                     )
+            elif item_type == 'component':
+                comp_ids = request.form.getlist('component_ids[]')
+                comp_qtys = request.form.getlist('component_quantities[]')
+                for comp_id, comp_qty in zip(comp_ids, comp_qtys):
+                    qty, qty_expr = _parse_bom_quantity_input(comp_qty)
+                    cursor.execute(
+                        'SELECT id FROM bom WHERE product_id = ? AND component_product_id = ?',
+                        (product_id, comp_id),
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        cursor.execute(
+                            'UPDATE bom SET quantity_per_box = ?, quantity_per_box_expr = ? WHERE id = ?',
+                            (qty, qty_expr, row['id']),
+                        )
+                    else:
+                        cursor.execute(
+                            '''
+                            INSERT INTO bom (product_id, component_product_id, quantity_per_box, quantity_per_box_expr)
+                            VALUES (?, ?, ?, ?)
+                            ''',
+                            (product_id, comp_id, qty, qty_expr),
+                        )
             else:
                 mat_ids = request.form.getlist('mat_ids[]')
                 mat_qtys = request.form.getlist('mat_quantities[]')
@@ -884,6 +1001,7 @@ def delete_bom_item(bom_id):
         cursor.execute(
             '''
             SELECT b.product_id, b.material_id, COALESCE(m.category, '') AS category
+                 , b.component_product_id
             FROM bom b
             LEFT JOIN materials m ON m.id = b.material_id
             WHERE b.id = ?
@@ -910,7 +1028,9 @@ def update_bom_item(bom_id):
             cursor = conn.cursor()
             cursor.execute(
                 '''
-                SELECT b.id, b.product_id, b.material_id, b.raw_material_id, b.sok_per_box, b.quantity_per_box, COALESCE(b.quantity_per_box_expr, '') as quantity_per_box_expr, p.sok_per_box as product_sok_per_box
+                SELECT b.id, b.product_id, b.material_id, b.component_product_id, b.raw_material_id,
+                       b.sok_per_box, b.quantity_per_box, COALESCE(b.quantity_per_box_expr, '') as quantity_per_box_expr,
+                       p.sok_per_box as product_sok_per_box
                 FROM bom b
                 JOIN products p ON p.id = b.product_id
                 WHERE b.id = ?
@@ -924,6 +1044,14 @@ def update_bom_item(bom_id):
             product_id = bom['product_id']
 
             if bom['material_id']:
+                qty, qty_expr = _parse_bom_quantity_input(request.form.get('quantity_per_box'))
+                cursor.execute(
+                    'UPDATE bom SET quantity_per_box = ?, quantity_per_box_expr = ? WHERE id = ?',
+                    (qty, qty_expr, bom_id),
+                )
+                return redirect(_product_bom_url(product_id, request.form.get('return_to')))
+
+            if bom['component_product_id']:
                 qty, qty_expr = _parse_bom_quantity_input(request.form.get('quantity_per_box'))
                 cursor.execute(
                     'UPDATE bom SET quantity_per_box = ?, quantity_per_box_expr = ? WHERE id = ?',
@@ -1068,12 +1196,19 @@ def update_product_pouch_selection(product_id):
 @role_required('production')
 def quick_update_product_info(product_id):
     category = (request.form.get('category') or '기타').strip() or '기타'
+    set_item_type = _normalize_set_item_type(request.form.get('set_item_type'), category)
     expiry_months = request.form.get('expiry_months', 12)
     try:
-        box_quantity = _parse_positive_int_field(request.form.get('box_quantity'), '박스당 낱봉')
-        sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack'), '매수')
-        cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet'), '절단')
-        sok_per_box = _parse_non_negative_float_field(request.form.get('sok_per_box'), '1박스당 원초')
+        if set_item_type == 'finished':
+            box_quantity = 1
+            sheets_per_pack = 0
+            cuts_per_sheet = 0
+            sok_per_box = 0
+        else:
+            box_quantity = _parse_positive_int_field(request.form.get('box_quantity'), '박스당 낱봉')
+            sheets_per_pack = _parse_positive_int_field(request.form.get('sheets_per_pack'), '매수')
+            cuts_per_sheet = _parse_cuts_per_sheet_field(request.form.get('cuts_per_sheet'), '절단')
+            sok_per_box = _parse_non_negative_float_field(request.form.get('sok_per_box'), '1박스당 원초')
         expiry_months = int(expiry_months)
     except ValueError as e:
         return f"<meta charset='utf-8'><script>alert({e.args[0]!r}); history.back();</script>"
@@ -1094,7 +1229,8 @@ def quick_update_product_info(product_id):
                 sheets_per_pack = ?,
                 cuts_per_sheet = ?,
                 sok_per_box = ?,
-                expiry_months = ?
+                expiry_months = ?,
+                set_item_type = ?
             WHERE id = ?
               AND workplace = ?
             ''',
@@ -1105,6 +1241,7 @@ def quick_update_product_info(product_id):
                 cuts_per_sheet,
                 sok_per_box,
                 expiry_months,
+                set_item_type,
                 product_id,
                 workplace,
             ),

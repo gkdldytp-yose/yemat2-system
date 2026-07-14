@@ -23,7 +23,9 @@
 .product-search-option:last-child{border-bottom:none;}
 .product-search-option:hover{background:#f8faff;}
 .product-search-option strong{color:#0f172a;}
-.product-search-option-meta{font-size:0.75rem;color:#999;margin-top:0.25rem;}
+.product-search-option-meta{font-size:0.75rem;color:#999;margin-top:0.25rem;display:flex;gap:0.45rem;flex-wrap:wrap;align-items:center;}
+.product-search-badge{display:inline-flex;align-items:center;padding:0.18rem 0.45rem;border-radius:999px;background:#eef2ff;color:#3b82f6;font-weight:700;font-size:0.7rem;}
+.product-search-badge.shared{background:#dcfce7;color:#15803d;}
 .info-panel-title{margin-bottom:1rem;color:#667eea;font-size:1rem;}
 .info-row.total-row{border-top:2px dashed #667eea;padding-top:0.75rem;margin-top:0.75rem;}
 .info-value.total-value{font-size:1.5rem;color:#667eea;}
@@ -56,6 +58,14 @@ html[data-theme="dark"] .product-search-option strong{
 }
 html[data-theme="dark"] .product-search-option-meta{
     color:#8ea3bd;
+}
+html[data-theme="dark"] .product-search-badge{
+    background:rgba(59,130,246,.16);
+    color:#bfdbfe;
+}
+html[data-theme="dark"] .product-search-badge.shared{
+    background:rgba(34,197,94,.16);
+    color:#bbf7d0;
 }
 html[data-theme="dark"] .info-panel{
     background:linear-gradient(180deg,#162133,#101827);
@@ -130,7 +140,7 @@ html[data-theme="dark"] .line-select-help{
         <div class="form-group">
             <label>품목 선택 *</label>
             <div class="product-search-wrap">
-                <input type="text" id="productSearch" placeholder="등록할 품목명을 검색하세요" autocomplete="off" oninput="doSearch()" onfocus="showAll()">
+                <input type="text" id="productSearch" placeholder="품목명 또는 코드 검색" autocomplete="off" oninput="doSearch()" onfocus="showAll()">
                 <div id="searchDrop" class="product-search-drop"></div>
             </div>
             <div id="selBox"></div>
@@ -146,6 +156,10 @@ html[data-theme="dark"] .line-select-help{
         </div>
         <div class="form-group">
             <label>생산 라인 * (중복 선택 가능)</label>
+            <label class="line-select-item" style="margin-bottom:.55rem;display:inline-flex;">
+                <input type="checkbox" id="lineUsageDisabled" name="line_usage_disabled" value="1" onchange="syncLineUsageDisabled()">
+                <span>라인 사용 안함</span>
+            </label>
             <div class="line-select-grid">
                 {% for line in range(1, 13) %}
                 <label class="line-select-item">
@@ -154,7 +168,7 @@ html[data-theme="dark"] .line-select-help{
                 </label>
                 {% endfor %}
             </div>
-            <div class="line-select-help">생산할 라인을 선택하세요. 여러 개 선택할 수 있습니다.</div>
+            <div class="line-select-help">생산할 라인을 선택하세요. 여러 개 선택할 수 있고, 라인을 쓰지 않는 작업은 사용 안함으로 등록할 수 있습니다.</div>
         </div>
         <div class="form-group">
             <label>비고</label>
@@ -190,17 +204,37 @@ html[data-theme="dark"] .line-select-help{
 const prods = {{ products_json|safe }};
 let sel = null;
 
+function escapeHtml(text){
+    return String(text ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+}
+
+function renderProdOption(p){
+    const isShared = Boolean(p.is_shared_workplace);
+    const workplaceBadge = p.workplace ? `<span class="product-search-badge${isShared ? ' shared' : ''}">${escapeHtml(p.workplace)}</span>` : '';
+    const codeText = p.code ? escapeHtml(p.code) : '';
+    return `<div onclick="selectProd(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.box_quantity})" class="product-search-option"><strong>${escapeHtml(p.name)}</strong><div class="product-search-option-meta">${workplaceBadge}${codeText ? `<span>${codeText}</span>` : ''}<span>박스당 ${escapeHtml(p.box_quantity)}개</span></div></div>`;
+}
+
 function showAll(){
     const drop = document.getElementById('searchDrop');
-    drop.innerHTML = prods.map(p=>`<div onclick="selectProd(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.box_quantity})" class="product-search-option"><strong>${p.name}</strong><div class="product-search-option-meta">박스당 ${p.box_quantity}개</div></div>`).join('');
+    drop.innerHTML = prods.map(renderProdOption).join('');
     drop.style.display='block';
 }
 
 function doSearch(){
     const q = document.getElementById('productSearch').value.toLowerCase();
-    const filtered = prods.filter(p=>p.name.toLowerCase().includes(q));
+    const filtered = prods.filter(p=>
+        String(p.name || '').toLowerCase().includes(q) ||
+        String(p.code || '').toLowerCase().includes(q) ||
+        String(p.workplace || '').toLowerCase().includes(q)
+    );
     const drop = document.getElementById('searchDrop');
-    drop.innerHTML = filtered.map(p=>`<div onclick="selectProd(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.box_quantity})" class="product-search-option"><strong>${p.name}</strong><div class="product-search-option-meta">박스당 ${p.box_quantity}개</div></div>`).join('');
+    drop.innerHTML = filtered.map(renderProdOption).join('');
     drop.style.display = filtered.length > 0 ? 'block' : 'none';
 }
 
@@ -221,11 +255,20 @@ function updateCalc(){
     document.getElementById('total').textContent = (boxes * sel.qty).toLocaleString();
 }
 
+function syncLineUsageDisabled(){
+    const disabled = Boolean(document.getElementById('lineUsageDisabled')?.checked);
+    document.querySelectorAll('input[name="production_lines"]').forEach((input) => {
+        input.disabled = disabled;
+    });
+}
+
 document.addEventListener('click',function(e){
     if(!e.target.closest('#productSearch') && !e.target.closest('#searchDrop')){
         document.getElementById('searchDrop').style.display='none';
     }
 });
+
+syncLineUsageDisabled();
 </script>
 {% endblock %}
 

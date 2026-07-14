@@ -11,6 +11,7 @@ from core import (
     get_workplace,
     hash_password,
     login_required,
+    normalize_workplace_name,
     today_local,
     verify_password,
 )
@@ -305,9 +306,51 @@ def index():
     conn = get_db()
     cursor = conn.cursor()
 
+    def _load_fallback_low_stock_materials():
+        cursor.execute(
+            '''
+            SELECT
+                m.id,
+                COALESCE(NULLIF(TRIM(m.code), ''), printf('M%05d', m.id)) AS code,
+                COALESCE(NULLIF(TRIM(m.name), ''), printf('자재 %d', m.id)) AS name,
+                COALESCE(m.unit, '') AS unit,
+                ROUND(COALESCE(m.current_stock, 0), 1) AS current_stock,
+                ROUND(COALESCE(m.min_stock, 0), 1) AS required_qty,
+                ROUND(COALESCE(m.min_stock, 0) - COALESCE(m.current_stock, 0), 1) AS shortage_qty
+            FROM materials m
+            WHERE COALESCE(m.min_stock, 0) > 0
+              AND COALESCE(m.current_stock, 0) < COALESCE(m.min_stock, 0)
+              AND (m.workplace = ? OR m.workplace = ? OR m.workplace IS NULL)
+            ORDER BY shortage_qty DESC, name ASC, code ASC
+            ''',
+            (workplace, SHARED_WORKPLACE),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    def _load_fallback_raw_shortages():
+        cursor.execute(
+            '''
+            SELECT
+                COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) AS code,
+                MIN(COALESCE(NULLIF(TRIM(name), ''), '원초')) AS name,
+                '속' AS unit,
+                ROUND(COALESCE(SUM(COALESCE(current_stock, 0)), 0), 1) AS current_stock,
+                0.0 AS required_qty,
+                0.0 AS shortage_qty
+            FROM raw_materials
+            WHERE workplace = ?
+            GROUP BY COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id))
+            HAVING ROUND(COALESCE(SUM(COALESCE(current_stock, 0)), 0), 1) <= 0
+            ORDER BY name ASC, code ASC
+            ''',
+            (workplace,),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
     # 금주 생산 스케줄
     today = today_local()
     week_end = today + timedelta(days=7)
+    schedule_window_start = today - timedelta(days=30)
     cursor.execute('''
         SELECT ps.id, ps.scheduled_date, ps.planned_boxes, ps.status, ps.note,
                p.name as product_name
@@ -315,12 +358,15 @@ def index():
         LEFT JOIN products p ON ps.product_id = p.id
         WHERE ps.scheduled_date BETWEEN ? AND ? AND ps.workplace = ?
         ORDER BY ps.scheduled_date
-    ''', (today.isoformat(), week_end.isoformat(), workplace))
+    ''', (schedule_window_start.isoformat(), week_end.isoformat(), workplace))
     schedule_rows = cursor.fetchall()
     schedules = []
     for row in schedule_rows:
         schedule = dict(row)
         normalized_status = _normalize_dashboard_schedule_status(schedule.get('status'))
+        scheduled_date = str(schedule.get('scheduled_date') or '').strip()
+        if scheduled_date and scheduled_date < today.isoformat() and normalized_status not in {'예정', '진행중'}:
+            continue
         schedule['display_status'] = normalized_status
         schedules.append(schedule)
 
@@ -333,7 +379,7 @@ def index():
           AND ps.scheduled_date BETWEEN ? AND ?
         ORDER BY ps.scheduled_date, ps.id
         ''',
-        (workplace, today.isoformat(), week_end.isoformat()),
+        (workplace, schedule_window_start.isoformat(), week_end.isoformat()),
     )
     product_box_map = {}
     for row in cursor.fetchall():
@@ -349,6 +395,7 @@ def index():
     low_stock_materials = []
     raw_shortages = []
     material_need_map = {}
+    has_planned_shortage_basis = bool(product_box_map)
     if product_box_map:
         product_ids = list(product_box_map.keys())
         placeholders = ','.join(['?'] * len(product_ids))
@@ -522,6 +569,10 @@ def index():
 
         raw_shortages.sort(key=lambda x: (-x['shortage_qty'], x['code'], x['name']))
 
+    if not has_planned_shortage_basis:
+        low_stock_materials = _load_fallback_low_stock_materials()
+        raw_shortages = _load_fallback_raw_shortages()
+
     # 최근 생산 통계
     days_ago_30 = today - timedelta(days=30)
     cursor.execute('''
@@ -620,6 +671,7 @@ def index():
     return render_template('dashboard.html',
                          user=session['user'],
                          workplace=workplace,
+                         has_planned_shortage_basis=has_planned_shortage_basis,
                          low_stock_materials=low_stock_materials,
                          low_stock_material_ids_json=json.dumps([int(item['id']) for item in low_stock_materials], ensure_ascii=False),
                          low_stock_material_ids_csv=','.join(str(int(item['id'])) for item in low_stock_materials),
@@ -647,10 +699,11 @@ def select_workplace():
 @login_required
 def set_workplace(workplace):
     """작업장 설정"""
-    user_workplaces = session['user']['workplaces']
-    if workplace in user_workplaces:
-        session['workplace'] = workplace
-        session['user'] = build_session_user(session['user'], workplace)
+    normalized_workplace = normalize_workplace_name(workplace)
+    user_workplaces = [normalize_workplace_name(item) for item in session['user']['workplaces']]
+    if normalized_workplace in user_workplaces:
+        session['workplace'] = normalized_workplace
+        session['user'] = build_session_user(session['user'], normalized_workplace)
         return redirect(url_for('main.index'))
     else:
         return "권한이 없습니다", 403

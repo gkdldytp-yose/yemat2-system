@@ -149,11 +149,19 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
                     {% for c in CATS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="form-group"><label>박스당 낱봉 *</label><input type="number" name="box_quantity" value="100" required></div>
-            <div class="form-group"><label>매수 *</label><input type="number" name="sheets_per_pack" value="24" required></div>
             <div class="form-group">
-                <label>절단 *</label>
-                <select name="cuts_per_sheet" required>
+                <label>세트 구분</label>
+                <select name="set_item_type">
+                    <option value="">일반 상품</option>
+                    <option value="finished">세트 완제품</option>
+                    <option value="semi">세트 반제품</option>
+                </select>
+            </div>
+            <div class="form-group"><label>박스당 낱봉</label><input type="number" name="box_quantity" value="100"></div>
+            <div class="form-group"><label>매수</label><input type="number" name="sheets_per_pack" value="24"></div>
+            <div class="form-group">
+                <label>절단</label>
+                <select name="cuts_per_sheet">
                     <option value="none">없음</option>
                     {% for cut in range(1, 21) %}
                     <option value="{{ cut }}" {% if cut == 9 %}selected{% endif %}>{{ cut }}</option>
@@ -247,14 +255,21 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
                     {% elif p.category=='전장' %}#f3e5f5;color:#7b1fa2
                     {% elif p.category=='생김' %}#e0f2f1;color:#00796b
                     {% elif p.category=='세트' %}#fce4ec;color:#c2185b
-                    {% else %}#f5f5f5;color:#666{% endif %}">{{ p.category }}</span>
+                {% else %}#f5f5f5;color:#666{% endif %}">{{ p.category }}</span>
+                {% if p.category == '세트' and p.set_item_type == 'finished' %}
+                <span class="cat-badge" style="background:#dbeafe;color:#1d4ed8;">완제품</span>
+                {% elif p.category == '세트' and p.set_item_type == 'semi' %}
+                <span class="cat-badge" style="background:#ecfccb;color:#3f6212;">반제품</span>
+                {% endif %}
                 {% else %}-{% endif %}
             </td>
-            <td>{{ p.box_quantity }}</td>
-            <td>{{ p.sheets_per_pack or 24 }}매</td>
-            <td>{% if p.cuts_per_sheet is not none and (p.cuts_per_sheet|int) == 0 %}없음{% else %}{{ p.cuts_per_sheet or 9 }}{% endif %}</td>
+            <td>{% if p.category == '세트' and p.set_item_type == 'finished' %}-{% else %}{{ p.box_quantity }}{% endif %}</td>
+            <td>{% if p.category == '세트' and p.set_item_type == 'finished' %}-{% else %}{{ p.sheets_per_pack or 24 }}매{% endif %}</td>
+            <td>{% if p.category == '세트' and p.set_item_type == 'finished' %}-{% elif p.cuts_per_sheet is not none and (p.cuts_per_sheet|int) == 0 %}없음{% else %}{{ p.cuts_per_sheet or 9 }}{% endif %}</td>
             <td>
-                {% if p.sok_per_box and p.sok_per_box > 0 %}
+                {% if p.category == '세트' and p.set_item_type == 'finished' %}
+                -
+                {% elif p.sok_per_box and p.sok_per_box > 0 %}
                 {{ "%.2f"|format(p.sok_per_box) }}속
                 {% else %}
                 -
@@ -288,6 +303,7 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
             <td colspan="9" class="quick-edit-cell">
                 <div class="quick-edit-panel">
                     <div class="quick-edit-title">{{ p.name }} 기본정보 빠른 수정</div>
+                    {% set is_finished_set_row = (p.category == '세트' and p.set_item_type == 'finished') %}
                     <form method="POST" action="/products/{{ p.id }}/quick-update">
                         <input type="hidden" name="return_to" value="{{ current_list_url }}">
                         <div class="quick-edit-grid">
@@ -300,19 +316,29 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
                                     <option value="기타" {% if (p.category or '기타') == '기타' %}selected{% endif %}>기타</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>박스당 낱봉</label><input type="number" name="box_quantity" min="1" step="1" value="{{ p.box_quantity or 100 }}" required></div>
-                            <div class="form-group"><label>매수</label><input type="number" name="sheets_per_pack" min="1" step="1" value="{{ p.sheets_per_pack or 24 }}" required></div>
+                            <div class="form-group">
+                                <label>세트 구분</label>
+                                <select name="set_item_type">
+                                    <option value="" {% if not p.set_item_type %}selected{% endif %}>일반 상품</option>
+                                    <option value="finished" {% if p.set_item_type == 'finished' %}selected{% endif %}>세트 완제품</option>
+                                    <option value="semi" {% if p.set_item_type == 'semi' %}selected{% endif %}>세트 반제품</option>
+                                </select>
+                            </div>
+                            {% if not is_finished_set_row %}
+                            <div class="form-group"><label>박스당 낱봉</label><input type="number" name="box_quantity" min="1" step="1" value="{{ p.box_quantity or 100 }}"></div>
+                            <div class="form-group"><label>매수</label><input type="number" name="sheets_per_pack" min="1" step="1" value="{{ p.sheets_per_pack or 24 }}"></div>
                             <div class="form-group">
                                 <label>절단</label>
                                 {% set selected_cut = 9 if p.cuts_per_sheet is none else (p.cuts_per_sheet|int) %}
-                                <select name="cuts_per_sheet" required>
+                                <select name="cuts_per_sheet">
                                     <option value="none" {% if selected_cut == 0 %}selected{% endif %}>없음</option>
                                     {% for cut in range(1, 21) %}
                                     <option value="{{ cut }}" {% if selected_cut == cut %}selected{% endif %}>{{ cut }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="form-group"><label>1박스당 원초</label><input type="number" name="sok_per_box" min="0" step="0.01" value="{{ '%.2f'|format(p.sok_per_box or 0) }}" required></div>
+                            <div class="form-group"><label>1박스당 원초</label><input type="number" name="sok_per_box" min="0" step="0.01" value="{{ '%.2f'|format(p.sok_per_box or 0) }}"></div>
+                            {% endif %}
                             <div class="form-group">
                                 <label>소비기한</label>
                                 <select name="expiry_months" required>

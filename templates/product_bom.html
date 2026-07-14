@@ -234,6 +234,8 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
 {%- set can_purch = _r in ['admin','purchase','logistics'] -%}
 {%- set can_raw   = _r in ['admin','rawmat'] -%}
 {%- set is_admin  = _r == 'admin' -%}
+{% set is_finished_set = (product.category == '세트' and product.set_item_type == 'finished') %}
+{% set is_semi_set = (product.category == '세트' and product.set_item_type == 'semi') %}
 {% set sok_values = [] %}
 {% if product.sok_per_box is not none and product.sok_per_box > 0 %}{% set _ = sok_values.append(product.sok_per_box) %}{% endif %}
 {% if product.sok_per_box_2 is not none and product.sok_per_box_2 > 0 %}{% set _ = sok_values.append(product.sok_per_box_2) %}{% endif %}
@@ -258,17 +260,25 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
         <div class="product-info-summary">
         <div class="product-info-item">
             <div class="product-info-label">분류</div>
-            <div class="product-info-value">{{ product.category or '-' }}</div>
+            <div class="product-info-value">
+                {{ product.category or '-' }}
+                {% if is_finished_set %}<span class="sok-multi-tag">세트 완제품</span>{% endif %}
+                {% if is_semi_set %}<span class="sok-multi-tag">세트 반제품</span>{% endif %}
+            </div>
         </div>
         <div class="product-info-item">
             <div class="product-info-label">박스당 낱봉</div>
-            <div class="product-info-value">{{ product.box_quantity }}개</div>
+            <div class="product-info-value">{% if is_finished_set %}-{% else %}{{ product.box_quantity }}개{% endif %}</div>
         </div>
         <div class="product-info-item">
             <div class="product-info-label">매수 / 절단</div>
             <div class="product-info-value">
+                {% if is_finished_set %}
+                -
+                {% else %}
                 {{ product.sheets_per_pack or 24 }}매 /
                 {% if product.cuts_per_sheet is not none and (product.cuts_per_sheet|int) == 0 %}없음{% else %}{{ product.cuts_per_sheet or 9 }}{% endif %}
+                {% endif %}
             </div>
         </div>
         <div class="product-info-item">
@@ -277,7 +287,9 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
         </div>
         <div class="product-info-item" style="grid-column:span 2;">
             <div class="product-info-label">1박스당 사용 원초 / 매수</div>
-            {% if raw_options %}
+            {% if is_finished_set %}
+            <div class="product-info-value muted">세트 완제품은 원초를 직접 사용하지 않습니다.</div>
+            {% elif raw_options %}
             <div class="product-info-value muted">
                 {% for raw_option in raw_options %}
                 <span class="sok-multi-tag">{{ "%.2f"|format(raw_option.sok) }}속 / {{ raw_option.sheets }}매</span>
@@ -305,8 +317,17 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>세트 구분</label>
+                    <select name="set_item_type">
+                        <option value="" {% if not product.set_item_type %}selected{% endif %}>일반 상품</option>
+                        <option value="finished" {% if product.set_item_type == 'finished' %}selected{% endif %}>세트 완제품</option>
+                        <option value="semi" {% if product.set_item_type == 'semi' %}selected{% endif %}>세트 반제품</option>
+                    </select>
+                </div>
+                {% if not is_finished_set %}
+                <div class="form-group">
                     <label>박스당 낱봉</label>
-                    <input type="number" name="box_quantity" value="{{ product.box_quantity }}" required>
+                    <input type="number" name="box_quantity" value="{{ product.box_quantity }}" {% if not is_finished_set %}required{% endif %}>
                 </div>
                 <div class="form-group">
                     <label>절단</label>
@@ -318,6 +339,7 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                         {% endfor %}
                     </select>
                 </div>
+                {% endif %}
                 <div class="form-group">
                     <label>소비기한</label>
                     <select name="expiry_months" required>
@@ -328,6 +350,9 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                 </div>
                 <div class="form-group product-edit-wide">
                     <label>1박스당 원초 / 매수</label>
+                    {% if is_finished_set %}
+                    <div class="product-info-value muted">세트 완제품은 반제품 BOM으로 생산하므로 원초 설정이 필요 없습니다.</div>
+                    {% else %}
                     <div class="sok-multi-wrap" id="sokPerBoxFields">
                         <div class="sok-multi-row">
                             <div>
@@ -367,6 +392,7 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                         {% endif %}
                     </div>
                     <button type="button" class="btn btn-small sok-multi-add" id="addSokValueBtn" onclick="addSokPerBoxField()">+ 추가</button>
+                    {% endif %}
                 </div>
             </div>
             <div class="product-edit-actions">
@@ -445,13 +471,16 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
     <form method="POST" action="/products/{{ product.id }}/bom/add-individual" id="bomForm">
         <input type="hidden" name="return_to" value="{{ return_to }}">
         <div class="tab-container">
+            {% if not is_finished_set %}
             <button type="button" class="tab-btn active" data-tab="raw" onclick="switchTab('raw')">🌿 원초</button>
+            {% endif %}
             <button type="button" class="tab-btn" data-tab="material" onclick="switchTab('material')">🧰 부자재</button>
+            <button type="button" class="tab-btn" data-tab="component" onclick="switchTab('component')">📦 반제품</button>
         </div>
         
-        <input type="hidden" name="item_type" id="itemType" value="raw">
+        <input type="hidden" name="item_type" id="itemType" value="{{ 'component' if is_finished_set else 'raw' }}">
         
-        <div id="rawTab">
+        <div id="rawTab" {% if is_finished_set %}style="display:none;"{% endif %}>
             <div class="search-container">
                 <input type="text" id="rawSearch" placeholder="원초 검색..." onkeyup="search('raw')">
                 <span class="search-icon">🔍</span>
@@ -580,6 +609,60 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                 <div id="materialRows"></div>
             </div>
         </div>
+
+        <div id="componentTab" style="display:none;">
+            <div class="search-container">
+                <input type="text" id="componentSearch" placeholder="반제품명/코드 검색..." onkeyup="search('component')">
+                <span class="search-icon">🔍</span>
+            </div>
+
+            <div class="selection-panel">
+                <div class="selection-panel-head">
+                    <div>
+                        <div class="selection-panel-title">반제품 선택</div>
+                        <div class="selection-panel-sub">세트 완제품 생산에 필요한 반제품을 선택하고, 세트 1개당 필요한 수량을 입력합니다.</div>
+                    </div>
+                </div>
+                <div class="selection-table-wrap">
+                    {% if component_candidates %}
+                    <table class="selection-table" id="componentList">
+                        <thead>
+                            <tr>
+                                <th style="width:52px;">선택</th>
+                                <th>반제품명</th>
+                                <th style="width:120px;">코드</th>
+                                <th style="width:110px;">분류</th>
+                                <th style="width:110px;">현재고</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comp in component_candidates %}
+                            <tr data-name="{{ (comp.name ~ ' ' ~ (comp.code or ''))|lower }}">
+                                <td>
+                                    <input type="checkbox" class="selection-check"
+                                           value="{{ comp.id }}"
+                                           data-name="{{ comp.name|e }}"
+                                           onchange="toggleComponentSelection(this)">
+                                </td>
+                                <td><div class="selection-name">{{ comp.name }}</div></td>
+                                <td><span class="selection-code">{{ comp.code or '-' }}</span></td>
+                                <td><span class="item-category">반제품</span></td>
+                                <td><span class="selection-stock">{{ "%.1f"|format(comp.current_stock or 0) }} EA</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="selection-empty">등록된 세트 반제품이 없습니다. 상품 관리에서 세트 반제품으로 먼저 등록해주세요.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="selected-items-list" id="selectedComponents" style="display:none;">
+                <h3 style="margin-bottom:1rem;">선택된 반제품 (세트 1개당 필요 수량)</h3>
+                <div id="componentRows"></div>
+            </div>
+        </div>
         
         <div style="text-align:right;margin-top:1.5rem;">
             <button type="button" class="btn btn-secondary" onclick="closeForm()">취소</button>
@@ -601,9 +684,14 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
     <tbody>{% for item in bom_items %}
     <tr>
         {% set cat = item.category or '원초' %}
+        {% if item.component_product_id %}
+            {% set cat = '반제품' %}
+        {% endif %}
         {% set cat_class = 'bom-cat-other' %}
         {% if item.raw_material_id %}
             {% set cat_class = 'bom-cat-raw' %}
+        {% elif item.component_product_id %}
+            {% set cat_class = 'bom-cat-tray' %}
         {% elif cat == '내포' %}
             {% set cat_class = 'bom-cat-inner' %}
         {% elif cat == '외포' %}
@@ -617,11 +705,13 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
         {% endif %}
         <td><span class="bom-category-badge {{ cat_class }}">{{ cat }}</span></td>
         <td>
-            <strong>{% if item.raw_material_display_name %}{{ item.raw_material_display_name }}{% else %}{{ item.material_name }}{% endif %}</strong>
+            <strong>{% if item.raw_material_display_name %}{{ item.raw_material_display_name }}{% elif item.component_product_name %}{{ item.component_product_name }}{% else %}{{ item.material_name }}{% endif %}</strong>
             {% if not item.raw_material_id and cat == '실리카' and item.material_id == effective_selected_silica_id %}
             <span class="silica-choice-badge">생산 사용</span>
             {% elif not item.raw_material_id and cat == '파우치' and item.material_id == effective_selected_pouch_id %}
             <span class="silica-choice-badge">생산 사용</span>
+            {% elif item.component_product_id %}
+            <span class="silica-choice-badge">현재고 {{ "%.1f"|format(item.component_current_stock or 0) }} EA</span>
             {% endif %}
         </td>
         <td>
@@ -646,9 +736,9 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                 {% endif %}
             {% else %}
                 {% if item.quantity_per_box_expr %}
-                {{ item.quantity_per_box_expr }} <span style="color:#64748b;font-size:0.8rem;">({{ "%.6f"|format(item.quantity_per_box) }})</span> {{ item.unit or '' }}
+                {{ item.quantity_per_box_expr }} <span style="color:#64748b;font-size:0.8rem;">({{ "%.6f"|format(item.quantity_per_box) }})</span> {{ item.unit or ('EA' if item.component_product_id else '') }}
                 {% else %}
-                {{ "%.6f"|format(item.quantity_per_box) }} {{ item.unit or '' }}
+                {{ "%.6f"|format(item.quantity_per_box) }} {{ item.unit or ('EA' if item.component_product_id else '') }}
                 {% endif %}
             {% endif %}
         </td>
@@ -692,7 +782,7 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                 <strong style="min-width:72px;">사용량 수정</strong>
                 <input type="text" inputmode="decimal" name="quantity_per_box"
                        value="{{ item.quantity_per_box_expr or item.quantity_per_box }}" required style="width:180px;" placeholder="예: 1/3 또는 0.333333">
-                <span style="color:#475569;">{{ item.unit or '' }} / BOX</span>
+                <span style="color:#475569;">{{ item.unit or ('EA' if item.component_product_id else '') }} / BOX</span>
                 <button type="submit" class="btn btn-small">저장</button>
                 <button type="button" class="btn btn-small btn-secondary" onclick="toggleBomEdit({{ item.id }})">취소</button>
             </form>
@@ -738,12 +828,13 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
 <script>
 let selectedRawId=null;
 let selectedMaterials=[];
+let selectedComponents=[];
 let pendingSilicaValue=null;
 let pendingPouchValue=null;
 
 function openForm(){
     document.getElementById('addForm').style.display='block';
-    switchTab('raw');
+    switchTab({{ ('component' if is_finished_set else 'raw')|tojson }});
 }
 
 function toggleBomEdit(bomId){
@@ -758,8 +849,10 @@ function switchTab(type){
     const targetBtn = document.querySelector(`.tab-btn[data-tab="${type}"]`);
     if(targetBtn) targetBtn.classList.add('active');
     document.getElementById('itemType').value=type;
-    document.getElementById('rawTab').style.display=type==='raw'?'block':'none';
+    const rawTab = document.getElementById('rawTab');
+    if(rawTab) rawTab.style.display=type==='raw'?'block':'none';
     document.getElementById('matTab').style.display=type==='material'?'block':'none';
+    document.getElementById('componentTab').style.display=type==='component'?'block':'none';
 }
 
 function toggleRawSelection(input){
@@ -787,6 +880,44 @@ function toggleMaterialSelection(input){
         selectedMaterials=selectedMaterials.filter(m=>m.id!==id);
     }
     updateMaterialList();
+}
+
+function toggleComponentSelection(input){
+    const id = Number(input.value);
+    const name = input.dataset.name || '';
+    const row = input.closest('tr');
+    if(row) row.classList.toggle('selected', input.checked);
+
+    if(input.checked){
+        if(!selectedComponents.find(item => item.id === id)){
+            selectedComponents.push({id, name});
+        }
+    } else {
+        selectedComponents = selectedComponents.filter(item => item.id !== id);
+    }
+    renderComponentRows();
+}
+
+function renderComponentRows(){
+    const wrap = document.getElementById('selectedComponents');
+    const rows = document.getElementById('componentRows');
+    if(!wrap || !rows) return;
+    if(!selectedComponents.length){
+        wrap.style.display='none';
+        rows.innerHTML='';
+        return;
+    }
+    wrap.style.display='block';
+    rows.innerHTML = selectedComponents.map((item, idx) => `
+        <div class="selected-material-row">
+            <input type="hidden" name="component_ids[]" value="${item.id}">
+            <div><strong>${item.name}</strong><div style="font-size:0.82rem;color:#64748b;">세트 1개당 필요 수량</div></div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <input type="text" name="component_quantities[]" required placeholder="예: 5" style="width:140px;">
+                <span>EA</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 function removeMaterial(id){
@@ -929,7 +1060,8 @@ function updateQty(id,value){
 }
 
 function search(type){
-    const searchText=document.getElementById(type==='raw'?'rawSearch':'matSearch').value.toLowerCase();
+    const inputId = type==='raw' ? 'rawSearch' : (type==='component' ? 'componentSearch' : 'matSearch');
+    const searchText=document.getElementById(inputId).value.toLowerCase();
     const rows=document.querySelectorAll(`#${type}List tbody tr`);
     rows.forEach(row=>{
         const name=row.getAttribute('data-name')||'';
@@ -957,7 +1089,7 @@ document.getElementById('bomForm').onsubmit=function(e){
         const input=document.createElement('input');
         input.type='hidden';input.name='raw_id';input.value=selectedRawId;
         this.appendChild(input);
-    }else{
+    }else if(type==='material'){
         if(selectedMaterials.length===0){
             alert('부자재를 선택해주세요.');
             e.preventDefault();
@@ -981,6 +1113,20 @@ document.getElementById('bomForm').onsubmit=function(e){
             qtyInput.type='hidden';qtyInput.name='mat_quantities[]';qtyInput.value=m.quantity;
             this.appendChild(qtyInput);
         });
+    }else if(type==='component'){
+        if(selectedComponents.length===0){
+            alert('반제품을 선택해주세요.');
+            e.preventDefault();
+            return false;
+        }
+        const quantityInputs = this.querySelectorAll('input[name=\"component_quantities[]\"]');
+        for(let i=0;i<quantityInputs.length;i+=1){
+            if(!isPositiveBomQuantity(quantityInputs[i].value)){
+                alert('반제품 사용 수량을 입력해주세요.');
+                e.preventDefault();
+                return false;
+            }
+        }
     }
     
     return true;
@@ -1004,9 +1150,11 @@ function closeForm(){
     document.getElementById('addForm').style.display='none';
     selectedRawId=null;
     selectedMaterials=[];
+    selectedComponents=[];
     document.querySelectorAll('.selection-check').forEach(cb=>cb.checked=false);
-    document.querySelectorAll('#rawList tbody tr, #matList tbody tr').forEach(row=>row.classList.remove('selected'));
+    document.querySelectorAll('#rawList tbody tr, #matList tbody tr, #componentList tbody tr').forEach(row=>row.classList.remove('selected'));
     updateMaterialList();
+    renderComponentRows();
 }
 </script>
 {% endblock %}

@@ -58,11 +58,20 @@
 .unknown-date-btn{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 .52rem;border:1px solid #334155;border-radius:999px;background:#17233a;color:#cbd5e1;font-size:.7rem;font-weight:900;cursor:pointer;white-space:nowrap;}
 .unknown-date-btn.active{border-color:#22c55e;background:#123124;color:#bbf7d0;box-shadow:0 0 14px rgba(34,197,94,.12);}
 .product-search-wrap{position:relative;}
+.product-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap;margin-bottom:.55rem;}
+.product-filter-tabs{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
+.product-filter-tab{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 .8rem;border:1px solid #334155;border-radius:999px;background:#132033;color:#9fb2cb;font-size:.78rem;font-weight:900;cursor:pointer;transition:all .18s ease;}
+.product-filter-tab:hover{border-color:#22d3ee;color:#eff6ff;background:#12313b;}
+.product-filter-tab.active{border-color:#22d3ee;background:#0f2f3a;color:#a5f3fc;box-shadow:0 0 0 1px rgba(34,211,238,.22),0 0 14px rgba(34,211,238,.12);}
+.product-filter-reset{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 .82rem;border:1px solid #334155;border-radius:999px;background:#17233a;color:#cbd5e1;font-size:.76rem;font-weight:900;cursor:pointer;transition:all .18s ease;}
+.product-filter-reset:hover{border-color:#67e8f9;background:#12313b;color:#eff6ff;}
 .product-search-drop{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;max-height:260px;overflow:auto;border:1px solid #35506b;border-radius:8px;background:#101a2b;box-shadow:0 18px 32px rgba(2,6,23,.32);}
 .product-search-option{padding:.78rem .85rem;border-bottom:1px solid rgba(148,163,184,.12);cursor:pointer;}
 .product-search-option:hover{background:#152235;}
 .product-search-option strong{display:block;color:#eff6ff;}
 .product-search-meta{margin-top:.22rem;color:#8ea3bd;font-size:.76rem;}
+.product-search-badge{display:inline-flex;align-items:center;padding:.16rem .45rem;border-radius:999px;background:#12313b;color:#a5f3fc;border:1px solid rgba(34,211,238,.18);font-size:.68rem;font-weight:900;margin-right:.35rem;}
+.product-search-badge.shared{background:#163126;color:#bbf7d0;border-color:rgba(34,197,94,.18);}
 .line-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;}
 .line-item{display:flex;align-items:center;gap:.48rem;padding:.68rem .72rem;border:1px solid #314155;border-radius:8px;background:#0f1827;color:#dbe7f5;font-weight:800;}
 .line-item input{width:17px;height:17px;accent-color:#0891b2;}
@@ -119,9 +128,31 @@
 .secondary-btn{background:#223148;border-color:#334155;color:#dbe7f5;}
 .danger-lite-btn{background:#3b1d26;border-color:#7f1d1d;color:#fecdd3;}
 .empty-state{padding:1rem;border:1px dashed #334155;border-radius:8px;color:#8ea3bd;text-align:center;background:#101827;}
+.variant-choice-panel{display:flex;flex-direction:column;gap:.7rem;margin-bottom:.85rem;padding:.95rem 1rem;border:1px solid #4c1d95;border-radius:12px;background:linear-gradient(180deg,rgba(49,25,88,.35),rgba(15,23,42,.86));box-shadow:0 0 0 1px rgba(168,85,247,.16),0 18px 36px rgba(88,28,135,.12);}
+.variant-choice-title{margin:0;color:#f5f3ff;font-size:.96rem;font-weight:900;}
+.variant-choice-desc{margin:.2rem 0 0;color:#d8b4fe;font-size:.79rem;line-height:1.5;}
+.variant-choice-group{display:flex;flex-direction:column;gap:.48rem;padding:.75rem .8rem;border:1px solid rgba(168,85,247,.22);border-radius:10px;background:rgba(30,41,59,.42);}
+.variant-choice-label{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;}
+.variant-choice-label strong{color:#f8fafc;font-size:.84rem;}
+.variant-choice-hint{color:#c4b5fd;font-size:.73rem;font-weight:800;}
+.variant-choice-options{display:flex;flex-wrap:wrap;gap:.5rem;}
+.variant-choice-btn{display:inline-flex;align-items:center;gap:.42rem;min-height:38px;padding:0 .88rem;border:1px solid #6d28d9;border-radius:999px;background:rgba(91,33,182,.18);color:#e9d5ff;font-size:.8rem;font-weight:900;cursor:pointer;transition:all .18s ease;}
+.variant-choice-btn:hover{background:rgba(91,33,182,.32);border-color:#8b5cf6;color:#fff;}
+.variant-choice-btn.active{background:linear-gradient(135deg,#7c3aed,#9333ea);border-color:#a78bfa;color:#fff;box-shadow:0 0 0 1px rgba(196,181,253,.2),0 0 18px rgba(147,51,234,.22);}
+.variant-code{display:inline-flex;align-items:center;padding:.16rem .4rem;border-radius:999px;background:rgba(255,255,255,.14);font-size:.66rem;font-weight:900;}
 .step-actions{display:flex;justify-content:space-between;gap:.6rem;margin-top:1rem;flex-wrap:wrap;}
 .finish-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1rem;flex-wrap:wrap;}
 .hidden-field{display:none!important;}
+.save-workplace-modal{display:none;position:fixed;inset:0;z-index:120;align-items:center;justify-content:center;padding:1rem;background:rgba(2,6,23,.68);backdrop-filter:blur(4px);}
+.save-workplace-modal.open{display:flex;}
+.save-workplace-card{width:min(520px,100%);padding:1.1rem;border:1px solid #35506b;border-radius:12px;background:linear-gradient(180deg,#111a29,#0c1422);box-shadow:0 24px 48px rgba(2,6,23,.42);}
+.save-workplace-card h3{margin:0 0 .5rem;color:#eff6ff;font-size:1rem;}
+.save-workplace-card p{margin:0;color:#9fb2cb;font-size:.85rem;line-height:1.55;}
+.save-workplace-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin-top:.9rem;}
+.save-workplace-meta-item{padding:.75rem;border:1px solid #26364d;border-radius:8px;background:#101827;}
+.save-workplace-meta-item span{display:block;color:#8ea3bd;font-size:.72rem;font-weight:800;}
+.save-workplace-meta-item strong{display:block;margin-top:.24rem;color:#eff6ff;font-size:.92rem;word-break:break-word;}
+.save-workplace-actions{display:flex;justify-content:flex-end;gap:.55rem;flex-wrap:wrap;margin-top:1rem;}
 html:not([data-theme="dark"]) .register-title{color:#0f172a;text-shadow:none;}
 html:not([data-theme="dark"]) .register-subtitle{color:#52637a;}
 html:not([data-theme="dark"]) .register-badge{background:linear-gradient(135deg,#0e7490,#0891b2);color:#ecfeff;border-color:rgba(14,116,144,.2);box-shadow:0 8px 18px rgba(8,145,178,.18);}
@@ -166,10 +197,17 @@ html:not([data-theme="dark"]) .register-textarea:focus{border-color:#0891b2;box-
 html:not([data-theme="dark"]) .unknown-date-btn{background:#eef2f7;border-color:#cbd5e1;color:#475569;}
 html:not([data-theme="dark"]) .unknown-date-btn.active{background:#dcfce7;border-color:#22c55e;color:#166534;box-shadow:0 0 12px rgba(34,197,94,.12);}
 html:not([data-theme="dark"]) .product-search-drop{background:#ffffff;border-color:#cbdff4;box-shadow:0 18px 32px rgba(15,23,42,.14);}
+html:not([data-theme="dark"]) .product-filter-tab{background:#eef6ff;border-color:#cbdff4;color:#475569;}
+html:not([data-theme="dark"]) .product-filter-tab:hover{background:#dff3ff;border-color:#67e8f9;color:#0f172a;}
+html:not([data-theme="dark"]) .product-filter-tab.active{background:#e0f7ff;border-color:#06b6d4;color:#0e7490;box-shadow:0 0 0 1px rgba(6,182,212,.16),0 10px 20px rgba(6,182,212,.08);}
+html:not([data-theme="dark"]) .product-filter-reset{background:#f8fbff;border-color:#cbd8e6;color:#475569;}
+html:not([data-theme="dark"]) .product-filter-reset:hover{background:#eff6ff;border-color:#67e8f9;color:#0f172a;}
 html:not([data-theme="dark"]) .product-search-option{border-bottom-color:#e2e8f0;}
 html:not([data-theme="dark"]) .product-search-option:hover{background:#f0f9ff;}
 html:not([data-theme="dark"]) .product-search-option strong{color:#0f172a;}
 html:not([data-theme="dark"]) .product-search-meta{color:#64748b;}
+html:not([data-theme="dark"]) .product-search-badge{background:#e0f7ff;color:#0e7490;border-color:rgba(6,182,212,.2);}
+html:not([data-theme="dark"]) .product-search-badge.shared{background:#dcfce7;color:#166534;border-color:rgba(34,197,94,.2);}
 html:not([data-theme="dark"]) .line-item{background:#ffffff;border-color:#cbd8e6;color:#1e293b;}
 html:not([data-theme="dark"]) .line-item:has(input:checked){background:#e0f7ff;border-color:#06b6d4;color:#0f172a;}
 html:not([data-theme="dark"]) .summary-cell,
@@ -209,6 +247,12 @@ html:not([data-theme="dark"]) .calc-box.yield.bad{border-color:#ef4444;color:#b9
 html:not([data-theme="dark"]) .primary-btn{background:linear-gradient(135deg,#0891b2,#06b6d4);color:#ffffff;box-shadow:0 10px 18px rgba(8,145,178,.18);}
 html:not([data-theme="dark"]) .danger-lite-btn{background:#fff1f2;border-color:#fecdd3;color:#be123c;}
 html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;background:#f8fbff;}
+html:not([data-theme="dark"]) .save-workplace-card{background:linear-gradient(180deg,#ffffff,#f8fbff);border-color:#cbdff4;box-shadow:0 24px 48px rgba(15,23,42,.16);}
+html:not([data-theme="dark"]) .save-workplace-card h3{color:#0f172a;}
+html:not([data-theme="dark"]) .save-workplace-card p{color:#52637a;}
+html:not([data-theme="dark"]) .save-workplace-meta-item{background:#ffffff;border-color:#d7e3f0;}
+html:not([data-theme="dark"]) .save-workplace-meta-item span{color:#64748b;}
+html:not([data-theme="dark"]) .save-workplace-meta-item strong{color:#0f172a;}
 @media (max-width: 980px){
     .step-layout{grid-template-columns:1fr;}
     .step-nav{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -219,10 +263,14 @@ html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;bac
     .step-panel-title-row{flex-direction:column;}
     .workplace-switch-wrap{align-items:stretch;width:100%;}
     .workplace-switch-panel{position:static;width:auto;}
+    .product-filter-bar{align-items:stretch;}
+    .product-filter-tabs{width:100%;}
+    .product-filter-tab,.product-filter-reset{flex:1 1 auto;}
     .expiry-auto-card,.expiry-custom-row{grid-template-columns:1fr;}
     .expiry-custom-line{grid-template-columns:1fr 1fr;}
     .line-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
     .register-title{font-size:1.35rem;}
+    .save-workplace-meta{grid-template-columns:1fr;}
 }
 </style>
 {% endblock %}
@@ -248,6 +296,7 @@ html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;bac
         <input type="hidden" name="next" value="{{ next_url }}">
         <input type="hidden" name="wp" value="{{ workplace }}">
         <input type="hidden" name="product_id" id="productId" required>
+        <input type="hidden" name="save_workplace" id="saveWorkplaceInput" value="{{ workplace }}">
 
         <div class="step-layout">
             <div class="step-nav" aria-label="등록 단계">
@@ -288,6 +337,15 @@ html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;bac
                         <div class="field full required">
                             <label>품목 선택</label>
                             <div class="product-search-wrap">
+                                <div class="product-filter-bar">
+                                    <div class="product-filter-tabs" role="tablist" aria-label="품목 필터">
+                                        <button type="button" class="product-filter-tab active" data-product-filter="all" onclick="setProductFilter('all')">전체 제품</button>
+                                        {% for wp in available_workplaces %}
+                                        <button type="button" class="product-filter-tab" data-product-filter="{{ wp }}" onclick='setProductFilter({{ wp|tojson }})'>{{ wp }}</button>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="button" class="product-filter-reset" onclick="resetProductFilter()">초기화</button>
+                                </div>
                                 <input type="text" id="productSearch" class="register-input required-input" placeholder="품목명 또는 코드 검색" autocomplete="off" oninput="filterProducts()" onfocus="showAllProducts()">
                                 <div id="productSearchDrop" class="product-search-drop"></div>
                             </div>
@@ -363,6 +421,10 @@ html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;bac
                         </div>
                         <div class="field full">
                             <label>생산 라인</label>
+                            <label class="line-item" style="margin-bottom:.55rem;display:inline-flex;">
+                                <input type="checkbox" id="registerLineUsageDisabled" name="line_usage_disabled" value="1" onchange="syncRegisterModeLineUsageDisabled()">
+                                <span>라인 사용 안함</span>
+                            </label>
                             <div class="line-grid">
                                 {% for line in range(1, 13) %}
                                 <label class="line-item"><input type="checkbox" name="production_lines" value="{{ line }}"><span>라인 {{ line }}</span></label>
@@ -387,8 +449,8 @@ html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;bac
                     <p class="step-note">생산일지에서 확인되는 작업 시간과 투입 인원을 입력합니다.</p>
                     <div class="field-grid">
                         <div class="field"><label>작업 시간</label><input type="text" name="work_time" class="register-input" placeholder="예: 08:30~17:30"></div>
-                        <div class="field"><label>공급 인원</label><input type="number" name="supply_people" class="register-input" min="0" step="1" placeholder="0"></div>
-                        <div class="field"><label>내포장 인원</label><input type="number" name="packing_people" class="register-input" min="0" step="1" placeholder="0"></div>
+                        <div class="field"><label>공급 인원</label><input type="number" id="registerSupplyPeople" name="supply_people" class="register-input" min="0" step="1" placeholder="0"></div>
+                        <div class="field"><label>내포장 인원</label><input type="number" id="registerPackingPeople" name="packing_people" class="register-input" min="0" step="1" placeholder="0"></div>
                         <div class="field"><label>외포장 인원</label><input type="number" name="outer_packing_people" class="register-input" min="0" step="1" placeholder="0"></div>
                         <div class="field full"><label>인원관리 비고</label><textarea name="personnel_note" class="register-textarea" placeholder="인원 특이사항 또는 작업 메모"></textarea></div>
                     </div>
@@ -437,6 +499,36 @@ html:not([data-theme="dark"]) .empty-state{border-style:dashed;color:#64748b;bac
     </form>
 </div>
 
+<div class="save-workplace-modal" id="saveWorkplaceModal" aria-hidden="true">
+    <div class="save-workplace-card">
+        <h3>저장 작업장 확인</h3>
+        <p>선택한 제품의 작업장과 현재 기준 작업장이 다릅니다. 저장할 작업장을 한 번 더 확인해 주세요.</p>
+        <div class="save-workplace-meta">
+            <div class="save-workplace-meta-item">
+                <span>현재 기준 작업장</span>
+                <strong id="saveWorkplaceCurrentLabel">{{ workplace }}</strong>
+            </div>
+            <div class="save-workplace-meta-item">
+                <span>선택 제품 작업장</span>
+                <strong id="saveWorkplaceProductLabel">-</strong>
+            </div>
+        </div>
+        <div class="field" style="margin-top:.9rem;">
+            <label for="saveWorkplaceSelect">저장 작업장 선택</label>
+            <select id="saveWorkplaceSelect" class="register-select">
+                {% for wp in available_workplaces %}
+                <option value="{{ wp }}">{{ wp }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="save-workplace-actions">
+            <button type="button" class="secondary-btn" onclick="closeSaveWorkplaceModal()">취소</button>
+            <button type="button" class="ghost-btn" onclick="saveUsingProductWorkplace()">제품 작업장으로 저장</button>
+            <button type="button" class="primary-btn" onclick="confirmSaveWorkplaceSelection()">선택 작업장으로 저장</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const products = {{ products_json|safe }};
 const rawBomMap = {{ raw_bom_json|safe }};
@@ -445,14 +537,19 @@ const lastRawDefaults = {{ last_raw_defaults_json|safe }};
 const lastMaterialDefaults = {{ last_material_defaults_json|safe }};
 const rawCatalog = {{ raw_catalog_json|safe }};
 const materialCatalog = {{ material_catalog_json|safe }};
+const availableWorkplaces = {{ available_workplaces_json|safe }};
 const baseMaterialKeywords = ['기름', '유지', '소금'];
 const SESAME_OIL_KG_PER_LITER = 0.92;
 const currentRegisterWorkplace = {{ workplace|tojson }};
+const PRODUCT_FILTER_STORAGE_KEY = 'yemat-register-mode-product-filter';
 let selectedProduct = null;
 let currentStep = 0;
 const completedSteps = new Set();
 let materialLotGroupSeq = 0;
 let rawLotGroupSeq = 0;
+let registerSaveConfirmed = false;
+let activeProductFilter = getSavedProductFilter();
+const registerVariantSelections = {};
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -464,6 +561,62 @@ function toNumber(value) {
 function formatQty(value) {
     const numeric = toNumber(value);
     return numeric.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+function normalizeProductFilter(value) {
+    const normalized = String(value || '').trim();
+    return normalized === 'all' || availableWorkplaces.includes(normalized) ? normalized : 'all';
+}
+function getSavedProductFilter() {
+    try {
+        return normalizeProductFilter(localStorage.getItem(PRODUCT_FILTER_STORAGE_KEY) || 'all');
+    } catch (error) {
+        return 'all';
+    }
+}
+function saveProductFilter(value) {
+    try {
+        localStorage.setItem(PRODUCT_FILTER_STORAGE_KEY, normalizeProductFilter(value));
+    } catch (error) {
+        // Ignore storage failures.
+    }
+}
+function updateProductFilterTabs() {
+    document.querySelectorAll('[data-product-filter]').forEach((button) => {
+        const isActive = button.dataset.productFilter === activeProductFilter;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+}
+function productMatchesActiveFilter(product) {
+    const productWorkplace = String(product?.workplace || '').trim();
+    if (activeProductFilter === 'all') return true;
+    return productWorkplace === activeProductFilter;
+}
+function getVisibleProducts(query = '') {
+    const loweredQuery = String(query || '').trim().toLowerCase();
+    return products.filter((product) => {
+        if (!productMatchesActiveFilter(product)) return false;
+        if (!loweredQuery) return true;
+        return (
+            String(product.name || '').toLowerCase().includes(loweredQuery) ||
+            String(product.code || '').toLowerCase().includes(loweredQuery) ||
+            String(product.workplace || '').toLowerCase().includes(loweredQuery)
+        );
+    });
+}
+function setProductFilter(filterName, options = {}) {
+    const { persist = true, keepQuery = true, openList = true } = options;
+    activeProductFilter = normalizeProductFilter(filterName);
+    if (persist) saveProductFilter(activeProductFilter);
+    updateProductFilterTabs();
+    if (!keepQuery) {
+        const searchInput = document.getElementById('productSearch');
+        if (searchInput) searchInput.value = '';
+    }
+    if (openList) filterProducts();
+}
+function resetProductFilter() {
+    setProductFilter('all', { persist: true, keepQuery: false, openList: true });
 }
 function currentBoxes() {
     return Math.max(toNumber(document.getElementById('actualBoxes').value), 0);
@@ -746,6 +899,15 @@ function completeAndNext(step) {
     completedSteps.add(step);
     goStep(step + 1);
 }
+function handleRegisterModeShortcutAdvance() {
+    const modalOpen = document.getElementById('saveWorkplaceModal')?.classList.contains('open');
+    if (modalOpen) return;
+    if (currentStep >= 5) {
+        document.getElementById('registerModeForm').requestSubmit();
+        return;
+    }
+    completeAndNext(currentStep);
+}
 function validateBaseStep() {
     if (!document.getElementById('productId').value) {
         alert('품목을 먼저 선택해 주세요.');
@@ -776,6 +938,17 @@ function validateRawStep() {
         return false;
     }
     return true;
+}
+function syncRegisterModeLineUsageDisabled() {
+    const disabled = Boolean(document.getElementById('registerLineUsageDisabled')?.checked);
+    document.querySelectorAll('input[name="production_lines"]').forEach((input) => {
+        input.disabled = disabled;
+    });
+    ['registerSupplyPeople', 'registerPackingPeople'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.disabled = disabled;
+    });
 }
 function validateRequiredFields() {
     if (!validateBaseStep()) return false;
@@ -821,11 +994,11 @@ function renderProductOptions(list) {
     drop.style.display = 'block';
 }
 function showAllProducts() {
-    renderProductOptions(products);
+    filterProducts();
 }
 function filterProducts() {
     const query = document.getElementById('productSearch').value.trim().toLowerCase();
-    renderProductOptions(products.filter((product) => String(product.name || '').toLowerCase().includes(query) || String(product.code || '').toLowerCase().includes(query)));
+    renderProductOptions(getVisibleProducts(query));
 }
 function selectProduct(productId) {
     selectedProduct = products.find((item) => Number(item.id) === Number(productId)) || null;
@@ -843,6 +1016,110 @@ function usageExpected(row) {
 }
 function selectedProductIdKey() {
     return String(document.getElementById('productId').value || '');
+}
+function variantSelectableCategory(category) {
+    return ['파우치', '실리카'].includes(String(category || '').trim());
+}
+function variantFieldName(category) {
+    if (category === '파우치') return 'selected_pouch_material_id';
+    if (category === '실리카') return 'selected_silica_material_id';
+    return '';
+}
+function variantCategoryLabel(category, rows = []) {
+    const normalized = String(category || '').trim();
+    if (normalized === '파우치') {
+        const hasPunchText = rows.some((row) => /타공/.test(`${row.material_name || ''} ${row.material_code || ''}`));
+        return hasPunchText ? '파우치 / 타공 선택' : '파우치 선택';
+    }
+    if (normalized === '실리카') return '실리카 선택';
+    return normalized || '혼용 자재 선택';
+}
+function productVariantSelectionBucket() {
+    const productKey = selectedProductIdKey();
+    if (!registerVariantSelections[productKey]) registerVariantSelections[productKey] = {};
+    return registerVariantSelections[productKey];
+}
+function getCurrentVariantSelections(rows) {
+    const bucket = productVariantSelectionBucket();
+    const grouped = {};
+    rows.forEach((row) => {
+        const category = String(row.material_category || '').trim();
+        if (!variantSelectableCategory(category)) return;
+        if (!grouped[category]) grouped[category] = [];
+        grouped[category].push(row);
+    });
+    Object.entries(grouped).forEach(([category, categoryRows]) => {
+        if (categoryRows.length <= 1) return;
+        const fieldName = variantFieldName(category);
+        const rowIds = categoryRows.map((row) => Number(row.material_id || 0)).filter((id) => id > 0);
+        const savedId = Number(bucket[category] || 0);
+        const defaultId = Number(categoryRows[0]?.[fieldName] || 0);
+        if (savedId > 0 && rowIds.includes(savedId)) {
+            bucket[category] = savedId;
+        } else if (defaultId > 0 && rowIds.includes(defaultId)) {
+            bucket[category] = defaultId;
+        } else if (rowIds.length) {
+            bucket[category] = rowIds[0];
+        }
+    });
+    return bucket;
+}
+function applyVariantSelection(category, materialId) {
+    const bucket = productVariantSelectionBucket();
+    bucket[String(category || '').trim()] = Number(materialId || 0);
+    renderUsageRows();
+}
+function renderVariantChoicePanel(materialRows) {
+    const grouped = {};
+    materialRows.forEach((row) => {
+        const category = String(row.material_category || '').trim();
+        if (!variantSelectableCategory(category)) return;
+        if (!grouped[category]) grouped[category] = [];
+        grouped[category].push(row);
+    });
+    const categories = Object.entries(grouped).filter(([, rows]) => rows.length > 1);
+    if (!categories.length) return '';
+    const selections = getCurrentVariantSelections(materialRows);
+    const groupsHtml = categories.map(([category, rows]) => {
+        const selectedId = Number(selections[category] || 0);
+        const buttons = rows.map((row) => {
+            const materialId = Number(row.material_id || 0);
+            const active = materialId === selectedId;
+            return `
+                <button type="button" class="variant-choice-btn ${active ? 'active' : ''}" onclick="applyVariantSelection('${escapeHtml(category)}', ${materialId})">
+                    <span>${escapeHtml(row.material_name || `자재 ${materialId}`)}</span>
+                    <span class="variant-code">${escapeHtml(row.material_code || `M${materialId}`)}</span>
+                </button>
+            `;
+        }).join('');
+        return `
+            <div class="variant-choice-group">
+                <div class="variant-choice-label">
+                    <strong>${escapeHtml(variantCategoryLabel(category, rows))}</strong>
+                    <span class="variant-choice-hint">이번 등록에 사용할 항목 1개를 선택해 주세요.</span>
+                </div>
+                <div class="variant-choice-options">${buttons}</div>
+            </div>
+        `;
+    }).join('');
+    return `
+        <div class="variant-choice-panel">
+            <h3 class="variant-choice-title">혼용 부자재 선택</h3>
+            <p class="variant-choice-desc">시즌별로 바뀌는 타공 있음/없음, 혼용 파우치/실리카는 여기서 선택한 항목만 이번 등록에 반영됩니다.</p>
+            ${groupsHtml}
+        </div>
+    `;
+}
+function filterRegisterModeMaterialRows(materialRows) {
+    const selections = getCurrentVariantSelections(materialRows);
+    return materialRows.filter((row) => {
+        const category = String(row.material_category || '').trim();
+        if (!variantSelectableCategory(category)) return true;
+        const sameCategoryRows = materialRows.filter((item) => String(item.material_category || '').trim() === category);
+        if (sameCategoryRows.length <= 1) return true;
+        const selectedId = Number(selections[category] || 0);
+        return !selectedId || Number(row.material_id || 0) === selectedId;
+    });
 }
 function lastRawDefault(row) {
     const bucket = lastRawDefaults[selectedProductIdKey()] || {};
@@ -1202,14 +1479,16 @@ function renderUsageRows() {
     materialLotGroupSeq = 0;
     const productId = Number(document.getElementById('productId').value || 0);
     const rawRows = productId ? (rawBomMap[String(productId)] || []) : [];
-    const materialRows = productId ? (materialBomMap[String(productId)] || []) : [];
+    const allMaterialRows = productId ? (materialBomMap[String(productId)] || []) : [];
+    const variantChoiceHtml = renderVariantChoicePanel(allMaterialRows);
+    const materialRows = filterRegisterModeMaterialRows(allMaterialRows);
     const baseRows = materialRows.filter(isBaseMaterial);
     const packRows = materialRows
         .filter((row) => !isBaseMaterial(row))
         .sort((a, b) => packSortRank(a) - packSortRank(b) || String(a.material_name || '').localeCompare(String(b.material_name || '')));
     document.getElementById('rawUsageWrap').innerHTML = rawRows.length ? rawRows.map(rawCard).join('') + '<div id="extraRawRows" class="usage-list"></div>' : '<div class="empty-state">기본 원초가 없습니다. 필요하면 원초를 추가해 주세요.</div><div id="extraRawRows" class="usage-list"></div>';
     document.getElementById('baseMaterialUsageWrap').innerHTML = baseRows.length ? baseRows.map((row) => materialCard(row, 'base')).join('') + '<div id="extraBaseMaterialRows" class="usage-list"></div>' : '<div class="empty-state">기본 원자재가 없습니다. 필요하면 직접 추가해 주세요.</div><div id="extraBaseMaterialRows" class="usage-list"></div>';
-    document.getElementById('packMaterialUsageWrap').innerHTML = packRows.length ? packRows.map((row) => materialCard(row, 'pack')).join('') + '<div id="extraPackMaterialRows" class="usage-list"></div>' : '<div class="empty-state">기본 부재료가 없습니다. 필요하면 직접 추가해 주세요.</div><div id="extraPackMaterialRows" class="usage-list"></div>';
+    document.getElementById('packMaterialUsageWrap').innerHTML = `${variantChoiceHtml}${packRows.length ? packRows.map((row) => materialCard(row, 'pack')).join('') : '<div class="empty-state">기본 부재료가 없습니다. 필요하면 직접 추가해 주세요.</div>'}<div id="extraPackMaterialRows" class="usage-list"></div>`;
     updateAllLosses();
 }
 function rawSelectOptions() {
@@ -1340,24 +1619,118 @@ function addExtraMaterialRow(mode) {
     target.appendChild(card);
     updateLossForCard(card.querySelector('.js-actual-input'));
 }
+function updateConfirm() {
+    document.getElementById('confirmProductName').textContent = selectedProduct ? selectedProduct.name : '미선택';
+    document.getElementById('confirmDate').textContent = document.getElementById('productionDate').value || '-';
+    document.getElementById('confirmBoxes').textContent = `${formatQty(currentBoxes())} 박스`;
+    const saveWorkplaceInput = document.getElementById('saveWorkplaceInput');
+    if (saveWorkplaceInput && !registerSaveConfirmed) {
+        saveWorkplaceInput.value = currentRegisterWorkplace;
+    }
+}
+function renderProductOptions(list) {
+    const drop = document.getElementById('productSearchDrop');
+    drop.innerHTML = list.length ? list.map((product) => `
+        <div class="product-search-option" onclick="selectProduct(${product.id})">
+            <strong>${escapeHtml(product.name)}</strong>
+            <div class="product-search-meta"><span class="product-search-badge${product.workplace && product.workplace !== currentRegisterWorkplace ? ' shared' : ''}">${escapeHtml(product.workplace || '-')}</span>${escapeHtml(product.code || '-')} · 박스당 ${formatQty(product.box_quantity)}개</div>
+        </div>
+    `).join('') : '<div class="product-search-option"><strong>검색 결과가 없습니다</strong><div class="product-search-meta">품목명, 코드, 작업장을 다시 확인해 주세요.</div></div>';
+    drop.style.display = 'block';
+}
+function filterProducts() {
+    const query = document.getElementById('productSearch').value.trim().toLowerCase();
+    renderProductOptions(getVisibleProducts(query));
+}
+function selectProduct(productId) {
+    selectedProduct = products.find((item) => Number(item.id) === Number(productId)) || null;
+    document.getElementById('productId').value = selectedProduct ? selectedProduct.id : '';
+    document.getElementById('productSearch').value = selectedProduct ? selectedProduct.name : '';
+    document.getElementById('productSearchDrop').style.display = 'none';
+    document.getElementById('saveWorkplaceInput').value = currentRegisterWorkplace;
+    completedSteps.clear();
+    updateSummary();
+    syncExpiryInputs();
+    renderUsageRows();
+    goStep(0);
+}
+function openSaveWorkplaceModal() {
+    const modal = document.getElementById('saveWorkplaceModal');
+    const productLabel = document.getElementById('saveWorkplaceProductLabel');
+    const select = document.getElementById('saveWorkplaceSelect');
+    if (productLabel) productLabel.textContent = selectedProduct?.workplace || '-';
+    if (select) {
+        const defaultWorkplace = selectedProduct?.workplace && availableWorkplaces.includes(selectedProduct.workplace)
+            ? selectedProduct.workplace
+            : currentRegisterWorkplace;
+        select.value = defaultWorkplace;
+    }
+    if (modal) {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+}
+function closeSaveWorkplaceModal() {
+    const modal = document.getElementById('saveWorkplaceModal');
+    if (modal) {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+function submitRegisterModeWithWorkplace(targetWorkplace) {
+    const saveWorkplaceInput = document.getElementById('saveWorkplaceInput');
+    if (saveWorkplaceInput) saveWorkplaceInput.value = targetWorkplace || currentRegisterWorkplace;
+    registerSaveConfirmed = true;
+    closeSaveWorkplaceModal();
+    document.getElementById('registerModeForm').requestSubmit();
+}
+function saveUsingProductWorkplace() {
+    submitRegisterModeWithWorkplace(selectedProduct?.workplace || currentRegisterWorkplace);
+}
+function confirmSaveWorkplaceSelection() {
+    const select = document.getElementById('saveWorkplaceSelect');
+    submitRegisterModeWithWorkplace(select ? String(select.value || '').trim() : currentRegisterWorkplace);
+}
 document.getElementById('registerModeForm').addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
     if (event.target && event.target.tagName === 'TEXTAREA') return;
+    if (event.ctrlKey) {
+        event.preventDefault();
+        handleRegisterModeShortcutAdvance();
+        return;
+    }
     event.preventDefault();
 });
 document.getElementById('registerModeForm').addEventListener('submit', (event) => {
     if (!validateRequiredFields()) {
         event.preventDefault();
+        return;
     }
+    if (registerSaveConfirmed) {
+        registerSaveConfirmed = false;
+        return;
+    }
+    const productWorkplace = String(selectedProduct?.workplace || '').trim();
+    if (productWorkplace && productWorkplace !== currentRegisterWorkplace) {
+        event.preventDefault();
+        openSaveWorkplaceModal();
+        return;
+    }
+    document.getElementById('saveWorkplaceInput').value = currentRegisterWorkplace;
 });
 document.addEventListener('click', (event) => {
     if (!event.target.closest('.product-search-wrap')) {
         document.getElementById('productSearchDrop').style.display = 'none';
     }
+    if (event.target.id === 'saveWorkplaceModal') {
+        closeSaveWorkplaceModal();
+    }
 });
+updateProductFilterTabs();
 updateSummary();
 syncExpiryInputs();
 renderUsageRows();
+syncRegisterModeLineUsageDisabled();
 goStep(0);
 </script>
 {% endblock %}
