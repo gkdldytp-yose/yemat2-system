@@ -621,7 +621,7 @@ html[data-theme="dark"] .dashboard-todo-legacy .todo-message-bubble.is-overdue{b
             </div>
             {% endfor %}
         {% else %}
-        <p class="dashboard-empty">재고 부족 부자재가 없습니다.</p>
+        <p class="dashboard-empty">{% if has_planned_shortage_basis %}예정 생산 기준 부족 부자재가 없습니다.{% else %}현재 재고 기준 부족 부자재가 없습니다.{% endif %}</p>
         {% endif %}
     </div>
 </div>
@@ -692,7 +692,7 @@ html[data-theme="dark"] .dashboard-todo-legacy .todo-message-bubble.is-overdue{b
     <div style="margin-top:0.9rem;font-size:0.82rem;color:#888;">+{{ raw_shortages|length - 6 }}건 더 있습니다.</div>
     {% endif %}
     {% else %}
-    <p class="dashboard-empty">예정 생산 기준 원초 재고 정상</p>
+    <p class="dashboard-empty">{% if has_planned_shortage_basis %}예정 생산 기준 원초 재고 정상{% else %}현재 재고 기준 부족 원초가 없습니다.{% endif %}</p>
     {% endif %}
 </div>
 

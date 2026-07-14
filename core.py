@@ -17,6 +17,19 @@ WORKPLACES = ['\u0031\ub3d9 \uc870\ubbf8', '\u0031\ub3d9 \uc790\ubc18', '\u0032\
 LOGISTICS_WORKPLACE = '\ubb3c\ub958'
 SHARED_WORKPLACE = '공통'
 SHARED_MATERIAL_CATEGORIES = {'기름', '소금', '실리카', '트레이'}
+WORKPLACE_ALIASES = {
+    '1동 조미 작업장': '1동 조미',
+    '1동 자반 작업장': '1동 자반',
+    '2동 1층': '2동 신관 1층',
+    '2동1층': '2동 신관 1층',
+    '2동 1층 작업장': '2동 신관 1층',
+    '2동 신관 1층 작업장': '2동 신관 1층',
+    '2동 2층': '2동 신관 2층',
+    '2동2층': '2동 신관 2층',
+    '2동 2층 작업장': '2동 신관 2층',
+    '2동 신관 2층 작업장': '2동 신관 2층',
+    '물류 작업장': LOGISTICS_WORKPLACE,
+}
 
 _user_schema_checked = False
 _purchase_schema_checked = False
@@ -155,6 +168,13 @@ def normalize_user_role(role_value):
     return role
 
 
+def normalize_workplace_name(workplace_value):
+    value = str(workplace_value or '').strip()
+    if not value:
+        return ''
+    return WORKPLACE_ALIASES.get(value, value)
+
+
 def parse_workplace_roles(raw_value):
     if isinstance(raw_value, dict):
         source = raw_value
@@ -168,7 +188,7 @@ def parse_workplace_roles(raw_value):
             return {}
     normalized = {}
     for workplace, role_value in (source or {}).items():
-        wp = (workplace or '').strip()
+        wp = normalize_workplace_name(workplace)
         if not wp or wp not in WORKPLACES:
             continue
         normalized[wp] = normalize_user_role(role_value)
@@ -179,7 +199,7 @@ def dump_workplace_roles(role_map, workplaces=None):
     allowed = set(workplaces or WORKPLACES)
     normalized = {}
     for workplace, role_value in (role_map or {}).items():
-        wp = (workplace or '').strip()
+        wp = normalize_workplace_name(workplace)
         if not wp or wp not in allowed:
             continue
         normalized[wp] = normalize_user_role(role_value)
@@ -192,7 +212,7 @@ def get_effective_user_role(user=None, workplace=None):
         return 'readonly'
     if bool(user.get('is_admin')):
         return 'admin'
-    current_workplace = (workplace or session.get('workplace') or '').strip()
+    current_workplace = normalize_workplace_name(workplace or session.get('workplace'))
     workplace_roles = parse_workplace_roles(user.get('workplace_roles'))
     if current_workplace and current_workplace in workplace_roles:
         return workplace_roles[current_workplace]
@@ -215,6 +235,7 @@ def build_session_user(user_row, current_workplace=None):
     workplaces = user_row.get('workplaces') or []
     if isinstance(workplaces, str):
         workplaces = [value.strip() for value in workplaces.split(',') if value.strip()]
+    workplaces = [normalize_workplace_name(value) for value in workplaces if normalize_workplace_name(value)]
     if not workplaces:
         workplaces = ['1??議곕?']
     base_role = normalize_user_role(user_row.get('role') or ('admin' if user_row.get('is_admin') else 'readonly'))
@@ -234,7 +255,7 @@ def build_session_user(user_row, current_workplace=None):
         'workplace_roles': workplace_roles,
         'can_integrated_management': bool(user_row.get('can_integrated_management')),
     }
-    payload['role'] = get_effective_user_role(payload, current_workplace or session.get('workplace'))
+    payload['role'] = get_effective_user_role(payload, normalize_workplace_name(current_workplace or session.get('workplace')))
     return payload
 
 # ?곗씠?곕쿋?댁뒪 ?곌껐
@@ -898,6 +919,7 @@ def _ensure_production_schema(conn):
                 export_quantity INTEGER NOT NULL DEFAULT 0,
                 boxes_per_container INTEGER NOT NULL DEFAULT 0,
                 container_count INTEGER NOT NULL DEFAULT 0,
+                container_box_quantities TEXT NOT NULL DEFAULT '',
                 unit_mode TEXT NOT NULL DEFAULT 'container',
                 production_start_date TEXT NOT NULL,
                 production_end_date TEXT,
@@ -934,6 +956,8 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE export_schedules ADD COLUMN boxes_per_container INTEGER NOT NULL DEFAULT 0")
         if 'container_count' not in export_cols:
             conn.execute("ALTER TABLE export_schedules ADD COLUMN container_count INTEGER NOT NULL DEFAULT 0")
+        if 'container_box_quantities' not in export_cols:
+            conn.execute("ALTER TABLE export_schedules ADD COLUMN container_box_quantities TEXT NOT NULL DEFAULT ''")
         if 'unit_mode' not in export_cols:
             conn.execute("ALTER TABLE export_schedules ADD COLUMN unit_mode TEXT NOT NULL DEFAULT 'container'")
         if 'production_start_date' not in export_cols:
@@ -973,6 +997,8 @@ def _ensure_production_schema(conn):
         schedule_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_schedules)").fetchall()]
         if 'line' not in schedule_cols:
             conn.execute("ALTER TABLE production_schedules ADD COLUMN line TEXT")
+        if 'line_usage_disabled' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN line_usage_disabled INTEGER NOT NULL DEFAULT 0")
         if 'workplace' not in schedule_cols:
             conn.execute("ALTER TABLE production_schedules ADD COLUMN workplace TEXT")
         if 'production_id' not in schedule_cols:
@@ -1040,6 +1066,8 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE productions ADD COLUMN export_schedule_id INTEGER")
         if 'supply_line' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN supply_line TEXT")
+        if 'line_usage_disabled' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN line_usage_disabled INTEGER NOT NULL DEFAULT 0")
         if 'supply_people' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN supply_people INTEGER")
         if 'packing_line' not in cols:
@@ -1096,6 +1124,8 @@ def _ensure_production_schema(conn):
             '''
         )
         usage_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_material_usage)").fetchall()]
+        if 'component_product_id' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN component_product_id INTEGER")
         if 'usage_note' not in usage_cols:
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN usage_note TEXT")
         if 'override_receiving_date' not in usage_cols:
@@ -1138,10 +1168,54 @@ def _ensure_products_schema(conn):
             conn.execute("ALTER TABLE products ADD COLUMN selected_silica_material_id INTEGER")
         if 'selected_pouch_material_id' not in cols:
             conn.execute("ALTER TABLE products ADD COLUMN selected_pouch_material_id INTEGER")
+        if 'set_item_type' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN set_item_type TEXT DEFAULT ''")
+        conn.execute(
+            "UPDATE products SET set_item_type = '' "
+            "WHERE set_item_type IS NULL"
+        )
         conn.execute("UPDATE products SET expiry_months = 12 WHERE expiry_months IS NULL")
         bom_cols = [row['name'] for row in conn.execute("PRAGMA table_info(bom)").fetchall()]
         if bom_cols and 'quantity_per_box_expr' not in bom_cols:
             conn.execute("ALTER TABLE bom ADD COLUMN quantity_per_box_expr TEXT")
+        if bom_cols and 'component_product_id' not in bom_cols:
+            conn.execute("ALTER TABLE bom ADD COLUMN component_product_id INTEGER")
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS product_stocks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                workplace TEXT NOT NULL,
+                current_stock REAL NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(product_id, workplace)
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS product_stock_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                workplace TEXT NOT NULL,
+                action TEXT NOT NULL,
+                quantity REAL NOT NULL DEFAULT 0,
+                note TEXT,
+                production_id INTEGER,
+                created_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        stock_cols = [row['name'] for row in conn.execute("PRAGMA table_info(product_stocks)").fetchall()]
+        if 'updated_at' not in stock_cols:
+            conn.execute("ALTER TABLE product_stocks ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_product_stocks_product_workplace ON product_stocks(product_id, workplace)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_product_stock_logs_product_workplace ON product_stock_logs(product_id, workplace, created_at)"
+        )
     except Exception:
         pass
     _products_schema_checked = True
@@ -1428,7 +1502,10 @@ def audit_log(conn, action, entity, entity_id=None, data=None):
 
 def get_workplace():
     """Return the currently selected workplace from the session."""
-    return session.get('workplace', '1??議곕?')
+    workplace = normalize_workplace_name(session.get('workplace', '1??議곕?'))
+    if workplace and session.get('workplace') != workplace:
+        session['workplace'] = workplace
+    return workplace
 
 
 def require_workplace(f):

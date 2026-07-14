@@ -3941,6 +3941,21 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 .export-form-grid .form-group.full {
     grid-column:1 / -1;
 }
+.export-top-field {
+    border:1px solid #2a3a52;
+    border-radius:16px;
+    background:linear-gradient(180deg,rgba(24,36,56,.72) 0%,rgba(17,24,39,.72) 100%);
+    padding:0.95rem;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+.export-top-field .export-unit-toggle-btn {
+    display:block;
+    margin-bottom:0.65rem;
+    line-height:1.35;
+}
+.export-top-field input[type="number"] {
+    min-height:44px;
+}
 .export-po-list {
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -3964,6 +3979,12 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     padding:0.42rem 0.82rem !important;
     font-size:0.8rem !important;
 }
+.export-field-toggle-row {
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:0.55rem;
+    margin-bottom:0;
+}
 .export-unit-toggle-btn {
     width:100%;
     text-align:left;
@@ -3978,6 +3999,93 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 }
 .export-unit-toggle-btn:hover {
     color:#2563eb !important;
+}
+.export-secondary-toggle-btn {
+    width:100%;
+    justify-content:center;
+    white-space:nowrap;
+    min-height:44px !important;
+    padding:0.7rem 0.95rem !important;
+    font-size:0.92rem !important;
+    font-weight:700 !important;
+    border-radius:12px !important;
+    text-align:center !important;
+}
+.export-secondary-toggle-btn.is-active {
+    background:linear-gradient(135deg,#2563eb,#1d4ed8) !important;
+    border-color:#1d4ed8 !important;
+    color:#fff !important;
+}
+.export-custom-box-wrap {
+    width:100%;
+    margin-top:0.65rem;
+    border:1px solid #dbe3f0;
+    border-radius:12px;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+    padding:0.8rem;
+    box-sizing:border-box;
+}
+.export-custom-box-list {
+    display:grid;
+    gap:0.65rem;
+}
+.export-custom-box-row {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:0.6rem;
+    align-items:end;
+}
+.export-custom-box-row label {
+    margin-bottom:0.35rem;
+    font-size:0.82rem;
+}
+.export-custom-box-helper {
+    margin-top:0.3rem;
+    font-size:0.76rem;
+    color:#8ea3bd;
+    line-height:1.4;
+}
+.export-custom-box-actions {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:0.75rem;
+    margin-top:0.75rem;
+    flex-wrap:wrap;
+}
+.export-custom-box-remove-btn {
+    min-height:auto !important;
+    padding:0.55rem 0.75rem !important;
+}
+.export-box-summary {
+    margin-top:.2rem;
+    font-size:.78rem;
+    color:#64748b;
+    line-height:1.45;
+}
+html[data-theme="dark"] .export-top-field {
+    border-color:#314155;
+    background:linear-gradient(180deg,#162133 0%,#121a2a 100%);
+}
+html[data-theme="dark"] .export-custom-box-wrap {
+    border-color:#2b3648;
+    background:linear-gradient(180deg,#152033 0%,#101827 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+}
+html[data-theme="dark"] .export-custom-box-helper,
+html[data-theme="dark"] .export-box-summary {
+    color:#8ea3bd;
+}
+html[data-theme="dark"] .export-secondary-toggle-btn:not(.is-active),
+html[data-theme="dark"] .export-custom-box-remove-btn {
+    background:#334155 !important;
+    border-color:#475569 !important;
+    color:#eff6ff !important;
+}
+html[data-theme="dark"] .export-secondary-toggle-btn:not(.is-active):hover,
+html[data-theme="dark"] .export-custom-box-remove-btn:hover {
+    background:#3f4f65 !important;
+    border-color:#64748b !important;
 }
 .export-po-toggle-btn.is-active {
     background:linear-gradient(135deg,#059669,#047857) !important;
@@ -4000,6 +4108,18 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     .export-form-grid,
     .export-po-list {
         grid-template-columns:1fr;
+    }
+    .export-top-field {
+        padding:0.85rem;
+    }
+    .export-secondary-toggle-btn {
+        text-align:center;
+    }
+    .export-custom-box-row {
+        grid-template-columns:1fr;
+    }
+    .export-custom-box-remove-btn {
+        width:100%;
     }
     .export-completed-filter-wrap,
     .export-completed-search-grid {
@@ -5181,6 +5301,17 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 {%- endif -%}
 {%- endmacro %}
 
+{% macro export_date(value) -%}
+{%- set text = (value or '')|string -%}
+{%- if text and text|length >= 10 and text[0:2] == '20' -%}
+{{ text[2:] }}
+{%- elif text -%}
+{{ text }}
+{%- else -%}
+-
+{%- endif -%}
+{%- endmacro %}
+
 {% macro render_export_table(rows, empty_message, item_class='') -%}
     {% if rows %}
     <div class="table-container">
@@ -5212,8 +5343,17 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% if export.completed_date %}data-completed-date="{{ export.completed_date }}"{% endif %}>
                     <td>
                         <strong>{{ export.product_name or '-' }}</strong>
+                        {% set po_numbers = export.po_numbers | select | list %}
+                        {% if po_numbers %}
+                        <div class="req-muted" style="margin-top:.2rem;">
+                            PO
+                            {% for po_number in po_numbers %}
+                            {{ po_number }}{% if not loop.last %} / {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         {% if export.completed_date %}
-                        <div class="req-muted" style="margin-top:.18rem;">완료일 {{ export.completed_date }}</div>
+                        <div class="req-muted" style="margin-top:.18rem;">완료일 {{ export_date(export.completed_date) }}</div>
                         {% endif %}
                         {% if export.note %}
                         <div class="req-muted" style="margin-top:.2rem;">{{ export.note }}</div>
@@ -5235,12 +5375,23 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         </div>
                         {% endif %}
                     </td>
-                    <td>1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box</td>
+                    <td>
+                        {% if export.has_custom_container_quantities %}
+                        <div>개별 입력</div>
+                        <div class="export-box-summary">
+                            {% for quantity in export.container_box_quantities %}
+                            {{ loop.index }}{{ export.unit_label_short }} {{ export_box(quantity) }} box{% if not loop.last %} / {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box
+                        {% endif %}
+                    </td>
                     <td>{{ export.container_count }}{{ export.unit_label_short }}</td>
                     <td>{{ export_box(export.export_quantity) }} box</td>
-                    <td>{{ export.production_start_date }}</td>
-                    <td>{{ export.production_end_date or '-' }}</td>
-                    <td>{{ export.cutoff_date or '-' }}</td>
+                    <td>{{ export_date(export.production_start_date) }}</td>
+                    <td>{{ export_date(export.production_end_date) }}</td>
+                    <td>{{ export_date(export.cutoff_date) }}</td>
                     <td>
                         {% if export.line %}
                             {% for line_num in export.line.split(',') %}
@@ -5292,10 +5443,26 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <div class="export-active-head">
                 <div>
                     <strong>{{ export.product_name or '-' }}</strong>
-                    <div class="req-muted">
-                        {{ export.production_start_date }} 시작 / 종료 {{ export.production_end_date or '-' }} / 컷오프 {{ export.cutoff_date or '-' }}
-                        {% if export.completed_date %} / 완료 {{ export.completed_date }}{% endif %}
+                    {% set po_numbers = export.po_numbers | select | list %}
+                    {% if po_numbers %}
+                    <div class="req-muted" style="margin-top:.2rem;">
+                        PO
+                        {% for po_number in po_numbers %}
+                        {{ po_number }}{% if not loop.last %} / {% endif %}
+                        {% endfor %}
                     </div>
+                    {% endif %}
+                    <div class="req-muted">
+                        {{ export_date(export.production_start_date) }} 시작 / 종료 {{ export_date(export.production_end_date) }} / 컷오프 {{ export_date(export.cutoff_date) }}
+                        {% if export.completed_date %} / 완료 {{ export_date(export.completed_date) }}{% endif %}
+                    </div>
+                    {% if export.has_custom_container_quantities %}
+                    <div class="export-box-summary">
+                        {% for quantity in export.container_box_quantities %}
+                        {{ loop.index }}{{ export.unit_label_short }} {{ export_box(quantity) }} box{% if not loop.last %} / {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="export-active-metrics">
                     <span>총 필요 {{ export_box(export.export_quantity) }} box</span>
@@ -5822,6 +5989,10 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             
             <div class="form-group">
                 <label>생산 라인 * (중복 선택 가능)</label>
+                <label class="schedule-line-option" style="margin-bottom:.6rem;display:inline-flex;">
+                    <input type="checkbox" id="scheduleLineUsageDisabled" name="line_usage_disabled" value="1" onchange="syncScheduleLineUsageDisabled()">
+                    <span>라인 사용 안함</span>
+                </label>
                 <div class="schedule-line-grid">
                     {% for line in range(1, 13) %}
                     <label class="schedule-line-option">
@@ -5832,7 +6003,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% endfor %}
                 </div>
                 <div class="schedule-helper-text">
-                    💡 생산할 라인을 선택하세요 (여러 개 선택 가능)
+                    💡 생산할 라인을 선택하세요 (여러 개 선택 가능). 생김, 세트 작업처럼 라인을 쓰지 않는 경우에는 사용 안함으로 등록할 수 있습니다.
                 </div>
             </div>
             
@@ -6031,14 +6202,28 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             </div>
 
             <div class="export-form-grid">
-                <div class="form-group">
-                    <button type="button" id="exportBoxesUnitToggleBtn" class="export-unit-toggle-btn" onclick="toggleExportUnitMode()">1C 박스 수량 *</button>
+                <div class="form-group export-top-field">
+                    <div class="export-field-toggle-row">
+                        <button type="button" id="exportBoxesUnitToggleBtn" class="export-unit-toggle-btn" onclick="toggleExportUnitMode()">1C 박스 수량 *</button>
+                        <button type="button" id="exportCustomBoxesToggleBtn" class="req-refresh-btn export-secondary-toggle-btn" onclick="toggleExportCustomBoxes()">개별 수량 입력</button>
+                    </div>
                     <input type="number" name="boxes_per_container" id="exportBoxesPerContainerInput" min="1" required placeholder="예: 8064">
+                    <input type="hidden" name="container_box_quantities" id="exportContainerBoxQuantitiesInput">
                 </div>
-                <div class="form-group">
+                <div class="form-group export-top-field">
                     <button type="button" id="exportCountUnitToggleBtn" class="export-unit-toggle-btn" onclick="toggleExportUnitMode()">생산 필요 컨테이너 수 *</button>
                     <input type="number" name="container_count" id="exportContainerCountInput" min="1" required placeholder="예: 4">
                     <input type="hidden" name="unit_mode" id="exportUnitModeInput" value="container">
+                </div>
+                <div class="form-group full">
+                    <div id="exportCustomBoxesWrap" class="export-custom-box-wrap" style="display:none;">
+                        <div class="req-muted">컨테이너별 박스 수량을 입력하면 총수량과 컨테이너 수가 자동 계산됩니다.</div>
+                        <div id="exportCustomBoxesList" class="export-custom-box-list" style="margin-top:.7rem;"></div>
+                        <div class="export-custom-box-actions">
+                            <button type="button" class="req-refresh-btn export-secondary-toggle-btn" onclick="addExportCustomBoxRow()">+ 추가</button>
+                            <span class="req-muted">예: 1C, 2C, 3C 순서대로 입력</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>총수량</label>
@@ -8634,6 +8819,9 @@ async function loadStatsDetailData() {
 function openAddModal(selectedDate = null) {
     if (!ensureScheduleAdminPermission()) return;
     document.getElementById('addModal').style.display = 'block';
+    const lineUsageToggle = document.getElementById('scheduleLineUsageDisabled');
+    if (lineUsageToggle) lineUsageToggle.checked = false;
+    syncScheduleLineUsageDisabled();
     specialNoteDefaultDate = selectedDate || '';
     syncModalOpenState();
     const singleDateInput = document.getElementById('singleDateInput');
@@ -8663,6 +8851,13 @@ function closeModal() {
     document.getElementById('addModal').style.display = 'none';
     clearSelection();
     syncModalOpenState();
+}
+
+function syncScheduleLineUsageDisabled() {
+    const disabled = Boolean(document.getElementById('scheduleLineUsageDisabled')?.checked);
+    document.querySelectorAll('#scheduleForm input[name="production_lines"]').forEach((input) => {
+        input.disabled = disabled;
+    });
 }
 
 // 모든 상품 보기 (검색창 포커스 시)
@@ -8756,6 +8951,16 @@ document.getElementById('scheduleForm').addEventListener('submit', function(even
     }
 });
 
+document.getElementById('scheduleForm').addEventListener('submit', function(event) {
+    if (event.defaultPrevented) return;
+    const lineDisabled = Boolean(document.getElementById('scheduleLineUsageDisabled')?.checked);
+    const checkedLines = Array.from(document.querySelectorAll('#scheduleForm input[name="production_lines"]')).some((checkbox) => checkbox.checked);
+    if (!lineDisabled && !checkedLines) {
+        event.preventDefault();
+        alert('생산 라인을 1개 이상 선택해 주세요.');
+    }
+});
+
 document.getElementById('exportScheduleForm').addEventListener('submit', function(event) {
     const productId = document.getElementById('exportProductId').value.trim();
     if (!productId) {
@@ -8784,9 +8989,11 @@ document.getElementById('exportScheduleForm').addEventListener('submit', functio
 });
 
 document.getElementById('exportBoxesPerContainerInput').addEventListener('input', function() {
+    if (isExportCustomBoxesEnabled()) return;
     calculateExportTotal();
 });
 document.getElementById('exportContainerCountInput').addEventListener('input', function() {
+    if (isExportCustomBoxesEnabled()) return;
     calculateExportTotal();
     if (document.getElementById('exportUsePoNumbers').value === '1') {
         renderExportContainerPoInputs();
@@ -9130,10 +9337,135 @@ function clearExportSelection() {
     document.getElementById('exportProductSearch').value = '';
 }
 
+function isExportCustomBoxesEnabled() {
+    return document.getElementById('exportCustomBoxesWrap').style.display !== 'none';
+}
+
+function getExportCustomBoxRows() {
+    return Array.from(document.querySelectorAll('#exportCustomBoxesList .export-custom-box-row'));
+}
+
+function getExportCustomBoxQuantities() {
+    return getExportCustomBoxRows()
+        .map((row) => Number(row.querySelector('input[data-role="box-qty"]').value || 0))
+        .filter((value) => value > 0);
+}
+
+function buildExportCustomBoxRow(index, value = '') {
+    const row = document.createElement('div');
+    row.className = 'export-custom-box-row';
+    row.innerHTML = `
+        <div>
+            <label>${index}${getExportUnitTerms().poItemSuffix} 박스 수량</label>
+            <input type="number" min="1" data-role="box-qty" value="${value ? escapeHtml(String(value)) : ''}" placeholder="예: 8064">
+            <div class="export-custom-box-helper">${index}${getExportUnitTerms().poItemSuffix} 생산 목표 박스 수량</div>
+        </div>
+        <button type="button" class="btn btn-secondary export-custom-box-remove-btn" data-role="remove-box-row">삭제</button>
+    `;
+    row.querySelector('input[data-role="box-qty"]').addEventListener('input', function() {
+        syncExportCustomBoxState();
+    });
+    row.querySelector('button[data-role="remove-box-row"]').addEventListener('click', function() {
+        removeExportCustomBoxRow(row);
+    });
+    return row;
+}
+
+function refreshExportCustomBoxLabels() {
+    getExportCustomBoxRows().forEach((row, index) => {
+        const containerNo = index + 1;
+        const label = row.querySelector('label');
+        const note = row.querySelector('.export-custom-box-helper');
+        const removeBtn = row.querySelector('button[data-role="remove-box-row"]');
+        if (label) label.textContent = `${containerNo}${getExportUnitTerms().poItemSuffix} 박스 수량`;
+        if (note) note.textContent = `${containerNo}${getExportUnitTerms().poItemSuffix} 생산 목표 박스 수량`;
+        if (removeBtn) removeBtn.disabled = getExportCustomBoxRows().length <= 1;
+    });
+}
+
+function syncExportCustomBoxState() {
+    const quantities = getExportCustomBoxQuantities();
+    document.getElementById('exportContainerBoxQuantitiesInput').value = quantities.join(',');
+    document.getElementById('exportContainerCountInput').value = quantities.length ? String(quantities.length) : '';
+    document.getElementById('exportBoxesPerContainerInput').value = quantities.length ? String(quantities[0]) : '';
+    calculateExportTotal();
+    if (document.getElementById('exportUsePoNumbers').value === '1') {
+        renderExportContainerPoInputs(
+            Array.from(document.querySelectorAll('#exportContainerPoList input[name="container_po_numbers"]')).map((input) => input.value)
+        );
+    }
+}
+
+function addExportCustomBoxRow(value = '') {
+    const list = document.getElementById('exportCustomBoxesList');
+    const nextIndex = getExportCustomBoxRows().length + 1;
+    list.appendChild(buildExportCustomBoxRow(nextIndex, value));
+    refreshExportCustomBoxLabels();
+    syncExportCustomBoxState();
+}
+
+function removeExportCustomBoxRow(row) {
+    if (getExportCustomBoxRows().length <= 1) return;
+    row.remove();
+    refreshExportCustomBoxLabels();
+    syncExportCustomBoxState();
+}
+
+function setExportCustomBoxesEnabled(enabled, quantities = []) {
+    const wrap = document.getElementById('exportCustomBoxesWrap');
+    const btn = document.getElementById('exportCustomBoxesToggleBtn');
+    const baseInput = document.getElementById('exportBoxesPerContainerInput');
+    const countInput = document.getElementById('exportContainerCountInput');
+    const list = document.getElementById('exportCustomBoxesList');
+    wrap.style.display = enabled ? 'block' : 'none';
+    btn.classList.toggle('is-active', enabled);
+    btn.textContent = enabled ? '개별 수량 입력 해제' : '개별 수량 입력';
+    baseInput.readOnly = enabled;
+    countInput.readOnly = enabled;
+    if (!enabled) {
+        list.innerHTML = '';
+        document.getElementById('exportContainerBoxQuantitiesInput').value = '';
+        countInput.value = countInput.value || '';
+        calculateExportTotal();
+        if (document.getElementById('exportUsePoNumbers').value === '1') {
+            renderExportContainerPoInputs();
+        }
+        return;
+    }
+    const seedQuantities = Array.isArray(quantities) && quantities.length
+        ? quantities
+        : (() => {
+            const baseQty = Number(baseInput.value || 0);
+            const count = Number(countInput.value || 0);
+            if (baseQty > 0 && count > 0) {
+                return Array.from({ length: count }, () => baseQty);
+            }
+            return baseQty > 0 ? [baseQty] : [0];
+        })();
+    list.innerHTML = '';
+    seedQuantities.forEach((quantity) => {
+        addExportCustomBoxRow(quantity > 0 ? quantity : '');
+    });
+    if (!seedQuantities.length) {
+        addExportCustomBoxRow();
+    }
+    refreshExportCustomBoxLabels();
+    syncExportCustomBoxState();
+}
+
+function toggleExportCustomBoxes() {
+    setExportCustomBoxesEnabled(!isExportCustomBoxesEnabled());
+}
+
 function calculateExportTotal() {
-    const boxesPerContainer = Number(document.getElementById('exportBoxesPerContainerInput').value || 0);
-    const containerCount = Number(document.getElementById('exportContainerCountInput').value || 0);
-    const total = boxesPerContainer > 0 && containerCount > 0 ? boxesPerContainer * containerCount : 0;
+    let total = 0;
+    if (isExportCustomBoxesEnabled()) {
+        total = getExportCustomBoxQuantities().reduce((sum, value) => sum + value, 0);
+    } else {
+        const boxesPerContainer = Number(document.getElementById('exportBoxesPerContainerInput').value || 0);
+        const containerCount = Number(document.getElementById('exportContainerCountInput').value || 0);
+        total = boxesPerContainer > 0 && containerCount > 0 ? boxesPerContainer * containerCount : 0;
+    }
     document.getElementById('exportQuantityInput').value = total > 0 ? String(total) : '';
     document.getElementById('exportQuantityDisplay').value = total > 0 ? `${total.toLocaleString('ko-KR')} box` : '';
     return total;
@@ -9169,6 +9501,9 @@ function applyExportUnitMode() {
     if (countBtn) countBtn.textContent = terms.countLabel;
     if (poSectionLabel) poSectionLabel.textContent = terms.poLabel;
     if (unitModeInput) unitModeInput.value = exportUnitMode;
+    if (isExportCustomBoxesEnabled()) {
+        refreshExportCustomBoxLabels();
+    }
     const usePo = document.getElementById('exportUsePoNumbers');
     if (usePo && usePo.value === '1') {
         renderExportContainerPoInputs(
@@ -9237,6 +9572,7 @@ function resetExportForm() {
     document.querySelectorAll('.export-line-checkbox').forEach((checkbox) => {
         checkbox.checked = false;
     });
+    setExportCustomBoxesEnabled(false);
     calculateExportTotal();
     setExportPoInputsVisible(false);
     document.getElementById('exportModalTitle').textContent = '수출 일정 추가';
@@ -9256,6 +9592,7 @@ function openExportModal(exportScheduleId = null) {
         document.getElementById('exportContainerCountInput').value = target.container_count || '';
         exportUnitMode = target.unit_mode === 'pallet' ? 'pallet' : 'container';
         applyExportUnitMode();
+        setExportCustomBoxesEnabled(Boolean(target.has_custom_container_quantities), target.container_box_quantities || []);
         calculateExportTotal();
         const hasPoNumbers = Array.isArray(target.po_numbers) && target.po_numbers.some((value) => String(value || '').trim());
         setExportPoInputsVisible(hasPoNumbers, target.po_numbers || []);
@@ -9268,6 +9605,7 @@ function openExportModal(exportScheduleId = null) {
             checkbox.checked = selectedLines.includes(String(checkbox.value));
         });
     } else {
+        setExportCustomBoxesEnabled(false);
         setExportPoInputsVisible(false);
     }
     document.getElementById('exportModal').style.display = 'block';
@@ -9277,6 +9615,8 @@ function closeExportModal() {
     document.getElementById('exportModal').style.display = 'none';
     resetExportForm();
 }
+
+syncScheduleLineUsageDisabled();
 </script>
 {% endblock %}
 

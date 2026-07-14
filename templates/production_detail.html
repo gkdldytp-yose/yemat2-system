@@ -159,6 +159,32 @@
     color:#64748b !important;
     opacity:1;
 }
+.personnel-input-muted{
+    border:1px solid #334155 !important;
+    box-shadow:none !important;
+    background:#e2e8f0 !important;
+    color:#64748b !important;
+    cursor:not-allowed;
+}
+.personnel-input-muted:focus{
+    border-color:#334155 !important;
+    box-shadow:none !important;
+    background:#e2e8f0 !important;
+    color:#64748b !important;
+}
+.personnel-input-muted::placeholder{
+    color:#94a3b8 !important;
+    opacity:1;
+}
+.personnel-disabled-note{
+    margin-top:0.65rem;
+    padding:0.7rem 0.9rem;
+    border:1px solid rgba(148,163,184,.24);
+    border-radius:10px;
+    background:rgba(148,163,184,.08);
+    color:#cbd5e1;
+    font-size:0.82rem;
+}
 .raw-card{border:2px solid #e1e8ed;border-radius:8px;padding:1rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.2s;}
 .raw-card:hover{border-color:#667eea;background:#f8f9ff;}
 .raw-card.active{border-color:#27ae60;background:#f0fff4;}
@@ -460,6 +486,23 @@ html[data-theme="dark"] .personnel-input-highlight:focus{
     color:#f8fafc !important;
     box-shadow:0 0 0 3px rgba(248,113,113,.24), 0 0 22px rgba(248,113,113,.24) !important;
 }
+html[data-theme="dark"] .personnel-input-muted{
+    border-color:rgba(71,85,105,.9) !important;
+    background:#0f172a !important;
+    color:#94a3b8 !important;
+    box-shadow:none !important;
+}
+html[data-theme="dark"] .personnel-input-muted:focus{
+    border-color:rgba(71,85,105,.9) !important;
+    background:#0f172a !important;
+    color:#94a3b8 !important;
+    box-shadow:none !important;
+}
+html[data-theme="dark"] .personnel-disabled-note{
+    border-color:rgba(71,85,105,.5);
+    background:rgba(15,23,42,.78);
+    color:#94a3b8;
+}
 html[data-theme="dark"] .display-readonly-value{background:rgba(22,33,51,.88);border-color:rgba(148,163,184,.2);color:#f8fafc;}
 html[data-theme="dark"] .display-readonly-value.success{background:linear-gradient(180deg,rgba(20,83,45,.92) 0%,rgba(22,101,52,.9) 100%);border-color:rgba(74,222,128,.3);color:#dcfce7;}
 html[data-theme="dark"] .display-readonly-hint{color:#94a3b8;}
@@ -696,6 +739,8 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {%- set has_workplace_access = has_workplace_access if has_workplace_access is defined else true -%}
 {%- set can_manage_production = can_prod and has_workplace_access -%}
 {%- set can_edit = can_prod and has_workplace_access and (production.status != '완료' or edit_completed) -%}
+{% set is_finished_set = (production.product_category == '세트' and production.product_set_item_type == 'finished') %}
+{% set is_semi_set = (production.product_category == '세트' and production.product_set_item_type == 'semi') %}
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
@@ -765,10 +810,14 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 </div>
                 <div class="plan-edit-field full">
                     <label>생산 라인</label>
+                    <label class="plan-line-chip" style="margin-bottom:.55rem;display:inline-flex;">
+                        <input type="checkbox" id="planLineUsageDisabled" name="line_usage_disabled" value="1" {% if production.line_usage_disabled %}checked{% endif %} onchange="syncPlanLineUsageDisabled()">
+                        <span>라인 사용 안함</span>
+                    </label>
                     <div class="plan-line-wrap">
                         {% for line in range(1, 13) %}
                         <label class="plan-line-chip">
-                            <input type="checkbox" name="production_lines" value="{{ line }}" {% if (line|string) in selected_plan_lines %}checked{% endif %}>
+                            <input type="checkbox" name="production_lines" value="{{ line }}" {% if (line|string) in selected_plan_lines %}checked{% endif %} {% if production.line_usage_disabled %}disabled{% endif %}>
                             <span>라인 {{ line }}</span>
                         </label>
                         {% endfor %}
@@ -867,8 +916,8 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 <span class="production-qty-badge">실제 박스 기준</span>
                 {% endif %}
             </div>
-            <div class="val">{{ production.production_sachet_display }}개</div>
-            {% if production.uses_actual_quantity %}
+            <div class="val">{% if is_finished_set %}-{% else %}{{ production.production_sachet_display }}개{% endif %}</div>
+            {% if production.uses_actual_quantity and not is_finished_set %}
             <div class="production-qty-note">{{ production.quantity_basis_boxes_display }} BOX × {{ production.box_quantity }} 낱봉 기준</div>
             {% endif %}
         </div>
@@ -977,13 +1026,13 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     <h3>👥 인원 관리</h3>
     <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr 1.2fr 2fr;">
         <div class="info-item"><div class="lbl">공급 인원 *</div>
-            <input type="number" name="supply_people" min="0" value="{{ production.supply_people or '' }}" class="personnel-input-highlight"
-                   {% if can_edit %}required{% else %}readonly{% endif %}
+            <input type="number" name="supply_people" min="0" value="{{ production.supply_people or '' }}" class="{% if production.line_usage_disabled %}personnel-input-muted{% else %}personnel-input-highlight{% endif %}"
+                   {% if can_edit and not production.line_usage_disabled %}required{% elif can_edit and production.line_usage_disabled %}disabled{% else %}readonly{% endif %}
                    style="padding:0.4rem;border:1px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">포장 인원 *</div>
-            <input type="number" name="packing_people" min="0" value="{{ production.packing_people or '' }}" class="personnel-input-highlight"
-                   {% if can_edit %}required{% else %}readonly{% endif %}
+            <input type="number" name="packing_people" min="0" value="{{ production.packing_people or '' }}" class="{% if production.line_usage_disabled %}personnel-input-muted{% else %}personnel-input-highlight{% endif %}"
+                   {% if can_edit and not production.line_usage_disabled %}required{% elif can_edit and production.line_usage_disabled %}disabled{% else %}readonly{% endif %}
                    style="padding:0.4rem;border:1px solid #667eea;border-radius:6px;width:100%;">
         </div>
         <div class="info-item"><div class="lbl">외포장 인원 *</div>
@@ -1013,6 +1062,9 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             {% endif %}
         </div>
     </div>
+    {% if production.line_usage_disabled %}
+    <div class="personnel-disabled-note">라인 사용 안함 작업은 공급 인원과 포장 인원을 입력하지 않아도 됩니다. 외포장 인원, 작업시간, 비고만 입력해 주세요.</div>
+    {% endif %}
 </div>
 
 {% if bom_raw_items %}
@@ -1157,7 +1209,50 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% endif %}
 
 {% set calc_base_boxes = production.actual_boxes or production.planned_boxes %}
-{% set mat_list = (detail_material_usage|default(material_usage)) | selectattr('material_id') | list %}
+{% set mat_source = detail_material_usage|default(material_usage) %}
+{% set ns_usage = namespace(components=[]) %}
+{% for u in mat_source %}
+    {% if u.material_id or u.component_product_id %}
+        {% if u.component_product_id %}
+            {% set ns_usage.components = ns_usage.components + [u] %}
+        {% endif %}
+    {% endif %}
+{% endfor %}
+{% set mat_list = mat_source | selectattr('material_id') | list %}
+{% set component_list = ns_usage.components %}
+{% if component_list %}
+<div class="sec">
+    <div class="section-head">
+        <h3>📦 반제품 사용량</h3>
+    </div>
+    <table class="mat-tbl">
+        <thead><tr><th>반제품명</th><th>단위</th><th>예상량</th><th>실제 사용량</th><th>로스량</th><th>수율</th></tr></thead>
+        <tbody>
+        {% for u in component_list %}
+        <tr data-uid="{{ u.id }}" data-pbox="{{ ((u.expected_quantity|default(0)) / calc_base_boxes)|round(6) if calc_base_boxes else 0 }}">
+            <td><strong>{{ u.material_name }}</strong></td>
+            <td>
+                <div class="unit-stock">
+                    <span>{{ u.unit }}</span>
+                    <span class="unit-stock-badge {% if (u.current_stock or 0) < (u.expected_quantity or 0) %}low{% endif %}">재고 {{ '%.1f'|format(u.current_stock or 0) }}</span>
+                </div>
+            </td>
+            <td id="exp_{{ u.id }}">{{ (u.expected_quantity|default(0))|round(1) }}</td>
+            <td>
+                {% if not can_edit %}
+                {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
+                {% else %}
+                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
+                {% endif %}
+            </td>
+            <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
+            <td id="yld_{{ u.id }}">{% if u.yield_rate %}<strong>{{ u.yield_rate|round(1) }}%</strong>{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 {% if mat_list %}
 {% set base_cats = ['기름','소금'] %}
 {% set pack_keys = ['내포','외포','박스','트레이','실리카'] %}
@@ -1442,8 +1537,8 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                     <input type="hidden" name="{{ item.name }}" value="{{ item.value }}">
                     {% endfor %}
                     <input type="hidden" name="save_action" value="temp">
-                    <input type="hidden" name="move_to_purchase" value="1">
-                    <button type="submit" class="btn">임시 저장 후 발주관리 이동</button>
+                    <input type="hidden" name="move_to_materials" value="1">
+                    <button type="submit" class="btn">임시 저장 후 부자재 관리로 이동</button>
                 </form>
                 <button type="button" class="btn btn-secondary" onclick="closeMaterialShortageModal()">닫기</button>
             </div>
@@ -1644,6 +1739,10 @@ function syncExpiryRows(){
 }
 
 function validateProductionUsageForm(){
+    const activeSubmitter = document.activeElement;
+    if(activeSubmitter && activeSubmitter.name === 'apply_usage_id'){
+        return true;
+    }
     const firstBoxInput = document.getElementById('expiryBoxes1');
     const firstDateInput = document.getElementById('expiryDate1');
     const firstBoxRaw = (firstBoxInput?.value || '').trim();
@@ -2345,6 +2444,7 @@ function closeMaterialShortageModal(){
 function openPlanEditModal(){
     const modal = document.getElementById('planEditModal');
     if(modal){
+        syncPlanLineUsageDisabled();
         modal.classList.add('open');
     }
 }
@@ -2354,6 +2454,14 @@ function closePlanEditModal(){
     if(modal){
         modal.classList.remove('open');
     }
+}
+
+function syncPlanLineUsageDisabled(){
+    const toggle = document.getElementById('planLineUsageDisabled');
+    const disabled = Boolean(toggle && toggle.checked);
+    document.querySelectorAll('#planEditModal input[name="production_lines"]').forEach((input) => {
+        input.disabled = disabled;
+    });
 }
 
 function openJournalPreview(url, windowName){

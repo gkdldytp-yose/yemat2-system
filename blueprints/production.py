@@ -640,8 +640,44 @@ def _normalize_line_values(raw_lines):
     return cleaned
 
 
+def _is_line_usage_disabled(value):
+    return str(value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _parse_line_usage_form(form):
+    return _is_line_usage_disabled(form.get('line_usage_disabled'))
+
+
 def _normalize_po_values(raw_values):
     return [str(raw or '').strip() for raw in (raw_values or [])]
+
+
+def _parse_export_container_box_quantities(raw_value):
+    quantities = []
+    for raw_item in str(raw_value or '').split(','):
+        value = str(raw_item or '').strip()
+        if not value:
+            continue
+        quantities.append(_parse_positive_int(value, '개별 컨테이너 박스 수량'))
+    return quantities
+
+
+def _serialize_export_container_box_quantities(quantities):
+    normalized = [str(int(quantity)) for quantity in (quantities or []) if int(quantity or 0) > 0]
+    return ','.join(normalized)
+
+
+def _get_export_container_box_quantities(row):
+    if not row:
+        return []
+    quantities = _parse_export_container_box_quantities(row.get('container_box_quantities'))
+    if quantities:
+        return quantities
+    boxes_per_container = int(row.get('boxes_per_container') or 0)
+    container_count = int(row.get('container_count') or 0)
+    if boxes_per_container <= 0 or container_count <= 0:
+        return []
+    return [boxes_per_container for _ in range(container_count)]
 
 
 def _normalize_export_unit_mode(raw_value):
@@ -663,11 +699,29 @@ def _build_export_unit_label(start_no, end_no, unit_mode):
     return ','.join(f'{number}{suffix}' for number in range(start_no, end_no + 1))
 
 
-def _get_export_unit_span(boxes_before, planned_boxes, boxes_per_unit):
-    if planned_boxes <= 0 or boxes_per_unit <= 0:
+def _find_export_unit_no_by_total(box_total, unit_quantities):
+    if box_total < 0:
+        return None
+    running_total = 0
+    for index, quantity in enumerate(unit_quantities, start=1):
+        normalized_qty = int(quantity or 0)
+        if normalized_qty <= 0:
+            continue
+        running_total += normalized_qty
+        if box_total < running_total:
+            return index
+    return None
+
+
+def _get_export_unit_span(boxes_before, planned_boxes, unit_quantities):
+    if planned_boxes <= 0 or not unit_quantities:
         return None, None
-    start_no = (boxes_before // boxes_per_unit) + 1
-    end_no = ((boxes_before + planned_boxes - 1) // boxes_per_unit) + 1
+    start_no = _find_export_unit_no_by_total(int(boxes_before or 0), unit_quantities)
+    end_no = _find_export_unit_no_by_total(int(boxes_before + planned_boxes - 1), unit_quantities)
+    if start_no is None:
+        start_no = len(unit_quantities) + 1
+    if end_no is None:
+        end_no = len(unit_quantities)
     return int(start_no), int(end_no)
 
 
@@ -774,12 +828,28 @@ def _is_started_export_row(row):
 
 
 def _build_export_schedule_note(export_schedule_id, container_label, note=''):
-    prefix = f'[?섏텧?쇱젙 #{export_schedule_id}'
+    prefix = f'[수출일정 #{export_schedule_id}'
     if container_label:
         prefix += f' / {container_label}'
     prefix += ']'
     extra = (note or '').strip()
     return f'{prefix} {extra}'.strip()
+
+
+def _normalize_export_schedule_note(note, export_schedule_id=0, container_label=''):
+    text = str(note or '').strip()
+    target_id = int(export_schedule_id or 0)
+    if not text or target_id <= 0 or not text.startswith('['):
+        return text
+    match = re.match(r'^\[[^\]#]*#\s*(\d+)(?:\s*/\s*([^\]]+))?\]\s*(.*)$', text)
+    if not match:
+        return text
+    note_id = int(match.group(1) or 0)
+    if note_id != target_id:
+        return text
+    normalized_label = str(container_label or '').strip() or str(match.group(2) or '').strip()
+    extra_note = str(match.group(3) or '').strip()
+    return _build_export_schedule_note(target_id, normalized_label, extra_note)
 
 
 def _create_schedule_with_production(
@@ -915,8 +985,9 @@ def _load_existing_export_completed_rows(cursor, workplace, product_id, start_da
     return [dict(row) for row in rows]
 
 
-def _allocate_export_boxes_to_containers(boxes_before, produced_boxes, boxes_per_container, container_count=0, total_limit=0):
-    if boxes_per_container <= 0:
+def _allocate_export_boxes_to_containers(boxes_before, produced_boxes, container_box_quantities, total_limit=0):
+    normalized_quantities = [int(quantity or 0) for quantity in (container_box_quantities or []) if int(quantity or 0) > 0]
+    if not normalized_quantities:
         return []
     try:
         before_value = max(float(boxes_before or 0), 0.0)
@@ -933,14 +1004,21 @@ def _allocate_export_boxes_to_containers(boxes_before, produced_boxes, boxes_per
     allocations = []
     cursor_value = before_value
     remaining = produced_value
+    cumulative_limits = []
+    running_total = 0.0
+    for quantity in normalized_quantities:
+        running_total += float(quantity)
+        cumulative_limits.append(running_total)
     while remaining > 1e-9:
-        container_no = int(cursor_value // boxes_per_container) + 1
-        if container_count and container_no > int(container_count):
+        container_no = _find_export_unit_no_by_total(cursor_value, normalized_quantities)
+        if container_no is None or container_no > len(normalized_quantities):
             break
-        position_in_container = cursor_value % boxes_per_container
-        available_space = float(boxes_per_container) - position_in_container
+        container_limit = cumulative_limits[container_no - 1]
+        previous_limit = cumulative_limits[container_no - 2] if container_no > 1 else 0.0
+        position_in_container = max(cursor_value - previous_limit, 0.0)
+        available_space = float(container_limit - previous_limit) - position_in_container
         if available_space <= 1e-9:
-            available_space = float(boxes_per_container)
+            available_space = float(container_limit - previous_limit)
         allocated_boxes = min(remaining, available_space)
         allocations.append(
             {
@@ -987,8 +1065,9 @@ def _load_production_raw_usage_by_ja_ho(cursor, production_ids):
     return dict(usage_map)
 
 
-def _build_export_container_raw_breakdown(cursor, completed_rows, boxes_per_container, container_count, export_quantity, po_number_map, unit_mode='container'):
-    if not completed_rows or boxes_per_container <= 0 or container_count <= 0 or export_quantity <= 0:
+def _build_export_container_raw_breakdown(cursor, completed_rows, container_box_quantities, export_quantity, po_number_map, unit_mode='container'):
+    normalized_quantities = [int(quantity or 0) for quantity in (container_box_quantities or []) if int(quantity or 0) > 0]
+    if not completed_rows or not normalized_quantities or export_quantity <= 0:
         return []
 
     sorted_rows = sorted(
@@ -1015,8 +1094,7 @@ def _build_export_container_raw_breakdown(cursor, completed_rows, boxes_per_cont
         allocations = _allocate_export_boxes_to_containers(
             produced_cursor,
             actual_boxes,
-            boxes_per_container,
-            container_count=container_count,
+            normalized_quantities,
             total_limit=export_quantity,
         )
         allocated_total = sum(float(item['boxes'] or 0) for item in allocations)
@@ -1063,7 +1141,7 @@ def _build_export_container_raw_breakdown(cursor, completed_rows, boxes_per_cont
 
     suffix = _get_export_unit_suffix(unit_mode)
     breakdown_rows = []
-    for container_no in range(1, int(container_count) + 1):
+    for container_no, target_box_quantity in enumerate(normalized_quantities, start=1):
         usage_bucket = container_usage_map.get(container_no) or {}
         ja_ho_map = usage_bucket.get('ja_ho_map') or {}
         produced_boxes = float(usage_bucket.get('produced_boxes') or 0)
@@ -1093,7 +1171,7 @@ def _build_export_container_raw_breakdown(cursor, completed_rows, boxes_per_cont
                 'container_label': f'{container_no}{suffix}',
                 'po_number': (po_number_map or {}).get(container_no, ''),
                 'produced_boxes': round(produced_boxes, 1),
-                'target_boxes': int(min(max(export_quantity - ((container_no - 1) * boxes_per_container), 0), boxes_per_container)),
+                'target_boxes': int(target_box_quantity),
                 'total_raw_qty': round(total_raw_qty, 2),
                 'breakdown_items': item_rows,
             }
@@ -1130,14 +1208,13 @@ def _delete_export_generated_rows(cursor, export_schedule_id, schedule_ids):
     )
 
 
-def _container_target_rows(total_quantity, boxes_per_container, container_count, produced_total, po_number_map=None, unit_mode='container'):
+def _container_target_rows(container_box_quantities, produced_total, po_number_map=None, unit_mode='container'):
     rows = []
-    remaining_total = total_quantity
     produced_cursor = produced_total
     po_number_map = po_number_map or {}
     suffix = _get_export_unit_suffix(unit_mode)
-    for index in range(1, container_count + 1):
-        target_boxes = min(boxes_per_container, max(remaining_total, 0))
+    for index, quantity in enumerate(container_box_quantities, start=1):
+        target_boxes = max(int(quantity or 0), 0)
         produced_boxes = min(target_boxes, max(produced_cursor, 0))
         remaining_boxes = max(target_boxes - produced_boxes, 0)
         rows.append(
@@ -1151,7 +1228,6 @@ def _container_target_rows(total_quantity, boxes_per_container, container_count,
                 'is_completed': int(remaining_boxes) <= 0 and int(target_boxes) > 0,
             }
         )
-        remaining_total -= target_boxes
         produced_cursor -= produced_boxes
     return rows
 
@@ -1168,8 +1244,7 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
     product_id = int(export_row['product_id'])
     workplace = (export_row.get('workplace') or '').strip()
     export_quantity = int(export_row.get('export_quantity') or 0)
-    boxes_per_container = int(export_row.get('boxes_per_container') or 0)
-    container_count = int(export_row.get('container_count') or 0)
+    container_box_quantities = _get_export_container_box_quantities(export_row)
     unit_mode = _normalize_export_unit_mode(export_row.get('unit_mode'))
     start_date = _parse_iso_date(export_row.get('production_start_date'))
     production_end_date = _parse_iso_date(export_row.get('production_end_date') or export_row.get('cutoff_date'))
@@ -1257,7 +1332,7 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
                 if planned_boxes <= 0:
                     continue
                 day_total_before = daily_cursor_total
-                unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, boxes_per_container)
+                unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, container_box_quantities)
                 container_no = unit_start_no if unit_start_no else None
                 container_label = _build_export_unit_label(unit_start_no, unit_end_no, unit_mode)
                 daily_cursor_total += planned_boxes
@@ -1277,7 +1352,7 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
         if planned_boxes <= 0:
             continue
         day_total_before = daily_cursor_total
-        unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, boxes_per_container)
+        unit_start_no, unit_end_no = _get_export_unit_span(day_total_before, planned_boxes, container_box_quantities)
         container_no = unit_start_no if unit_start_no else None
         container_label = _build_export_unit_label(unit_start_no, unit_end_no, unit_mode)
         daily_cursor_total += planned_boxes
@@ -1472,6 +1547,147 @@ def _filter_selected_variant_bom_rows(rows):
                 continue
         filtered.append(row_dict)
     return filtered
+
+
+def _normalize_set_item_type(raw_value, category=''):
+    value = str(raw_value or '').strip().lower()
+    normalized_category = str(category or '').strip()
+    if normalized_category != '세트':
+        return ''
+    if value in {'finished', '완제품'}:
+        return 'finished'
+    if value in {'semi', '반제품'}:
+        return 'semi'
+    return ''
+
+
+def _row_value(row, key, default=None):
+    if row is None:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+
+def _is_set_semi_product_row(product_row):
+    if not product_row:
+        return False
+    return (
+        str(_row_value(product_row, 'category') or '').strip() == '세트'
+        and _normalize_set_item_type(_row_value(product_row, 'set_item_type'), '세트') == 'semi'
+    )
+
+
+def _is_set_finished_product_row(product_row):
+    if not product_row:
+        return False
+    return (
+        str(_row_value(product_row, 'category') or '').strip() == '세트'
+        and _normalize_set_item_type(_row_value(product_row, 'set_item_type'), '세트') == 'finished'
+    )
+
+
+def _get_product_stock(cursor, product_id, workplace):
+    cursor.execute(
+        '''
+        SELECT COALESCE(current_stock, 0) AS current_stock
+        FROM product_stocks
+        WHERE product_id = ?
+          AND workplace = ?
+        ''',
+        (product_id, workplace),
+    )
+    row = cursor.fetchone()
+    return float(row['current_stock'] or 0) if row else 0.0
+
+
+def _adjust_product_stock(cursor, product_id, workplace, delta_qty, action, note='', production_id=None, created_by=''):
+    qty = round(float(delta_qty or 0), 4)
+    if abs(qty) <= 1e-9 or not product_id or not workplace:
+        return 0.0
+    current_stock = _get_product_stock(cursor, product_id, workplace)
+    new_stock = round(current_stock + qty, 4)
+    if new_stock < -1e-9:
+        raise ValueError('반제품 재고가 부족합니다.')
+    cursor.execute(
+        '''
+        INSERT INTO product_stocks (product_id, workplace, current_stock, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(product_id, workplace)
+        DO UPDATE SET current_stock = excluded.current_stock, updated_at = CURRENT_TIMESTAMP
+        ''',
+        (product_id, workplace, max(new_stock, 0.0)),
+    )
+    cursor.execute(
+        '''
+        INSERT INTO product_stock_logs (
+            product_id, workplace, action, quantity, note, production_id, created_by
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''',
+        (product_id, workplace, action, qty, note, production_id, created_by),
+    )
+    return max(new_stock, 0.0)
+
+
+def _restore_component_usage_for_production(cursor, production_id, workplace, actor_username, note_prefix='production_restore'):
+    cursor.execute(
+        '''
+        SELECT component_product_id, SUM(COALESCE(actual_quantity, 0)) AS qty
+        FROM production_material_usage
+        WHERE production_id = ?
+          AND component_product_id IS NOT NULL
+          AND COALESCE(actual_quantity, 0) > 0
+        GROUP BY component_product_id
+        ''',
+        (production_id,),
+    )
+    restored_ids = set()
+    for row in cursor.fetchall():
+        component_product_id = int(row['component_product_id'] or 0)
+        qty = float(row['qty'] or 0)
+        if component_product_id <= 0 or qty <= 0:
+            continue
+        _adjust_product_stock(
+            cursor,
+            component_product_id,
+            workplace,
+            qty,
+            'RETURN',
+            f'{note_prefix}:{production_id}',
+            production_id,
+            actor_username,
+        )
+        restored_ids.add(component_product_id)
+    return restored_ids
+
+
+def _consume_component_product_stock(cursor, component_product_id, required_qty, production_id, workplace, actor_username):
+    need_qty = round(float(required_qty or 0), 4)
+    if component_product_id <= 0 or need_qty <= 0:
+        return 0.0
+    available_qty = _get_product_stock(cursor, component_product_id, workplace)
+    if available_qty + 1e-9 < need_qty:
+        cursor.execute('SELECT name FROM products WHERE id = ?', (component_product_id,))
+        product_row = cursor.fetchone()
+        product_name = product_row['name'] if product_row else f'반제품 {component_product_id}'
+        raise ValueError(
+            f'{product_name} 반제품 재고가 부족합니다. 필요 {need_qty:.1f}, 현재 {available_qty:.1f}'
+        )
+    _adjust_product_stock(
+        cursor,
+        component_product_id,
+        workplace,
+        -need_qty,
+        'CONSUME',
+        f'production:{production_id}',
+        production_id,
+        actor_username,
+    )
+    return need_qty
 
 
 def _normalize_production_status(status_value):
@@ -2337,8 +2553,7 @@ def schedules():
 
     with db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
-        products = cursor.fetchall()
+        products = _load_schedule_selectable_products(cursor, workplace)
         stats_products = _load_schedule_stats_products(cursor, workplace)
         cursor.execute(
             '''
@@ -2488,7 +2703,8 @@ def schedules():
             started_count = len(completed_rows)
             export_quantity = int(export_row.get('export_quantity') or 0)
             boxes_per_container = int(export_row.get('boxes_per_container') or 0)
-            container_count = int(export_row.get('container_count') or 0)
+            container_box_quantities = _get_export_container_box_quantities(export_row)
+            container_count = len(container_box_quantities) or int(export_row.get('container_count') or 0)
             remaining_total = max(export_quantity - produced_total, 0)
             daily_actual_map = {}
             for linked_row in completed_rows:
@@ -2540,9 +2756,7 @@ def schedules():
             is_completed = export_quantity > 0 and remaining_total <= 0
             completed_date = completed_dates[-1] if is_completed and completed_dates else ''
             container_rows = _container_target_rows(
-                export_quantity,
-                boxes_per_container,
-                container_count,
+                container_box_quantities,
                 produced_total,
                 po_number_map,
                 unit_mode=unit_mode,
@@ -2551,8 +2765,7 @@ def schedules():
                 container_raw_breakdowns = _build_export_container_raw_breakdown(
                     cursor,
                     completed_rows,
-                    boxes_per_container,
-                    container_count,
+                    container_box_quantities,
                     export_quantity,
                     po_number_map,
                     unit_mode=unit_mode,
@@ -2578,6 +2791,8 @@ def schedules():
                 'completion_rate': round((produced_total / export_quantity) * 100, 1) if export_quantity > 0 else 0.0,
                 'container_rows': container_rows,
                 'container_raw_breakdowns': container_raw_breakdowns,
+                'container_box_quantities': container_box_quantities,
+                'has_custom_container_quantities': bool(export_row.get('container_box_quantities') and str(export_row.get('container_box_quantities')).strip()),
                 'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
                 'daily_actuals': [
                     {
@@ -2612,6 +2827,8 @@ def schedules():
                     'export_quantity': export_quantity,
                     'boxes_per_container': boxes_per_container,
                     'container_count': container_count,
+                    'container_box_quantities': container_box_quantities,
+                    'has_custom_container_quantities': bool(export_row.get('container_box_quantities') and str(export_row.get('container_box_quantities')).strip()),
                     'unit_mode': unit_mode,
                     'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
                     'production_start_date': export_row.get('production_start_date') or '',
@@ -3534,7 +3751,7 @@ def schedule_requirements_auto_purchase():
                 continue
 
             issue_qty = round(shortage, 2)
-            issue_note = "[?먮룞 遺덉텧 ?깅줉]"
+            issue_note = "[자동 불출 등록]"
             cursor.execute(
                 '''
                 INSERT INTO logistics_issue_requests
@@ -3600,33 +3817,36 @@ def add_schedule():
     scheduled_dates = list(dict.fromkeys(d for d in scheduled_dates if d))
     planned_boxes = request.form.get('planned_boxes')
     production_lines = request.form.getlist('production_lines')
-    production_lines_str = ','.join(production_lines) if production_lines else ''
+    line_usage_disabled = _parse_line_usage_form(request.form)
+    production_lines_str = '' if line_usage_disabled else (','.join(production_lines) if production_lines else '')
     note = request.form.get('note', '')
 
     if not product_id:
         return "<script>alert('?곹뭹???좏깮??二쇱꽭??');history.back();</script>", 400
     with db_transaction() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
-        if not cursor.fetchone():
+        product_row = _is_schedule_product_selectable(cursor, workplace, product_id)
+        if not product_row:
             return "<script>alert('?좏깮???곹뭹??李얠쓣 ???놁뒿?덈떎. ?ㅼ떆 ?좏깮??二쇱꽭??');history.back();</script>", 400
+        if not line_usage_disabled and not production_lines:
+            return "<script>alert('생산 라인을 1개 이상 선택해 주세요.');history.back();</script>", 400
 
         for scheduled_date in scheduled_dates:
             if scheduled_date:
                 cursor.execute(
                     '''
-                    INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
-                    VALUES (?, ?, ?, ?, '?덉젙', ?, ?)
+                    INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, line_usage_disabled, workplace)
+                    VALUES (?, ?, ?, ?, '?덉젙', ?, ?, ?)
                 ''',
-                    (product_id, scheduled_date, planned_boxes, note, production_lines_str, workplace),
+                    (product_id, scheduled_date, planned_boxes, note, production_lines_str, 1 if line_usage_disabled else 0, workplace),
                 )
                 schedule_id = cursor.lastrowid
                 cursor.execute(
                     '''
-                    INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
-                    VALUES (?, ?, ?, '?덉젙', ?, ?, ?)
+                    INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace, line_usage_disabled)
+                    VALUES (?, ?, ?, '?덉젙', ?, ?, ?, ?)
                 ''',
-                    (product_id, scheduled_date, planned_boxes, note, schedule_id, workplace),
+                    (product_id, scheduled_date, planned_boxes, note, schedule_id, workplace, 1 if line_usage_disabled else 0),
                 )
                 production_id = cursor.lastrowid
                 cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
@@ -3641,6 +3861,7 @@ def add_schedule():
                         'planned_boxes': planned_boxes,
                         'note': note,
                         'line': production_lines_str,
+                        'line_usage_disabled': line_usage_disabled,
                         'workplace': workplace,
                         'production_id': production_id,
                     },
@@ -3661,7 +3882,7 @@ def copy_schedule():
         cursor = conn.cursor()
         cursor.execute(
             '''
-            SELECT product_id, planned_boxes, note, line
+            SELECT product_id, planned_boxes, note, line, COALESCE(line_usage_disabled, 0) AS line_usage_disabled
             FROM production_schedules
             WHERE id = ?
         ''',
@@ -3674,8 +3895,8 @@ def copy_schedule():
                 if target_date:
                     cursor.execute(
                         '''
-                        INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, workplace)
-                        VALUES (?, ?, ?, ?, '?덉젙', ?, ?)
+                        INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, note, status, line, line_usage_disabled, workplace)
+                        VALUES (?, ?, ?, ?, '?덉젙', ?, ?, ?)
                     ''',
                         (
                             original['product_id'],
@@ -3683,14 +3904,15 @@ def copy_schedule():
                             original['planned_boxes'],
                             original['note'],
                             original['line'],
+                            int(original['line_usage_disabled'] or 0),
                             workplace,
                         ),
                     )
                     new_schedule_id = cursor.lastrowid
                     cursor.execute(
                         '''
-                        INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace)
-                        VALUES (?, ?, ?, '?덉젙', ?, ?, ?)
+                        INSERT INTO productions (product_id, production_date, planned_boxes, status, note, schedule_id, workplace, line_usage_disabled)
+                        VALUES (?, ?, ?, '?덉젙', ?, ?, ?, ?)
                     ''',
                         (
                             original['product_id'],
@@ -3699,6 +3921,7 @@ def copy_schedule():
                             original['note'],
                             new_schedule_id,
                             workplace,
+                            int(original['line_usage_disabled'] or 0),
                         ),
                     )
                     production_id = cursor.lastrowid
@@ -3715,6 +3938,7 @@ def copy_schedule():
                             'planned_boxes': original['planned_boxes'],
                             'note': original['note'],
                             'line': original['line'],
+                            'line_usage_disabled': int(original['line_usage_disabled'] or 0),
                             'workplace': workplace,
                             'production_id': production_id,
                         },
@@ -3997,8 +4221,7 @@ def schedule_detail(date):
             (date, workplace),
         )
         schedules = cursor.fetchall()
-        cursor.execute('SELECT id, name FROM products WHERE workplace = ? ORDER BY name ASC', (workplace,))
-        products = rows_to_dict(cursor.fetchall())
+        products = _load_schedule_selectable_products(cursor, workplace)
 
     return render_template('schedule_detail.html', user=session['user'], date=date, schedules=schedules, products=products)
 
@@ -4014,30 +4237,32 @@ def add_schedule_to_date(date):
     product_id = (request.form.get('product_id') or '').strip()
     planned_boxes = request.form.get('planned_boxes')
     production_lines = request.form.getlist('production_lines')
-    production_lines_str = ','.join(production_lines) if production_lines else ''
+    line_usage_disabled = _parse_line_usage_form(request.form)
+    production_lines_str = '' if line_usage_disabled else (','.join(production_lines) if production_lines else '')
 
     if not product_id:
         return "<script>alert('?곹뭹???좏깮??二쇱꽭??');history.back();</script>", 400
     with db_transaction() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT id FROM products WHERE id = ? AND workplace = ?', (product_id, workplace))
-        if not cursor.fetchone():
+        if not _is_schedule_product_selectable(cursor, workplace, product_id):
             return "<script>alert('?좏깮???곹뭹??李얠쓣 ???놁뒿?덈떎. ?ㅼ떆 ?좏깮??二쇱꽭??');history.back();</script>", 400
+        if not line_usage_disabled and not production_lines:
+            return "<script>alert('생산 라인을 1개 이상 선택해 주세요.');history.back();</script>", 400
 
         cursor.execute(
             '''
-            INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, line, workplace)
-            VALUES (?, ?, ?, '?덉젙', ?, ?)
+            INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, line, line_usage_disabled, workplace)
+            VALUES (?, ?, ?, '?덉젙', ?, ?, ?)
         ''',
-            (product_id, date, planned_boxes, production_lines_str, workplace),
+            (product_id, date, planned_boxes, production_lines_str, 1 if line_usage_disabled else 0, workplace),
         )
         schedule_id = cursor.lastrowid
         cursor.execute(
             '''
-            INSERT INTO productions (product_id, production_date, planned_boxes, status, schedule_id, workplace)
-            VALUES (?, ?, ?, '?덉젙', ?, ?)
+            INSERT INTO productions (product_id, production_date, planned_boxes, status, schedule_id, workplace, line_usage_disabled)
+            VALUES (?, ?, ?, '?덉젙', ?, ?, ?)
         ''',
-            (product_id, date, planned_boxes, schedule_id, workplace),
+            (product_id, date, planned_boxes, schedule_id, workplace, 1 if line_usage_disabled else 0),
         )
         production_id = cursor.lastrowid
         cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
@@ -4051,6 +4276,7 @@ def add_schedule_to_date(date):
                 'scheduled_date': date,
                 'planned_boxes': planned_boxes,
                 'line': production_lines_str,
+                'line_usage_disabled': line_usage_disabled,
                 'workplace': workplace,
                 'production_id': production_id,
             },
@@ -4069,10 +4295,112 @@ def _schedule_error_response(message, view='export'):
     return f"<script>alert({safe_message}); location.href={redirect_url};</script>", 400
 
 
+SCHEDULE_SHARED_TABLE_WORKPLACE_GROUPS = (
+    {'1동 조미', '1동 조미 작업장', '2동 신관 2층'},
+)
+
+
+def _normalize_schedule_product_workplace(raw_workplace):
+    value = str(raw_workplace or '').strip()
+    if value == '1동 조미 작업장':
+        return '1동 조미'
+    return value
+
+
+def _get_schedule_shared_table_workplaces(workplace):
+    normalized = _normalize_schedule_product_workplace(workplace)
+    for group in SCHEDULE_SHARED_TABLE_WORKPLACE_GROUPS:
+        normalized_group = {_normalize_schedule_product_workplace(item) for item in group}
+        if normalized in normalized_group:
+            return normalized_group
+    return {normalized} if normalized else set()
+
+
+def _load_schedule_selectable_products(cursor, workplace, include_box_quantity=False):
+    normalized_workplace = _normalize_schedule_product_workplace(workplace)
+    shared_workplaces = _get_schedule_shared_table_workplaces(normalized_workplace)
+    select_cols = 'id, name, workplace, COALESCE(category, \'\') as category, COALESCE(code, \'\') as code'
+    if include_box_quantity:
+        select_cols += ', box_quantity'
+    rows = cursor.execute(
+        f'''
+        SELECT {select_cols}
+        FROM products
+        ORDER BY name ASC, id ASC
+        '''
+    ).fetchall()
+    selectable = []
+    seen_ids = set()
+    for raw_row in rows:
+        row = dict(raw_row)
+        product_id = int(row.get('id') or 0)
+        if product_id <= 0 or product_id in seen_ids:
+            continue
+        row_workplace = _normalize_schedule_product_workplace(row.get('workplace'))
+        category = str(row.get('category') or '').strip()
+        is_same_workplace = row_workplace == normalized_workplace
+        is_shared_table_product = (
+            normalized_workplace in shared_workplaces
+            and row_workplace in shared_workplaces
+            and category == '식탁'
+        )
+        if not is_same_workplace and not is_shared_table_product:
+            continue
+        selectable.append(row)
+        seen_ids.add(product_id)
+    selectable.sort(
+        key=lambda item: (
+            0 if _normalize_schedule_product_workplace(item.get('workplace')) == normalized_workplace else 1,
+            str(item.get('name') or ''),
+            int(item.get('id') or 0),
+        )
+    )
+    return selectable
+
+
+def _is_schedule_product_selectable(cursor, workplace, product_id):
+    target_id = int(product_id or 0)
+    if target_id <= 0:
+        return None
+    for row in _load_schedule_selectable_products(cursor, workplace, include_box_quantity=True):
+        if int(row.get('id') or 0) == target_id:
+            return row
+    return None
+
+
+def _load_register_mode_products(cursor, current_workplace=''):
+    normalized_current = _normalize_schedule_product_workplace(current_workplace)
+    rows = cursor.execute(
+        '''
+        SELECT DISTINCT
+            p.id,
+            p.name,
+            COALESCE(p.code, '') as code,
+            COALESCE(p.box_quantity, 0) as box_quantity,
+            COALESCE(p.expiry_months, 12) as expiry_months,
+            COALESCE(p.workplace, '') as workplace,
+            COALESCE(p.category, '') as category
+        FROM products p
+        ORDER BY
+            CASE WHEN COALESCE(p.workplace, '') = ? THEN 0 ELSE 1 END,
+            p.name ASC,
+            p.id ASC
+        ''',
+        (normalized_current,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def _parse_export_container_inputs(form):
     boxes_per_container = _parse_positive_int(form.get('boxes_per_container'), '1C 諛뺤뒪 ?섎웾')
-    container_count = _parse_positive_int(form.get('container_count'), '생산 필요 컨테이너 수량')
-    export_quantity = boxes_per_container * container_count
+    container_box_quantities = _parse_export_container_box_quantities(form.get('container_box_quantities'))
+    if container_box_quantities:
+        boxes_per_container = int(container_box_quantities[0])
+        container_count = len(container_box_quantities)
+        export_quantity = sum(container_box_quantities)
+    else:
+        container_count = _parse_positive_int(form.get('container_count'), '생산 필요 컨테이너 수량')
+        export_quantity = boxes_per_container * container_count
     use_po_numbers = str(form.get('use_po_numbers') or '').strip() in {'1', 'true', 'on', 'yes'}
     po_numbers = _normalize_po_values(form.getlist('container_po_numbers'))
     if use_po_numbers:
@@ -4084,7 +4412,7 @@ def _parse_export_container_inputs(form):
                 raise ValueError(f'{index}C??PO 踰덊샇瑜??낅젰?댁＜?몄슂.')
     else:
         po_numbers = []
-    return boxes_per_container, container_count, export_quantity, po_numbers
+    return boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities
 
 
 @bp.route('/schedules/export/add', methods=['POST'])
@@ -4093,7 +4421,7 @@ def add_export_schedule():
     try:
         workplace = get_workplace()
         product_id = _parse_positive_int(request.form.get('product_id'), '?섏텧 ?쒗뭹')
-        boxes_per_container, container_count, export_quantity, po_numbers = _parse_export_container_inputs(request.form)
+        boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities = _parse_export_container_inputs(request.form)
         unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
         start_date = (request.form.get('production_start_date') or '').strip()
         production_end_date = (request.form.get('production_end_date') or '').strip()
@@ -4105,20 +4433,17 @@ def add_export_schedule():
 
         with db_transaction() as conn:
             cursor = conn.cursor()
-            product_row = cursor.execute(
-                'SELECT id, name FROM products WHERE id = ? AND workplace = ?',
-                (product_id, workplace),
-            ).fetchone()
+            product_row = _is_schedule_product_selectable(cursor, workplace, product_id)
             if not product_row:
                 raise ValueError('?좏깮???섏텧 ?쒗뭹??李얠쓣 ???놁뒿?덈떎.')
 
             cursor.execute(
                 '''
                 INSERT INTO export_schedules (
-                    workplace, product_id, export_quantity, boxes_per_container, container_count, unit_mode,
+                    workplace, product_id, export_quantity, boxes_per_container, container_count, container_box_quantities, unit_mode,
                     production_start_date, production_end_date, cutoff_date, line, note, created_by, updated_by
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     workplace,
@@ -4126,6 +4451,7 @@ def add_export_schedule():
                     export_quantity,
                     boxes_per_container,
                     container_count,
+                    _serialize_export_container_box_quantities(container_box_quantities),
                     unit_mode,
                     start_date,
                     production_end_date,
@@ -4151,6 +4477,7 @@ def add_export_schedule():
                     'export_quantity': export_quantity,
                     'boxes_per_container': boxes_per_container,
                     'container_count': container_count,
+                    'container_box_quantities': container_box_quantities,
                     'unit_mode': unit_mode,
                     'po_numbers': po_numbers,
                     'production_start_date': start_date,
@@ -4172,7 +4499,7 @@ def update_export_schedule(export_schedule_id):
     try:
         workplace = get_workplace()
         product_id = _parse_positive_int(request.form.get('product_id'), '?섏텧 ?쒗뭹')
-        boxes_per_container, container_count, export_quantity, po_numbers = _parse_export_container_inputs(request.form)
+        boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities = _parse_export_container_inputs(request.form)
         unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
         start_date = (request.form.get('production_start_date') or '').strip()
         production_end_date = (request.form.get('production_end_date') or '').strip()
@@ -4190,17 +4517,14 @@ def update_export_schedule(export_schedule_id):
             ).fetchone()
             if not before_row:
                 raise ValueError('?섏젙???섏텧 ?쇱젙???놁뒿?덈떎.')
-            product_row = cursor.execute(
-                'SELECT id, name FROM products WHERE id = ? AND workplace = ?',
-                (product_id, workplace),
-            ).fetchone()
+            product_row = _is_schedule_product_selectable(cursor, workplace, product_id)
             if not product_row:
                 raise ValueError('?좏깮???섏텧 ?쒗뭹??李얠쓣 ???놁뒿?덈떎.')
 
             cursor.execute(
                 '''
                 UPDATE export_schedules
-                SET product_id = ?, export_quantity = ?, boxes_per_container = ?, container_count = ?, unit_mode = ?,
+                SET product_id = ?, export_quantity = ?, boxes_per_container = ?, container_count = ?, container_box_quantities = ?, unit_mode = ?,
                     production_start_date = ?, production_end_date = ?, cutoff_date = ?, line = ?, note = ?, updated_by = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND workplace = ?
@@ -4210,6 +4534,7 @@ def update_export_schedule(export_schedule_id):
                     export_quantity,
                     boxes_per_container,
                     container_count,
+                    _serialize_export_container_box_quantities(container_box_quantities),
                     unit_mode,
                     start_date,
                     production_end_date,
@@ -4586,60 +4911,80 @@ def add_production():
         cursor = conn.cursor()
 
         # ?怨밸? 筌뤴뫖以?(?袁⑹삺 ?臾믩씜?貫彛?
-        cursor.execute('SELECT id, name, box_quantity FROM products WHERE workplace = ? ORDER BY name', (workplace,))
-        products = cursor.fetchall()
+        products = _load_schedule_selectable_products(cursor, workplace, include_box_quantity=True)
+        selectable_product_ids = [int(row['id']) for row in products if int(row.get('id') or 0) > 0]
+        product_placeholders = ','.join(['?'] * len(selectable_product_ids))
 
         # ?怨밸?癰?BOM ?癒?겧 ?類ｋ궖 (?癒?겧 ?????癒곗깈/??껎????釉? - ?臾믩씜???袁り숲
-        cursor.execute(
-            '''
-            SELECT b.product_id, b.quantity_per_box,
-                   rm.id as rm_id, rm.name as rm_name,
-                   rm.car_number, rm.receiving_date, rm.current_stock
-            FROM bom b
-            JOIN raw_materials rm ON b.raw_material_id = rm.id
-            JOIN products p ON b.product_id = p.id
-            WHERE p.workplace = ?
-        ''',
-            (workplace,),
-        )
-        bom_raw = cursor.fetchall()
+        if selectable_product_ids:
+            cursor.execute(
+                f'''
+                SELECT b.product_id, b.quantity_per_box,
+                       rm.id as rm_id, rm.name as rm_name,
+                       rm.car_number, rm.receiving_date, rm.current_stock
+                FROM bom b
+                JOIN raw_materials rm ON b.raw_material_id = rm.id
+                JOIN products p ON b.product_id = p.id
+                WHERE p.id IN ({product_placeholders})
+            ''',
+                selectable_product_ids,
+            )
+            bom_raw = cursor.fetchall()
+        else:
+            bom_raw = []
 
         # ?怨밸?癰?BOM ??癒?삺 ?類ｋ궖 - ?臾믩씜???袁り숲
-        cursor.execute(
-            '''
-            SELECT b.product_id, b.quantity_per_box,
-                   m.id as m_id, m.name as m_name, m.unit,
-                   COALESCE(m.category, '') as material_category,
-                   COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
-                   COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
-            FROM bom b
-            JOIN materials m ON b.material_id = m.id
-            JOIN products p ON b.product_id = p.id
-            WHERE p.workplace = ?
-        ''',
-            (workplace,),
-        )
-        bom_mat = _filter_selected_variant_bom_rows(
-            [
-                {
-                    'product_id': row['product_id'],
-                    'material_id': row['m_id'],
-                    'quantity_per_box': row['quantity_per_box'],
-                    'm_id': row['m_id'],
-                    'm_name': row['m_name'],
-                    'unit': row['unit'],
-                    'material_category': '실리카' if '실리카' in str(row['m_name'] or '') else '',
-                    'selected_silica_material_id': row['selected_silica_material_id'],
-                    'selected_pouch_material_id': row['selected_pouch_material_id'],
-                }
-                for row in cursor.fetchall()
-            ]
-        )
+        if selectable_product_ids:
+            cursor.execute(
+                f'''
+                SELECT b.product_id, b.quantity_per_box,
+                       m.id as m_id, m.name as m_name, m.unit,
+                       COALESCE(m.category, '') as material_category,
+                       COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                       COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
+                FROM bom b
+                JOIN materials m ON b.material_id = m.id
+                JOIN products p ON b.product_id = p.id
+                WHERE p.id IN ({product_placeholders})
+            ''',
+                selectable_product_ids,
+            )
+            bom_mat = _filter_selected_variant_bom_rows(
+                [
+                    {
+                        'product_id': row['product_id'],
+                        'material_id': row['m_id'],
+                        'quantity_per_box': row['quantity_per_box'],
+                        'm_id': row['m_id'],
+                        'm_name': row['m_name'],
+                        'unit': row['unit'],
+                        'material_category': row['material_category'],
+                        'selected_silica_material_id': row['selected_silica_material_id'],
+                        'selected_pouch_material_id': row['selected_pouch_material_id'],
+                    }
+                    for row in cursor.fetchall()
+                ]
+            )
+        else:
+            bom_mat = []
 
         conn_context.__exit__(None, None, None)
 
         # JSON??곗쨮 癰??
-        products_list = [{'id': p['id'], 'name': p['name'], 'box_quantity': p['box_quantity']} for p in products]
+        products_list = [
+            {
+                'id': p['id'],
+                'name': p['name'],
+                'box_quantity': p['box_quantity'],
+                'workplace': p.get('workplace', '') if isinstance(p, dict) else p['workplace'],
+                'category': p.get('category', '') if isinstance(p, dict) else p['category'],
+                'code': p.get('code', '') if isinstance(p, dict) else (p['code'] if 'code' in p.keys() else ''),
+                'is_shared_workplace': _normalize_schedule_product_workplace(
+                    p.get('workplace', '') if isinstance(p, dict) else p['workplace']
+                ) != _normalize_schedule_product_workplace(workplace),
+            }
+            for p in products
+        ]
         products_json = json.dumps(products_list, ensure_ascii=False)
 
         bom_raw_data = {}
@@ -4687,23 +5032,28 @@ def add_production():
     production_date = request.form.get('production_date')
     planned_boxes = request.form.get('planned_boxes')
     production_lines = request.form.getlist('production_lines')
-    production_lines_str = ','.join(production_lines) if production_lines else ''
+    line_usage_disabled = _parse_line_usage_form(request.form)
+    production_lines_str = '' if line_usage_disabled else (','.join(production_lines) if production_lines else '')
     note = request.form.get('note')
 
-    if not production_lines:
+    if not line_usage_disabled and not production_lines:
         return "<script>alert('??밴텦 ??깆뵥???醫뤾문??곻폒?紐꾩뒄.'); window.history.back();</script>"
 
     conn = get_db()
     begin_db_transaction(conn)
     cursor = conn.cursor()
+    if not _is_schedule_product_selectable(cursor, workplace, product_id):
+        rollback_db(conn)
+        close_db(conn)
+        return "<script>alert('?좏깮???곹뭹??李얠쓣 ???놁뒿?덈떎. ?ㅼ떆 ?좏깮??二쇱꽭??'); window.history.back();</script>", 400
 
     # ??밴텦 疫꿸퀡以???밴쉐 (workplace ?곕떽?)
     cursor.execute(
         '''
-        INSERT INTO productions (product_id, production_date, planned_boxes, status, note, workplace)
-        VALUES (?, ?, ?, '?덉젙', ?, ?)
+        INSERT INTO productions (product_id, production_date, planned_boxes, status, note, workplace, line_usage_disabled)
+        VALUES (?, ?, ?, '?덉젙', ?, ?, ?)
     ''',
-        (product_id, production_date, planned_boxes, note, workplace),
+        (product_id, production_date, planned_boxes, note, workplace, 1 if line_usage_disabled else 0),
     )
 
     production_id = cursor.lastrowid
@@ -4711,10 +5061,10 @@ def add_production():
     # ???臾먭컩???怨뺣짗: ???餓κ쑴肉???癒?짗 ?源낆쨯 (workplace ?곕떽?)
     cursor.execute(
         '''
-        INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, note, production_id, line, workplace)
-        VALUES (?, ?, ?, '?덉젙', ?, ?, ?, ?)
+        INSERT INTO production_schedules (product_id, scheduled_date, planned_boxes, status, note, production_id, line, line_usage_disabled, workplace)
+        VALUES (?, ?, ?, '?덉젙', ?, ?, ?, ?, ?)
     ''',
-        (product_id, production_date, planned_boxes, note, production_id, production_lines_str, workplace),
+        (product_id, production_date, planned_boxes, note, production_id, production_lines_str, 1 if line_usage_disabled else 0, workplace),
     )
     schedule_id = cursor.lastrowid
 
@@ -4731,6 +5081,7 @@ def add_production():
             'production_date': production_date,
             'planned_boxes': planned_boxes,
             'line': production_lines_str,
+            'line_usage_disabled': line_usage_disabled,
             'note': note,
             'workplace': workplace,
             'schedule_id': schedule_id,
@@ -4773,14 +5124,17 @@ def production_register_mode():
         production_date = (request.form.get('production_date') or '').strip()
         actual_boxes = _to_float(request.form.get('actual_boxes'), 0)
         line_values = _normalize_line_values(request.form.getlist('production_lines'))
-        line_text = ','.join(line_values)
+        line_usage_disabled = _parse_line_usage_form(request.form)
+        line_text = '' if line_usage_disabled else ','.join(line_values)
         note = (request.form.get('note') or '').strip()
-        supply_people = int(request.form.get('supply_people') or 0) if str(request.form.get('supply_people') or '').strip() else None
-        packing_people = int(request.form.get('packing_people') or 0) if str(request.form.get('packing_people') or '').strip() else None
+        supply_people = None if line_usage_disabled else (int(request.form.get('supply_people') or 0) if str(request.form.get('supply_people') or '').strip() else None)
+        packing_people = None if line_usage_disabled else (int(request.form.get('packing_people') or 0) if str(request.form.get('packing_people') or '').strip() else None)
         outer_packing_people = int(request.form.get('outer_packing_people') or 0) if str(request.form.get('outer_packing_people') or '').strip() else None
         work_time = (request.form.get('work_time') or '').strip()
         personnel_note = (request.form.get('personnel_note') or '').strip()
         next_url = (request.form.get('next') or '').strip()
+        save_workplace = (request.form.get('save_workplace') or '').strip()
+        target_workplace = save_workplace if save_workplace in available_workplaces else workplace
 
         if product_id <= 0:
             return "<script>alert('품목을 선택해 주세요.'); window.history.back();</script>"
@@ -4794,8 +5148,11 @@ def production_register_mode():
         cursor = conn.cursor()
 
         try:
-            cursor.execute('SELECT expiry_months FROM products WHERE id = ?', (product_id,))
+            cursor.execute('SELECT id, workplace, expiry_months FROM products WHERE id = ?', (product_id,))
             product_row = cursor.fetchone()
+            if not product_row:
+                rollback_db(conn)
+                return "<script>alert('선택한 품목을 찾을 수 없습니다. 다시 선택해 주세요.'); window.history.back();</script>"
             default_expiry_date = _calculate_product_expiry_date(
                 production_date,
                 product_row['expiry_months'] if product_row else 12,
@@ -4842,9 +5199,9 @@ def production_register_mode():
                 INSERT INTO productions (
                     product_id, production_date, planned_boxes, actual_boxes, status, note, workplace, raw_sok_mode, entry_mode,
                     supply_line, supply_people, packing_line, packing_people, outer_packing_line, outer_packing_people, work_time, personnel_note,
-                    expiry_date, expiry_date_2, expiry_date_3, expiry_boxes_1, expiry_boxes_2, expiry_boxes_3
+                    line_usage_disabled, expiry_date, expiry_date_2, expiry_date_3, expiry_boxes_1, expiry_boxes_2, expiry_boxes_3
                 )
-                VALUES (?, ?, ?, ?, '완료', ?, ?, 1, 'register', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, '완료', ?, ?, 1, 'register', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     product_id,
@@ -4852,15 +5209,16 @@ def production_register_mode():
                     actual_boxes,
                     actual_boxes,
                     note,
-                    workplace,
-                    line_text,
+                    target_workplace,
+                    '' if line_usage_disabled else line_text,
                     supply_people,
-                    line_text,
+                    '' if line_usage_disabled else line_text,
                     packing_people,
-                    line_text,
+                    '' if line_usage_disabled else line_text,
                     outer_packing_people,
                     work_time,
                     personnel_note,
+                    1 if line_usage_disabled else 0,
                     expiry_dates[0],
                     expiry_dates[1],
                     expiry_dates[2],
@@ -4874,11 +5232,11 @@ def production_register_mode():
             cursor.execute(
                 '''
                 INSERT INTO production_schedules (
-                    product_id, scheduled_date, planned_boxes, status, note, production_id, line, workplace
+                    product_id, scheduled_date, planned_boxes, status, note, production_id, line, line_usage_disabled, workplace
                 )
-                VALUES (?, ?, ?, '완료', ?, ?, ?, ?)
+                VALUES (?, ?, ?, '완료', ?, ?, ?, ?, ?)
                 ''',
-                (product_id, production_date, actual_boxes, note, production_id, line_text, workplace),
+                (product_id, production_date, actual_boxes, note, production_id, line_text, 1 if line_usage_disabled else 0, target_workplace),
             )
             schedule_id = cursor.lastrowid
             cursor.execute('UPDATE productions SET schedule_id = ? WHERE id = ?', (schedule_id, production_id))
@@ -4922,7 +5280,7 @@ def production_register_mode():
                         ORDER BY id DESC
                         LIMIT 1
                         ''',
-                        (workplace, raw_code, raw_name, clean_receiving_date, clean_car_number),
+                        (target_workplace, raw_code, raw_name, clean_receiving_date, clean_car_number),
                     )
                     existing_raw = cursor.fetchone()
                     if existing_raw:
@@ -4943,7 +5301,7 @@ def production_register_mode():
                                 clean_receiving_date or None,
                                 clean_car_number or None,
                                 clean_car_number or None,
-                                workplace,
+                                target_workplace,
                             ),
                         )
                         resolved_raw_id = cursor.lastrowid
@@ -5029,13 +5387,16 @@ def production_register_mode():
                     'production_date': production_date,
                     'actual_boxes': actual_boxes,
                     'line': line_text,
+                    'line_usage_disabled': line_usage_disabled,
                     'note': note,
                     'supply_people': supply_people,
                     'packing_people': packing_people,
                     'outer_packing_people': outer_packing_people,
                     'work_time': work_time,
                     'personnel_note': personnel_note,
-                    'workplace': workplace,
+                    'workplace': target_workplace,
+                    'requested_workplace': workplace,
+                    'product_workplace': product_row['workplace'] or '',
                     'schedule_id': schedule_id,
                     'entry_mode': 'register',
                     'auto_work_day': auto_work_day,
@@ -5050,8 +5411,8 @@ def production_register_mode():
 
         flash('생산 등록 모드로 저장되었습니다.', 'success')
         redirect_kwargs = {'registered': 1}
-        if workplace:
-            redirect_kwargs['wp'] = workplace
+        if target_workplace:
+            redirect_kwargs['wp'] = target_workplace
         if next_url:
             redirect_kwargs['next'] = next_url
         return redirect(url_for('production.production_register_mode', **redirect_kwargs))
@@ -5059,94 +5420,67 @@ def production_register_mode():
     next_url = (request.args.get('next') or '').strip()
     with db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            '''
-            SELECT DISTINCT p.id, p.name, p.code, p.box_quantity, COALESCE(p.expiry_months, 12) as expiry_months, p.workplace
-            FROM products p
-            WHERE COALESCE(p.workplace, '') = ?
-               OR EXISTS (
-                   SELECT 1
-                   FROM productions pr
-                   WHERE pr.product_id = p.id
-                     AND COALESCE(pr.workplace, '') = ?
-               )
-            ORDER BY
-                CASE WHEN COALESCE(p.workplace, '') = ? THEN 0 ELSE 1 END,
-                p.name
-            ''',
-            (workplace, workplace, workplace),
-        )
-        products = [dict(row) for row in cursor.fetchall()]
+        products = _load_register_mode_products(cursor, workplace)
+        product_ids = [int(row['id']) for row in products if int(row.get('id') or 0) > 0]
+        product_placeholders = ','.join(['?'] * len(product_ids))
 
-        cursor.execute(
-            '''
-            SELECT
-                b.product_id,
-                rm.id as raw_material_id,
-                rm.name as raw_material_name,
-                COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_material_code,
-                COALESCE(NULLIF(TRIM(rm.code), ''), '') as raw_material_code_key,
-                COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
-                COALESCE(rm.receiving_date, '') as receiving_date,
-                b.quantity_per_box
-            FROM bom b
-            JOIN raw_materials rm ON b.raw_material_id = rm.id
-            JOIN products p ON p.id = b.product_id
-            WHERE COALESCE(p.workplace, '') = ?
-               OR EXISTS (
-                   SELECT 1
-                   FROM productions pr
-                   WHERE pr.product_id = p.id
-                     AND COALESCE(pr.workplace, '') = ?
-               )
-            ORDER BY b.product_id, rm.name
-            ''',
-            (workplace, workplace),
-        )
         raw_bom_rows = []
-        seen_raw_bom_keys = set()
-        for row in cursor.fetchall():
-            row_dict = dict(row)
-            raw_key = (
-                int(row_dict['product_id']),
-                (row_dict.get('raw_material_code_key') or row_dict.get('raw_material_name') or '').strip(),
+        if product_ids:
+            cursor.execute(
+                f'''
+                SELECT
+                    b.product_id,
+                    rm.id as raw_material_id,
+                    rm.name as raw_material_name,
+                    COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_material_code,
+                    COALESCE(NULLIF(TRIM(rm.code), ''), '') as raw_material_code_key,
+                    COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
+                    COALESCE(rm.receiving_date, '') as receiving_date,
+                    b.quantity_per_box
+                FROM bom b
+                JOIN raw_materials rm ON b.raw_material_id = rm.id
+                JOIN products p ON p.id = b.product_id
+                WHERE p.id IN ({product_placeholders})
+                ORDER BY b.product_id, rm.name
+                ''',
+                product_ids,
             )
-            if raw_key in seen_raw_bom_keys:
-                continue
-            seen_raw_bom_keys.add(raw_key)
-            row_dict.pop('raw_material_code_key', None)
-            raw_bom_rows.append(row_dict)
+            seen_raw_bom_keys = set()
+            for row in cursor.fetchall():
+                row_dict = dict(row)
+                raw_key = (
+                    int(row_dict['product_id']),
+                    (row_dict.get('raw_material_code_key') or row_dict.get('raw_material_name') or '').strip(),
+                )
+                if raw_key in seen_raw_bom_keys:
+                    continue
+                seen_raw_bom_keys.add(raw_key)
+                row_dict.pop('raw_material_code_key', None)
+                raw_bom_rows.append(row_dict)
 
-        cursor.execute(
-            '''
-            SELECT
-                b.product_id,
-                b.material_id,
-                m.name as material_name,
-                COALESCE(NULLIF(TRIM(m.code), ''), printf('MAT%05d', m.id)) as material_code,
-                COALESCE(m.unit, 'EA') as unit,
-                COALESCE(m.category, '') as material_category,
-                b.quantity_per_box,
-                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
-                COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
-            FROM bom b
-            JOIN materials m ON b.material_id = m.id
-            JOIN products p ON p.id = b.product_id
-            WHERE COALESCE(p.workplace, '') = ?
-               OR EXISTS (
-                   SELECT 1
-                   FROM productions pr
-                   WHERE pr.product_id = p.id
-                     AND COALESCE(pr.workplace, '') = ?
-               )
-            ORDER BY b.product_id, material_category, material_name
-            ''',
-            (workplace, workplace),
-        )
-        material_bom_rows = [
-            dict(row)
-            for row in _filter_selected_variant_bom_rows(cursor.fetchall())
-        ]
+        material_bom_rows = []
+        if product_ids:
+            cursor.execute(
+                f'''
+                SELECT
+                    b.product_id,
+                    b.material_id,
+                    m.name as material_name,
+                    COALESCE(NULLIF(TRIM(m.code), ''), printf('MAT%05d', m.id)) as material_code,
+                    COALESCE(m.unit, 'EA') as unit,
+                    COALESCE(m.category, '') as material_category,
+                    b.quantity_per_box,
+                    COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                    COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
+                FROM bom b
+                JOIN materials m ON b.material_id = m.id
+                JOIN products p ON p.id = b.product_id
+                WHERE p.id IN ({product_placeholders})
+                ORDER BY b.product_id, material_category, material_name
+                ''',
+                product_ids,
+            )
+            material_bom_rows = [dict(row) for row in cursor.fetchall()]
 
         cursor.execute(
             '''
@@ -5313,10 +5647,12 @@ def production_detail(production_id):
     # ??밴텦 ?類ｋ궖
     cursor.execute(
         '''
-        SELECT pr.*, p.name as product_name, p.box_quantity, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
+        SELECT pr.*, p.name as product_name, p.category as product_category, COALESCE(p.set_item_type, '') as product_set_item_type,
+               p.box_quantity, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
                p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3, p.expiry_months,
                p.spec_sheet_file_name, p.spec_sheet_stored_name, p.spec_sheet_uploaded_at
                , COALESCE(ps.line, '') as line
+               , COALESCE(ps.line_usage_disabled, pr.line_usage_disabled, 0) as schedule_line_usage_disabled
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
         LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
@@ -5331,7 +5667,15 @@ def production_detail(production_id):
         return redirect(url_for('production.production_list'))
 
     production = dict(production)
+    production['line_usage_disabled'] = _is_line_usage_disabled(
+        production.get('line_usage_disabled') or production.get('schedule_line_usage_disabled')
+    )
     production['status'] = _normalize_production_status(production.get('status'))
+    production['note'] = _normalize_export_schedule_note(
+        production.get('note'),
+        production.get('export_schedule_id'),
+        production.get('export_container_label'),
+    )
     production['entry_mode'] = _normalize_production_entry_mode(production.get('entry_mode'))
     production['entry_mode_meta'] = _get_production_entry_mode_meta(production.get('entry_mode'))
     done_status = _normalize_production_status('\uC644\uB8CC')
@@ -5531,6 +5875,38 @@ def production_detail(production_id):
     for item in bom_raw_items:
         item['is_temp_raw'] = 0
 
+    cursor.execute(
+        '''
+        WITH selected_bom_raw AS (
+            SELECT b.raw_material_id
+            FROM bom b
+            WHERE b.product_id = ?
+              AND b.raw_material_id IS NOT NULL
+            ORDER BY b.id DESC
+            LIMIT 1
+        )
+        SELECT
+            rm.id as raw_material_id,
+            ? as quantity_per_box,
+            rm.name as rm_name,
+            COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
+            rm.receiving_date,
+            COALESCE(rm.current_stock, 0) as current_stock,
+            rm.id as rm_id
+        FROM selected_bom_raw sbr
+        JOIN raw_materials rm ON rm.id = sbr.raw_material_id
+        ''',
+        (production['product_id'], production['active_sok_per_box']),
+    )
+    bom_raw_seed = cursor.fetchone()
+    if bom_raw_seed and not bom_raw_items:
+        seed_row = dict(bom_raw_seed)
+        seed_raw_id = int(seed_row.get('rm_id') or 0)
+        existing_raw_ids = {int(row.get('rm_id') or 0) for row in bom_raw_items if int(row.get('rm_id') or 0) > 0}
+        if seed_raw_id > 0 and seed_raw_id not in existing_raw_ids:
+            seed_row['is_temp_raw'] = 0
+            bom_raw_items.insert(0, seed_row)
+
     if production['status'] != '\uC644\uB8CC' or edit_completed:
         existing_raw_ids = {int(row['rm_id'] or 0) for row in bom_raw_items if row.get('rm_id')}
         cursor.execute(
@@ -5601,7 +5977,7 @@ def production_detail(production_id):
     if usage_count > 0 and production['status'] != done_status:
         cursor.execute(
             '''
-            SELECT b.product_id, b.material_id, b.quantity_per_box,
+            SELECT b.product_id, b.material_id, b.component_product_id, b.quantity_per_box,
                    COALESCE(m.category, '') AS material_category,
                    COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
                    COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
@@ -5609,12 +5985,15 @@ def production_detail(production_id):
             LEFT JOIN materials m ON m.id = b.material_id
             LEFT JOIN products p ON p.id = b.product_id
             WHERE b.product_id = ?
-              AND b.material_id IS NOT NULL
+              AND (b.material_id IS NOT NULL OR b.component_product_id IS NOT NULL)
               AND NOT EXISTS (
                   SELECT 1
                   FROM production_material_usage pmu
                   WHERE pmu.production_id = ?
-                    AND pmu.material_id = b.material_id
+                    AND (
+                        (b.material_id IS NOT NULL AND pmu.material_id = b.material_id)
+                        OR (b.component_product_id IS NOT NULL AND pmu.component_product_id = b.component_product_id)
+                    )
               )
             ''',
             (production['product_id'], production_id),
@@ -5627,10 +6006,10 @@ def production_detail(production_id):
                 cursor.execute(
                     '''
                     INSERT INTO production_material_usage
-                    (production_id, material_id, raw_material_name, expected_quantity)
-                    VALUES (?, ?, NULL, ?)
+                    (production_id, material_id, component_product_id, raw_material_name, expected_quantity)
+                    VALUES (?, ?, ?, NULL, ?)
                     ''',
-                    (production_id, bom['material_id'], expected_qty),
+                    (production_id, bom.get('material_id'), bom.get('component_product_id'), expected_qty),
                 )
             conn.commit()
 
@@ -5641,11 +6020,14 @@ def production_detail(production_id):
         cursor.execute(
             '''
             SELECT b.*, m.name as material_name, m.unit, m.category,
+                   cp.name as component_product_name,
+                   cp.code as component_product_code,
                    b.product_id,
                    COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
                    COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
             FROM bom b
-            JOIN materials m ON b.material_id = m.id
+            LEFT JOIN materials m ON b.material_id = m.id
+            LEFT JOIN products cp ON cp.id = b.component_product_id
             JOIN products p ON p.id = b.product_id
             WHERE b.product_id = ?
         ''',
@@ -5659,10 +6041,10 @@ def production_detail(production_id):
             cursor.execute(
                 '''
                 INSERT INTO production_material_usage 
-                (production_id, material_id, raw_material_name, expected_quantity)
-                VALUES (?, ?, NULL, ?)
+                (production_id, material_id, component_product_id, raw_material_name, expected_quantity)
+                VALUES (?, ?, ?, NULL, ?)
             ''',
-                (production_id, bom['material_id'], expected_qty),
+                (production_id, bom.get('material_id'), bom.get('component_product_id'), expected_qty),
             )
 
         conn.commit()
@@ -5671,15 +6053,25 @@ def production_detail(production_id):
     cursor.execute(
         '''
         SELECT pmu.*, 
-               COALESCE(pmu.raw_material_name, m.name) as material_name,
-               COALESCE(m.code, '') as material_code,
-               COALESCE(m.unit, '-') as unit,
-               COALESCE(m.category, '원초') as category,
+               COALESCE(pmu.raw_material_name, cp.name, m.name) as material_name,
+               COALESCE(cp.code, m.code, '') as material_code,
+               CASE
+                   WHEN pmu.component_product_id IS NOT NULL THEN 'EA'
+                   ELSE COALESCE(m.unit, '-')
+               END as unit,
+               CASE
+                   WHEN pmu.component_product_id IS NOT NULL THEN '반제품'
+                   ELSE COALESCE(m.category, '원초')
+               END as category,
+               pmu.component_product_id,
+               cp.name as component_product_name,
+               cp.code as component_product_code,
                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as override_receiving_date,
                COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), '') as override_expiry_date,
                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') as override_car_number
         FROM production_material_usage pmu
         LEFT JOIN materials m ON pmu.material_id = m.id
+        LEFT JOIN products cp ON pmu.component_product_id = cp.id
         WHERE pmu.production_id = ?
         ORDER BY category, material_name
     ''',
@@ -5689,6 +6081,11 @@ def production_detail(production_id):
     current_workplace = production_workplace or viewer_workplace
     workplace_stock_map = {}
     material_ids = [int(row.get('material_id') or 0) for row in material_usage if int(row.get('material_id') or 0) > 0]
+    component_product_ids = [
+        int(row.get('component_product_id') or 0)
+        for row in material_usage
+        if int(row.get('component_product_id') or 0) > 0
+    ]
     location_ids = _get_inventory_location_ids(cursor, current_workplace)
     if material_ids and location_ids:
         placeholders = ','.join(['?'] * len(material_ids))
@@ -5714,14 +6111,36 @@ def production_detail(production_id):
             for row in cursor.fetchall()
             if int(row['material_id'] or 0) > 0
         }
+    component_stock_map = {}
+    if component_product_ids:
+        placeholders = ','.join(['?'] * len(component_product_ids))
+        cursor.execute(
+            f'''
+            SELECT product_id, COALESCE(current_stock, 0) AS current_stock
+            FROM product_stocks
+            WHERE workplace = ?
+              AND product_id IN ({placeholders})
+            ''',
+            [current_workplace, *component_product_ids],
+        )
+        component_stock_map = {
+            int(row['product_id']): float(row['current_stock'] or 0)
+            for row in cursor.fetchall()
+            if int(row['product_id'] or 0) > 0
+        }
     for row in material_usage:
         row['base_sort_key'] = _get_production_material_sort_key(row)
         material_id = row.get('material_id')
+        component_product_id = row.get('component_product_id')
         if material_id:
             row['current_stock'] = float(workplace_stock_map.get(int(material_id), 0.0) or 0.0)
             gap = _get_material_info_gap(cursor, int(material_id), row.get('category'), current_workplace)
             row['lot_info_gap'] = gap
             row['has_lot_info_gap'] = bool(gap)
+        elif component_product_id:
+            row['current_stock'] = float(component_stock_map.get(int(component_product_id), 0.0) or 0.0)
+            row['lot_info_gap'] = None
+            row['has_lot_info_gap'] = False
         else:
             row['current_stock'] = 0.0
             row['lot_info_gap'] = None
@@ -5734,9 +6153,15 @@ def production_detail(production_id):
         grouped_material_usage = {}
         for row in material_usage:
             material_id = int(row.get('material_id') or 0)
-            if material_id <= 0:
+            component_product_id = int(row.get('component_product_id') or 0)
+            group_key = None
+            if material_id > 0:
+                group_key = f'material:{material_id}'
+            elif component_product_id > 0:
+                group_key = f'component:{component_product_id}'
+            if not group_key:
                 continue
-            entry = grouped_material_usage.get(material_id)
+            entry = grouped_material_usage.get(group_key)
             if not entry:
                 entry = dict(row)
                 entry['expected_quantity'] = 0.0
@@ -5747,7 +6172,7 @@ def production_detail(production_id):
                 entry['source_ids'] = []
                 entry['has_lot_info_gap'] = False
                 entry['lot_info_gap'] = None
-                grouped_material_usage[material_id] = entry
+                grouped_material_usage[group_key] = entry
             expected_qty = _coerce_float(row.get('expected_quantity'))
             actual_qty = _coerce_float(row.get('actual_quantity'))
             entry['expected_quantity'] += expected_qty
@@ -5764,7 +6189,11 @@ def production_detail(production_id):
             entry['actual_quantity'] = actual_qty
             entry['loss_quantity'] = round(actual_qty - expected_qty, 4)
             entry['yield_rate'] = round(expected_qty / actual_qty * 100, 2) if actual_qty > 0 and expected_qty > 0 else None
-        raw_usage_rows = [dict(row) for row in material_usage if int(row.get('material_id') or 0) <= 0]
+        raw_usage_rows = [
+            dict(row)
+            for row in material_usage
+            if int(row.get('material_id') or 0) <= 0 and int(row.get('component_product_id') or 0) <= 0
+        ]
         detail_material_usage = raw_usage_rows + sorted(
             grouped_material_usage.values(),
             key=lambda item: (
@@ -5959,7 +6388,9 @@ def edit_production_plan(production_id):
 
     cursor.execute(
         '''
-        SELECT pr.*, p.name as product_name, COALESCE(ps.line, '') as line
+        SELECT pr.*, p.name as product_name,
+               COALESCE(ps.line, '') as line,
+               COALESCE(ps.line_usage_disabled, pr.line_usage_disabled, 0) as schedule_line_usage_disabled
         FROM productions pr
         LEFT JOIN products p ON p.id = pr.product_id
         LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
@@ -5991,13 +6422,14 @@ def edit_production_plan(production_id):
         planned_boxes_raw = (request.form.get('planned_boxes') or '').strip()
         note = (request.form.get('note') or '').strip()
         production_lines = [item.strip() for item in request.form.getlist('production_lines') if item.strip()]
-        production_lines_str = ','.join(dict.fromkeys(production_lines))
+        line_usage_disabled = _parse_line_usage_form(request.form)
+        production_lines_str = '' if line_usage_disabled else ','.join(dict.fromkeys(production_lines))
 
         if not production_date or not planned_boxes_raw:
             conn.close()
             return "<script>alert('?앹궛?쇨낵 怨꾪쉷 ?앹궛 諛뺤뒪 ?섎? ?낅젰?댁＜?몄슂.');history.back();</script>", 400
 
-        if not production_lines:
+        if not line_usage_disabled and not production_lines:
             conn.close()
             return "<script>alert('?앹궛 ?쇱씤???섎굹 ?댁긽 ?좏깮?댁＜?몄슂.');history.back();</script>", 400
 
@@ -6018,10 +6450,11 @@ def edit_production_plan(production_id):
             UPDATE productions
             SET production_date = ?,
                 planned_boxes = ?,
-                note = ?
+                note = ?,
+                line_usage_disabled = ?
             WHERE id = ?
             ''',
-            (production_date, planned_boxes, note, production_id),
+            (production_date, planned_boxes, note, 1 if line_usage_disabled else 0, production_id),
         )
 
         schedule_before = None
@@ -6036,10 +6469,11 @@ def edit_production_plan(production_id):
                     SET scheduled_date = ?,
                         planned_boxes = ?,
                         note = ?,
-                        line = ?
+                        line = ?,
+                        line_usage_disabled = ?
                     WHERE id = ?
                     ''',
-                    (production_date, planned_boxes, note, production_lines_str, production['schedule_id']),
+                    (production_date, planned_boxes, note, production_lines_str, 1 if line_usage_disabled else 0, production['schedule_id']),
                 )
 
         cursor.execute(
@@ -6097,6 +6531,7 @@ def edit_production_plan(production_id):
                     'planned_boxes': planned_boxes,
                     'note': note,
                     'line': production_lines_str,
+                    'line_usage_disabled': line_usage_disabled,
                 },
             },
         )
@@ -6154,10 +6589,11 @@ def update_production_usage(production_id):
         actual_boxes = float(request.form.get('actual_boxes', 0) or 0)
         cursor.execute(
             '''
-            SELECT pr.planned_boxes, pr.product_id, pr.production_date, pr.status, pr.raw_sok_mode,
-                   pr.workplace, pr.entry_mode,
+            SELECT pr.planned_boxes, pr.actual_boxes, pr.product_id, pr.production_date, pr.status, pr.raw_sok_mode,
+                   pr.workplace, pr.entry_mode, COALESCE(pr.line_usage_disabled, 0) as line_usage_disabled,
                    p.expiry_months, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
-                   p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3
+                   p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3,
+                   p.category, COALESCE(p.set_item_type, '') as set_item_type
             FROM productions pr
             LEFT JOIN products p ON p.id = pr.product_id
             WHERE pr.id = ?
@@ -6237,6 +6673,7 @@ def update_production_usage(production_id):
         outer_packing_people = _to_int('outer_packing_people')
         work_time = (request.form.get('work_time') or '').strip()
         personnel_note = (request.form.get('personnel_note') or '').strip()
+        line_usage_disabled = _is_line_usage_disabled(prod_row['line_usage_disabled'] if prod_row else 0)
         expiry_date_input = (request.form.get('expiry_date') or '').strip()
         expiry_date_2_input = (request.form.get('expiry_date_2') or '').strip()
         expiry_date_3_input = (request.form.get('expiry_date_3') or '').strip()
@@ -6349,9 +6786,9 @@ def update_production_usage(production_id):
         sample_usage_auto_note = _build_sample_usage_auto_note(expiry_rows_for_note)
 
         missing = []
-        if supply_people is None:
+        if not line_usage_disabled and supply_people is None:
             missing.append('?⑤벀???紐꾩뜚')
-        if packing_people is None:
+        if not line_usage_disabled and packing_people is None:
             missing.append('?????紐꾩뜚')
         if outer_packing_people is None:
             missing.append('?紐낅７???紐꾩뜚')
@@ -6392,11 +6829,11 @@ def update_production_usage(production_id):
             ''',
             (
                 effective_production_date,
-                planned_line,
+                '' if line_usage_disabled else planned_line,
                 supply_people,
-                planned_line,
+                '' if line_usage_disabled else planned_line,
                 packing_people,
-                planned_line,
+                '' if line_usage_disabled else planned_line,
                 outer_packing_people,
                 work_time,
                 personnel_note,
@@ -6432,7 +6869,7 @@ def update_production_usage(production_id):
 
             cursor.execute(
                 '''
-                SELECT b.product_id, b.material_id, b.quantity_per_box,
+                SELECT b.product_id, b.material_id, b.component_product_id, b.quantity_per_box,
                        COALESCE(m.category, '') AS material_category,
                        COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
                        COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
@@ -6440,7 +6877,7 @@ def update_production_usage(production_id):
                 LEFT JOIN materials m ON m.id = b.material_id
                 LEFT JOIN products p ON p.id = b.product_id
                 WHERE b.product_id = (SELECT product_id FROM productions WHERE id = ?)
-                AND b.material_id IS NOT NULL
+                AND (b.material_id IS NOT NULL OR b.component_product_id IS NOT NULL)
             ''',
                 (production_id,),
             )
@@ -6449,14 +6886,24 @@ def update_production_usage(production_id):
             for bom in bom_mats:
                 exact = float(bom['quantity_per_box']) * actual_boxes
                 new_expected = math.ceil(exact * 100) / 100
-                cursor.execute(
-                    '''
-                    UPDATE production_material_usage
-                    SET expected_quantity = ?
-                    WHERE production_id = ? AND material_id = ?
-                ''',
-                    (new_expected, production_id, bom['material_id']),
-                )
+                if bom.get('material_id'):
+                    cursor.execute(
+                        '''
+                        UPDATE production_material_usage
+                        SET expected_quantity = ?
+                        WHERE production_id = ? AND material_id = ?
+                    ''',
+                        (new_expected, production_id, bom['material_id']),
+                    )
+                elif bom.get('component_product_id'):
+                    cursor.execute(
+                        '''
+                        UPDATE production_material_usage
+                        SET expected_quantity = ?
+                        WHERE production_id = ? AND component_product_id = ?
+                    ''',
+                        (new_expected, production_id, bom['component_product_id']),
+                    )
 
         # 2. ?癒?겧 ??쇱㉦ ?醫뤾문 筌ｌ꼶??(raw_rm_id_N ?類ㅻ뻼)
         raw_entries = {}
@@ -6496,6 +6943,13 @@ def update_production_usage(production_id):
         else:
             if not skip_stock_impact:
                 touched_material_ids |= _rollback_material_lot_usage_for_production(cursor, production_id, 'resave')
+                _restore_component_usage_for_production(
+                    cursor,
+                    production_id,
+                    current_workplace,
+                    session.get('user', {}).get('username'),
+                    note_prefix='production_edit_component',
+                )
                 if is_completed_status:
                     _rollback_raw_usage_for_production(
                         cursor,
@@ -6503,6 +6957,19 @@ def update_production_usage(production_id):
                         session.get('user', {}).get('username'),
                         note_prefix='production_edit',
                     )
+                    if _is_set_semi_product_row(prod_row):
+                        previous_output_qty = float(prod_row['actual_boxes'] or 0)
+                        if previous_output_qty > 0:
+                            _adjust_product_stock(
+                                cursor,
+                                int(product_id or 0),
+                                current_workplace,
+                                -previous_output_qty,
+                                'RETURN_OUTPUT',
+                                f'production_output_edit:{production_id}',
+                                production_id,
+                                session.get('user', {}).get('username'),
+                            )
                 if is_completed_status and not touched_material_ids:
                     cursor.execute(
                         '''
@@ -6654,14 +7121,22 @@ def update_production_usage(production_id):
         if save_action != 'temp' and not skip_stock_impact:
             cursor.execute(
                 '''
-                SELECT id, material_id
+                SELECT id, material_id, component_product_id
                 FROM production_material_usage
-                WHERE production_id = ? AND material_id IS NOT NULL
+                WHERE production_id = ?
+                  AND (material_id IS NOT NULL OR component_product_id IS NOT NULL)
                 ''',
                 (production_id,),
             )
-            usage_map = {str(r['id']): r['material_id'] for r in cursor.fetchall()}
+            usage_map = {
+                str(r['id']): {
+                    'material_id': r['material_id'],
+                    'component_product_id': r['component_product_id'],
+                }
+                for r in cursor.fetchall()
+            }
             needed_by_material = {}
+            needed_by_component = {}
             for key in request.form:
                 if not key.startswith('actual_mat_'):
                     continue
@@ -6672,10 +7147,13 @@ def update_production_usage(production_id):
                 qty = round(float(actual_str), 4)
                 if qty <= 0:
                     continue
-                material_id = usage_map.get(usage_id)
-                if not material_id:
-                    continue
-                needed_by_material[material_id] = needed_by_material.get(material_id, 0.0) + qty
+                usage_target = usage_map.get(usage_id) or {}
+                material_id = int(usage_target.get('material_id') or 0)
+                component_product_id = int(usage_target.get('component_product_id') or 0)
+                if material_id > 0:
+                    needed_by_material[material_id] = needed_by_material.get(material_id, 0.0) + qty
+                elif component_product_id > 0:
+                    needed_by_component[component_product_id] = needed_by_component.get(component_product_id, 0.0) + qty
 
             material_shortages = []
             for material_id, need_qty in needed_by_material.items():
@@ -6735,6 +7213,21 @@ def update_production_usage(production_id):
                         }
                     )
 
+            for component_product_id, need_qty in needed_by_component.items():
+                available = _get_product_stock(cursor, component_product_id, current_workplace)
+                cursor.execute('SELECT name FROM products WHERE id = ?', (component_product_id,))
+                component_row = cursor.fetchone()
+                if available + 1e-9 < need_qty:
+                    material_shortages.append(
+                        {
+                            'material_id': f'product:{component_product_id}',
+                            'name': component_row['name'] if component_row else f'반제품 {component_product_id}',
+                            'unit': 'EA',
+                            'have': available,
+                            'need': need_qty,
+                        }
+                    )
+
             if material_shortages:
                 if conn:
                     try:
@@ -6744,7 +7237,7 @@ def update_production_usage(production_id):
                     conn.close()
                 form_payload = []
                 for k in request.form.keys():
-                    if k in ('save_action', 'move_to_purchase'):
+                    if k in ('save_action', 'move_to_materials'):
                         continue
                     for v in request.form.getlist(k):
                         form_payload.append({'name': k, 'value': v})
@@ -6760,6 +7253,7 @@ def update_production_usage(production_id):
             DELETE FROM production_material_usage
             WHERE production_id = ?
               AND material_id IS NULL
+              AND component_product_id IS NULL
             ''',
             (production_id,),
         )
@@ -6860,7 +7354,7 @@ def update_production_usage(production_id):
 
                 cursor.execute(
                     '''
-                    SELECT pmu.expected_quantity, pmu.material_id, COALESCE(m.category, '') AS category
+                    SELECT pmu.expected_quantity, pmu.material_id, pmu.component_product_id, COALESCE(m.category, '') AS category
                     FROM production_material_usage pmu
                     LEFT JOIN materials m ON pmu.material_id = m.id
                     WHERE pmu.id = ?
@@ -6904,6 +7398,15 @@ def update_production_usage(production_id):
                         (request.form.get(f'mat_info_expiry_none_{usage_id}') or '').strip() == '1',
                     )
                     touched_material_ids.add(row['material_id'])
+                elif save_action != 'temp' and row['component_product_id'] and not skip_stock_impact:
+                    _consume_component_product_stock(
+                        cursor,
+                        int(row['component_product_id']),
+                        actual,
+                        production_id,
+                        current_workplace,
+                        session['user']['username'],
+                    )
 
         if save_action == 'temp':
             if actual_boxes > 0:
@@ -6930,8 +7433,8 @@ def update_production_usage(production_id):
                 },
             )
             commit_db(conn)
-            if request.form.get('move_to_purchase') == '1':
-                return redirect(url_for('materials.purchase_orders'))
+            if request.form.get('move_to_materials') == '1':
+                return redirect(url_for('materials.materials'))
             return redirect(url_for('production.production_detail', production_id=production_id))
 
         # 4. ??밴텦 ?꾨즺 筌ｌ꼶??
@@ -6948,6 +7451,17 @@ def update_production_usage(production_id):
                 ''',
                 (production_id,),
             )
+            if not skip_stock_impact and _is_set_semi_product_row(prod_row):
+                _adjust_product_stock(
+                    cursor,
+                    int(product_id or 0),
+                    current_workplace,
+                    actual_boxes,
+                    'PRODUCE',
+                    f'production_output:{production_id}',
+                    production_id,
+                    session.get('user', {}).get('username'),
+                )
 
         if save_action != 'temp' and touched_material_ids and not skip_stock_impact:
             for material_id in touched_material_ids:
@@ -7037,6 +7551,15 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
     status = _normalize_production_status(prod['status'])
     entry_mode = _normalize_production_entry_mode(prod['entry_mode'])
     product_id, schedule_id = prod['product_id'], prod['schedule_id']
+    workplace = (prod['workplace'] or '').strip()
+    actor_username = ''
+    if actor_user_id:
+        try:
+            cursor.execute('SELECT username FROM users WHERE id = ?', (actor_user_id,))
+            actor_row = cursor.fetchone()
+            actor_username = (actor_row['username'] or '').strip() if actor_row else ''
+        except Exception:
+            actor_username = ''
 
     if status == '?꾨즺' and not _is_register_entry_mode(entry_mode):
         cursor.execute(
@@ -7080,11 +7603,33 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
                 legacy_material_rollbacks.append((mat_id, qty))
 
         touched = _rollback_material_lot_usage_for_production(cursor, production_id, 'production_delete')
+        _restore_component_usage_for_production(
+            cursor,
+            production_id,
+            workplace,
+            actor_username,
+            note_prefix='production_delete_component',
+        )
         for mid in touched:
             _sync_material_stock_with_lots(conn, mid)
         if not touched:
             for mat_id, qty in legacy_material_rollbacks:
                 cursor.execute('UPDATE materials SET current_stock = current_stock + ? WHERE id = ?', (qty, mat_id))
+        cursor.execute('SELECT category, COALESCE(set_item_type, "") as set_item_type FROM products WHERE id = ?', (product_id,))
+        product_row = cursor.fetchone()
+        if _is_set_semi_product_row(product_row):
+            produced_qty = float(prod['actual_boxes'] or 0)
+            if produced_qty > 0:
+                _adjust_product_stock(
+                    cursor,
+                    int(product_id or 0),
+                    workplace,
+                    -produced_qty,
+                    'DELETE_OUTPUT',
+                    f'production_delete_output:{production_id}',
+                    production_id,
+                    actor_username,
+                )
 
     cursor.execute('DELETE FROM production_material_usage WHERE production_id = ?', (production_id,))
     cursor.execute('DELETE FROM productions WHERE id = ?', (production_id,))
