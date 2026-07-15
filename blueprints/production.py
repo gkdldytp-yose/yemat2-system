@@ -1878,6 +1878,27 @@ def _resolve_raw_sok_mode(product_row, mode_value):
     return mode, values[mode - 1], values
 
 
+def _normalize_register_mode_raw_bom_quantity(product_row, quantity_per_box):
+    try:
+        bom_qty = float(quantity_per_box or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    if bom_qty <= 0:
+        return 0.0
+
+    for option in _get_product_raw_options(product_row):
+        try:
+            sok_value = float(option.get('sok_per_box') or 0)
+            sheets_value = float(option.get('sheets_per_pack') or 0)
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if sok_value <= 0 or sheets_value <= 0:
+            continue
+        if abs(bom_qty - (sok_value * sheets_value)) < 1e-6:
+            return round(sok_value, 4)
+    return bom_qty
+
+
 def _compose_raw_usage_note(user_note, raw_sok_mode, per_box_value, sheets_per_pack=0, base_sheets_per_pack=0):
     base_note = (user_note or '').strip()
     auto_note = ''
@@ -5436,7 +5457,13 @@ def production_register_mode():
                     COALESCE(NULLIF(TRIM(rm.code), ''), '') as raw_material_code_key,
                     COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') as car_number,
                     COALESCE(rm.receiving_date, '') as receiving_date,
-                    b.quantity_per_box
+                    b.quantity_per_box,
+                    COALESCE(p.sok_per_box, 0) as sok_per_box,
+                    COALESCE(p.sok_per_box_2, 0) as sok_per_box_2,
+                    COALESCE(p.sok_per_box_3, 0) as sok_per_box_3,
+                    COALESCE(p.sheets_per_pack, 0) as sheets_per_pack,
+                    COALESCE(p.sheets_per_pack_2, 0) as sheets_per_pack_2,
+                    COALESCE(p.sheets_per_pack_3, 0) as sheets_per_pack_3
                 FROM bom b
                 JOIN raw_materials rm ON b.raw_material_id = rm.id
                 JOIN products p ON p.id = b.product_id
@@ -5455,6 +5482,10 @@ def production_register_mode():
                 if raw_key in seen_raw_bom_keys:
                     continue
                 seen_raw_bom_keys.add(raw_key)
+                row_dict['quantity_per_box'] = _normalize_register_mode_raw_bom_quantity(
+                    row_dict,
+                    row_dict.get('quantity_per_box'),
+                )
                 row_dict.pop('raw_material_code_key', None)
                 raw_bom_rows.append(row_dict)
 
@@ -6346,6 +6377,7 @@ def production_detail(production_id):
     packaging_checksheet_url = url_for(
         'printouts.packaging_checksheet_preview',
         date=production['production_date'],
+        production_id=production_id,
     )
 
     conn_context.__exit__(None, None, None)
