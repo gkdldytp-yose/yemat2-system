@@ -4197,6 +4197,7 @@ def raw_material_checksheet_preview(raw_material_id):
         raw_car_number = requested_car_number or (raw['car_number'] or '').strip()
         raw_code = (raw['code'] or '').strip()
         lot_raw_ids = [int(raw_material_id)]
+        lot_placeholders = '?'
         lot_total_stock = float(raw['total_stock'] or 0)
         lot_current_stock = float(raw['current_stock'] or 0)
         if raw_receiving_date and raw_car_number:
@@ -4213,6 +4214,7 @@ def raw_material_checksheet_preview(raw_material_id):
             lot_rows = [dict(row) for row in cursor.fetchall()]
             if lot_rows:
                 lot_raw_ids = [int(row['id']) for row in lot_rows if int(row['id'] or 0) > 0]
+                lot_placeholders = ','.join(['?'] * len(lot_raw_ids)) if lot_raw_ids else '?'
                 lot_total_stock = sum(float(row.get('total_stock') or 0) for row in lot_rows)
                 lot_current_stock = sum(float(row.get('current_stock') or 0) for row in lot_rows)
         if aggregate_register_lot and raw_receiving_date and raw_car_number:
@@ -4246,29 +4248,31 @@ def raw_material_checksheet_preview(raw_material_id):
             )
         else:
             cursor.execute(
-                '''
+                f'''
                 SELECT
-                    p.id as production_id,
-                    substr(p.production_date, 1, 10) as use_date,
-                    COALESCE(pmu.actual_quantity, 0) as used_quantity,
+                    COALESCE(p.id, rml.production_id) as production_id,
+                    substr(COALESCE(NULLIF(TRIM(p.production_date), ''), rml.created_at), 1, 10) as use_date,
+                    ABS(COALESCE(rml.quantity, 0)) as used_quantity,
                     COALESCE(pr.name, '') as product_name,
-                    COALESCE(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), '') as usage_note,
+                    COALESCE(NULLIF(TRIM(COALESCE(rml.note, '')), ''), '') as usage_note,
                     COALESCE(rcn.note, '') as checksheet_note,
                     COALESCE(p.status, '') as production_status
-                FROM production_material_usage pmu
-                JOIN productions p
-                  ON p.id = pmu.production_id
-                 AND COALESCE(p.production_date, '') <> ''
+                FROM raw_material_logs rml
+                LEFT JOIN productions p
+                  ON p.id = rml.production_id
                 LEFT JOIN products pr ON pr.id = p.product_id
                 LEFT JOIN raw_material_checksheet_notes rcn
-                  ON rcn.raw_material_id = pmu.raw_material_id
-                  AND rcn.use_date = substr(p.production_date, 1, 10)
-                WHERE pmu.raw_material_id = ?
-                  AND (? <= 0 OR pmu.production_id = ?)
-                  AND COALESCE(pmu.actual_quantity, 0) > 0
-                ORDER BY substr(p.production_date, 1, 10) DESC, p.id DESC, pmu.id DESC
+                  ON rcn.raw_material_id = ?
+                  AND rcn.use_date = substr(COALESCE(NULLIF(TRIM(p.production_date), ''), rml.created_at), 1, 10)
+                WHERE rml.raw_material_id IN ({lot_placeholders})
+                  AND COALESCE(rml.type, '') = 'production'
+                  AND COALESCE(rml.quantity, 0) < 0
+                  AND (? <= 0 OR rml.production_id = ?)
+                ORDER BY substr(COALESCE(NULLIF(TRIM(p.production_date), ''), rml.created_at), 1, 10) DESC,
+                         COALESCE(p.id, rml.production_id) DESC,
+                         rml.id DESC
                 ''',
-                (raw_material_id, production_id, production_id),
+                [raw_material_id, *lot_raw_ids, production_id, production_id],
             )
         production_usage_rows = [dict(row) for row in cursor.fetchall()]
         if aggregate_register_lot and production_id > 0 and not production_usage_rows:
@@ -4304,7 +4308,7 @@ def raw_material_checksheet_preview(raw_material_id):
         done_status = _normalize_production_status('완료')
         for row in production_usage_rows:
             is_selected_register_row = aggregate_register_lot and production_id > 0 and int(row.get('production_id') or 0) == production_id
-            if _normalize_production_status(row.get('production_status')) != done_status and not is_selected_register_row:
+            if aggregate_register_lot and _normalize_production_status(row.get('production_status')) != done_status and not is_selected_register_row:
                 continue
             if aggregate_register_lot:
                 register_production_used_total += float(row.get('used_quantity') or 0)
