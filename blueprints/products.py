@@ -26,6 +26,55 @@ def _product_bom_url(product_id, return_to=''):
     return url_for('products.product_bom', product_id=product_id)
 
 
+def _load_bom_raw_material_catalog(cursor):
+    cursor.execute(
+        '''
+        WITH normalized AS (
+            SELECT
+                id,
+                name,
+                COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) as code,
+                COALESCE(sheets_per_sok, 0) as sheets_per_sok,
+                COALESCE(current_stock, 0) as current_stock,
+                COALESCE(receiving_date, '') as receiving_date,
+                COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') as car_number
+            FROM raw_materials
+        ),
+        grouped AS (
+            SELECT
+                code,
+                MAX(id) as representative_id,
+                COALESCE(SUM(current_stock), 0) as current_stock
+            FROM normalized
+            GROUP BY code
+        )
+        SELECT
+            rep.id,
+            rep.name,
+            rep.code,
+            COALESCE((
+                SELECT GROUP_CONCAT(product_name, ', ')
+                FROM (
+                    SELECT
+                        p.name as product_name,
+                        COUNT(*) as bom_count
+                    FROM bom b
+                    JOIN raw_materials linked_rm ON linked_rm.id = b.raw_material_id
+                    JOIN products p ON p.id = b.product_id
+                    WHERE COALESCE(NULLIF(TRIM(linked_rm.code), ''), printf('RM%05d', linked_rm.id)) = rep.code
+                    GROUP BY p.id, p.name
+                    ORDER BY bom_count DESC, p.name ASC
+                    LIMIT 3
+                )
+            ), '미등록') as product_names
+        FROM grouped
+        JOIN normalized rep ON rep.id = grouped.representative_id
+        ORDER BY rep.code ASC, rep.name ASC
+        '''
+    )
+    return cursor.fetchall()
+
+
 def _load_product_variant_options(cursor, product_id, category):
     cursor.execute(
         '''
@@ -749,33 +798,7 @@ def product_bom(product_id):
         ''', (workplace, SHARED_WORKPLACE))
         materials = cursor.fetchall()
 
-        cursor.execute('''
-            WITH rm_base AS (
-                SELECT
-                    id,
-                    name,
-                    COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) as code,
-                    COALESCE(sheets_per_sok, 0) as sheets_per_sok,
-                    COALESCE(current_stock, 0) as current_stock,
-                    receiving_date,
-                    COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as car_number
-                FROM raw_materials
-                WHERE workplace = ?
-                  AND COALESCE(current_stock, 0) > 0
-            )
-            SELECT
-                MIN(id) as id,
-                MIN(name) as name,
-                code,
-                MAX(sheets_per_sok) as sheets_per_sok,
-                COALESCE(SUM(current_stock), 0) as current_stock,
-                MAX(receiving_date) as receiving_date,
-                MIN(car_number) as car_number
-            FROM rm_base
-            GROUP BY code
-            ORDER BY code ASC
-        ''', (workplace,))
-        raw_materials = cursor.fetchall()
+        raw_materials = _load_bom_raw_material_catalog(cursor)
         component_candidates = _load_component_product_candidates(cursor, workplace, product_id)
 
     return_to = _clean_next_url(request.args.get('return_to'), url_for('products.products'))

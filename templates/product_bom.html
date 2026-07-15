@@ -198,6 +198,9 @@ html[data-theme="dark"] .quantity-input-box{background:#162133;color:#dbe7f5;}
 html[data-theme="dark"] .quantity-input-box label{color:#c7d3e3;}
 html[data-theme="dark"] .selected-item-row{background:#162133;color:#dbe7f5;}
 html[data-theme="dark"] .selection-check{accent-color:#3b82f6;}
+html[data-theme="dark"] .raw-list-helper{color:#d7e3f4;}
+html[data-theme="dark"] .raw-list-helper strong{color:#f8fbff;}
+html[data-theme="dark"] .raw-list-helper span:last-child{color:#c3d4ea;}
 html[data-theme="dark"] .product-info-item{background:#162133;border-color:#263244;box-shadow:none;}
 html[data-theme="dark"] .product-edit-panel{background:linear-gradient(180deg,#162133,#121a2a);border-color:#314155;}
 html[data-theme="dark"] .sok-multi-tag{background:rgba(79,70,229,.18);color:#c7d2fe;}
@@ -490,12 +493,12 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                 <div class="selection-panel-head">
                     <div>
                         <div class="selection-panel-title">원초 선택</div>
-                        <div class="selection-panel-sub">목록에서 1개 원초를 선택하면 상품 설정값 기준으로 BOM에 연결됩니다.</div>
+                        <div class="selection-panel-sub">대표코드 1개를 선택하면 해당 코드의 원초 전체가 생산 상세에서 사용 가능합니다.</div>
                     </div>
                 </div>
                 <div class="raw-list-helper">
                     <span>선택 방식: <strong>단일 선택</strong></span>
-                    <span>현재고가 있는 원초만 표시됩니다.</span>
+                    <span>등록 이력이 있는 대표코드만 표시합니다.</span>
                 </div>
                 <div class="selection-table-wrap">
                     {% if raw_materials %}
@@ -503,33 +506,27 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                         <thead>
                             <tr>
                                 <th style="width:52px;">선택</th>
-                                <th>원초명</th>
-                                <th style="width:130px;">코드</th>
-                                <th style="width:120px;">속수</th>
-                                <th style="width:170px;">입고/자호</th>
-                                <th style="width:130px;">현재고</th>
+                                <th style="width:150px;">코드</th>
+                                <th style="width:180px;">원초명</th>
+                                <th>주로 사용된 제품 품목</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for rm in raw_materials %}
-                            <tr data-name="{{ (rm.name ~ ' ' ~ (rm.code or ''))|lower }}">
+                            <tr data-name="{{ ((rm.code or '') ~ ' ' ~ (rm.name or '') ~ ' ' ~ (rm.product_names or ''))|lower }}">
                                 <td>
                                     <input type="checkbox" class="selection-check raw-check" value="{{ rm.id }}"
-                                           data-name="{{ rm.name|e }}" onchange="toggleRawSelection(this)">
+                                           data-name="{{ ((rm.code or '-') ~ ' / ' ~ (rm.name or '-'))|e }}" onchange="toggleRawSelection(this)">
                                 </td>
                                 <td>
-                                    <div class="selection-name">{{ rm.name }}</div>
-                                    <div class="selection-meta">
-                                        {% if rm.car_number %}<span>🚗 {{ rm.car_number }}</span>{% endif %}
-                                        {% if rm.receiving_date %}<span>📅 {{ rm.receiving_date }}</span>{% endif %}
-                                    </div>
+                                    <div class="selection-name">{{ rm.code or '-' }}</div>
                                 </td>
-                                <td><span class="selection-code">{{ rm.code or '-' }}</span></td>
-                                <td>{{ rm.sheets_per_sok }}속/box</td>
                                 <td>
-                                    {% if rm.receiving_date %}{{ rm.receiving_date }}{% else %}-{% endif %}
+                                    <div class="selection-name">{{ rm.name or '-' }}</div>
                                 </td>
-                                <td><span class="selection-stock">{{ "%.1f"|format(rm.current_stock) }}속</span></td>
+                                <td>
+                                    <div class="selection-meta" style="margin-top:0;color:inherit;">{{ rm.product_names or '미등록' }}</div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -769,7 +766,7 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                 <select name="raw_material_id" required style="min-width:260px;">
                     {% for rm in raw_materials %}
                     <option value="{{ rm.id }}" {% if (item.raw_code or '') == (rm.code or '') %}selected{% endif %}>
-                        {{ rm.name }} | 코드: {{ rm.code or '-' }} | 재고: {{ "%.1f"|format(rm.current_stock or 0) }}속
+                        {{ rm.code or '-' }}
                     </option>
                     {% endfor %}
                 </select>

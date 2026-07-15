@@ -23,8 +23,8 @@ LOW_STOCK_MATERIAL_GROUP_ORDER = ['내포', '외포', '박스', '실리카', '�
 
 def _normalize_dashboard_schedule_status(status_value):
     s = (status_value or '').strip()
-    broken_planned_statuses = {'?\ub349\uc819', '?\uafa8\uc9ba'}
-    broken_completed_statuses = {'?\ub8cc', '\ufffd\u03f7\ufffd'}
+    broken_planned_statuses = {'?\ub349\uc819'}
+    broken_completed_statuses = {'?\uafa8\uc9ba', '\ufffd\u03f7\ufffd'}
     if not s:
         return '예정'
     if s in broken_completed_statuses or s == '완료' or '완료' in s:
@@ -42,6 +42,57 @@ def _low_stock_material_group_rank(name_value):
         if keyword in name:
             return idx
     return len(LOW_STOCK_MATERIAL_GROUP_ORDER)
+
+
+def _filter_dashboard_selected_variant_bom_rows(rows):
+    if not rows:
+        return []
+
+    selected_fields = {
+        '실리카': 'selected_silica_material_id',
+        '파우치': 'selected_pouch_material_id',
+    }
+    selected_map = {category: {} for category in selected_fields}
+    material_maps = {category: {} for category in selected_fields}
+
+    for row in rows:
+        row_dict = dict(row)
+        product_id = int(row_dict.get('product_id') or 0)
+        material_id = int(row_dict.get('material_id') or 0)
+        if product_id <= 0:
+            continue
+        category = (row_dict.get('material_category') or row_dict.get('category') or '').strip()
+        field_name = selected_fields.get(category)
+        if not field_name:
+            continue
+        if product_id not in selected_map[category]:
+            selected_map[category][product_id] = int(row_dict.get(field_name) or 0)
+        if material_id > 0:
+            material_maps[category].setdefault(product_id, [])
+            if material_id not in material_maps[category][product_id]:
+                material_maps[category][product_id].append(material_id)
+
+    effective_maps = {category: {} for category in selected_fields}
+    for category, product_materials in material_maps.items():
+        for product_id, material_ids in product_materials.items():
+            selected_id = int(selected_map[category].get(product_id) or 0)
+            if selected_id in material_ids:
+                effective_maps[category][product_id] = selected_id
+            elif material_ids:
+                effective_maps[category][product_id] = material_ids[0]
+
+    filtered = []
+    for row in rows:
+        row_dict = dict(row)
+        product_id = int(row_dict.get('product_id') or 0)
+        material_id = int(row_dict.get('material_id') or 0)
+        category = (row_dict.get('material_category') or row_dict.get('category') or '').strip()
+        if product_id > 0 and material_id > 0 and category in effective_maps:
+            effective_id = effective_maps[category].get(product_id)
+            if effective_id and material_id != effective_id:
+                continue
+        filtered.append(row_dict)
+    return filtered
 
 
 def _parse_dashboard_todo_due_date(raw_value):
@@ -376,10 +427,9 @@ def index():
         SELECT ps.product_id, ps.planned_boxes, ps.status
         FROM production_schedules ps
         WHERE ps.workplace = ?
-          AND ps.scheduled_date BETWEEN ? AND ?
         ORDER BY ps.scheduled_date, ps.id
         ''',
-        (workplace, schedule_window_start.isoformat(), week_end.isoformat()),
+        (workplace,),
     )
     product_box_map = {}
     for row in cursor.fetchall():
@@ -407,15 +457,19 @@ def index():
                 COALESCE(b.quantity_per_box, 0) as quantity_per_box,
                 m.name as material_name,
                 COALESCE(m.code, printf('M%05d', m.id)) as material_code,
-                COALESCE(m.unit, '') as unit
+                COALESCE(m.unit, '') as unit,
+                COALESCE(m.category, '') as material_category,
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
             FROM bom b
+            JOIN products p ON p.id = b.product_id
             JOIN materials m ON m.id = b.material_id
             WHERE b.product_id IN ({placeholders})
               AND b.material_id IS NOT NULL
             ''',
             product_ids,
         )
-        material_bom_rows = cursor.fetchall()
+        material_bom_rows = _filter_dashboard_selected_variant_bom_rows(cursor.fetchall())
 
         material_ids = sorted({int(row['material_id'] or 0) for row in material_bom_rows if int(row['material_id'] or 0) > 0})
         workplace_material_stock_map = {}
@@ -501,7 +555,11 @@ def index():
                 COALESCE(p.sok_per_box, b.quantity_per_box, 0) as raw_qty_per_box,
                 COALESCE(b.quantity_per_box, 0) as quantity_per_box,
                 rm.name as raw_name,
-                COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code
+                COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) as raw_code,
+                '' as material_category,
+                0 as material_id,
+                COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
+                COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
             FROM bom b
             JOIN products p ON p.id = b.product_id
             JOIN raw_materials rm ON rm.id = b.raw_material_id
@@ -510,7 +568,7 @@ def index():
             ''',
             product_ids,
         )
-        bom_rows = cursor.fetchall()
+        bom_rows = _filter_dashboard_selected_variant_bom_rows(cursor.fetchall())
 
         cursor.execute(
             '''

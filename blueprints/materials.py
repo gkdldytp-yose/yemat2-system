@@ -5017,9 +5017,33 @@ def delete_raw_material(raw_material_id):
 
         cursor.execute('SELECT * FROM raw_materials WHERE id = ?', (raw_material_id,))
         before = cursor.fetchone()
+        replacement_raw_id = None
+
+        if before:
+            raw_code = (before['code'] or '').strip() or f"RM{int(raw_material_id):05d}"
+            cursor.execute(
+                '''
+                SELECT id
+                FROM raw_materials
+                WHERE id != ?
+                  AND COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) = ?
+                ORDER BY id DESC
+                LIMIT 1
+                ''',
+                (raw_material_id, raw_code),
+            )
+            replacement = cursor.fetchone()
+            if replacement:
+                replacement_raw_id = int(replacement['id'])
 
         if bom_count > 0:
-            cursor.execute('DELETE FROM bom WHERE raw_material_id = ?', (raw_material_id,))
+            if replacement_raw_id:
+                cursor.execute(
+                    'UPDATE bom SET raw_material_id = ? WHERE raw_material_id = ?',
+                    (replacement_raw_id, raw_material_id),
+                )
+            else:
+                cursor.execute('DELETE FROM bom WHERE raw_material_id = ?', (raw_material_id,))
 
         cursor.execute('DELETE FROM raw_material_logs WHERE raw_material_id = ?', (raw_material_id,))
         cursor.execute('DELETE FROM raw_materials WHERE id = ?', (raw_material_id,))
