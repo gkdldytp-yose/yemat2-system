@@ -3671,14 +3671,27 @@ def raw_materials():
                     COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as ja_ho
                 FROM raw_materials
                 WHERE TRIM(COALESCE(code, '')) <> ''
+            ),
+            usage_products AS (
+                SELECT
+                    COALESCE(NULLIF(TRIM(rm.code), ''), '') as code,
+                    GROUP_CONCAT(DISTINCT pr.name) as product_names
+                FROM production_material_usage pmu
+                JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                JOIN productions p ON p.id = pmu.production_id
+                LEFT JOIN products pr ON pr.id = p.product_id
+                WHERE TRIM(COALESCE(rm.code, '')) <> ''
+                  AND COALESCE(p.status, '') = '완료'
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                GROUP BY COALESCE(NULLIF(TRIM(rm.code), ''), '')
             )
             SELECT
                 n.code,
                 n.name,
                 COALESCE(n.sheets_per_sok, 0) as sheets_per_sok,
-                n.receiving_date,
-                n.ja_ho
+                COALESCE(up.product_names, '') as product_names
             FROM normalized n
+            LEFT JOIN usage_products up ON up.code = n.code
             WHERE NOT EXISTS (
                 SELECT 1
                 FROM normalized newer
@@ -3691,7 +3704,7 @@ def raw_materials():
                       )
                   )
             )
-            ORDER BY code
+            ORDER BY n.code
         '''
         )
     else:
@@ -3708,14 +3721,29 @@ def raw_materials():
                 FROM raw_materials
                 WHERE workplace = ?
                   AND TRIM(COALESCE(code, '')) <> ''
+            ),
+            usage_products AS (
+                SELECT
+                    COALESCE(NULLIF(TRIM(rm.code), ''), '') as code,
+                    GROUP_CONCAT(DISTINCT pr.name) as product_names
+                FROM production_material_usage pmu
+                JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                JOIN productions p ON p.id = pmu.production_id
+                LEFT JOIN products pr ON pr.id = p.product_id
+                WHERE COALESCE(rm.workplace, '') = ?
+                  AND COALESCE(p.workplace, '') = ?
+                  AND TRIM(COALESCE(rm.code, '')) <> ''
+                  AND COALESCE(p.status, '') = '완료'
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                GROUP BY COALESCE(NULLIF(TRIM(rm.code), ''), '')
             )
             SELECT
                 n.code,
                 n.name,
                 COALESCE(n.sheets_per_sok, 0) as sheets_per_sok,
-                n.receiving_date,
-                n.ja_ho
+                COALESCE(up.product_names, '') as product_names
             FROM normalized n
+            LEFT JOIN usage_products up ON up.code = n.code
             WHERE NOT EXISTS (
                 SELECT 1
                 FROM normalized newer
@@ -3728,9 +3756,9 @@ def raw_materials():
                       )
                   )
             )
-            ORDER BY code
+            ORDER BY n.code
         ''',
-            (workplace,),
+            (workplace, workplace, workplace),
         )
     raw_code_profiles = [dict(r) for r in cursor.fetchall()]
 
@@ -4250,29 +4278,29 @@ def raw_material_checksheet_preview(raw_material_id):
             cursor.execute(
                 f'''
                 SELECT
-                    COALESCE(p.id, rml.production_id) as production_id,
-                    substr(COALESCE(NULLIF(TRIM(p.production_date), ''), rml.created_at), 1, 10) as use_date,
-                    ABS(COALESCE(rml.quantity, 0)) as used_quantity,
+                    p.id as production_id,
+                    substr(p.production_date, 1, 10) as use_date,
+                    COALESCE(pmu.actual_quantity, 0) as used_quantity,
                     COALESCE(pr.name, '') as product_name,
-                    COALESCE(NULLIF(TRIM(COALESCE(rml.note, '')), ''), '') as usage_note,
+                    COALESCE(NULLIF(TRIM(COALESCE(pmu.usage_note, '')), ''), '') as usage_note,
                     COALESCE(rcn.note, '') as checksheet_note,
                     COALESCE(p.status, '') as production_status
-                FROM raw_material_logs rml
-                LEFT JOIN productions p
-                  ON p.id = rml.production_id
+                FROM production_material_usage pmu
+                JOIN productions p
+                  ON p.id = pmu.production_id
+                 AND COALESCE(p.production_date, '') <> ''
                 LEFT JOIN products pr ON pr.id = p.product_id
                 LEFT JOIN raw_material_checksheet_notes rcn
                   ON rcn.raw_material_id = ?
-                  AND rcn.use_date = substr(COALESCE(NULLIF(TRIM(p.production_date), ''), rml.created_at), 1, 10)
-                WHERE rml.raw_material_id IN ({lot_placeholders})
-                  AND COALESCE(rml.type, '') = 'production'
-                  AND COALESCE(rml.quantity, 0) < 0
-                  AND (? <= 0 OR rml.production_id = ?)
-                ORDER BY substr(COALESCE(NULLIF(TRIM(p.production_date), ''), rml.created_at), 1, 10) DESC,
-                         COALESCE(p.id, rml.production_id) DESC,
-                         rml.id DESC
+                  AND rcn.use_date = substr(p.production_date, 1, 10)
+                WHERE pmu.raw_material_id IN ({lot_placeholders})
+                  AND COALESCE(p.workplace, '') = ?
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                ORDER BY substr(p.production_date, 1, 10) DESC,
+                         p.id DESC,
+                         pmu.id DESC
                 ''',
-                [raw_material_id, *lot_raw_ids, production_id, production_id],
+                [raw_material_id, *lot_raw_ids, workplace],
             )
         production_usage_rows = [dict(row) for row in cursor.fetchall()]
         if aggregate_register_lot and production_id > 0 and not production_usage_rows:
@@ -4384,8 +4412,15 @@ def raw_material_checksheet_preview(raw_material_id):
             display_logs = sorted(usage_logs, key=lambda row: row.get('use_date') or '')
             running_before = total_stock
         else:
-            display_logs = usage_logs
-            running_after = current_stock
+            display_logs = sorted(
+                usage_logs,
+                key=lambda row: (
+                    row.get('use_date') or '',
+                    -int(row.get('sort_group') or 0),
+                    row.get('log_kind') or '',
+                ),
+            )
+            running_stock = total_stock
         for log in display_logs:
             used_qty = float(log.get('used_quantity') or 0)
             log_kind = str(log.get('log_kind') or 'production').strip()
@@ -4415,7 +4450,8 @@ def raw_material_checksheet_preview(raw_material_id):
                 row_stock = max(running_before - used_qty, 0)
                 running_before = row_stock
             else:
-                row_stock = running_after
+                row_stock = max(running_stock - used_qty, 0)
+                running_stock = row_stock
             reconstructed_rows.append(
                 {
                     'use_date': log.get('use_date') or '',
@@ -4426,9 +4462,7 @@ def raw_material_checksheet_preview(raw_material_id):
                     'note': note,
                 }
             )
-            if not aggregate_register_lot:
-                running_after = max(running_after + used_qty, 0)
-        usage_rows = reconstructed_rows if aggregate_register_lot else list(reversed(reconstructed_rows))
+        usage_rows = reconstructed_rows
         # Keep extra blank rows available so the print template can fill the page
         # and then hide only the overflow rows in fitUsageRowsToSinglePage().
         target_usage_rows = 12
