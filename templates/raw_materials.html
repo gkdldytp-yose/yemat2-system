@@ -48,6 +48,18 @@
 .raw-add-next-btn{min-width:92px;font-weight:800 !important;}
 .raw-add-fields-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;}
 .raw-add-submit-row{display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;margin-top:1rem;}
+.raw-add-header{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.9rem;}
+.raw-add-header h2{margin:0;}
+.raw-code-guide-btn{border:1px solid #60a5fa !important;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%) !important;color:#1d4ed8 !important;font-weight:800 !important;box-shadow:0 8px 18px rgba(37,99,235,0.14);}
+.raw-code-guide-note{margin:0.3rem 0 0;color:#64748b;font-size:0.84rem;line-height:1.5;}
+.raw-code-guide-table-wrap{border:1px solid #dbe5f0;border-radius:14px;overflow:hidden;background:#fff;}
+.raw-code-guide-table-wrap table{width:100%;min-width:760px;border-collapse:collapse;}
+.raw-code-guide-table-wrap th,.raw-code-guide-table-wrap td{padding:0.72rem 0.8rem;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top;}
+.raw-code-guide-table-wrap th{background:#eff6ff;color:#1e3a8a;font-size:0.84rem;font-weight:800;}
+.raw-code-guide-table-wrap td{font-size:0.9rem;color:#0f172a;}
+.raw-code-guide-table-wrap tbody tr:last-child td{border-bottom:none;}
+.raw-code-guide-code{display:inline-flex;align-items:center;padding:0.2rem 0.45rem;border-radius:999px;background:#e0f2fe;color:#0369a1;font-weight:800;font-size:0.8rem;}
+.raw-code-guide-empty{padding:2rem 1rem;text-align:center;color:#64748b;}
 @media (max-width: 900px){
     .raw-add-choice-grid{grid-template-columns:1fr;}
     .raw-add-fields-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -61,6 +73,8 @@
     .raw-add-inline .form-group{flex:1 1 auto;width:100%;}
     .raw-add-inline-actions{width:100%;justify-content:space-between;}
     .raw-add-next-btn,.raw-add-back-btn{flex:1 1 0;min-height:44px;}
+    .raw-add-header{align-items:stretch;}
+    .raw-code-guide-btn{width:100%;min-height:44px;}
     .raw-add-fields-grid{grid-template-columns:1fr;}
     .raw-add-fields-grid .form-group input,
     .raw-add-fields-grid .form-group select{min-height:46px;font-size:16px;}
@@ -77,7 +91,10 @@
 
 {% if can_raw %}
 <div id="addForm" class="card" style="display:none;border:2px solid #667eea;margin-bottom:2rem;">
-    <h2>{{ "\uc6d0\ucd08 \ucd94\uac00" }}</h2>
+    <div class="raw-add-header">
+        <h2>{{ "\uc6d0\ucd08 \ucd94\uac00" }}</h2>
+        <button type="button" class="btn btn-small raw-code-guide-btn" onclick="openRawCodeGuideModal()">대표코드 원초 가이드</button>
+    </div>
     <form method="POST" action="/raw-materials/add">
         <div class="raw-add-wizard">
             <div class="raw-add-steps">
@@ -677,6 +694,33 @@
     </div>
 </div>
 
+<div id="rawCodeGuideModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:1100px;margin:5% auto;background:white;padding:1.25rem;border-radius:12px;max-height:84vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.9rem;">
+            <div>
+                <h2 style="margin:0;">대표코드 원초 가이드</h2>
+                <p class="raw-code-guide-note">원초 등록 전에 기존 대표코드와 최근 등록 기준값을 확인하는 참고용 화면입니다. 여기서는 조회만 가능하며 자동 선택이나 등록은 되지 않습니다.</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeRawCodeGuideModal()">닫기</button>
+        </div>
+        <div class="raw-code-guide-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>대표코드</th>
+                        <th>원초명</th>
+                        <th>1박스당 속수</th>
+                        <th>최근 사용 제품명</th>
+                    </tr>
+                </thead>
+                <tbody id="rawCodeGuideTableBody">
+                    <tr><td colspan="4" class="raw-code-guide-empty">불러오는 중..</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <script id="rawCodeProfilesData" type="application/json">{{ raw_code_profiles_json|safe }}</script>
 <script>
 const RAW_CODE_PROFILES = (() => {
@@ -869,6 +913,40 @@ function applyRawCodeProfile(code){
     jaHoEl.value = p.ja_ho || '';
     totalEl.value = '';
     currentEl.value = '';
+}
+
+function renderRawCodeGuideRows(){
+    const tbody = document.getElementById('rawCodeGuideTableBody');
+    if(!tbody) return;
+    if(!Array.isArray(RAW_CODE_PROFILES) || RAW_CODE_PROFILES.length === 0){
+        tbody.innerHTML = '<tr><td colspan="4" class="raw-code-guide-empty">등록 이력이 있는 대표코드가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = RAW_CODE_PROFILES.map((profile) => {
+        const code = escapeHtml((profile.code || '').trim() || '-');
+        const name = escapeHtml((profile.name || '').trim() || '-');
+        const sheets = escapeHtml(String(profile.sheets_per_sok ?? ''));
+        const productNames = escapeHtml((profile.product_names || '').trim() || '미등록');
+        return `
+            <tr>
+                <td><span class="raw-code-guide-code">${code}</span></td>
+                <td>${name}</td>
+                <td>${sheets || '-'}</td>
+                <td>${productNames}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function openRawCodeGuideModal(){
+    renderRawCodeGuideRows();
+    const modal = document.getElementById('rawCodeGuideModal');
+    if(modal) modal.style.display = 'block';
+}
+
+function closeRawCodeGuideModal(){
+    const modal = document.getElementById('rawCodeGuideModal');
+    if(modal) modal.style.display = 'none';
 }
 
 const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
@@ -1703,6 +1781,7 @@ html[data-theme="dark"] .raw-lot-header-item .label{color:var(--text-muted);}
 html[data-theme="dark"] .raw-add-existing-picker{background:rgba(37,99,235,0.14);border-color:rgba(96,165,250,0.28);}
 html[data-theme="dark"] .raw-add-badge{background:rgba(14,165,233,0.18);color:#7dd3fc;}
 html[data-theme="dark"] .raw-add-back-btn{background:rgba(154,52,18,0.18) !important;border-color:rgba(251,146,60,0.28) !important;color:#fdba74 !important;}
+html[data-theme="dark"] .raw-code-guide-btn{background:linear-gradient(135deg,rgba(30,64,175,.28) 0%,rgba(15,23,42,.96) 100%) !important;border-color:rgba(96,165,250,0.4) !important;color:#bfdbfe !important;box-shadow:0 10px 22px rgba(2,6,23,.3);}
 html[data-theme="dark"] tr[onclick]:hover{background:rgba(37,99,235,0.08);}
 html[data-theme="dark"] .raw-code-card,
 html[data-theme="dark"] .raw-code-card.tone-0,
@@ -1758,6 +1837,7 @@ html[data-theme="dark"] .raw-code-summary .is-current span{color:#93c5fd !import
 html[data-theme="dark"] .raw-code-summary .is-current strong{color:#eff6ff !important;}
 html[data-theme="dark"] #rawActivityModal .modal-content,
 html[data-theme="dark"] #rawBasicEditModal .modal-content,
+html[data-theme="dark"] #rawCodeGuideModal .modal-content,
 html[data-theme="dark"] #receiveModal .modal-content,
 html[data-theme="dark"] #exportModal .modal-content,
 html[data-theme="dark"] #adjustModal .modal-content,
@@ -1770,6 +1850,7 @@ html[data-theme="dark"] #logsModal .modal-content{
 }
 html[data-theme="dark"] #rawActivityModal h2,
 html[data-theme="dark"] #rawBasicEditModal h2,
+html[data-theme="dark"] #rawCodeGuideModal h2,
 html[data-theme="dark"] #receiveModal h2,
 html[data-theme="dark"] #exportModal h2,
 html[data-theme="dark"] #adjustModal h2,
@@ -1777,7 +1858,14 @@ html[data-theme="dark"] #rawChecksheetModal h2,
 html[data-theme="dark"] #logsModal h2{color:#eff6ff;}
 html[data-theme="dark"] #rawActivityModal p,
 html[data-theme="dark"] #logsModal p,
+html[data-theme="dark"] #rawCodeGuideModal .raw-code-guide-note,
 html[data-theme="dark"] #rawActivityPeriodText{color:#8ea3bd !important;}
+html[data-theme="dark"] #rawCodeGuideModal .raw-code-guide-table-wrap{background:rgba(15,23,42,.78);border-color:rgba(148,163,184,.2);}
+html[data-theme="dark"] #rawCodeGuideModal th{background:rgba(30,41,59,.96);color:#dbeafe;border-bottom-color:rgba(148,163,184,.18);}
+html[data-theme="dark"] #rawCodeGuideModal td{background:rgba(15,23,42,.74);color:#d8e4f5;border-bottom-color:rgba(148,163,184,.14);}
+html[data-theme="dark"] #rawCodeGuideModal tbody tr:hover td{background:rgba(30,41,59,.92);}
+html[data-theme="dark"] #rawCodeGuideModal .raw-code-guide-code{background:rgba(14,165,233,.18);color:#7dd3fc;}
+html[data-theme="dark"] #rawCodeGuideModal .raw-code-guide-empty{color:#94a3b8;}
 html[data-theme="dark"] #rawActivityModal input,
 html[data-theme="dark"] #rawBasicEditModal input,
 html[data-theme="dark"] #receiveModal input,

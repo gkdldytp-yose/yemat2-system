@@ -877,6 +877,54 @@ function maxUnlockedStep() {
     }
     return max;
 }
+function isVisibleFocusableField(element) {
+    if (!element || element.disabled) return false;
+    if (element.type === 'hidden') return false;
+    if (element.closest('.hidden-field')) return false;
+    if (element.closest('[aria-hidden="true"]')) return false;
+    return element.offsetParent !== null;
+}
+function focusElementSoon(element, delay = 80) {
+    if (!element) return;
+    setTimeout(() => {
+        if (!element) return;
+        if (!isVisibleFocusableField(element) && element.tagName !== 'BUTTON') return;
+        element.focus();
+        if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && typeof element.select === 'function' && element.type !== 'date') {
+            element.select();
+        }
+    }, delay);
+}
+function getStepPrimaryFocusTarget(step) {
+    if (step === 0) {
+        if (!document.getElementById('productId')?.value) return document.getElementById('productSearch');
+        if (!document.getElementById('productionDate')?.value) return document.getElementById('productionDate');
+        const customExpiryEnabled = document.getElementById('useCustomExpiry')?.value === '1';
+        if (customExpiryEnabled) {
+            const customExpiryTarget = Array.from(document.querySelectorAll('#customExpiryPanel .js-custom-expiry-part, #customExpiryPanel .js-custom-expiry'))
+                .find(isVisibleFocusableField);
+            if (customExpiryTarget) return customExpiryTarget;
+        }
+        return document.getElementById('actualBoxes');
+    }
+    if (step === 1) {
+        return Array.from(document.querySelectorAll('[data-step-panel="1"] input, [data-step-panel="1"] textarea'))
+            .find(isVisibleFocusableField) || null;
+    }
+    if (step >= 2 && step <= 4) {
+        const panel = document.querySelector(`[data-step-panel="${step}"]`);
+        if (!panel) return null;
+        return Array.from(panel.querySelectorAll('input, select, textarea, button'))
+            .find((element) => isVisibleFocusableField(element) && element.type !== 'hidden') || null;
+    }
+    if (step === 5) {
+        return document.querySelector('[data-step-panel="5"] button[type="submit"]');
+    }
+    return null;
+}
+function focusStepPrimaryField(step) {
+    focusElementSoon(getStepPrimaryFocusTarget(step));
+}
 function goStep(step) {
     const unlocked = maxUnlockedStep();
     if (step > unlocked) {
@@ -892,6 +940,7 @@ function goStep(step) {
         button.querySelector('.step-state').textContent = completedSteps.has(index) ? '완료' : (index === currentStep ? '입력' : '대기');
     });
     if (currentStep === 5) updateConfirm();
+    focusStepPrimaryField(currentStep);
 }
 function completeAndNext(step) {
     if (step === 0 && !validateBaseStep()) return;
@@ -1010,6 +1059,10 @@ function selectProduct(productId) {
     syncExpiryInputs();
     renderUsageRows();
     goStep(0);
+    const nextField = document.getElementById('productionDate')?.value
+        ? document.getElementById('actualBoxes')
+        : document.getElementById('productionDate');
+    focusElementSoon(nextField);
 }
 function usageExpected(row) {
     return (toNumber(row.quantity_per_box) * currentBoxes()).toFixed(2).replace(/\.00$/, '');
@@ -1653,6 +1706,10 @@ function selectProduct(productId) {
     syncExpiryInputs();
     renderUsageRows();
     goStep(0);
+    const nextField = document.getElementById('productionDate')?.value
+        ? document.getElementById('actualBoxes')
+        : document.getElementById('productionDate');
+    focusElementSoon(nextField);
 }
 function openSaveWorkplaceModal() {
     const modal = document.getElementById('saveWorkplaceModal');
