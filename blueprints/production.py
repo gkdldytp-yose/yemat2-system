@@ -6017,19 +6017,76 @@ def production_detail(production_id):
             LEFT JOIN products p ON p.id = b.product_id
             WHERE b.product_id = ?
               AND (b.material_id IS NOT NULL OR b.component_product_id IS NOT NULL)
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM production_material_usage pmu
-                  WHERE pmu.production_id = ?
-                    AND (
-                        (b.material_id IS NOT NULL AND pmu.material_id = b.material_id)
-                        OR (b.component_product_id IS NOT NULL AND pmu.component_product_id = b.component_product_id)
-                    )
+            ''',
+            (production['product_id'],),
+        )
+        active_bom_mats = _filter_selected_variant_bom_rows(cursor.fetchall())
+        allowed_material_ids = {
+            int(row.get('material_id') or 0)
+            for row in active_bom_mats
+            if int(row.get('material_id') or 0) > 0
+        }
+        allowed_component_product_ids = {
+            int(row.get('component_product_id') or 0)
+            for row in active_bom_mats
+            if int(row.get('component_product_id') or 0) > 0
+        }
+        cursor.execute(
+            '''
+            SELECT id, material_id, component_product_id
+            FROM production_material_usage
+            WHERE production_id = ?
+              AND raw_material_id IS NULL
+              AND (
+                  material_id IS NOT NULL
+                  OR component_product_id IS NOT NULL
               )
             ''',
-            (production['product_id'], production_id),
+            (production_id,),
         )
-        missing_bom_mats = _filter_selected_variant_bom_rows(cursor.fetchall())
+        stale_usage_ids = []
+        for usage_row in cursor.fetchall():
+            usage_material_id = int(usage_row['material_id'] or 0)
+            usage_component_product_id = int(usage_row['component_product_id'] or 0)
+            if usage_material_id > 0:
+                if usage_material_id not in allowed_material_ids:
+                    stale_usage_ids.append(int(usage_row['id']))
+                continue
+            if usage_component_product_id > 0 and usage_component_product_id not in allowed_component_product_ids:
+                stale_usage_ids.append(int(usage_row['id']))
+        if stale_usage_ids:
+            stale_placeholders = ','.join(['?'] * len(stale_usage_ids))
+            cursor.execute(
+                f'DELETE FROM production_material_usage WHERE id IN ({stale_placeholders})',
+                stale_usage_ids,
+            )
+        cursor.execute(
+            '''
+            SELECT material_id, component_product_id
+            FROM production_material_usage
+            WHERE production_id = ?
+              AND (
+                  material_id IS NOT NULL
+                  OR component_product_id IS NOT NULL
+              )
+            ''',
+            (production_id,),
+        )
+        existing_usage_keys = {
+            (
+                int(row['material_id'] or 0),
+                int(row['component_product_id'] or 0),
+            )
+            for row in cursor.fetchall()
+        }
+        missing_bom_mats = [
+            bom
+            for bom in active_bom_mats
+            if (
+                int(bom.get('material_id') or 0),
+                int(bom.get('component_product_id') or 0),
+            ) not in existing_usage_keys
+        ]
         if missing_bom_mats:
             planned = float(production['planned_boxes'] or 0)
             for bom in missing_bom_mats:
