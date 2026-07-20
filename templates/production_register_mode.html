@@ -51,10 +51,16 @@
 .register-textarea{min-height:86px;resize:vertical;}
 .ko-first-input{ime-mode:active;}
 .register-input:focus,.register-select:focus,.register-textarea:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.14);}
-.date-field-head{display:flex;align-items:center;justify-content:space-between;gap:.4rem;min-height:18px;}
+.date-field-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:18px;}
 .date-field-head label{min-width:0;}
+.date-field-label{display:inline-flex;align-items:center;gap:.35rem;min-width:0;}
 .date-unknown-wrap{display:block;}
 .date-unknown-wrap .register-input{min-width:0;width:100%;}
+.date-input-row{display:block;}
+.date-input-row .register-input{width:100%;}
+.date-input-row .date-picker-btn{display:none;}
+.date-picker-btn{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 .52rem;border-radius:999px;font-size:.7rem;font-weight:900;line-height:1;white-space:nowrap;}
+.date-picker-proxy{position:absolute;opacity:0;pointer-events:none;width:0;height:0;border:0;padding:0;}
 .unknown-date-btn{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 .52rem;border:1px solid #334155;border-radius:999px;background:#17233a;color:#cbd5e1;font-size:.7rem;font-weight:900;cursor:pointer;white-space:nowrap;}
 .unknown-date-btn.active{border-color:#22c55e;background:#123124;color:#bbf7d0;box-shadow:0 0 14px rgba(34,197,94,.12);}
 .product-search-wrap{position:relative;}
@@ -620,6 +626,38 @@ function resetProductFilter() {
 }
 function currentBoxes() {
     return Math.max(toNumber(document.getElementById('actualBoxes').value), 0);
+}
+const REGISTER_MODE_PRODUCTION_DATE_STORAGE_KEY = 'registerModeProductionDate';
+function clearStoredRegisterModeProductionDate() {
+    try {
+        sessionStorage.removeItem(REGISTER_MODE_PRODUCTION_DATE_STORAGE_KEY);
+    } catch (error) {
+        console.warn('register mode production date clear failed', error);
+    }
+}
+function storeRegisterModeProductionDate(value = null) {
+    const productionDateInput = document.getElementById('productionDate');
+    const nextValue = String(value ?? productionDateInput?.value ?? '').trim();
+    try {
+        if (nextValue) {
+            sessionStorage.setItem(REGISTER_MODE_PRODUCTION_DATE_STORAGE_KEY, nextValue);
+        } else {
+            sessionStorage.removeItem(REGISTER_MODE_PRODUCTION_DATE_STORAGE_KEY);
+        }
+    } catch (error) {
+        console.warn('register mode production date store failed', error);
+    }
+}
+function restoreStoredRegisterModeProductionDate() {
+    const productionDateInput = document.getElementById('productionDate');
+    if (!productionDateInput) return;
+    try {
+        const storedValue = String(sessionStorage.getItem(REGISTER_MODE_PRODUCTION_DATE_STORAGE_KEY) || '').trim();
+        if (!storedValue) return;
+        productionDateInput.value = storedValue;
+    } catch (error) {
+        console.warn('register mode production date restore failed', error);
+    }
 }
 function toggleWorkplaceSwitch(forceState = null) {
     const panel = document.getElementById('workplaceSwitchPanel');
@@ -1319,6 +1357,87 @@ function removeRawLot(buttonEl) {
     card.remove();
     updateRawLotGroup(groupEl);
 }
+function formatRegisterDateValue(year, month, day) {
+    return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+function parseRegisterDateValue(rawValue) {
+    const source = String(rawValue || '').trim();
+    if (!source) return '';
+    const normalizedSource = source.replace(/\./g, '-').replace(/\//g, '-').replace(/\s+/g, '');
+    let yearPart = '';
+    let monthPart = '';
+    let dayPart = '';
+    if (/^\d{6}$/.test(normalizedSource)) {
+        yearPart = normalizedSource.slice(0, 2);
+        monthPart = normalizedSource.slice(2, 4);
+        dayPart = normalizedSource.slice(4, 6);
+    } else if (/^\d{8}$/.test(normalizedSource)) {
+        yearPart = normalizedSource.slice(0, 4);
+        monthPart = normalizedSource.slice(4, 6);
+        dayPart = normalizedSource.slice(6, 8);
+    } else {
+        const parts = normalizedSource.split('-');
+        if (parts.length !== 3 || parts.some((part) => !/^\d+$/.test(part))) return null;
+        [yearPart, monthPart, dayPart] = parts;
+    }
+    if (![2, 4].includes(yearPart.length) || monthPart.length < 1 || monthPart.length > 2 || dayPart.length < 1 || dayPart.length > 2) {
+        return null;
+    }
+    const year = yearPart.length === 2 ? 2000 + Number(yearPart) : Number(yearPart);
+    const month = Number(monthPart);
+    const day = Number(dayPart);
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+    const candidate = new Date(year, month - 1, day);
+    if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) {
+        return null;
+    }
+    return formatRegisterDateValue(year, month, day);
+}
+function syncDatePickerProxy(input) {
+    if (!input) return;
+    const proxy = input.parentElement ? input.parentElement.querySelector('.date-picker-proxy') : null;
+    if (proxy) proxy.value = /^\d{4}-\d{2}-\d{2}$/.test(String(input.value || '').trim()) ? String(input.value || '').trim() : '';
+}
+function setRegisterDateInputValue(input, value) {
+    if (!input) return;
+    input.value = value || '';
+    syncDatePickerProxy(input);
+}
+function normalizeRegisterDateInput(input, strict = false) {
+    if (!input || input.readOnly) return true;
+    const rawValue = String(input.value || '').trim();
+    if (!rawValue) {
+        syncDatePickerProxy(input);
+        return true;
+    }
+    const normalized = parseRegisterDateValue(rawValue);
+    if (!normalized) {
+        if (strict) {
+            const label = input.dataset.dateLabel || '날짜';
+            alert(`${label}은 YY-MM-DD 또는 YYYY-MM-DD 형식으로 입력해 주세요.`);
+            input.focus();
+        }
+        return false;
+    }
+    setRegisterDateInputValue(input, normalized);
+    return true;
+}
+function openDatePicker(buttonEl) {
+    const field = buttonEl.closest('.field');
+    const proxy = field ? field.querySelector('.date-picker-proxy') : null;
+    if (!proxy) return;
+    if (typeof proxy.showPicker === 'function') {
+        proxy.showPicker();
+        return;
+    }
+    proxy.click();
+}
+function applyDatePickerValue(proxyInput) {
+    const row = proxyInput.closest('.date-input-row');
+    const textInput = row ? row.querySelector('.js-register-date-input') : null;
+    if (!textInput) return;
+    setRegisterDateInputValue(textInput, proxyInput.value || '');
+}
 function dateInputHtml(name, value, label, required = true, options = {}) {
     const unknownDefault = Boolean(options.unknownDefault);
     const inputValue = unknownDefault ? '' : (value || '');
@@ -1328,29 +1447,36 @@ function dateInputHtml(name, value, label, required = true, options = {}) {
     return `
         <div class="field ${required ? 'required' : ''}">
             <div class="date-field-head">
-                <label>${escapeHtml(label)}</label>
+                <div class="date-field-label">
+                    <label>${escapeHtml(label)}</label>
+                    <button type="button" class="ghost-btn date-picker-btn" tabindex="-1" onclick="openDatePicker(this)">달력</button>
+                </div>
                 <button type="button" class="unknown-date-btn ${unknownDefault ? 'active' : ''}" onclick="toggleUnknownDate(this)">${unknownDefault ? '입력' : '모름'}</button>
             </div>
             <div class="date-unknown-wrap">
-                <input type="date" class="register-input ${requiredClass}" name="${escapeHtml(name)}" value="${escapeHtml(inputValue)}" data-date-label="${escapeHtml(label)}"${previousValueAttr}${readonlyAttr}>
+                <div class="date-input-row">
+                    <input type="text" inputmode="numeric" class="register-input js-register-date-input ${requiredClass}" name="${escapeHtml(name)}" value="${escapeHtml(inputValue)}" placeholder="26-01-20" data-date-label="${escapeHtml(label)}"${previousValueAttr}${readonlyAttr}>
+                    <button type="button" class="ghost-btn date-picker-btn" onclick="openDatePicker(this)">달력</button>
+                    <input type="date" class="date-picker-proxy" tabindex="-1" aria-hidden="true" value="${escapeHtml(inputValue)}" onchange="applyDatePickerValue(this)">
+                </div>
             </div>
         </div>
     `;
 }
 function setUnknownDateField(field, unknown) {
     const buttonEl = field ? field.querySelector('.unknown-date-btn') : null;
-    const input = field ? field.querySelector('.date-unknown-wrap input') : null;
+    const input = field ? field.querySelector('.js-register-date-input') : null;
     if (!buttonEl || !input) return;
     buttonEl.classList.toggle('active', unknown);
     if (unknown) {
         input.dataset.previousValue = input.value || input.dataset.previousValue || '';
-        input.value = '';
+        setRegisterDateInputValue(input, '');
         input.readOnly = true;
         input.classList.remove('required-input');
         buttonEl.textContent = '입력';
     } else {
         input.readOnly = false;
-        input.value = input.dataset.previousValue || '';
+        setRegisterDateInputValue(input, input.dataset.previousValue || '');
         input.classList.add('required-input');
         buttonEl.textContent = '모름';
     }
@@ -1359,7 +1485,7 @@ function toggleUnknownDate(buttonEl) {
     const field = buttonEl.closest('.field');
     const shouldUnknown = !buttonEl.classList.contains('active');
     setUnknownDateField(field, shouldUnknown);
-    const input = field ? field.querySelector('.date-unknown-wrap input') : null;
+    const input = field ? field.querySelector('.js-register-date-input') : null;
     if (!shouldUnknown && input) input.focus();
 }
 function removeMaterialLot(buttonEl) {
@@ -1492,7 +1618,7 @@ function rawLotCardHtml(row, options = {}) {
                 <input type="hidden" name="raw_material_name[]" value="${escapeHtml(row.raw_material_name || '')}">
                 <input type="hidden" name="raw_expected_quantity[]" value="0">
             </div>
-            <div class="field required"><label>입고일</label><input type="date" class="register-input required-input" name="raw_override_receiving_date[]" value="${escapeHtml(options.receivingDate || '')}"></div>
+            ${dateInputHtml('raw_override_receiving_date[]', options.receivingDate || '', '입고일')}
             <div class="field required"><label>자호</label><input type="text" class="register-input required-input" name="raw_override_car_number[]" value="${escapeHtml(options.carNumber || '')}" placeholder="자호"></div>
             <div class="field required"><label>실제 사용량</label><input type="number" inputmode="decimal" class="register-input required-input js-actual-input" name="raw_actual_quantity[]" step="any" min="0" value="${escapeHtml(options.actualValue || '0')}" oninput="updateRawActualForLot(this)"></div>
             <div class="field"><label>메모</label><textarea class="register-textarea usage-note" name="raw_usage_note[]" placeholder="필요 시 입력">${escapeHtml(options.note || '')}</textarea></div>
@@ -1563,7 +1689,7 @@ function addExtraRawRow() {
                 <div class="field required"><label>원초명</label><input type="text" class="register-input required-input" name="raw_material_name[]" placeholder="원초명"></div>
                 <div class="field required"><label>필요량</label><input type="number" class="register-input required-input js-expected-input" name="raw_expected_quantity[]" step="0.01" min="0" value="0" oninput="updateExpectedForCard(this)"></div>
             </div>
-            <div class="field required"><label>입고일</label><input type="date" class="register-input required-input" name="raw_override_receiving_date[]" value=""></div>
+            ${dateInputHtml('raw_override_receiving_date[]', '', '입고일')}
             <div class="field required"><label>자호</label><input type="text" class="register-input required-input" name="raw_override_car_number[]" value=""></div>
             <div class="field"><label>필요량 확인</label><div class="calc-box need js-need-value">0<span class="calc-unit">속</span></div></div>
             <div class="field required"><label>실제 사용량</label><input type="number" class="register-input required-input js-actual-input" name="raw_actual_quantity[]" step="0.01" min="0" value="0" oninput="updateLossForCard(this)"></div>
@@ -1580,7 +1706,7 @@ function syncRawSelect(selectEl) {
     const card = selectEl.closest('.usage-card');
     card.querySelector('input[name="raw_material_name[]"]').value = option.dataset.name || '';
     card.querySelector('input[name="raw_override_car_number[]"]').value = option.dataset.car || '';
-    card.querySelector('input[name="raw_override_receiving_date[]"]').value = option.dataset.date || '';
+    setRegisterDateInputValue(card.querySelector('input[name="raw_override_receiving_date[]"]'), option.dataset.date || '');
 }
 function syncMaterialSelect(selectEl) {
     const option = selectEl.options[selectEl.selectedIndex];
@@ -1758,7 +1884,22 @@ document.getElementById('registerModeForm').addEventListener('keydown', (event) 
     }
     event.preventDefault();
 });
+document.getElementById('productionDate')?.addEventListener('change', (event) => {
+    storeRegisterModeProductionDate(event.target.value || '');
+    syncExpiryInputs();
+});
+document.getElementById('registerModeForm').addEventListener('focusout', (event) => {
+    if (!event.target.classList.contains('js-register-date-input')) return;
+    normalizeRegisterDateInput(event.target, false);
+});
 document.getElementById('registerModeForm').addEventListener('submit', (event) => {
+    const invalidDateInput = Array.from(document.querySelectorAll('#registerModeForm .js-register-date-input'))
+        .find((input) => !normalizeRegisterDateInput(input, false));
+    if (invalidDateInput) {
+        event.preventDefault();
+        normalizeRegisterDateInput(invalidDateInput, true);
+        return;
+    }
     if (!validateRequiredFields()) {
         event.preventDefault();
         return;
@@ -1773,6 +1914,7 @@ document.getElementById('registerModeForm').addEventListener('submit', (event) =
         openSaveWorkplaceModal();
         return;
     }
+    storeRegisterModeProductionDate();
     document.getElementById('saveWorkplaceInput').value = currentRegisterWorkplace;
 });
 document.addEventListener('click', (event) => {
@@ -1782,7 +1924,13 @@ document.addEventListener('click', (event) => {
     if (event.target.id === 'saveWorkplaceModal') {
         closeSaveWorkplaceModal();
     }
+    const link = event.target.closest('a[href]');
+    if (link && !link.hasAttribute('download') && (link.target || '_self') === '_self') {
+        clearStoredRegisterModeProductionDate();
+    }
 });
+document.querySelectorAll('#registerModeForm .js-register-date-input').forEach((input) => syncDatePickerProxy(input));
+restoreStoredRegisterModeProductionDate();
 updateProductFilterTabs();
 updateSummary();
 syncExpiryInputs();
