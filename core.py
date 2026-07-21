@@ -945,6 +945,36 @@ def _ensure_production_schema(conn):
             )
             '''
         )
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS set_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workplace TEXT NOT NULL,
+                finished_product_id INTEGER NOT NULL,
+                production_start_date TEXT NOT NULL,
+                production_end_date TEXT NOT NULL,
+                note TEXT,
+                created_by TEXT,
+                updated_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS set_schedule_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                set_schedule_id INTEGER NOT NULL,
+                component_product_id INTEGER NOT NULL,
+                required_quantity INTEGER NOT NULL DEFAULT 0,
+                priority INTEGER NOT NULL DEFAULT 1,
+                line TEXT NOT NULL DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(set_schedule_id, component_product_id)
+            )
+            '''
+        )
         export_cols = [row['name'] for row in conn.execute("PRAGMA table_info(export_schedules)").fetchall()]
         if 'workplace' not in export_cols:
             conn.execute("ALTER TABLE export_schedules ADD COLUMN workplace TEXT NOT NULL DEFAULT ''")
@@ -993,6 +1023,44 @@ def _ensure_production_schema(conn):
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_export_schedule_containers_schedule ON export_schedule_containers(export_schedule_id, container_no)"
         )
+        set_schedule_cols = [row['name'] for row in conn.execute("PRAGMA table_info(set_schedules)").fetchall()]
+        if 'workplace' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN workplace TEXT NOT NULL DEFAULT ''")
+        if 'finished_product_id' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN finished_product_id INTEGER NOT NULL DEFAULT 0")
+        if 'production_start_date' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN production_start_date TEXT NOT NULL DEFAULT ''")
+        if 'production_end_date' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN production_end_date TEXT NOT NULL DEFAULT ''")
+        if 'note' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN note TEXT")
+        if 'created_by' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN created_by TEXT")
+        if 'updated_by' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN updated_by TEXT")
+        if 'created_at' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if 'updated_at' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        set_schedule_item_cols = [row['name'] for row in conn.execute("PRAGMA table_info(set_schedule_items)").fetchall()]
+        if 'set_schedule_id' not in set_schedule_item_cols:
+            conn.execute("ALTER TABLE set_schedule_items ADD COLUMN set_schedule_id INTEGER NOT NULL DEFAULT 0")
+        if 'component_product_id' not in set_schedule_item_cols:
+            conn.execute("ALTER TABLE set_schedule_items ADD COLUMN component_product_id INTEGER NOT NULL DEFAULT 0")
+        if 'required_quantity' not in set_schedule_item_cols:
+            conn.execute("ALTER TABLE set_schedule_items ADD COLUMN required_quantity INTEGER NOT NULL DEFAULT 0")
+        if 'priority' not in set_schedule_item_cols:
+            conn.execute("ALTER TABLE set_schedule_items ADD COLUMN priority INTEGER NOT NULL DEFAULT 1")
+        if 'line' not in set_schedule_item_cols:
+            conn.execute("ALTER TABLE set_schedule_items ADD COLUMN line TEXT NOT NULL DEFAULT ''")
+        if 'created_at' not in set_schedule_item_cols:
+            conn.execute("ALTER TABLE set_schedule_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_set_schedules_workplace_dates ON set_schedules(workplace, production_start_date, production_end_date)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_set_schedule_items_schedule_priority ON set_schedule_items(set_schedule_id, priority, id)"
+        )
 
         schedule_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_schedules)").fetchall()]
         if 'line' not in schedule_cols:
@@ -1007,6 +1075,10 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE production_schedules ADD COLUMN schedule_source TEXT DEFAULT 'manual'")
         if 'export_schedule_id' not in schedule_cols:
             conn.execute("ALTER TABLE production_schedules ADD COLUMN export_schedule_id INTEGER")
+        if 'set_schedule_id' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN set_schedule_id INTEGER")
+        if 'set_schedule_item_id' not in schedule_cols:
+            conn.execute("ALTER TABLE production_schedules ADD COLUMN set_schedule_item_id INTEGER")
         if 'export_container_no' not in schedule_cols:
             conn.execute("ALTER TABLE production_schedules ADD COLUMN export_container_no INTEGER")
         if 'export_container_label' not in schedule_cols:
@@ -1014,6 +1086,9 @@ def _ensure_production_schema(conn):
         conn.execute("UPDATE production_schedules SET schedule_source = 'manual' WHERE schedule_source IS NULL OR TRIM(schedule_source) = ''")
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_production_schedules_export_schedule ON production_schedules(export_schedule_id, scheduled_date)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_production_schedules_set_schedule ON production_schedules(set_schedule_id, scheduled_date)"
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_production_schedules_workplace_date ON production_schedules(workplace, scheduled_date)"
@@ -1064,6 +1139,10 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE productions ADD COLUMN workplace TEXT")
         if 'export_schedule_id' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN export_schedule_id INTEGER")
+        if 'set_schedule_id' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN set_schedule_id INTEGER")
+        if 'set_schedule_item_id' not in cols:
+            conn.execute("ALTER TABLE productions ADD COLUMN set_schedule_item_id INTEGER")
         if 'supply_line' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN supply_line TEXT")
         if 'line_usage_disabled' not in cols:
@@ -1111,6 +1190,9 @@ def _ensure_production_schema(conn):
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_productions_export_schedule ON productions(export_schedule_id, production_date)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_productions_set_schedule ON productions(set_schedule_id, production_date)"
         )
         conn.execute(
             '''
@@ -1180,6 +1262,23 @@ def _ensure_products_schema(conn):
             conn.execute("ALTER TABLE bom ADD COLUMN quantity_per_box_expr TEXT")
         if bom_cols and 'component_product_id' not in bom_cols:
             conn.execute("ALTER TABLE bom ADD COLUMN component_product_id INTEGER")
+        if bom_cols:
+            conn.execute(
+                '''
+                INSERT INTO bom (product_id, component_product_id, quantity_per_box)
+                SELECT finished.id, component.id, 3
+                FROM products finished
+                JOIN products component
+                  ON component.code = 'C-KR-R003'
+                WHERE finished.code = 'A-KR-Z002V1'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM bom existing
+                      WHERE existing.product_id = finished.id
+                        AND existing.component_product_id = component.id
+                  )
+                '''
+            )
         conn.execute(
             '''
             CREATE TABLE IF NOT EXISTS product_stocks (

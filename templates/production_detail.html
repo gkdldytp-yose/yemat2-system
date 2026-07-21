@@ -1562,6 +1562,7 @@ let expiryVisibleCount = {{ expiry_visible_count or 1 }};
 let rawChangeTargetId = null;
 let selectedRawChangeId = null;
 let rawChangeActiveTab = 'all';
+const AUTO_OPEN_PLAN_EDIT = {{ auto_open_plan_edit|tojson }};
 
 window.onload = () => {
     initSampleBoxUi();
@@ -1570,6 +1571,9 @@ window.onload = () => {
     recalcAll();
     initLotGapNoneButtons();
     initAutoGrowNotes();
+    if (AUTO_OPEN_PLAN_EDIT) {
+        openPlanEditModal();
+    }
 };
 
 function getActualBoxes(){
