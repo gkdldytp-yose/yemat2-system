@@ -2371,6 +2371,12 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     font-weight: 700;
     color: #14532d;
 }
+.schedule-selected-product-meta {
+    margin-top: 0.35rem;
+    color: #15803d;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
 .schedule-selected-product-cancel {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: #fff;
@@ -3389,30 +3395,35 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     flex-wrap:wrap;
 }
 .export-tab-btn {
-    border:1px solid #bfdbfe;
-    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
-    color:#1e3a8a;
+    border:1px solid #93c5fd;
+    background:
+        radial-gradient(circle at top, rgba(191,219,254,0.5), transparent 46%),
+        linear-gradient(180deg,#ffffff 0%,#eef6ff 100%);
+    color:#1d4ed8;
     border-radius:999px;
-    min-width:112px;
-    min-height:52px;
-    padding:0.72rem 1.28rem;
-    font-size:1rem;
+    min-width:126px;
+    min-height:54px;
+    padding:0.78rem 1.4rem;
+    font-size:1.02rem;
     font-weight:900;
     letter-spacing:-0.01em;
     cursor:pointer;
-    box-shadow:0 10px 24px rgba(37,99,235,0.12);
+    box-shadow:0 12px 26px rgba(37,99,235,0.14), inset 0 1px 0 rgba(255,255,255,0.9);
     transition:all 0.18s ease;
 }
 .export-tab-btn:hover {
     border-color:#60a5fa;
     color:#1d4ed8;
-    transform:translateY(-1px);
+    transform:translateY(-1px) scale(1.01);
+    box-shadow:0 16px 30px rgba(37,99,235,0.18), inset 0 1px 0 rgba(255,255,255,0.95);
 }
 .export-tab-btn.active {
-    background:linear-gradient(135deg,#1d4ed8,#2563eb);
+    background:
+        radial-gradient(circle at top, rgba(191,219,254,0.34), transparent 42%),
+        linear-gradient(135deg,#1d4ed8,#2563eb);
     border-color:#2563eb;
     color:#fff;
-    box-shadow:0 14px 28px rgba(37,99,235,0.24);
+    box-shadow:0 18px 34px rgba(37,99,235,0.28), 0 0 0 4px rgba(96,165,250,0.12);
 }
 .export-summary-card {
     border:1px solid #dbe7f3;
@@ -3619,12 +3630,71 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     display:flex;
     align-items:center;
     gap:0.4rem;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
 }
 .export-mini-btn {
     min-height:auto !important;
-    padding:0.44rem 0.82rem !important;
-    font-size:0.88rem !important;
+    padding:0.4rem 0.82rem !important;
+    font-size:0.84rem !important;
+}
+.set-manage-btn {
+    position:relative;
+    min-height:40px !important;
+    padding:0.48rem 0.9rem !important;
+    border-radius:12px !important;
+    font-size:0.84rem !important;
+    font-weight:800 !important;
+    letter-spacing:-0.01em;
+    box-shadow:0 10px 20px rgba(15,23,42,0.14);
+    white-space:nowrap;
+}
+.set-manage-btn:hover {
+    transform:translateY(-1px);
+}
+.set-assemble-btn {
+    gap:0.48rem;
+    background:linear-gradient(135deg,#16a34a 0%,#0f766e 100%) !important;
+    color:#f0fdf4 !important;
+    border:1px solid rgba(134,239,172,0.34) !important;
+    box-shadow:0 14px 26px rgba(15,118,110,0.28), 0 0 0 1px rgba(255,255,255,0.12) inset;
+}
+.set-assemble-btn:hover {
+    background:linear-gradient(135deg,#22c55e 0%,#0f8a7c 100%) !important;
+    color:#f0fdf4 !important;
+    border-color:rgba(187,247,208,0.56) !important;
+}
+.set-edit-btn {
+    gap:0.42rem;
+    background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%) !important;
+    color:#eff6ff !important;
+    border:1px solid rgba(147,197,253,0.44) !important;
+    box-shadow:0 14px 26px rgba(29,78,216,0.26), 0 0 0 1px rgba(255,255,255,0.12) inset;
+}
+.set-edit-btn:hover {
+    background:linear-gradient(135deg,#60a5fa 0%,#2563eb 100%) !important;
+    color:#eff6ff !important;
+    border-color:rgba(191,219,254,0.72) !important;
+}
+.set-delete-btn {
+    gap:0.42rem;
+    background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%) !important;
+    color:#fff5f5 !important;
+    border:1px solid rgba(252,165,165,0.42) !important;
+    box-shadow:0 14px 26px rgba(185,28,28,0.28), 0 0 0 1px rgba(255,255,255,0.12) inset;
+}
+.set-delete-btn:hover {
+    background:linear-gradient(135deg,#f87171 0%,#dc2626 100%) !important;
+    color:#fff5f5 !important;
+    border-color:rgba(254,202,202,0.72) !important;
+}
+.set-manage-btn .btn-copy {
+    display:flex;
+    align-items:center;
+    line-height:1;
+}
+.set-manage-btn .btn-title {
+    font-size:0.84rem;
+    font-weight:800;
 }
 .export-delete-btn {
     min-height:auto !important;
@@ -4025,6 +4095,207 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     padding:0.8rem;
     box-sizing:border-box;
 }
+.set-schedule-items-head {
+    display:flex;
+    justify-content:flex-start;
+    gap:0.75rem;
+    align-items:flex-start;
+    margin-bottom:0.85rem;
+    flex-direction:column;
+}
+.set-schedule-items-head .req-muted {
+    margin-top:0.2rem;
+}
+.set-schedule-total-grid {
+    width:100%;
+    display:grid;
+    grid-template-columns:minmax(0, 240px);
+    gap:0.75rem;
+    margin-top:0.25rem;
+}
+.set-schedule-total-card {
+    padding:0.85rem 0.9rem;
+    border:1px solid #dbe3f0;
+    border-radius:14px;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+}
+.set-schedule-total-card label {
+    margin-bottom:0.38rem;
+}
+.set-schedule-total-card input[type="number"] {
+    margin-top:0.2rem;
+}
+.set-schedule-total-helper {
+    margin-top:0.35rem;
+    font-size:0.76rem;
+    color:#64748b;
+    line-height:1.45;
+}
+.set-schedule-items-list {
+    display:grid;
+    gap:0.85rem;
+}
+.set-schedule-item-card {
+    border:1px solid #dbe3f0;
+    border-radius:16px;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    padding:0.95rem 1rem;
+    box-shadow:0 10px 24px rgba(15,23,42,0.06);
+}
+.set-schedule-item-main {
+    display:grid;
+    grid-template-columns:1fr;
+    gap:0.95rem;
+    align-items:start;
+}
+.set-schedule-item-info {
+    display:block;
+}
+.set-schedule-item-title {
+    margin:0;
+    font-size:1rem;
+    font-weight:800;
+    color:#0f172a;
+    line-height:1.35;
+}
+.set-schedule-item-meta {
+    margin-top:0.3rem;
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.45rem;
+}
+.set-schedule-item-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:0.3rem;
+    padding:0.34rem 0.58rem;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-size:0.78rem;
+    font-weight:800;
+}
+.set-schedule-item-stock {
+    margin-top:0.55rem;
+    color:#64748b;
+    font-size:0.83rem;
+    line-height:1.5;
+}
+.set-schedule-item-fields {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:0.75rem;
+    align-items:start;
+}
+.set-schedule-field {
+    display:block;
+}
+.set-schedule-field-label {
+    display:block;
+    margin-bottom:0.42rem;
+    line-height:1.35;
+    color:#334155;
+}
+.set-schedule-field-title {
+    display:block;
+    font-size:0.86rem;
+    font-weight:800;
+}
+.set-schedule-field-hint {
+    display:block;
+    margin-top:0.16rem;
+    font-size:0.73rem;
+    color:#94a3b8;
+    font-weight:700;
+}
+.set-schedule-field input[type="number"] {
+    height:52px;
+    font-size:1.02rem;
+    font-weight:800;
+    text-align:center;
+}
+.set-schedule-field select {
+    height:52px;
+    font-size:0.96rem;
+    font-weight:700;
+}
+.set-schedule-line-picker {
+    display:grid;
+    gap:0.55rem;
+    margin-top:0.15rem;
+    padding-top:0.9rem;
+    border-top:1px dashed #dbe3f0;
+}
+.set-schedule-line-controls {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:0.45rem;
+    align-items:center;
+}
+.set-schedule-line-add-btn {
+    min-height:52px;
+    padding:0.75rem 0.95rem;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg,#2563eb,#1d4ed8);
+    color:#fff;
+    font-size:0.84rem;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow:0 10px 20px rgba(37,99,235,0.22);
+}
+.set-schedule-line-add-btn:hover {
+    filter:brightness(1.05);
+}
+.set-schedule-line-selected {
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.45rem;
+    min-height:20px;
+}
+.set-schedule-line-chip {
+    display:flex;
+    align-items:center;
+    gap:0.4rem;
+    min-height:36px;
+    padding:0.4rem 0.68rem;
+    border:1px solid #dbe3f0;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-size:0.8rem;
+    font-weight:700;
+}
+.set-schedule-line-chip button {
+    border:none;
+    background:transparent;
+    color:inherit;
+    font-size:0.92rem;
+    font-weight:900;
+    cursor:pointer;
+    padding:0;
+    line-height:1;
+}
+.set-schedule-line-empty {
+    color:#94a3b8;
+    font-size:0.78rem;
+    font-weight:700;
+}
+.set-schedule-line-picker .req-muted {
+    margin-top:0;
+    font-size:0.72rem;
+}
+.set-schedule-line-section {
+    margin-top:0.1rem;
+}
+.set-schedule-priority-note {
+    margin-top:0.75rem;
+    padding-top:0.7rem;
+    border-top:1px dashed #dbe3f0;
+    color:#64748b;
+    font-size:0.8rem;
+    line-height:1.5;
+}
 .export-custom-box-list {
     display:grid;
     gap:0.65rem;
@@ -4072,6 +4343,53 @@ html[data-theme="dark"] .export-custom-box-wrap {
     background:linear-gradient(180deg,#152033 0%,#101827 100%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
 }
+html[data-theme="dark"] .set-schedule-item-card {
+    border-color:#314155;
+    background:linear-gradient(180deg,#172235 0%,#111b2a 100%);
+    box-shadow:0 12px 28px rgba(2,6,23,0.28);
+}
+html[data-theme="dark"] .set-schedule-total-card {
+    border-color:#314155;
+    background:linear-gradient(180deg,#172235 0%,#111b2a 100%);
+}
+html[data-theme="dark"] .set-schedule-item-title {
+    color:#eff6ff;
+}
+html[data-theme="dark"] .set-schedule-item-chip {
+    background:rgba(37,99,235,0.2);
+    color:#bfdbfe;
+}
+html[data-theme="dark"] .set-schedule-item-stock {
+    color:#8ea3bd;
+}
+html[data-theme="dark"] .set-schedule-field-label {
+    color:#dbeafe;
+}
+html[data-theme="dark"] .set-schedule-total-helper,
+html[data-theme="dark"] .set-schedule-field-hint,
+html[data-theme="dark"] .set-schedule-priority-note {
+    color:#8ea3bd;
+}
+html[data-theme="dark"] .set-schedule-line-chip {
+    border-color:#3a4c67;
+    background:rgba(37,99,235,0.18);
+    color:#dbeafe;
+}
+html[data-theme="dark"] .set-schedule-line-add-btn {
+    box-shadow:0 12px 22px rgba(29,78,216,0.3);
+}
+html[data-theme="dark"] .set-assemble-btn {
+    border-color:rgba(110,231,183,0.36) !important;
+    box-shadow:0 16px 28px rgba(13,148,136,0.34), 0 0 0 1px rgba(255,255,255,0.08) inset;
+}
+html[data-theme="dark"] .set-edit-btn {
+    border-color:rgba(96,165,250,0.4) !important;
+    box-shadow:0 16px 28px rgba(37,99,235,0.34), 0 0 0 1px rgba(255,255,255,0.08) inset;
+}
+html[data-theme="dark"] .set-delete-btn {
+    border-color:rgba(248,113,113,0.42) !important;
+    box-shadow:0 16px 28px rgba(185,28,28,0.36), 0 0 0 1px rgba(255,255,255,0.08) inset;
+}
 html[data-theme="dark"] .export-custom-box-helper,
 html[data-theme="dark"] .export-box-summary {
     color:#8ea3bd;
@@ -4092,6 +4410,43 @@ html[data-theme="dark"] .export-custom-box-remove-btn:hover {
     border-color:#065f46 !important;
 }
 @media (max-width: 768px) {
+    .set-schedule-items-head,
+    .set-schedule-item-main {
+        grid-template-columns:1fr;
+        display:grid;
+    }
+    .set-schedule-item-fields {
+        grid-template-columns:1fr;
+    }
+    .set-schedule-line-controls {
+        grid-template-columns:1fr;
+    }
+    .export-actions {
+        display:grid;
+        grid-template-columns:repeat(3, minmax(0,1fr));
+        gap:0.45rem;
+        width:100%;
+        align-items:stretch;
+    }
+    .export-actions form {
+        width:100%;
+    }
+    .export-actions .set-manage-btn,
+    .export-actions .export-delete-btn,
+    .export-actions > button {
+        width:100%;
+        justify-content:center;
+        padding:0.5rem 0.55rem !important;
+        min-height:42px !important;
+    }
+    .export-actions .btn-copy {
+        width:100%;
+        justify-content:center;
+    }
+    .export-actions .btn-title {
+        text-align:center;
+        font-size:0.8rem;
+    }
     .export-table {
         width:max-content;
         min-width:1120px;
@@ -4159,9 +4514,9 @@ html[data-theme="dark"] .view-toggle button{background:#152033;border-color:#2b3
 html[data-theme="dark"] .view-toggle button:hover{border-color:#60a5fa;color:#eff6ff;background:#1a2436;}
 html[data-theme="dark"] .view-toggle button.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 10px 22px rgba(37,99,235,.22);}
 html[data-theme="dark"] .calendar-header a,
-html[data-theme="dark"] .calendar-action-btn{background:#152033 !important;border:1px solid #2b3648 !important;color:#e5eefc !important;box-shadow:none !important;}
+html[data-theme="dark"] .calendar-action-btn:not(.set-manage-btn){background:#152033 !important;border:1px solid #2b3648 !important;color:#e5eefc !important;box-shadow:none !important;}
 html[data-theme="dark"] .calendar-header a:hover,
-html[data-theme="dark"] .calendar-action-btn:hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
+html[data-theme="dark"] .calendar-action-btn:not(.set-manage-btn):hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
 html[data-theme="dark"] .calendar-special-btn{
     background: linear-gradient(135deg, #38bdf8 0%, #2563eb 48%, #1d4ed8 100%) !important;
     color: #f8fbff !important;
@@ -4181,7 +4536,22 @@ html[data-theme="dark"] .calendar-special-btn .special-btn-icon{
 html[data-theme="dark"] .calendar-special-btn .special-btn-title{color:#f8fbff;}
 html[data-theme="dark"] .calendar-special-btn .special-btn-sub{color:rgba(239,246,255,.86);}
 html[data-theme="dark"] .export-tab-btn{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
-html[data-theme="dark"] .export-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;box-shadow:0 14px 28px rgba(37,99,235,0.2);}
+html[data-theme="dark"] .export-tab-btn{
+    background:
+        radial-gradient(circle at top, rgba(96,165,250,0.16), transparent 42%),
+        linear-gradient(180deg,#152033 0%,#101827 100%);
+    border-color:#35506f;
+    color:#dbe7f5;
+    box-shadow:0 12px 24px rgba(2,6,23,0.24), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+html[data-theme="dark"] .export-tab-btn.active{
+    background:
+        radial-gradient(circle at top, rgba(147,197,253,0.22), transparent 42%),
+        linear-gradient(135deg,#1d4ed8,#2563eb);
+    border-color:#60a5fa;
+    color:#fff;
+    box-shadow:0 18px 34px rgba(37,99,235,0.28), 0 0 0 4px rgba(96,165,250,0.1);
+}
 html[data-theme="dark"] .export-filter-head{
     border-color:#36506f;
     background:
@@ -4560,6 +4930,9 @@ html[data-theme="dark"] .schedule-date-picker-month,
 html[data-theme="dark"] .schedule-selected-product-name,
 html[data-theme="dark"] .schedule-selected-product-title {
     color: #eff6ff;
+}
+html[data-theme="dark"] .schedule-selected-product-meta {
+    color:#86efac;
 }
 html[data-theme="dark"] .schedule-add-form input[type="date"],
 html[data-theme="dark"] .schedule-add-form input[type="number"],
@@ -5125,7 +5498,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 <div class="schedule-toolbar">
     <div class="view-toggle">
         <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
-        <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
+        <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
+        <button data-view="set" onclick="switchView('set')">🎁 세트 일정표</button>
         <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
         <button data-view="capacity" onclick="switchView('capacity')">📦 생산 가능량 계산기</button>
         <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
@@ -5729,6 +6103,301 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <div id="exportCompletedCardEmpty" class="export-empty" style="display:none;">선택한 조건에 맞는 완료 일정이 없습니다.</div>
         </div>
     </div>
+ </div>
+
+{% macro render_set_table(rows, empty_message, item_class='') -%}
+    {% if rows %}
+    <div class="table-container">
+        <table class="export-table">
+            <thead>
+                <tr>
+                    <th>세트 완제품</th>
+                    <th>기간</th>
+                    <th>반제품 계획</th>
+                    <th>자동 생성 일정</th>
+                    <th>진행</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in rows %}
+                <tr class="{{ item_class }}"
+                    data-product-name="{{ item.finished_product_name or '' }}"
+                    data-component-names="{{ (item.component_names or []) | join(' ') }}"
+                    data-production-dates="{{ item.daily_actuals | map(attribute='date') | join(',') }}"
+                    {% if item.completed_date %}data-completed-date="{{ item.completed_date }}"{% endif %}>
+                    <td>
+                        <strong>{{ item.finished_product_name or '-' }}</strong>
+                        {% if item.finished_product_code %}
+                        <div class="req-muted" style="margin-top:.18rem;">{{ item.finished_product_code }}</div>
+                        {% endif %}
+                        {% if item.completed_date %}
+                        <div class="req-muted" style="margin-top:.18rem;">완료일 {{ item.completed_date }}</div>
+                        {% endif %}
+                        {% if item.note %}
+                        <div class="req-muted" style="margin-top:.2rem;">{{ item.note }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>{{ item.production_start_date or '-' }} ~ {{ item.production_end_date or '-' }}</div>
+                        {% if item.started_dates %}
+                        <div class="req-muted" style="margin-top:.18rem;">시작 일정 {{ item.started_dates[0] }}{% if item.started_dates|length > 1 %} 외 {{ item.started_dates|length - 1 }}일{% endif %}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% for component in item['items'] %}
+                        <div style="margin-bottom:.2rem;">{{ component.priority }}순위 {{ component.component_product_name }} {{ component.required_quantity }}</div>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <div>{{ item.generated_count }}건 생성</div>
+                        <div class="req-muted" style="margin-top:.18rem;">총 계획 {{ item.total_generated_qty }}</div>
+                    </td>
+                    <td>
+                        <div>{{ item.completed_count }} / {{ item.generated_count }} 완료</div>
+                        <div class="export-progress-track">
+                            {% set set_completion_rate = ((item.completed_count / item.generated_count) * 100) if item.generated_count else 0 %}
+                            <div class="export-progress-bar" style="width: {{ '%.0f'|format(set_completion_rate) }}%;"></div>
+                        </div>
+                        <div class="req-muted" style="margin-top:.18rem;">완료 수량 {{ item.completed_qty }}</div>
+                    </td>
+                    <td>
+                        <div class="export-actions">
+                            {% if can_prod %}
+                            <form method="POST" action="/schedules/set/assemble/{{ item.id }}" onsubmit="return confirm('완제품 조립 등록 하시겠습니까?');">
+                                <button type="submit" class="calendar-action-btn export-mini-btn set-manage-btn set-assemble-btn">
+                                    <span class="btn-copy">
+                                        <span class="btn-title">
+                                            {% if item.assembly_production_id %}
+                                                {% if item.assembly_status == '완료' %}조립 상세{% else %}완제품 조립{% endif %}
+                                            {% else %}
+                                                완제품 조립
+                                            {% endif %}
+                                        </span>
+                                    </span>
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if can_prod and item.started_count == 0 %}
+                            <button type="button" class="calendar-action-btn export-mini-btn set-manage-btn set-edit-btn" onclick="openSetModal({{ item.id }})">
+                                <span class="btn-copy">
+                                    <span class="btn-title">일정 수정</span>
+                                </span>
+                            </button>
+                            <form method="POST" action="/schedules/set/delete/{{ item.id }}" onsubmit="return confirm('이 세트 일정을 삭제하시겠습니까?');">
+                                <button type="submit" class="calendar-action-btn export-mini-btn set-manage-btn set-delete-btn">
+                                    <span class="btn-copy">
+                                        <span class="btn-title">일정 삭제</span>
+                                    </span>
+                                </button>
+                            </form>
+                            {% elif not can_prod %}
+                            <span class="req-muted">{% if item.is_completed %}완료{% else %}생산 시작됨{% endif %}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="export-empty">{{ empty_message }}</div>
+    {% endif %}
+{%- endmacro %}
+
+{% macro render_set_cards(rows, empty_message, item_class='') -%}
+    {% if rows %}
+        {% for item in rows %}
+        <div class="export-active-card {{ item_class }}"
+            data-product-name="{{ item.finished_product_name or '' }}"
+            data-component-names="{{ (item.component_names or []) | join(' ') }}"
+            data-production-dates="{{ item.daily_actuals | map(attribute='date') | join(',') }}"
+            {% if item.completed_date %}data-completed-date="{{ item.completed_date }}"{% endif %}>
+            <div class="export-active-head">
+                <div>
+                    <strong>{{ item.finished_product_name or '-' }}</strong>
+                    {% if item.finished_product_code %}
+                    <div class="req-muted" style="margin-top:.2rem;">{{ item.finished_product_code }}</div>
+                    {% endif %}
+                    <div class="req-muted">
+                        {{ item.production_start_date or '-' }} 시작 / 종료 {{ item.production_end_date or '-' }}
+                        {% if item.completed_date %} / 완료 {{ item.completed_date }}{% endif %}
+                    </div>
+                </div>
+                <div class="export-active-metrics">
+                    <span>반제품 {{ item['items']|length }}종</span>
+                    <span>생성 {{ item.generated_count }}건</span>
+                    <span>완료 {{ item.completed_count }}건</span>
+                    <span>완료 수량 {{ item.completed_qty }}</span>
+                </div>
+            </div>
+            <div class="export-active-grid">
+                <div class="export-active-pane">
+                    <h4>반제품 계획</h4>
+                    {% for component in item['items'] %}
+                    <div class="export-container-row">
+                        <div class="export-container-label">
+                            {{ component.priority }}순위 {{ component.component_product_name }}
+                            {% if component.component_product_code %}
+                            <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">{{ component.component_product_code }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="export-container-math">필요 {{ component.required_quantity }}</div>
+                        <div class="export-container-remaining">
+                            {% if component.line %}
+                                {% for line_num in component.line.split(',') %}
+                                <span class="line-badge">L{{ line_num.strip() }}</span>
+                                {% endfor %}
+                            {% else %}
+                            라인 사용 안함
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="export-active-pane">
+                    <h4>생산일자별 완료 수량</h4>
+                    {% if item.daily_actuals %}
+                        {% for daily in item.daily_actuals %}
+                        <div class="export-daily-row">
+                            <div>
+                                {% if daily.detail_url %}
+                                <a href="{{ daily.detail_url }}" class="export-daily-date-link">{{ daily.date }}</a>
+                                {% else %}
+                                <span>{{ daily.date }}</span>
+                                {% endif %}
+                            </div>
+                            <strong>{{ daily.actual_boxes }}</strong>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="req-muted">아직 완료된 생산 이력이 없습니다.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="export-empty">{{ empty_message }}</div>
+    {% endif %}
+{%- endmacro %}
+
+<div id="setView" class="card" style="display:none;">
+    <div class="export-topbar">
+        <div>
+            <h2 style="margin:0;">세트 일정표</h2>
+            <div class="req-muted">세트 완제품 기준으로 반제품 수량과 우선순위를 입력하면 작업일 기준으로 자동 생산 일정이 생성됩니다.</div>
+        </div>
+        {% if can_prod %}
+        <button type="button" class="req-refresh-btn" onclick="openSetModal()">+ 세트 일정 추가</button>
+        {% endif %}
+    </div>
+
+    <div class="export-summary-grid">
+        <div class="export-summary-card">
+            <div class="export-summary-label">등록 일정</div>
+            <div class="export-summary-value">{{ set_schedules|length }}</div>
+        </div>
+        <div class="export-summary-card">
+            <div class="export-summary-label">생산중 일정</div>
+            <div class="export-summary-value">{{ set_active_schedules|length }}</div>
+        </div>
+        <div class="export-summary-card">
+            <div class="export-summary-label">완료 일정</div>
+            <div class="export-summary-value">{{ set_completed_schedules|length }}</div>
+        </div>
+    </div>
+
+    <div class="export-tabs">
+        <button type="button" class="export-tab-btn active" data-set-tab="active" onclick="switchSetScheduleTab('active')">생산중</button>
+        <button type="button" class="export-tab-btn" data-set-tab="completed" onclick="switchSetScheduleTab('completed')">완료</button>
+    </div>
+
+    <div id="setTabActivePane">
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>등록된 세트 일정</h3>
+            </div>
+            {{ render_set_table(set_in_progress_schedules, '등록된 생산중 세트 일정이 없습니다.') }}
+        </div>
+
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>생산중 일정 리스트</h3>
+            </div>
+            {{ render_set_cards(set_active_schedules, '생산중인 세트 일정이 아직 없습니다.') }}
+        </div>
+    </div>
+
+    <div id="setTabCompletedPane" style="display:none;">
+        <div class="export-section">
+            <div class="export-section-head export-filter-head" id="setCompletedFilterHead" onclick="toggleSetCompletedSearchPanel()">
+                <h3>완료 일정 검색</h3>
+                <div class="export-filter-trigger">
+                    <div class="req-muted" id="setCompletedFilterSummary"></div>
+                    <button type="button" class="export-completed-filter-toggle" id="setCompletedFilterToggleBtn" onclick="event.stopPropagation(); toggleSetCompletedSearchPanel()">검색 열기</button>
+                    <span class="export-filter-arrow" aria-hidden="true">▼</span>
+                </div>
+            </div>
+            <div class="export-completed-filter-wrap" id="setCompletedFilterBody" style="display:none;">
+                <div class="schedule-date-picker export-completed-picker">
+                    <div class="schedule-date-picker-head">
+                        <button type="button" onclick="changeSetCompletedMonth(-1)" class="schedule-date-nav-btn">◀</button>
+                        <span id="setCompletedMonthLabel" class="schedule-date-picker-month"></span>
+                        <button type="button" onclick="changeSetCompletedMonth(1)" class="schedule-date-nav-btn">▶</button>
+                    </div>
+                    <div class="schedule-date-weekdays">
+                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                    </div>
+                    <div id="setCompletedDays" class="schedule-date-days"></div>
+                    <div class="schedule-date-picker-actions">
+                        <button type="button" class="calendar-action-btn" onclick="resetSetCompletedMonthFilter()">이번달 완료건</button>
+                        <button type="button" class="calendar-action-btn" onclick="clearSetCompletedDateFilter()">선택 해제</button>
+                    </div>
+                </div>
+                <div class="export-completed-search-panel">
+                    <div class="export-completed-search-grid">
+                        <div class="export-completed-search-field">
+                            <label for="setCompletedProductFilter">세트명</label>
+                            <input type="text" id="setCompletedProductFilter" placeholder="세트명 검색" oninput="applySetCompletedFilter()">
+                        </div>
+                        <div class="export-completed-search-field">
+                            <label for="setCompletedComponentFilter">반제품명</label>
+                            <input type="text" id="setCompletedComponentFilter" placeholder="반제품명 검색" oninput="applySetCompletedFilter()">
+                        </div>
+                        <div class="export-completed-search-field">
+                            <label for="setCompletedDateFilter">완료일</label>
+                            <input type="date" id="setCompletedDateFilter" onchange="handleSetCompletedDateInputChange()">
+                        </div>
+                        <div class="export-completed-search-field">
+                            <label for="setCompletedProductionDateFilter">생산일자</label>
+                            <input type="date" id="setCompletedProductionDateFilter" onchange="applySetCompletedFilter()">
+                        </div>
+                    </div>
+                    <div class="export-completed-search-actions">
+                        <button type="button" class="calendar-action-btn" onclick="clearSetCompletedSearchFilters()">검색 초기화</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>완료된 세트 일정</h3>
+            </div>
+            {{ render_set_table(set_completed_schedules, '완료된 세트 일정이 없습니다.', 'set-completed-table-row') }}
+            <div id="setCompletedTableEmpty" class="export-empty" style="display:none;">선택한 조건에 맞는 완료 일정이 없습니다.</div>
+        </div>
+
+        <div class="export-section">
+            <div class="export-section-head">
+                <h3>생산 완료 일정 리스트</h3>
+            </div>
+            {{ render_set_cards(set_completed_schedules, '완료된 세트 일정이 없습니다.', 'set-completed-card') }}
+            <div id="setCompletedCardEmpty" class="export-empty" style="display:none;">선택한 조건에 맞는 완료 일정이 없습니다.</div>
+        </div>
+    </div>
 </div>
 
 <!-- 생산 통계 뷰 -->
@@ -6177,13 +6846,13 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         <h2 id="exportModalTitle" style="margin-bottom: 1.5rem;">수출 일정 추가</h2>
 
         <form method="POST" action="/schedules/export/add" id="exportScheduleForm" class="schedule-add-form">
-            <input type="hidden" name="product_id" id="exportProductId" required>
+<input type="hidden" name="product_id" id="exportProductId" required>
 
             <div class="form-group">
-                <label>수출 제품 *</label>
+                <label>상품 선택 * (검색해서 선택하세요)</label>
                 <div class="search-box">
                     <input type="text" id="exportProductSearch"
-                           placeholder="🔍 수출 제품명 검색"
+                           placeholder="🔍 상품명 키워드로 검색 (예: 김, 100g, 코스트코...)"
                            autocomplete="off"
                            oninput="searchExportProducts()"
                            onfocus="showAllExportProducts()">
@@ -6193,8 +6862,9 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 <div id="exportSelectedProduct" class="schedule-selected-product">
                     <div class="schedule-selected-product-head">
                         <div>
-                            <strong class="schedule-selected-product-title">✓ 선택된 제품:</strong>
+                            <strong class="schedule-selected-product-title">✓ 선택된 상품:</strong>
                             <span id="exportSelectedProductName" class="schedule-selected-product-name"></span>
+                            <div id="exportSelectedProductMeta" class="schedule-selected-product-meta"></div>
                         </div>
                         <button type="button" onclick="clearExportSelection()" class="schedule-selected-product-cancel">취소</button>
                     </div>
@@ -6277,6 +6947,80 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     </div>
 </div>
 
+<div id="setModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeSetModal()">&times;</span>
+        <h2 id="setModalTitle" style="margin-bottom: 1.5rem;">세트 일정 추가</h2>
+
+        <form method="POST" action="/schedules/set/add" id="setScheduleForm" class="schedule-add-form">
+<div class="form-group">
+                <label>세트 완제품 * (검색해서 선택하세요)</label>
+                <input type="hidden" name="finished_product_id" id="setFinishedProductId" required>
+                <div class="search-box">
+                    <input type="text" id="setFinishedProductSearch"
+                           placeholder="🔍 세트 완제품명 키워드로 검색"
+                           autocomplete="off"
+                           oninput="searchSetFinishedProducts()"
+                           onfocus="showAllSetFinishedProducts()">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="product-list" id="setFinishedProductList" style="display:none;"></div>
+                <div id="setFinishedProductSelected" class="schedule-selected-product">
+                    <div class="schedule-selected-product-head">
+                        <div>
+                            <strong class="schedule-selected-product-title">✓ 선택된 상품:</strong>
+                            <span id="setFinishedProductSelectedName" class="schedule-selected-product-name"></span>
+                            <div id="setFinishedProductSelectedMeta" class="schedule-selected-product-meta"></div>
+                        </div>
+                        <button type="button" onclick="clearSetFinishedSelection()" class="schedule-selected-product-cancel">취소</button>
+                    </div>
+                </div>
+                <div class="req-muted" style="margin-top:.35rem;">등록된 세트 완제품의 BOM 반제품을 기본값으로 불러옵니다.</div>
+            </div>
+
+            <div class="export-form-grid">
+                <div class="form-group">
+                    <label>생산 시작일 *</label>
+                    <input type="date" name="production_start_date" id="setStartDateInput" required>
+                </div>
+                <div class="form-group">
+                    <label>생산 종료일 *</label>
+                    <input type="date" name="production_end_date" id="setEndDateInput" required>
+                </div>
+                <div class="form-group full">
+                    <label>반제품 수량 / 우선순위 *</label>
+                    <div id="setScheduleItemsWrap" class="export-custom-box-wrap">
+                        <div class="set-schedule-items-head">
+                            <div>
+                                <div class="req-muted">등록된 세트 완제품의 BOM 반제품을 바로 불러옵니다.</div>
+                                <div class="req-muted">숫자가 작을수록 먼저 배치되며, 수량은 반제품 재고 단위 기준입니다.</div>
+                            </div>
+                            <div class="set-schedule-total-grid">
+                                <div class="set-schedule-total-card">
+                                    <label for="setTotalQuantityInput">세트 총 수량</label>
+                                    <input type="number" id="setTotalQuantityInput" min="1" step="1" placeholder="예: 100" oninput="handleSetTotalQuantityChange()">
+                                    <div class="set-schedule-total-helper">입력한 총 수량 x BOM 기본 수량으로 각 반제품 필요 수량이 자동 입력됩니다.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="setScheduleItemsList" class="set-schedule-items-list"></div>
+                    </div>
+                    <div id="setScheduleItemsEmpty" class="req-muted" style="display:none;margin-top:.5rem;">선택한 세트 완제품에 연결된 반제품 BOM이 없습니다.</div>
+                </div>
+                <div class="form-group full">
+                    <label>비고</label>
+                    <textarea name="note" id="setNoteInput" rows="2" placeholder="세트 일정 메모"></textarea>
+                </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeSetModal()">취소</button>
+                <button type="submit" class="btn" id="setSubmitBtn">등록</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -6288,9 +7032,12 @@ const allProducts = {{ products_json|safe }};
 const allStatsProducts = {{ stats_products_json|safe }};
 const workDays = {{ work_days_json|safe }};
 const exportSchedules = {{ export_schedules_json|safe }};
+const setSchedules = {{ set_schedules_json|safe }};
+const setFinishedProducts = {{ set_finished_products_json|safe }};
 const CAN_MANAGE_SCHEDULE = {{ can_manage_schedule|tojson }};
 const SCHEDULE_ADMIN_PERMISSION_MESSAGE = '해당 작업에 대한 권한이 없습니다. 관리자에게 문의 부탁드립니다.';
 const exportCompletedSchedules = exportSchedules.filter((row) => Boolean(row.is_completed) && String(row.completed_date || '').trim());
+const setCompletedSchedules = setSchedules.filter((row) => Boolean(row.is_completed) && String(row.completed_date || '').trim());
 let exportUnitMode = 'container';
 let currentYear = {{ month_start.year }};
 let currentMonth = {{ month_start.month }};
@@ -6309,6 +7056,11 @@ let exportCompletedFilterYear = exportToday.getFullYear();
 let exportCompletedFilterMonth = exportToday.getMonth() + 1;
 let exportCompletedSelectedDate = '';
 let exportCompletedSearchOpen = false;
+let currentSetScheduleTab = 'active';
+let setCompletedFilterYear = exportToday.getFullYear();
+let setCompletedFilterMonth = exportToday.getMonth() + 1;
+let setCompletedSelectedDate = '';
+let setCompletedSearchOpen = false;
 let currentStatsDetailProductId = null;
 let currentStatsDetailProductName = '';
 let statsDetailRequestSeq = 0;
@@ -6332,6 +7084,7 @@ function getActiveView() {
     if (view === 'list' || view === 'stats') return 'stats';
     if (view === 'requirements') return 'requirements';
     if (view === 'export') return 'export';
+    if (view === 'set') return 'set';
     if (view === 'capacity') return 'capacity';
     return 'calendar';
 }
@@ -7149,6 +7902,194 @@ function applyExportCompletedFilter() {
     if (cardEmpty) cardEmpty.style.display = visibleCardCount > 0 ? 'none' : '';
 }
 
+function switchSetScheduleTab(tab) {
+    currentSetScheduleTab = tab === 'completed' ? 'completed' : 'active';
+    const activePane = document.getElementById('setTabActivePane');
+    const completedPane = document.getElementById('setTabCompletedPane');
+    if (activePane) activePane.style.display = currentSetScheduleTab === 'active' ? '' : 'none';
+    if (completedPane) completedPane.style.display = currentSetScheduleTab === 'completed' ? '' : 'none';
+    document.querySelectorAll('[data-set-tab]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.setTab === currentSetScheduleTab);
+    });
+    if (currentSetScheduleTab === 'completed') {
+        renderSetCompletedCalendar();
+        applySetCompletedFilter();
+    }
+}
+
+function toggleSetCompletedSearchPanel(forceOpen = null) {
+    setCompletedSearchOpen = typeof forceOpen === 'boolean' ? forceOpen : !setCompletedSearchOpen;
+    const body = document.getElementById('setCompletedFilterBody');
+    const btn = document.getElementById('setCompletedFilterToggleBtn');
+    const head = document.getElementById('setCompletedFilterHead');
+    if (body) body.style.display = setCompletedSearchOpen ? 'grid' : 'none';
+    if (btn) btn.textContent = setCompletedSearchOpen ? '검색 닫기' : '검색 열기';
+    if (head) head.classList.toggle('is-open', setCompletedSearchOpen);
+}
+
+function resetSetCompletedMonthFilter() {
+    setCompletedFilterYear = exportToday.getFullYear();
+    setCompletedFilterMonth = exportToday.getMonth() + 1;
+    setCompletedSelectedDate = '';
+    const completedInput = document.getElementById('setCompletedDateFilter');
+    if (completedInput) completedInput.value = '';
+    renderSetCompletedCalendar();
+    applySetCompletedFilter();
+}
+
+function clearSetCompletedDateFilter() {
+    setCompletedSelectedDate = '';
+    const completedInput = document.getElementById('setCompletedDateFilter');
+    if (completedInput) completedInput.value = '';
+    renderSetCompletedCalendar();
+    applySetCompletedFilter();
+}
+
+function clearSetCompletedSearchFilters() {
+    const productInput = document.getElementById('setCompletedProductFilter');
+    const componentInput = document.getElementById('setCompletedComponentFilter');
+    const completedInput = document.getElementById('setCompletedDateFilter');
+    const productionDateInput = document.getElementById('setCompletedProductionDateFilter');
+    if (productInput) productInput.value = '';
+    if (componentInput) componentInput.value = '';
+    if (productionDateInput) productionDateInput.value = '';
+    if (completedInput) completedInput.value = '';
+    resetSetCompletedMonthFilter();
+}
+
+function handleSetCompletedDateInputChange() {
+    const completedInput = document.getElementById('setCompletedDateFilter');
+    const value = String(completedInput?.value || '').trim();
+    if (value) {
+        const [year, month] = value.split('-');
+        if (year && month) {
+            setCompletedFilterYear = Number(year);
+            setCompletedFilterMonth = Number(month);
+        }
+        setCompletedSelectedDate = value;
+    } else {
+        setCompletedSelectedDate = '';
+    }
+    renderSetCompletedCalendar();
+    applySetCompletedFilter();
+}
+
+function changeSetCompletedMonth(delta) {
+    setCompletedFilterMonth += delta;
+    if (setCompletedFilterMonth < 1) {
+        setCompletedFilterMonth = 12;
+        setCompletedFilterYear -= 1;
+    } else if (setCompletedFilterMonth > 12) {
+        setCompletedFilterMonth = 1;
+        setCompletedFilterYear += 1;
+    }
+    setCompletedSelectedDate = '';
+    renderSetCompletedCalendar();
+    applySetCompletedFilter();
+}
+
+function renderSetCompletedCalendar() {
+    const monthLabel = document.getElementById('setCompletedMonthLabel');
+    const daysWrap = document.getElementById('setCompletedDays');
+    if (!monthLabel || !daysWrap) return;
+
+    monthLabel.textContent = `${setCompletedFilterYear}년 ${setCompletedFilterMonth}월`;
+    daysWrap.innerHTML = '';
+
+    const firstDay = new Date(setCompletedFilterYear, setCompletedFilterMonth - 1, 1);
+    const lastDay = new Date(setCompletedFilterYear, setCompletedFilterMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startWeekday = firstDay.getDay();
+    const monthPrefix = `${setCompletedFilterYear}-${String(setCompletedFilterMonth).padStart(2, '0')}`;
+    const dateCountMap = setCompletedSchedules.reduce((acc, row) => {
+        const completedDate = String(row.completed_date || '').trim();
+        if (completedDate.startsWith(monthPrefix)) {
+            acc[completedDate] = (acc[completedDate] || 0) + 1;
+        }
+        return acc;
+    }, {});
+
+    for (let i = 0; i < startWeekday; i += 1) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'schedule-date-empty';
+        daysWrap.appendChild(emptyDay);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+        const dayElement = document.createElement('div');
+        dayElement.className = 'schedule-date-cell';
+        dayElement.textContent = day;
+        if (setCompletedSelectedDate === dateStr) {
+            dayElement.classList.add('is-selected');
+        }
+        if (dateCountMap[dateStr]) {
+            dayElement.classList.add('has-items');
+            dayElement.title = `완료 일정 ${dateCountMap[dateStr]}건`;
+        }
+        dayElement.onclick = function() {
+            setCompletedSelectedDate = setCompletedSelectedDate === dateStr ? '' : dateStr;
+            renderSetCompletedCalendar();
+            applySetCompletedFilter();
+        };
+        daysWrap.appendChild(dayElement);
+    }
+}
+
+function applySetCompletedFilter() {
+    const productKeyword = String(document.getElementById('setCompletedProductFilter')?.value || '').trim().toLowerCase();
+    const componentKeyword = String(document.getElementById('setCompletedComponentFilter')?.value || '').trim().toLowerCase();
+    const completedDateInput = String(document.getElementById('setCompletedDateFilter')?.value || '').trim();
+    const productionDateInput = String(document.getElementById('setCompletedProductionDateFilter')?.value || '').trim();
+    const monthPrefix = `${setCompletedFilterYear}-${String(setCompletedFilterMonth).padStart(2, '0')}`;
+    const matchesFilter = (node) => {
+        const value = String(node.dataset.completedDate || '').trim();
+        if (!value.startsWith(monthPrefix)) return false;
+        if (setCompletedSelectedDate && value !== setCompletedSelectedDate) return false;
+        if (completedDateInput && value !== completedDateInput) return false;
+        if (productKeyword && !String(node.dataset.productName || '').toLowerCase().includes(productKeyword)) return false;
+        if (componentKeyword && !String(node.dataset.componentNames || '').toLowerCase().includes(componentKeyword)) return false;
+        if (productionDateInput) {
+            const productionDates = String(node.dataset.productionDates || '')
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean);
+            if (!productionDates.includes(productionDateInput)) return false;
+        }
+        return true;
+    };
+
+    let visibleTableCount = 0;
+    document.querySelectorAll('.set-completed-table-row').forEach((row) => {
+        const show = matchesFilter(row);
+        row.style.display = show ? '' : 'none';
+        if (show) visibleTableCount += 1;
+    });
+
+    let visibleCardCount = 0;
+    document.querySelectorAll('.set-completed-card').forEach((card) => {
+        const show = matchesFilter(card);
+        card.style.display = show ? '' : 'none';
+        if (show) visibleCardCount += 1;
+    });
+
+    const summary = document.getElementById('setCompletedFilterSummary');
+    if (summary) {
+        if (completedDateInput) {
+            summary.textContent = `${completedDateInput} 완료 일정 ${visibleCardCount}건`;
+        } else if (setCompletedSelectedDate) {
+            summary.textContent = `${setCompletedSelectedDate} 완료 일정 ${visibleCardCount}건`;
+        } else {
+            summary.textContent = `${monthPrefix} 완료 일정 ${visibleCardCount}건`;
+        }
+    }
+
+    const tableEmpty = document.getElementById('setCompletedTableEmpty');
+    if (tableEmpty) tableEmpty.style.display = visibleTableCount > 0 ? 'none' : '';
+    const cardEmpty = document.getElementById('setCompletedCardEmpty');
+    if (cardEmpty) cardEmpty.style.display = visibleCardCount > 0 ? 'none' : '';
+}
+
 function renderMobileScheduleList() {
     const mobileList = document.getElementById('mobileCalendarList');
     if (!mobileList) return;
@@ -7850,7 +8791,8 @@ function switchView(view) {
     const statsView = document.getElementById('statsView');
     const requirementsView = document.getElementById('requirementsView');
     const exportView = document.getElementById('exportView');
-    const capacityView = document.getElementById('capacityView');
+    const setView = document.getElementById('setView');
+    const capacityView = document.getElementById('capacityView');
     const buttons = document.querySelectorAll('.view-toggle button[data-view]');
     const normalizedView = view === 'list' ? 'stats' : view;
 
@@ -7860,7 +8802,8 @@ function switchView(view) {
     if (statsView) statsView.style.display = 'none';
     if (requirementsView) requirementsView.style.display = 'none';
     if (exportView) exportView.style.display = 'none';
-    if (capacityView) capacityView.style.display = 'none';
+    if (setView) setView.style.display = 'none';
+    if (capacityView) capacityView.style.display = 'none';
 
     if (normalizedView === 'calendar') {
         calendarView.style.display = 'block';
@@ -7871,10 +8814,404 @@ function switchView(view) {
         loadRequirementsData();
     } else if (normalizedView === 'export') {
         if (exportView) exportView.style.display = 'block';
+    } else if (normalizedView === 'set') {
+        if (setView) setView.style.display = 'block';
     } else if (normalizedView === 'capacity') {
         if (capacityView) capacityView.style.display = 'block';
     }
     setViewQuery(normalizedView);
+}
+
+function getSetFinishedProductById(productId) {
+    return setFinishedProducts.find((item) => Number(item.id) === Number(productId)) || null;
+}
+
+function renderSetFinishedProductList(products) {
+    const list = document.getElementById('setFinishedProductList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!products.length) {
+        list.innerHTML = '<div class="schedule-product-empty">검색 결과가 없습니다.</div>';
+        list.style.display = 'block';
+        return;
+    }
+    products.forEach((product) => {
+        const item = document.createElement('div');
+        item.className = 'product-item';
+        const codeText = String(product.code || '').trim();
+        item.innerHTML = `<strong>${escapeHtml(product.name || '')}</strong>${codeText ? ` <span class="schedule-product-id">(${escapeHtml(codeText)})</span>` : ''}`;
+        item.onclick = function() {
+            selectSetFinishedProduct(product.id);
+        };
+        list.appendChild(item);
+    });
+    list.style.display = 'block';
+}
+
+function showAllSetFinishedProducts() {
+    const searchInput = document.getElementById('setFinishedProductSearch');
+    if (searchInput && !searchInput.value.trim()) {
+        renderSetFinishedProductList(setFinishedProducts);
+    }
+}
+
+function searchSetFinishedProducts() {
+    const searchInput = document.getElementById('setFinishedProductSearch');
+    const keyword = String(searchInput ? searchInput.value : '').trim().toLowerCase();
+    if (!keyword) {
+        renderSetFinishedProductList(setFinishedProducts);
+        return;
+    }
+    renderSetFinishedProductList(
+        setFinishedProducts.filter((product) => {
+            const name = String(product.name || '').toLowerCase();
+            const code = String(product.code || '').toLowerCase();
+            return name.includes(keyword) || code.includes(keyword);
+        })
+    );
+}
+
+function syncSetFinishedProductSelectionCard() {
+    const productId = Number(document.getElementById('setFinishedProductId')?.value || 0);
+    const selectedWrap = document.getElementById('setFinishedProductSelected');
+    const selectedName = document.getElementById('setFinishedProductSelectedName');
+    const selectedMeta = document.getElementById('setFinishedProductSelectedMeta');
+    const product = getSetFinishedProductById(productId);
+    if (!selectedWrap || !selectedName || !selectedMeta) return;
+    if (!product) {
+        selectedName.textContent = '';
+        selectedMeta.textContent = '';
+        selectedWrap.style.display = 'none';
+        return;
+    }
+    selectedName.textContent = String(product.name || '').trim();
+    selectedMeta.textContent = String(product.code || '').trim()
+        ? `상품코드 ${String(product.code || '').trim()}`
+        : `상품 ID ${productId}`;
+    selectedWrap.style.display = 'block';
+}
+
+function selectSetFinishedProduct(productId) {
+    const product = getSetFinishedProductById(productId);
+    if (!product) return;
+    document.getElementById('setFinishedProductId').value = String(product.id || '');
+    document.getElementById('setFinishedProductSearch').value = '';
+    document.getElementById('setFinishedProductList').style.display = 'none';
+    syncSetFinishedProductSelectionCard();
+    handleSetFinishedProductChange();
+}
+
+function clearSetFinishedSelection() {
+    document.getElementById('setFinishedProductId').value = '';
+    document.getElementById('setFinishedProductSearch').value = '';
+    document.getElementById('setFinishedProductList').style.display = 'none';
+    syncSetFinishedProductSelectionCard();
+    handleSetFinishedProductChange();
+}
+
+function getSetTotalQuantityValue() {
+    const rawValue = Number(document.getElementById('setTotalQuantityInput')?.value || 0);
+    return Number.isFinite(rawValue) && rawValue > 0 ? Math.floor(rawValue) : 0;
+}
+
+function inferSetTotalQuantity(product, presetItems = []) {
+    const components = Array.isArray(product?.components) ? product.components : [];
+    if (!components.length || !Array.isArray(presetItems) || !presetItems.length) return '';
+    const presetMap = new Map((presetItems || []).map((item) => [Number(item.component_product_id), item]));
+    const inferredTotals = [];
+    for (const component of components) {
+        const preset = presetMap.get(Number(component.component_product_id));
+        const defaultQuantity = Number(component.default_quantity || 0);
+        const requiredQuantity = Number(preset?.required_quantity || 0);
+        if (!preset || defaultQuantity <= 0 || requiredQuantity <= 0) continue;
+        const ratio = requiredQuantity / defaultQuantity;
+        if (!Number.isFinite(ratio) || ratio <= 0 || !Number.isInteger(ratio)) return '';
+        inferredTotals.push(ratio);
+    }
+    if (!inferredTotals.length) return '';
+    return inferredTotals.every((value) => value === inferredTotals[0]) ? String(inferredTotals[0]) : '';
+}
+
+function applySetTotalQuantityToInputs() {
+    const totalQuantity = getSetTotalQuantityValue();
+    document.querySelectorAll('#setScheduleItemsList input[name="required_quantity[]"]').forEach((input) => {
+        const defaultQuantity = Number(input.dataset.defaultQuantity || 0);
+        if (!Number.isFinite(defaultQuantity) || defaultQuantity <= 0) return;
+        if (totalQuantity > 0) {
+            input.value = String(Math.max(1, Math.round(totalQuantity * defaultQuantity)));
+        } else if (!String(input.value || '').trim()) {
+            input.value = String(Math.max(1, Math.round(defaultQuantity)));
+        }
+    });
+}
+
+function handleSetTotalQuantityChange() {
+    applySetTotalQuantityToInputs();
+}
+
+function normalizeSetPriorityInputs(changedInput = null) {
+    const inputs = Array.from(document.querySelectorAll('#setScheduleItemsList input[name="priority[]"]'));
+    if (!inputs.length) return;
+    const maxPriority = inputs.length;
+    const targetInput = changedInput && inputs.includes(changedInput) ? changedInput : null;
+    const requestedPriority = targetInput
+        ? Math.min(maxPriority, Math.max(1, Math.floor(Number(targetInput.value || 1) || 1)))
+        : null;
+    const usedPriorities = new Set();
+
+    if (targetInput) {
+        targetInput.value = String(requestedPriority);
+        usedPriorities.add(requestedPriority);
+    }
+
+    let nextPriority = 1;
+    inputs.forEach((input) => {
+        if (input === targetInput) return;
+        while (usedPriorities.has(nextPriority) && nextPriority <= maxPriority) {
+            nextPriority += 1;
+        }
+        const assignedPriority = Math.min(maxPriority, Math.max(1, nextPriority));
+        input.value = String(assignedPriority);
+        usedPriorities.add(assignedPriority);
+        nextPriority = assignedPriority + 1;
+    });
+}
+
+function handleSetPriorityChange(input) {
+    normalizeSetPriorityInputs(input);
+}
+function buildSetScheduleLineOptions(selectedLine = '') {
+    const selectedValues = String(selectedLine || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter((value) => value);
+    const selectedSet = new Set(selectedValues);
+    let html = '';
+    for (let line = 1; line <= 12; line += 1) {
+        const value = String(line);
+        html += `
+            <label class="set-schedule-line-option">
+                <input type="checkbox" value="${value}" ${selectedSet.has(value) ? 'checked' : ''} onchange="syncSetScheduleLineSelection(this)">
+                <span>라인 ${value}</span>
+            </label>
+        `;
+    }
+    return html;
+}
+
+function syncSetScheduleLineSelection(input) {
+    const picker = input?.closest('.set-schedule-line-picker');
+    if (!picker) return;
+    const hidden = picker.querySelector('input[name="component_line[]"]');
+    if (!hidden) return;
+    const values = Array.from(picker.querySelectorAll('input[type="checkbox"]:checked'))
+        .map((checkbox) => String(checkbox.value || '').trim())
+        .filter((value) => value);
+    hidden.value = values.join(',');
+}
+
+function parseSetScheduleLineValues(rawValue = '') {
+    return String(rawValue || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter((value) => value);
+}
+
+function buildSetScheduleLineSelectOptions(selectedValues = []) {
+    const selectedSet = new Set((selectedValues || []).map((value) => String(value || '').trim()).filter((value) => value));
+    let html = '<option value="">라인 선택</option>';
+    for (let line = 1; line <= 12; line += 1) {
+        const value = String(line);
+        if (selectedSet.has(value)) continue;
+        html += `<option value="${value}">라인 ${value}</option>`;
+    }
+    return html;
+}
+
+function renderSetScheduleSelectedLines(picker) {
+    if (!picker) return;
+    const hidden = picker.querySelector('input[name="component_line[]"]');
+    if (!hidden) return;
+    const selectedWrap = picker.querySelector('.set-schedule-line-selected');
+    const select = picker.querySelector('.set-schedule-line-select');
+    const values = parseSetScheduleLineValues(hidden.value);
+    if (selectedWrap) {
+        if (!values.length) {
+            selectedWrap.innerHTML = '<span class="set-schedule-line-empty">선택된 라인이 없습니다.</span>';
+        } else {
+            selectedWrap.innerHTML = values.map((value) => `
+                <span class="set-schedule-line-chip">
+                    <span>라인 ${escapeHtml(value)}</span>
+                    <button type="button" onclick="removeSetScheduleLine(this, '${escapeHtml(value)}')">&times;</button>
+                </span>
+            `).join('');
+        }
+    }
+    if (select) {
+        select.innerHTML = buildSetScheduleLineSelectOptions(values);
+        select.value = '';
+    }
+}
+
+function addSetScheduleLine(button) {
+    const picker = button?.closest('.set-schedule-line-picker');
+    if (!picker) return;
+    const hidden = picker.querySelector('input[name="component_line[]"]');
+    const select = picker.querySelector('.set-schedule-line-select');
+    if (!hidden || !select) return;
+    const nextValue = String(select.value || '').trim();
+    if (!nextValue) return;
+    const values = parseSetScheduleLineValues(hidden.value);
+    if (!values.includes(nextValue)) {
+        values.push(nextValue);
+        hidden.value = values.join(',');
+    }
+    renderSetScheduleSelectedLines(picker);
+}
+
+function removeSetScheduleLine(button, lineValue) {
+    const picker = button?.closest('.set-schedule-line-picker');
+    if (!picker) return;
+    const hidden = picker.querySelector('input[name="component_line[]"]');
+    if (!hidden) return;
+    const targetValue = String(lineValue || '').trim();
+    hidden.value = parseSetScheduleLineValues(hidden.value)
+        .filter((value) => value !== targetValue)
+        .join(',');
+    renderSetScheduleSelectedLines(picker);
+}
+
+function initializeSetScheduleLinePickers(scope = document) {
+    (scope.querySelectorAll ? scope.querySelectorAll('.set-schedule-line-picker') : []).forEach((picker) => {
+        renderSetScheduleSelectedLines(picker);
+    });
+}
+
+function renderSetScheduleItems(productId, presetItems = []) {
+    const list = document.getElementById('setScheduleItemsList');
+    const empty = document.getElementById('setScheduleItemsEmpty');
+    const submitBtn = document.getElementById('setSubmitBtn');
+    if (!list) return;
+    const product = getSetFinishedProductById(productId);
+    const components = Array.isArray(product?.components) ? product.components : [];
+    const presetMap = new Map((presetItems || []).map((item) => [Number(item.component_product_id), item]));
+    const totalQuantityInput = document.getElementById('setTotalQuantityInput');
+    list.innerHTML = '';
+    if (!components.length) {
+        if (empty) empty.style.display = 'block';
+        if (submitBtn) submitBtn.disabled = true;
+        if (totalQuantityInput) totalQuantityInput.value = '';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    if (submitBtn) submitBtn.disabled = false;
+    if (totalQuantityInput && presetItems.length) {
+        totalQuantityInput.value = inferSetTotalQuantity(product, presetItems);
+    }
+    components.forEach((component, index) => {
+        const preset = presetMap.get(Number(component.component_product_id)) || {};
+        const quantityValue = Number(preset.required_quantity ?? component.default_quantity ?? 0);
+        const priorityValue = Number(preset.priority ?? (index + 1));
+        const lineValue = String(preset.line || '').trim();
+        const row = document.createElement('div');
+        row.className = 'set-schedule-item-card';
+        row.innerHTML = `
+            <input type="hidden" name="component_product_id[]" value="${Number(component.component_product_id)}">
+            <div class="set-schedule-item-main">
+                <div class="set-schedule-item-info">
+                    <p class="set-schedule-item-title">${escapeHtml(component.component_product_name || '')}</p>
+                    <div class="set-schedule-item-meta">
+                        <span class="set-schedule-item-chip">${escapeHtml(component.component_product_code || '')}</span>
+                        <span class="set-schedule-item-chip">기본 수량 ${formatQuantity(component.default_quantity || 0)}</span>
+                    </div>
+                    <div class="set-schedule-item-stock">현재 재고 ${formatQuantity(component.current_stock || 0)}</div>
+                    <div class="set-schedule-priority-note">우선순위 1이 가장 먼저 생산 캘린더에 배치됩니다.</div>
+                </div>
+                <div class="set-schedule-item-fields">
+                    <label class="set-schedule-field">
+                        <span class="set-schedule-field-label">
+                            <span class="set-schedule-field-title">필요 수량</span>
+                            <span class="set-schedule-field-hint">반제품 기준</span>
+                        </span>
+                        <input type="number" name="required_quantity[]" min="1" step="1" required value="${Math.max(1, quantityValue || 1)}" data-default-quantity="${Math.max(1, Number(component.default_quantity || 1))}">
+                    </label>
+                    <label class="set-schedule-field">
+                        <span class="set-schedule-field-label">
+                            <span class="set-schedule-field-title">우선순위</span>
+                            <span class="set-schedule-field-hint">작을수록 먼저</span>
+                        </span>
+                        <input type="number" name="priority[]" min="1" step="1" required value="${Math.max(1, priorityValue || 1)}" oninput="handleSetPriorityChange(this)" onchange="handleSetPriorityChange(this)">
+                    </label>
+                </div>
+                <div class="set-schedule-line-section">
+                    <span class="set-schedule-field-label">
+                        <span class="set-schedule-field-title">생산 라인</span>
+                        <span class="set-schedule-field-hint">자동 생성 일정에 반영</span>
+                    </span>
+                    <div class="set-schedule-line-picker">
+                        <input type="hidden" name="component_line[]" value="${escapeHtml(lineValue)}">
+                        <div class="set-schedule-line-controls">
+                            <select class="set-schedule-line-select">${buildSetScheduleLineSelectOptions(parseSetScheduleLineValues(lineValue))}</select>
+                            <button type="button" class="set-schedule-line-add-btn" onclick="addSetScheduleLine(this)">추가</button>
+                        </div>
+                        <div class="set-schedule-line-selected"></div>
+                        <div class="req-muted">여러 라인을 함께 선택할 수 있습니다. 선택하지 않으면 라인 사용 안함으로 등록됩니다.</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        list.appendChild(row);
+        initializeSetScheduleLinePickers(row);
+    });
+    applySetTotalQuantityToInputs();
+    normalizeSetPriorityInputs();
+}
+
+function handleSetFinishedProductChange() {
+    const productId = Number(document.getElementById('setFinishedProductId')?.value || 0);
+    syncSetFinishedProductSelectionCard();
+    renderSetScheduleItems(productId);
+}
+
+function resetSetModal() {
+    const form = document.getElementById('setScheduleForm');
+    if (form) {
+        form.reset();
+        form.action = '/schedules/set/add';
+    }
+    document.getElementById('setModalTitle').textContent = '세트 일정 추가';
+    document.getElementById('setSubmitBtn').textContent = '등록';
+    document.getElementById('setScheduleItemsList').innerHTML = '';
+    document.getElementById('setTotalQuantityInput').value = '';
+    document.getElementById('setScheduleItemsEmpty').style.display = 'none';
+    document.getElementById('setSubmitBtn').disabled = false;
+    document.getElementById('setFinishedProductSearch').value = '';
+    document.getElementById('setFinishedProductList').style.display = 'none';
+    syncSetFinishedProductSelectionCard();
+}
+
+function openSetModal(setScheduleId = null) {
+    resetSetModal();
+    if (setScheduleId != null) {
+        const target = setSchedules.find((row) => Number(row.id) === Number(setScheduleId));
+        if (!target) return;
+        document.getElementById('setModalTitle').textContent = '세트 일정 수정';
+        document.getElementById('setSubmitBtn').textContent = '수정';
+        document.getElementById('setScheduleForm').action = `/schedules/set/update/${setScheduleId}`;
+        document.getElementById('setFinishedProductId').value = String(target.finished_product_id || '');
+        document.getElementById('setStartDateInput').value = target.production_start_date || '';
+        document.getElementById('setEndDateInput').value = target.production_end_date || '';
+        document.getElementById('setNoteInput').value = target.note || '';
+        syncSetFinishedProductSelectionCard();
+        renderSetScheduleItems(target.finished_product_id, target.items || []);
+    }
+    document.getElementById('setModal').style.display = 'block';
+    syncModalOpenState();
+}
+
+function closeSetModal() {
+    document.getElementById('setModal').style.display = 'none';
+    syncModalOpenState();
 }
 
 function switchRequirementsTab(tab) {
@@ -9004,6 +10341,8 @@ document.getElementById('exportContainerCountInput').addEventListener('input', f
 document.addEventListener('DOMContentLoaded', function() {
     resetExportCompletedMonthFilter();
     switchExportScheduleTab('active');
+    resetSetCompletedMonthFilter();
+    switchSetScheduleTab('active');
     document.getElementById('specialNoteForm')?.addEventListener('submit', saveSpecialNote);
     document.getElementById('specialNoteSingleDate')?.addEventListener('change', updateSpecialNoteDateSummary);
     const activeView = getActiveView();
@@ -9018,6 +10357,7 @@ window.onclick = function(event) {
     const specialNoteModal = document.getElementById('specialNoteModal');
     const copyModal = document.getElementById('copyModal');
     const exportModal = document.getElementById('exportModal');
+    const setModal = document.getElementById('setModal');
     const statsDetailModal = document.getElementById('statsDetailModal');
     
     if (event.target == addModal) {
@@ -9031,6 +10371,9 @@ window.onclick = function(event) {
     }
     if (event.target == exportModal) {
         closeExportModal();
+    }
+    if (event.target == setModal) {
+        closeSetModal();
     }
     if (event.target == statsDetailModal) {
         closeStatsDetailModal();
@@ -9322,8 +10665,14 @@ function searchExportProducts() {
 }
 
 function selectExportProduct(id, name) {
+    const target = allProducts.find((product) => Number(product.id) === Number(id)) || null;
     document.getElementById('exportProductId').value = id;
     document.getElementById('exportSelectedProductName').textContent = name;
+    const meta = document.getElementById('exportSelectedProductMeta');
+    if (meta) {
+        const codeText = String(target?.code || '').trim();
+        meta.textContent = codeText ? `상품코드 ${codeText}` : `상품 ID ${id}`;
+    }
     document.getElementById('exportSelectedProduct').style.display = 'block';
     document.getElementById('exportProductList').style.display = 'none';
     document.getElementById('exportProductSearch').value = '';
@@ -9332,6 +10681,8 @@ function selectExportProduct(id, name) {
 function clearExportSelection() {
     document.getElementById('exportProductId').value = '';
     document.getElementById('exportSelectedProductName').textContent = '';
+    const meta = document.getElementById('exportSelectedProductMeta');
+    if (meta) meta.textContent = '';
     document.getElementById('exportSelectedProduct').style.display = 'none';
     document.getElementById('exportProductList').style.display = 'none';
     document.getElementById('exportProductSearch').value = '';
