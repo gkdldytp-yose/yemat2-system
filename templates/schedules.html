@@ -3883,6 +3883,96 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     color:#334155;
     font-size:0.92rem;
 }
+.set-component-progress {
+    min-width:118px;
+    color:#2563eb;
+    font-size:0.78rem;
+    font-weight:800;
+}
+.set-component-progress-track {
+    height:5px;
+    margin-top:0.28rem;
+    overflow:hidden;
+    border-radius:999px;
+    background:#dbeafe;
+}
+.set-component-progress-track span {
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,#38bdf8,#2563eb);
+}
+.set-remaining-quantity {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:72px;
+    padding:0.28rem 0.48rem;
+    border:1px solid rgba(22,163,74,0.28);
+    border-radius:999px;
+    background:rgba(240,253,244,0.9);
+    color:#15803d;
+    font-size:0.78rem;
+    font-weight:900;
+    white-space:nowrap;
+}
+.set-finished-progress {
+    margin:0 0 0.7rem;
+    padding:0.72rem 0.78rem;
+    border:1px solid rgba(22,163,74,0.22);
+    border-radius:10px;
+    background:linear-gradient(135deg,rgba(240,253,244,0.9),rgba(239,246,255,0.9));
+}
+.set-finished-progress-head {
+    display:flex;
+    justify-content:space-between;
+    gap:0.6rem;
+    color:#166534;
+    font-size:0.84rem;
+    font-weight:800;
+}
+.set-finished-progress-track {
+    height:7px;
+    margin-top:0.42rem;
+    overflow:hidden;
+    border-radius:999px;
+    background:#bbf7d0;
+}
+.set-finished-progress-track span {
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,#22c55e,#0f766e);
+}
+.set-daily-production-copy {
+    min-width:0;
+}
+.set-daily-product-name {
+    margin-top:0.16rem;
+    color:#0f172a;
+    font-size:0.8rem;
+    font-weight:800;
+}
+.set-daily-expiry {
+    margin-top:0.12rem;
+    color:#64748b;
+    font-size:0.74rem;
+    font-weight:700;
+}
+.set-daily-row-extra {display:none;}
+.set-daily-toggle-btn {
+    width:100%;
+    margin-top:.7rem;
+    padding:.52rem .7rem;
+    border:1px dashed #4f83bd;
+    border-radius:10px;
+    background:rgba(37,99,235,.08);
+    color:#2563eb;
+    font-size:.78rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.set-daily-toggle-btn:hover {background:rgba(37,99,235,.14);}
 .export-container-remaining,
 .export-daily-row strong {
     font-weight:800;
@@ -4296,6 +4386,31 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     font-size:0.8rem;
     line-height:1.5;
 }
+.set-component-stock-panel {
+    margin-top:1rem;
+    padding:.85rem .9rem;
+    border:1px solid #cbdcf5;
+    border-radius:14px;
+    background:linear-gradient(135deg,#f4f9ff 0%,#effcf6 100%);
+}
+.set-component-stock-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:.7rem;
+    margin-bottom:.65rem;
+}
+.set-component-stock-head h5 {margin:0;color:#0f3b68;font-size:.88rem;}
+.set-component-stock-head p {margin:.18rem 0 0;color:#52718f;font-size:.72rem;line-height:1.35;}
+.set-component-stock-head > span {white-space:nowrap;color:#18744c;font-size:.72rem;font-weight:800;}
+.set-component-stock-list {display:grid;gap:.45rem;}
+.set-component-stock-row {display:flex;justify-content:space-between;align-items:center;gap:.65rem;padding:.52rem .6rem;border-radius:10px;background:rgba(255,255,255,.78);}
+.set-component-stock-name {font-size:.78rem;font-weight:800;color:#213b58;min-width:0;}
+.set-component-stock-flow {display:flex;align-items:center;justify-content:flex-end;gap:.35rem;flex-wrap:wrap;font-size:.72rem;color:#54708c;}
+.set-component-stock-flow strong {color:#1e4e85;font-size:.78rem;}
+.set-component-stock-flow i {font-style:normal;color:#89a3bb;font-weight:800;}
+.set-component-stock-available {padding:.16rem .38rem;border-radius:999px;background:#d9f8e6;color:#087443;font-weight:800;}
+.set-component-stock-available strong {color:#087443;}
 .export-custom-box-list {
     display:grid;
     gap:0.65rem;
@@ -4370,6 +4485,16 @@ html[data-theme="dark"] .set-schedule-field-hint,
 html[data-theme="dark"] .set-schedule-priority-note {
     color:#8ea3bd;
 }
+html[data-theme="dark"] .set-component-stock-panel {border-color:#24516a;background:linear-gradient(135deg,rgba(13,56,78,.72),rgba(13,70,49,.52));}
+html[data-theme="dark"] .set-component-stock-head h5 {color:#dbeafe;}
+html[data-theme="dark"] .set-component-stock-head p,
+html[data-theme="dark"] .set-component-stock-flow {color:#9fb6cd;}
+html[data-theme="dark"] .set-component-stock-head > span {color:#86efac;}
+html[data-theme="dark"] .set-component-stock-row {background:rgba(11,25,40,.72);}
+html[data-theme="dark"] .set-component-stock-name {color:#e2e8f0;}
+html[data-theme="dark"] .set-component-stock-flow strong {color:#bfdbfe;}
+html[data-theme="dark"] .set-component-stock-available {background:rgba(22,163,74,.18);color:#86efac;}
+html[data-theme="dark"] .set-component-stock-available strong {color:#86efac;}
 html[data-theme="dark"] .set-schedule-line-chip {
     border-color:#3a4c67;
     background:rgba(37,99,235,0.18);
@@ -4378,6 +4503,15 @@ html[data-theme="dark"] .set-schedule-line-chip {
 html[data-theme="dark"] .set-schedule-line-add-btn {
     box-shadow:0 12px 22px rgba(29,78,216,0.3);
 }
+html[data-theme="dark"] .set-component-progress {color:#93c5fd;}
+html[data-theme="dark"] .set-component-progress-track {background:#223e69;}
+html[data-theme="dark"] .set-remaining-quantity {background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.34);color:#86efac;}
+html[data-theme="dark"] .set-finished-progress {background:linear-gradient(135deg,rgba(20,83,45,.28),rgba(30,58,138,.2));border-color:rgba(74,222,128,.26);}
+html[data-theme="dark"] .set-finished-progress-head {color:#bbf7d0;}
+html[data-theme="dark"] .set-finished-progress-track {background:#14532d;}
+html[data-theme="dark"] .set-daily-product-name {color:#dbeafe;}
+html[data-theme="dark"] .set-daily-expiry {color:#8ea3bd;}
+html[data-theme="dark"] .set-daily-toggle-btn {border-color:#3b82f6;background:rgba(37,99,235,.16);color:#bfdbfe;}
 html[data-theme="dark"] .set-assemble-btn {
     border-color:rgba(110,231,183,0.36) !important;
     box-shadow:0 16px 28px rgba(13,148,136,0.34), 0 0 0 1px rgba(255,255,255,0.08) inset;
@@ -4517,13 +4651,13 @@ html[data-theme="dark"] .calendar-header a,
 html[data-theme="dark"] .calendar-action-btn:not(.set-manage-btn){background:#152033 !important;border:1px solid #2b3648 !important;color:#e5eefc !important;box-shadow:none !important;}
 html[data-theme="dark"] .calendar-header a:hover,
 html[data-theme="dark"] .calendar-action-btn:not(.set-manage-btn):hover{background:#1a2436 !important;border-color:#60a5fa !important;color:#eff6ff !important;}
-html[data-theme="dark"] .calendar-special-btn{
+html[data-theme="dark"] .calendar-action-btn.calendar-special-btn{
     background: linear-gradient(135deg, #38bdf8 0%, #2563eb 48%, #1d4ed8 100%) !important;
     color: #f8fbff !important;
     border: 1px solid rgba(125, 211, 252, 0.72) !important;
     box-shadow: 0 16px 36px rgba(37, 99, 235, 0.3), 0 0 0 1px rgba(255,255,255,0.16) inset !important;
 }
-html[data-theme="dark"] .calendar-special-btn:hover{
+html[data-theme="dark"] .calendar-action-btn.calendar-special-btn:hover{
     background: linear-gradient(135deg, #4cc9ff 0%, #2f7df6 48%, #2457d6 100%) !important;
     color: #f8fbff !important;
     border-color: rgba(147, 197, 253, 0.9) !important;
@@ -6146,12 +6280,12 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     </td>
                     <td>
                         {% for component in item['items'] %}
-                        <div style="margin-bottom:.2rem;">{{ component.priority }}순위 {{ component.component_product_name }} {{ component.required_quantity }}</div>
+                        <div style="margin-bottom:.2rem;">{{ component.component_product_name }} {{ export_box(component.required_quantity) }}</div>
                         {% endfor %}
                     </td>
                     <td>
                         <div>{{ item.generated_count }}건 생성</div>
-                        <div class="req-muted" style="margin-top:.18rem;">총 계획 {{ item.total_generated_qty }}</div>
+                        <div class="req-muted" style="margin-top:.18rem;">총 계획 {{ export_box(item.total_generated_qty) }}</div>
                     </td>
                     <td>
                         <div>{{ item.completed_count }} / {{ item.generated_count }} 완료</div>
@@ -6159,7 +6293,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             {% set set_completion_rate = ((item.completed_count / item.generated_count) * 100) if item.generated_count else 0 %}
                             <div class="export-progress-bar" style="width: {{ '%.0f'|format(set_completion_rate) }}%;"></div>
                         </div>
-                        <div class="req-muted" style="margin-top:.18rem;">완료 수량 {{ item.completed_qty }}</div>
+                        <div class="req-muted" style="margin-top:.18rem;">완료 수량 {{ export_box(item.completed_qty) }}</div>
                     </td>
                     <td>
                         <div class="export-actions">
@@ -6169,7 +6303,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                     <span class="btn-copy">
                                         <span class="btn-title">
                                             {% if item.assembly_production_id %}
-                                                {% if item.assembly_status == '완료' %}조립 상세{% else %}완제품 조립{% endif %}
+                                                {% if item.assembly_status == '완료' %}추가 조립{% else %}완제품 조립{% endif %}
                                             {% else %}
                                                 완제품 조립
                                             {% endif %}
@@ -6178,13 +6312,14 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                 </button>
                             </form>
                             {% endif %}
-                            {% if can_prod and item.started_count == 0 %}
+                            {% if can_prod %}
                             <button type="button" class="calendar-action-btn export-mini-btn set-manage-btn set-edit-btn" onclick="openSetModal({{ item.id }})">
                                 <span class="btn-copy">
                                     <span class="btn-title">일정 수정</span>
                                 </span>
                             </button>
-                            <form method="POST" action="/schedules/set/delete/{{ item.id }}" onsubmit="return confirm('이 세트 일정을 삭제하시겠습니까?');">
+                            <form method="POST" action="/schedules/set/delete/{{ item.id }}" onsubmit="return confirmSetScheduleDelete(this, {{ item.id }});">
+                                <input type="hidden" name="owner_password" value="">
                                 <button type="submit" class="calendar-action-btn export-mini-btn set-manage-btn set-delete-btn">
                                     <span class="btn-copy">
                                         <span class="btn-title">일정 삭제</span>
@@ -6229,7 +6364,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     <span>반제품 {{ item['items']|length }}종</span>
                     <span>생성 {{ item.generated_count }}건</span>
                     <span>완료 {{ item.completed_count }}건</span>
-                    <span>완료 수량 {{ item.completed_qty }}</span>
+                    <span>완료 수량 {{ export_box(item.completed_qty) }}</span>
                 </div>
             </div>
             <div class="export-active-grid">
@@ -6238,39 +6373,81 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% for component in item['items'] %}
                     <div class="export-container-row">
                         <div class="export-container-label">
-                            {{ component.priority }}순위 {{ component.component_product_name }}
+                            {{ component.component_product_name }}
                             {% if component.component_product_code %}
                             <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">{{ component.component_product_code }}</div>
                             {% endif %}
                         </div>
-                        <div class="export-container-math">필요 {{ component.required_quantity }}</div>
+                        <div class="export-container-math">필요 {{ export_box(component.required_quantity) }}</div>
+                        <div class="set-component-progress">
+                            완료 {{ export_box(component.completed_quantity) }} / 계획 {{ export_box(component.required_quantity) }}
+                            <div class="set-component-progress-track">
+                                <span style="width: {{ ((component.completed_quantity / component.required_quantity) * 100) if component.required_quantity else 0 }}%;"></span>
+                            </div>
+                        </div>
                         <div class="export-container-remaining">
-                            {% if component.line %}
-                                {% for line_num in component.line.split(',') %}
-                                <span class="line-badge">L{{ line_num.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                            라인 사용 안함
-                            {% endif %}
+                            <span class="set-remaining-quantity">생산 잔량 {{ export_box(component.remaining_quantity) }}</span>
                         </div>
                     </div>
                     {% endfor %}
+                    <div class="set-component-stock-panel">
+                        <div class="set-component-stock-head">
+                            <div>
+                                <h5>반제품 재고 현황</h5>
+                                <p>이 세트 일정에서 생산 완료된 반제품과 완제품 조립 사용량 기준</p>
+                            </div>
+                            <span>생산 → 조립 → 잔량</span>
+                        </div>
+                        <div class="set-component-stock-list">
+                            {% for component in item['items'] %}
+                            <div class="set-component-stock-row">
+                                <div class="set-component-stock-name">{{ component.component_product_name }}</div>
+                                <div class="set-component-stock-flow">
+                                    <span>생산 <strong>{{ export_box(component.completed_quantity) }}</strong></span>
+                                    <i>−</i>
+                                    <span>조립 사용 <strong>{{ export_box(component.assembly_used_quantity) }}</strong></span>
+                                    <i>=</i>
+                                    <span class="set-component-stock-available">재고 <strong>{{ export_box(component.available_stock_quantity) }}</strong></span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
                 <div class="export-active-pane">
                     <h4>생산일자별 완료 수량</h4>
+                    <div class="set-finished-progress">
+                        <div class="set-finished-progress-head">
+                            <span>완제품 조립 진행</span>
+                            <strong>{{ export_box(item.assembly_completed_qty) }} / {{ export_box(item.assembly_target_qty) }}</strong>
+                        </div>
+                        <div class="set-finished-progress-track">
+                            <span style="width: {{ ((item.assembly_completed_qty / item.assembly_target_qty) * 100) if item.assembly_target_qty else 0 }}%;"></span>
+                        </div>
+                        <div class="req-muted" style="margin-top:.42rem;">조립 {{ item.assembly_count }}회{% if item.assembly_in_progress_id %} · 진행 중 조립 있음{% endif %}</div>
+                    </div>
                     {% if item.daily_actuals %}
+                        <div id="setDailyActuals{{ item.id }}" class="set-daily-actuals">
                         {% for daily in item.daily_actuals %}
-                        <div class="export-daily-row">
-                            <div>
+                        <div class="export-daily-row{% if loop.revindex > 5 %} set-daily-row-extra{% endif %}">
+                            <div class="set-daily-production-copy">
                                 {% if daily.detail_url %}
                                 <a href="{{ daily.detail_url }}" class="export-daily-date-link">{{ daily.date }}</a>
                                 {% else %}
                                 <span>{{ daily.date }}</span>
                                 {% endif %}
+                                <div class="set-daily-product-name">{{ daily.product_name or '-' }}</div>
+                                <div class="set-daily-expiry">소비기한 {{ daily.expiry_date or '미입력' }}</div>
                             </div>
-                            <strong>{{ daily.actual_boxes }}</strong>
+                            <strong>{{ export_box(daily.actual_boxes) }} BOX</strong>
                         </div>
                         {% endfor %}
+                        </div>
+                        {% if item.daily_actuals|length > 5 %}
+                        <button type="button" class="set-daily-toggle-btn" data-expanded="false" onclick="toggleSetDailyActuals({{ item.id }}, this)">
+                            최근 5일만 표시 중 · {{ item.daily_actuals|length - 5 }}일 더 보기
+                        </button>
+                        {% endif %}
                     {% else %}
                     <div class="req-muted">아직 완료된 생산 이력이 없습니다.</div>
                     {% endif %}
@@ -7018,6 +7195,22 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 <button type="submit" class="btn" id="setSubmitBtn">등록</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="setDeletePasswordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="setDeletePasswordTitle">
+    <div class="modal-content" style="max-width:420px;">
+        <span class="close" onclick="closeSetDeletePasswordModal()">&times;</span>
+        <h2 id="setDeletePasswordTitle">세트 일정 삭제 확인</h2>
+        <p class="req-muted" style="margin:0 0 1rem;">등록한 사용자의 비밀번호가 일치할 때만 세트 일정을 삭제할 수 있습니다.</p>
+        <div class="form-group">
+            <label for="setDeletePasswordInput">비밀번호</label>
+            <input id="setDeletePasswordInput" type="password" autocomplete="current-password" placeholder="비밀번호 입력" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); submitSetScheduleDelete(); }">
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:.55rem;margin-top:1.25rem;">
+            <button type="button" class="btn btn-secondary" onclick="closeSetDeletePasswordModal()">취소</button>
+            <button type="button" class="btn" onclick="submitSetScheduleDelete()">삭제</button>
+        </div>
     </div>
 </div>
 
@@ -7900,6 +8093,20 @@ function applyExportCompletedFilter() {
     if (tableEmpty) tableEmpty.style.display = visibleTableCount > 0 ? 'none' : '';
     const cardEmpty = document.getElementById('exportCompletedCardEmpty');
     if (cardEmpty) cardEmpty.style.display = visibleCardCount > 0 ? 'none' : '';
+}
+
+function toggleSetDailyActuals(setScheduleId, button) {
+    const container = document.getElementById(`setDailyActuals${setScheduleId}`);
+    if (!container || !button) return;
+    const extraRows = Array.from(container.querySelectorAll('.set-daily-row-extra'));
+    const isExpanded = button.dataset.expanded === 'true';
+    extraRows.forEach((row) => {
+        row.style.display = isExpanded ? 'none' : 'flex';
+    });
+    button.dataset.expanded = String(!isExpanded);
+    button.textContent = isExpanded
+        ? `최근 5일만 표시 중 · ${extraRows.length}일 더 보기`
+        : '최근 5일만 보기';
 }
 
 function switchSetScheduleTab(tab) {
@@ -9195,6 +9402,10 @@ function openSetModal(setScheduleId = null) {
     if (setScheduleId != null) {
         const target = setSchedules.find((row) => Number(row.id) === Number(setScheduleId));
         if (!target) return;
+        if (!target.is_owner) {
+            alert('세트 일정은 등록한 사용자만 수정 및 삭제할 수 있습니다.');
+            return;
+        }
         document.getElementById('setModalTitle').textContent = '세트 일정 수정';
         document.getElementById('setSubmitBtn').textContent = '수정';
         document.getElementById('setScheduleForm').action = `/schedules/set/update/${setScheduleId}`;
@@ -9207,6 +9418,43 @@ function openSetModal(setScheduleId = null) {
     }
     document.getElementById('setModal').style.display = 'block';
     syncModalOpenState();
+}
+
+function confirmSetScheduleDelete(form, setScheduleId) {
+    const target = setSchedules.find((row) => Number(row.id) === Number(setScheduleId));
+    if (!target || !target.is_owner) {
+        alert('세트 일정은 등록한 사용자만 수정 및 삭제할 수 있습니다.');
+        return false;
+    }
+    window.pendingSetDeleteForm = form;
+    const passwordInput = document.getElementById('setDeletePasswordInput');
+    if (passwordInput) passwordInput.value = '';
+    document.getElementById('setDeletePasswordModal').style.display = 'block';
+    syncModalOpenState();
+    window.setTimeout(() => passwordInput?.focus(), 0);
+    return false;
+}
+
+function closeSetDeletePasswordModal() {
+    window.pendingSetDeleteForm = null;
+    const modal = document.getElementById('setDeletePasswordModal');
+    if (modal) modal.style.display = 'none';
+    syncModalOpenState();
+}
+
+function submitSetScheduleDelete() {
+    const form = window.pendingSetDeleteForm;
+    const passwordInput = document.getElementById('setDeletePasswordInput');
+    const password = String(passwordInput?.value || '');
+    if (!form || !password.trim()) {
+        alert('비밀번호를 입력해주세요.');
+        passwordInput?.focus();
+        return;
+    }
+    if (!window.confirm('입력한 비밀번호로 세트 일정을 삭제하시겠습니까?')) return;
+    const hiddenInput = form.querySelector('input[name="owner_password"]');
+    if (hiddenInput) hiddenInput.value = password;
+    form.submit();
 }
 
 function closeSetModal() {

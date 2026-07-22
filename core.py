@@ -953,6 +953,7 @@ def _ensure_production_schema(conn):
                 finished_product_id INTEGER NOT NULL,
                 production_start_date TEXT NOT NULL,
                 production_end_date TEXT NOT NULL,
+                excluded_dates TEXT NOT NULL DEFAULT '',
                 note TEXT,
                 created_by TEXT,
                 updated_by TEXT,
@@ -1032,6 +1033,8 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE set_schedules ADD COLUMN production_start_date TEXT NOT NULL DEFAULT ''")
         if 'production_end_date' not in set_schedule_cols:
             conn.execute("ALTER TABLE set_schedules ADD COLUMN production_end_date TEXT NOT NULL DEFAULT ''")
+        if 'excluded_dates' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN excluded_dates TEXT NOT NULL DEFAULT ''")
         if 'note' not in set_schedule_cols:
             conn.execute("ALTER TABLE set_schedules ADD COLUMN note TEXT")
         if 'created_by' not in set_schedule_cols:
@@ -1218,6 +1221,28 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_manufacture_date TEXT")
         if 'override_car_number' not in usage_cols:
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_car_number TEXT")
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS production_component_lot_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                production_usage_id INTEGER NOT NULL,
+                component_production_id INTEGER,
+                component_product_id INTEGER NOT NULL,
+                receiving_date TEXT,
+                expiry_date TEXT,
+                quantity REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (production_usage_id) REFERENCES production_material_usage(id),
+                FOREIGN KEY (component_production_id) REFERENCES productions(id)
+            )
+            '''
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_pclu_usage_id ON production_component_lot_usage(production_usage_id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_pclu_component_output ON production_component_lot_usage(component_production_id, expiry_date)"
+        )
     except Exception:
         pass
     _production_schema_checked = True
