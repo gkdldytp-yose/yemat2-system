@@ -30,6 +30,7 @@ from core import (
     SHARED_MATERIAL_CATEGORIES,
     today_local,
     now_local,
+    verify_password,
 )
 
 bp = Blueprint('production', __name__)
@@ -529,6 +530,8 @@ def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days
                     label = str(schedule.get('export_container_label') or '').strip()
                     badge_text = f'수출 {label}' if label else '수출'
                     html_parts.append(f'<span class="done-badge" style="background:#dbeafe;color:#1d4ed8;">{escape(badge_text)}</span>')
+                elif str(schedule.get('source') or '') == 'set_assembly':
+                    html_parts.append('<span class="done-badge" style="background:#dcfce7;color:#166534;">세트 조립</span>')
                 if is_completed:
                     html_parts.append('<span class="done-badge">완료</span>')
                 html_parts.append('<div class="schedule-info">')
@@ -614,6 +617,8 @@ def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_d
                 label = str(schedule.get('export_container_label') or '').strip()
                 badge_text = f'수출 {label}' if label else '수출'
                 html_parts.append(f'<div class="req-muted" style="margin-top:0.2rem;color:#1d4ed8;font-weight:700;">{escape(badge_text)}</div>')
+            elif str(schedule.get('source') or '') == 'set_assembly':
+                html_parts.append('<div class="req-muted" style="margin-top:0.2rem;color:#15803d;font-weight:700;">세트 조립</div>')
             html_parts.append('</div>')
             html_parts.append(f'<span class="mobile-status-badge {status_class}">{status_text}</span>')
             html_parts.append('</div><div class="mobile-schedule-meta">')
@@ -743,6 +748,14 @@ def _parse_export_excluded_dates(raw_value):
 
 def _serialize_export_excluded_dates(raw_dates):
     return ','.join(_parse_export_excluded_dates(','.join(str(item or '').strip() for item in (raw_dates or []))))
+
+
+def _parse_set_excluded_dates(raw_value):
+    return _parse_export_excluded_dates(raw_value)
+
+
+def _serialize_set_excluded_dates(raw_dates):
+    return _serialize_export_excluded_dates(raw_dates)
 
 
 def _ensure_auto_work_days_for_range(conn, cursor, start_date, end_date):
@@ -934,6 +947,7 @@ def _load_set_schedule_items(cursor, set_schedule_id):
 
 def _replace_set_schedule_items(cursor, set_schedule_id, items):
     cursor.execute('DELETE FROM set_schedule_items WHERE set_schedule_id = ?', (set_schedule_id,))
+    saved_items = []
     for item in items:
         cursor.execute(
             '''
@@ -947,6 +961,38 @@ def _replace_set_schedule_items(cursor, set_schedule_id, items):
                 int(item.get('priority') or 0),
                 str(item.get('line') or '').strip(),
             ),
+        )
+        saved_items.append({**item, 'id': int(cursor.lastrowid or 0)})
+    return saved_items
+
+
+def _rebind_started_set_schedule_items(cursor, set_schedule_id, items):
+    item_id_by_product = {
+        int(item.get('component_product_id') or 0): int(item.get('id') or 0)
+        for item in items
+        if int(item.get('component_product_id') or 0) > 0 and int(item.get('id') or 0) > 0
+    }
+    rows = cursor.execute(
+        '''
+        SELECT ps.id, ps.product_id, ps.planned_boxes, pr.status AS production_status, ps.status AS schedule_status
+        FROM production_schedules ps
+        LEFT JOIN productions pr ON pr.id = ps.production_id
+        WHERE ps.set_schedule_id = ?
+          AND COALESCE(ps.schedule_source, '') = 'set'
+        ''',
+        (int(set_schedule_id or 0),),
+    ).fetchall()
+    for row in rows:
+        row_dict = dict(row)
+        if not _is_started_set_row(row_dict):
+            continue
+        component_product_id = int(row_dict.get('product_id') or 0)
+        replacement_item_id = int(item_id_by_product.get(component_product_id) or 0)
+        if replacement_item_id <= 0:
+            raise ValueError('생산이 시작된 반제품은 일정에서 제거하거나 다른 반제품으로 변경할 수 없습니다.')
+        cursor.execute(
+            'UPDATE production_schedules SET set_schedule_item_id = ? WHERE id = ?',
+            (replacement_item_id, int(row_dict['id'])),
         )
 
 
@@ -1040,17 +1086,69 @@ def _load_set_assembly_production(cursor, set_schedule_id, finished_product_id=0
     return dict(row) if row else None
 
 
+def _load_set_assembly_productions(cursor, set_schedule_id, finished_product_id=0):
+    params = [int(set_schedule_id or 0)]
+    product_filter = ''
+    if int(finished_product_id or 0) > 0:
+        product_filter = ' AND pr.product_id = ?'
+        params.append(int(finished_product_id))
+    rows = cursor.execute(
+        f'''
+        SELECT
+            pr.id,
+            pr.product_id,
+            pr.production_date,
+            pr.planned_boxes,
+            pr.actual_boxes,
+            pr.status,
+            pr.schedule_id,
+            COALESCE(ps.schedule_source, '') AS schedule_source,
+            COALESCE(ps.line_usage_disabled, pr.line_usage_disabled, 0) AS line_usage_disabled
+        FROM productions pr
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        WHERE COALESCE(pr.set_schedule_id, 0) = ?
+          AND COALESCE(pr.set_schedule_item_id, 0) = 0
+          AND COALESCE(ps.schedule_source, '') = 'set_assembly'
+          {product_filter}
+        ORDER BY pr.production_date, pr.id
+        ''',
+        params,
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _calculate_set_assembly_available_quantity(cursor, finished_product_id, component_stock_map):
+    bom_rows = cursor.execute(
+        '''
+        SELECT component_product_id, quantity_per_box
+        FROM bom
+        WHERE product_id = ?
+          AND component_product_id IS NOT NULL
+          AND COALESCE(quantity_per_box, 0) > 0
+        ''',
+        (int(finished_product_id or 0),),
+    ).fetchall()
+    quantities = []
+    for row in bom_rows:
+        component_product_id = int(row['component_product_id'] or 0)
+        per_box = float(row['quantity_per_box'] or 0)
+        if component_product_id <= 0 or per_box <= 0:
+            continue
+        quantities.append(float(component_stock_map.get(component_product_id, 0) or 0) / per_box)
+    return max(int(min(quantities)), 0) if quantities else 0
+
+
 def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id):
     produced_rows = cursor.execute(
         '''
         SELECT
             pr.product_id AS component_product_id,
-            SUM(COALESCE(pr.actual_boxes, pr.planned_boxes, 0)) AS produced_qty
+            pr.actual_boxes,
+            pr.planned_boxes,
+            pr.status
         FROM productions pr
         WHERE COALESCE(pr.set_schedule_id, 0) = ?
           AND COALESCE(pr.set_schedule_item_id, 0) > 0
-          AND COALESCE(pr.status, '') = '완료'
-        GROUP BY pr.product_id
         ''',
         (int(set_schedule_id or 0),),
     ).fetchall()
@@ -1058,7 +1156,8 @@ def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id):
         '''
         SELECT
             pmu.component_product_id,
-            SUM(COALESCE(pmu.actual_quantity, 0)) AS consumed_qty
+            pmu.actual_quantity,
+            pr.status
         FROM production_material_usage pmu
         JOIN productions pr ON pr.id = pmu.production_id
         LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
@@ -1066,25 +1165,53 @@ def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id):
           AND pmu.component_product_id IS NOT NULL
           AND COALESCE(pr.set_schedule_item_id, 0) = 0
           AND COALESCE(ps.schedule_source, '') = 'set_assembly'
-        GROUP BY pmu.component_product_id
         ''',
         (int(set_schedule_id or 0),),
     ).fetchall()
-    produced_map = {
-        int(row['component_product_id'] or 0): float(row['produced_qty'] or 0)
-        for row in produced_rows
-        if int(row['component_product_id'] or 0) > 0
-    }
-    consumed_map = {
-        int(row['component_product_id'] or 0): float(row['consumed_qty'] or 0)
-        for row in consumed_rows
-        if int(row['component_product_id'] or 0) > 0
-    }
+    done_status = _normalize_production_status('완료')
+    produced_map = defaultdict(float)
+    for row in produced_rows:
+        component_product_id = int(row['component_product_id'] or 0)
+        if component_product_id <= 0 or _normalize_production_status(row['status']) != done_status:
+            continue
+        produced_map[component_product_id] += float(row['actual_boxes'] or row['planned_boxes'] or 0)
+
+    consumed_map = defaultdict(float)
+    for row in consumed_rows:
+        component_product_id = int(row['component_product_id'] or 0)
+        if component_product_id <= 0 or _normalize_production_status(row['status']) != done_status:
+            continue
+        consumed_map[component_product_id] += float(row['actual_quantity'] or 0)
     component_ids = set(produced_map.keys()) | set(consumed_map.keys())
     return {
         component_id: round(float(produced_map.get(component_id, 0)) - float(consumed_map.get(component_id, 0)), 4)
         for component_id in component_ids
     }
+
+
+def _get_set_schedule_component_assembly_usage(cursor, set_schedule_id):
+    rows = cursor.execute(
+        '''
+        SELECT pmu.component_product_id, pmu.actual_quantity, pr.status
+        FROM production_material_usage pmu
+        JOIN productions pr ON pr.id = pmu.production_id
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        WHERE COALESCE(pr.set_schedule_id, 0) = ?
+          AND pmu.component_product_id IS NOT NULL
+          AND COALESCE(pr.set_schedule_item_id, 0) = 0
+          AND COALESCE(ps.schedule_source, '') = 'set_assembly'
+        ''',
+        (int(set_schedule_id or 0),),
+    ).fetchall()
+    done_status = _normalize_production_status('완료')
+    usage_map = defaultdict(float)
+    for row in rows:
+        if _normalize_production_status(row['status']) != done_status:
+            continue
+        component_product_id = int(row['component_product_id'] or 0)
+        if component_product_id > 0:
+            usage_map[component_product_id] += float(row['actual_quantity'] or 0)
+    return {component_id: round(quantity, 4) for component_id, quantity in usage_map.items()}
 
 
 def _load_set_linked_rows(cursor, set_schedule_id, include_assembly=False):
@@ -1106,6 +1233,7 @@ def _load_set_linked_rows(cursor, set_schedule_id, include_assembly=False):
             COALESCE(cp.code, '') AS component_product_code,
             pr.id AS linked_production_id,
             pr.actual_boxes,
+            pr.expiry_date,
             pr.status AS production_status
         FROM production_schedules ps
         LEFT JOIN productions pr ON pr.id = ps.production_id
@@ -1125,7 +1253,7 @@ def _is_started_set_row(row):
     return status_value in {'진행중', '완료'}
 
 
-def _delete_set_generated_rows(cursor, schedule_ids):
+def _delete_set_generated_rows(conn, cursor, schedule_ids):
     if not schedule_ids:
         return
     placeholders = ','.join(['?'] * len(schedule_ids))
@@ -1138,16 +1266,8 @@ def _delete_set_generated_rows(cursor, schedule_ids):
         schedule_ids,
     ).fetchall()
     production_ids = [int(row['id']) for row in production_rows if int(row['id'] or 0) > 0]
-    if production_ids:
-        prod_placeholders = ','.join(['?'] * len(production_ids))
-        cursor.execute(
-            f'DELETE FROM production_material_usage WHERE production_id IN ({prod_placeholders})',
-            production_ids,
-        )
-        cursor.execute(
-            f'DELETE FROM productions WHERE id IN ({prod_placeholders})',
-            production_ids,
-        )
+    for production_id in production_ids:
+        _delete_production_record(conn, production_id, session.get('user_id'))
     cursor.execute(
         f'DELETE FROM production_schedules WHERE id IN ({placeholders})',
         schedule_ids,
@@ -1216,15 +1336,47 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
             raise ValueError('생산이 시작된 세트 일정은 종료일을 앞당길 수 없습니다.')
 
     if pending_rows:
-        _delete_set_generated_rows(cursor, [int(row['schedule_id']) for row in pending_rows if int(row.get('schedule_id') or 0) > 0])
+        _delete_set_generated_rows(conn, cursor, [int(row['schedule_id']) for row in pending_rows if int(row.get('schedule_id') or 0) > 0])
 
-    business_dates = _get_business_schedule_dates(conn, cursor, start_date, production_end_date)
+    excluded_date_set = set(_parse_set_excluded_dates(set_schedule_row.get('excluded_dates')))
+    business_dates = [
+        value for value in _get_business_schedule_dates(conn, cursor, start_date, production_end_date)
+        if value not in excluded_date_set
+    ]
+    if started_rows:
+        latest_started_date = max(
+            (str(row.get('scheduled_date') or '') for row in started_rows),
+            default='',
+        )
+        if latest_started_date:
+            business_dates = [value for value in business_dates if value > latest_started_date]
     finished_product_row = cursor.execute(
         'SELECT name FROM products WHERE id = ?',
         (finished_product_id,),
     ).fetchone()
     finished_product_name = (finished_product_row['name'] or '').strip() if finished_product_row else ''
-    allocations = _allocate_set_item_business_dates(item_rows, business_dates)
+    started_planned_by_component = defaultdict(int)
+    for row in started_rows:
+        component_product_id = int(row.get('component_product_id') or 0)
+        if component_product_id > 0:
+            status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
+            frozen_quantity = row.get('actual_boxes') if status_value == '완료' else row.get('planned_boxes')
+            started_planned_by_component[component_product_id] += int(float(frozen_quantity or row.get('planned_boxes') or 0))
+
+    remaining_items = []
+    for item in item_rows:
+        component_product_id = int(item.get('component_product_id') or 0)
+        required_quantity = int(item.get('required_quantity') or 0)
+        frozen_quantity = int(started_planned_by_component.get(component_product_id, 0))
+        if required_quantity < frozen_quantity:
+            raise ValueError('이미 시작된 반제품의 계획 수량보다 적게 변경할 수 없습니다.')
+        remaining_quantity = max(required_quantity - frozen_quantity, 0)
+        if remaining_quantity > 0:
+            remaining_items.append({**item, 'required_quantity': remaining_quantity})
+
+    if remaining_items and not business_dates:
+        raise ValueError('남은 세트 생산량을 배정할 작업일이 없습니다. 종료일을 확인해주세요.')
+    allocations = _allocate_set_item_business_dates(remaining_items, business_dates) if remaining_items else []
     generated_rows = []
     for item in allocations:
         component_product_id = int(item.get('component_product_id') or 0)
@@ -1949,6 +2101,74 @@ def _save_export_excluded_dates(cursor, export_schedule_id, excluded_dates):
     return serialized_dates
 
 
+def _save_set_excluded_dates(cursor, set_schedule_id, excluded_dates):
+    serialized_dates = _serialize_set_excluded_dates(excluded_dates)
+    cursor.execute(
+        '''
+        UPDATE set_schedules
+        SET excluded_dates = ?,
+            updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        ''',
+        (
+            serialized_dates,
+            session.get('user', {}).get('username'),
+            set_schedule_id,
+        ),
+    )
+    return serialized_dates
+
+
+def _link_completed_semi_production_to_set_schedule(cursor, production_id, product_id, production_date, workplace):
+    """Attach an independently completed set component to its active set schedule."""
+    component_product_id = int(product_id or 0)
+    scheduled_date = str(production_date or '').strip()
+    effective_workplace = str(workplace or '').strip()
+    if component_product_id <= 0 or not scheduled_date or not effective_workplace:
+        return None
+
+    match = cursor.execute(
+        '''
+        SELECT ss.id AS set_schedule_id, ssi.id AS set_schedule_item_id
+        FROM set_schedules ss
+        JOIN set_schedule_items ssi ON ssi.set_schedule_id = ss.id
+        WHERE ss.workplace = ?
+          AND ssi.component_product_id = ?
+          AND ss.production_start_date <= ?
+          AND ss.production_end_date >= ?
+        ORDER BY ss.production_start_date DESC, ss.id DESC
+        LIMIT 1
+        ''',
+        (effective_workplace, component_product_id, scheduled_date, scheduled_date),
+    ).fetchone()
+    if not match:
+        return None
+
+    set_schedule_id = int(match['set_schedule_id'])
+    set_schedule_item_id = int(match['set_schedule_item_id'])
+    cursor.execute(
+        '''
+        UPDATE productions
+        SET set_schedule_id = ?, set_schedule_item_id = ?
+        WHERE id = ?
+          AND COALESCE(set_schedule_id, 0) = 0
+        ''',
+        (set_schedule_id, set_schedule_item_id, production_id),
+    )
+    if cursor.rowcount <= 0:
+        return None
+    cursor.execute(
+        '''
+        UPDATE production_schedules
+        SET set_schedule_id = ?, set_schedule_item_id = ?
+        WHERE production_id = ?
+        ''',
+        (set_schedule_id, set_schedule_item_id, production_id),
+    )
+    return set_schedule_id
+
+
 def _resync_schedules_for_work_day_change(conn, cursor, work_date):
     work_date_text = str(work_date or '').strip()
     if not work_date_text:
@@ -2190,6 +2410,15 @@ def _restore_component_usage_for_production(cursor, production_id, workplace, ac
         ''',
         (production_id,),
     )
+    cursor.execute(
+        '''
+        DELETE FROM production_component_lot_usage
+        WHERE production_usage_id IN (
+            SELECT id FROM production_material_usage WHERE production_id = ?
+        )
+        ''',
+        (production_id,),
+    )
     restored_ids = set()
     for row in cursor.fetchall():
         component_product_id = int(row['component_product_id'] or 0)
@@ -2210,7 +2439,100 @@ def _restore_component_usage_for_production(cursor, production_id, workplace, ac
     return restored_ids
 
 
-def _consume_component_product_stock(cursor, component_product_id, required_qty, production_id, workplace, actor_username):
+def _record_component_product_fifo_usage(cursor, production_usage_id, component_product_id, required_qty, workplace):
+    """Store the semi-finished product lots consumed by a set assembly, oldest output first."""
+    if not production_usage_id or component_product_id <= 0 or required_qty <= 0:
+        return 0.0
+
+    cursor.execute('DELETE FROM production_component_lot_usage WHERE production_usage_id = ?', (production_usage_id,))
+    output_rows = cursor.execute(
+        '''
+        SELECT id, production_date, expiry_date, expiry_date_2, expiry_date_3,
+               expiry_boxes_1, expiry_boxes_2, expiry_boxes_3,
+               sample_excluded_boxes_1, sample_excluded_boxes_2, sample_excluded_boxes_3,
+               actual_boxes
+        FROM productions
+        WHERE product_id = ?
+          AND workplace = ?
+          AND status = ?
+          AND COALESCE(actual_boxes, 0) > 0
+        ORDER BY production_date ASC, id ASC
+        ''',
+        (component_product_id, workplace, '완료'),
+    ).fetchall()
+    used_rows = cursor.execute(
+        '''
+        SELECT component_production_id, COALESCE(expiry_date, '') AS expiry_date,
+               SUM(COALESCE(quantity, 0)) AS used_quantity
+        FROM production_component_lot_usage
+        WHERE component_product_id = ?
+        GROUP BY component_production_id, COALESCE(expiry_date, '')
+        ''',
+        (component_product_id,),
+    ).fetchall()
+    used_by_lot = {
+        (int(row['component_production_id'] or 0), str(row['expiry_date'] or '')): float(row['used_quantity'] or 0)
+        for row in used_rows
+    }
+
+    remaining_need = round(float(required_qty or 0), 4)
+    recorded_quantity = 0.0
+    for output_row in output_rows:
+        output = dict(output_row)
+        expiry_rows, _ = _build_production_expiry_rows(output)
+        output_lots = []
+        for expiry_row in expiry_rows:
+            try:
+                lot_quantity = float(expiry_row.get('boxes') or 0)
+            except (TypeError, ValueError):
+                lot_quantity = 0.0
+            if lot_quantity > 0:
+                output_lots.append((str(expiry_row.get('date') or ''), lot_quantity))
+        if not output_lots:
+            output_lots = [(str(output.get('expiry_date') or ''), float(output.get('actual_boxes') or 0))]
+
+        for expiry_date, output_quantity in output_lots:
+            if remaining_need <= 1e-9:
+                break
+            lot_key = (int(output['id']), expiry_date)
+            available_quantity = max(float(output_quantity or 0) - float(used_by_lot.get(lot_key, 0) or 0), 0.0)
+            consumed_quantity = min(remaining_need, available_quantity)
+            if consumed_quantity <= 1e-9:
+                continue
+            cursor.execute(
+                '''
+                INSERT INTO production_component_lot_usage
+                (production_usage_id, component_production_id, component_product_id, receiving_date, expiry_date, quantity)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    production_usage_id,
+                    int(output['id']),
+                    component_product_id,
+                    str(output.get('production_date') or ''),
+                    expiry_date,
+                    consumed_quantity,
+                ),
+            )
+            remaining_need = round(remaining_need - consumed_quantity, 4)
+            recorded_quantity += consumed_quantity
+
+    # Product stock can also contain manual inventory adjustments. Preserve the usage record even
+    # when there is no identifiable production lot, rather than blocking a valid stock deduction.
+    if remaining_need > 1e-9:
+        cursor.execute(
+            '''
+            INSERT INTO production_component_lot_usage
+            (production_usage_id, component_product_id, receiving_date, expiry_date, quantity)
+            VALUES (?, ?, ?, ?, ?)
+            ''',
+            (production_usage_id, component_product_id, '', '', remaining_need),
+        )
+        recorded_quantity += remaining_need
+    return round(recorded_quantity, 4)
+
+
+def _consume_component_product_stock(cursor, component_product_id, required_qty, production_id, workplace, actor_username, production_usage_id=None):
     need_qty = round(float(required_qty or 0), 4)
     if component_product_id <= 0 or need_qty <= 0:
         return 0.0
@@ -2231,6 +2553,13 @@ def _consume_component_product_stock(cursor, component_product_id, required_qty,
         f'production:{production_id}',
         production_id,
         actor_username,
+    )
+    _record_component_product_fifo_usage(
+        cursor,
+        production_usage_id,
+        component_product_id,
+        need_qty,
+        workplace,
     )
     return need_qty
 
@@ -2285,6 +2614,19 @@ def _has_production_workplace_access(viewer_workplace, production_workplace):
     if not viewer_key or not production_key:
         return True
     return viewer_key == production_key
+
+
+def _get_effective_production_workplace(cursor, production):
+    production = production or {}
+    set_schedule_id = int(production.get('set_schedule_id') or 0)
+    if set_schedule_id > 0:
+        row = cursor.execute(
+            'SELECT workplace FROM set_schedules WHERE id = ?',
+            (set_schedule_id,),
+        ).fetchone()
+        if row and str(row['workplace'] or '').strip():
+            return str(row['workplace']).strip()
+    return str(production.get('workplace') or '').strip()
 
 
 def _load_schedule_stats_products(cursor, workplace):
@@ -3208,11 +3550,12 @@ def schedules():
             FROM production_schedules ps
             LEFT JOIN products p ON ps.product_id = p.id
             LEFT JOIN productions pr ON pr.schedule_id = ps.id
+            LEFT JOIN set_schedules ss ON ss.id = ps.set_schedule_id
             WHERE ps.scheduled_date BETWEEN ? AND ?
-            AND ps.workplace = ?
+            AND (ps.workplace = ? OR ss.workplace = ?)
             ORDER BY ps.scheduled_date
         ''',
-            (month_start.isoformat(), month_end.isoformat(), workplace),
+            (month_start.isoformat(), month_end.isoformat(), workplace, workplace),
         )
         schedules = cursor.fetchall()
 
@@ -3499,13 +3842,17 @@ def schedules():
         for raw_set_row in set_schedule_rows:
             try:
                 set_row = dict(raw_set_row)
+                creator_username = str(set_row.get('created_by') or '').strip()
+                current_username = str((session.get('user') or {}).get('username') or '').strip()
+                set_row['is_owner'] = bool(creator_username and creator_username == current_username)
                 item_rows = _load_set_schedule_items(cursor, int(set_row['id']))
                 linked_rows = _load_set_linked_rows(cursor, int(set_row['id']))
-                assembly_row = _load_set_assembly_production(
+                assembly_rows = _load_set_assembly_productions(
                     cursor,
                     int(set_row['id']),
                     int(set_row.get('finished_product_id') or 0),
                 )
+                assembly_row = assembly_rows[-1] if assembly_rows else None
                 assembly_target_qty = _calculate_set_schedule_finished_quantity(
                     cursor,
                     int(set_row.get('finished_product_id') or 0),
@@ -3519,7 +3866,21 @@ def schedules():
                 linked_dates = []
                 completed_dates = []
                 daily_actuals = []
+                component_progress = {
+                    int(item.get('component_product_id') or 0): {
+                        'planned_quantity': 0,
+                        'completed_quantity': 0,
+                        'completed_count': 0,
+                        'generated_count': 0,
+                    }
+                    for item in item_rows
+                }
                 for linked_row in linked_rows:
+                    component_product_id = int(linked_row.get('component_product_id') or 0)
+                    progress = component_progress.get(component_product_id)
+                    if progress is not None:
+                        progress['generated_count'] += 1
+                        progress['planned_quantity'] += int(float(linked_row.get('planned_boxes') or 0))
                     scheduled_date_value = str(linked_row.get('scheduled_date') or '')
                     if _is_started_set_row(linked_row):
                         started_count += 1
@@ -3527,7 +3888,11 @@ def schedules():
                     status_value = _normalize_schedule_state(linked_row.get('production_status') or linked_row.get('schedule_status'))
                     if status_value == done_status:
                         completed_count += 1
-                        completed_qty += int(float(linked_row.get('actual_boxes') or linked_row.get('planned_boxes') or 0))
+                        completed_boxes = int(float(linked_row.get('actual_boxes') or linked_row.get('planned_boxes') or 0))
+                        completed_qty += completed_boxes
+                        if progress is not None:
+                            progress['completed_count'] += 1
+                            progress['completed_quantity'] += completed_boxes
                         if scheduled_date_value:
                             completed_dates.append(scheduled_date_value)
                         daily_actuals.append(
@@ -3535,6 +3900,8 @@ def schedules():
                                 'date': scheduled_date_value,
                                 'actual_boxes': int(float(linked_row.get('actual_boxes') or linked_row.get('planned_boxes') or 0)),
                                 'planned_boxes': int(float(linked_row.get('planned_boxes') or 0)),
+                                'product_name': linked_row.get('component_product_name') or '',
+                                'expiry_date': str(linked_row.get('expiry_date') or ''),
                                 'detail_url': (
                                     f"/production/{int(linked_row.get('linked_production_id') or 0)}"
                                     if int(linked_row.get('linked_production_id') or 0) > 0
@@ -3542,8 +3909,13 @@ def schedules():
                                 ),
                             }
                         )
-                item_summaries = [
-                    {
+                item_summaries = []
+                component_available_stock = _get_set_schedule_component_remaining_stock(cursor, int(set_row['id']))
+                component_assembly_usage = _get_set_schedule_component_assembly_usage(cursor, int(set_row['id']))
+                for item in item_rows:
+                    component_product_id = int(item.get('component_product_id') or 0)
+                    progress = component_progress.get(component_product_id, {})
+                    item_summaries.append({
                         'id': int(item.get('id') or 0),
                         'component_product_id': int(item.get('component_product_id') or 0),
                         'component_product_name': item.get('component_product_name') or '',
@@ -3551,11 +3923,33 @@ def schedules():
                         'required_quantity': int(item.get('required_quantity') or 0),
                         'priority': int(item.get('priority') or 0),
                         'line': str(item.get('line') or '').strip(),
+                        'planned_quantity': int(progress.get('planned_quantity') or 0),
+                        'completed_quantity': int(progress.get('completed_quantity') or 0),
+                        'remaining_quantity': max(
+                            int(item.get('required_quantity') or 0) - int(progress.get('completed_quantity') or 0),
+                            0,
+                        ),
+                        'completed_count': int(progress.get('completed_count') or 0),
+                        'generated_count': int(progress.get('generated_count') or 0),
+                        'assembly_used_quantity': int(round(component_assembly_usage.get(component_product_id, 0) or 0)),
+                        'available_stock_quantity': max(
+                            int(round(component_available_stock.get(component_product_id, 0) or 0)),
+                            0,
+                        ),
                     }
-                    for item in item_rows
-                ]
+                    )
+                assembly_completed_qty = sum(
+                    float(row.get('actual_boxes') or row.get('planned_boxes') or 0)
+                    for row in assembly_rows
+                    if _normalize_production_status(row.get('status')) == done_status
+                )
+                assembly_in_progress_row = next(
+                    (row for row in reversed(assembly_rows) if _normalize_production_status(row.get('status')) != done_status),
+                    None,
+                )
                 component_name_list = [item['component_product_name'] for item in item_summaries if item.get('component_product_name')]
-                is_completed = bool(linked_rows) and completed_count == len(linked_rows)
+                component_production_completed = bool(linked_rows) and completed_count == len(linked_rows)
+                is_completed = component_production_completed and assembly_target_qty > 0 and assembly_completed_qty >= assembly_target_qty
                 completed_date = max(completed_dates) if completed_dates and is_completed else ''
                 has_started = started_count > 0 or completed_count > 0
                 set_view = {
@@ -3582,6 +3976,10 @@ def schedules():
                     ),
                     'started_dates': sorted([value for value in linked_dates if value]),
                     'assembly_production_id': int(assembly_row.get('id') or 0) if assembly_row else 0,
+                    'assembly_rows': assembly_rows,
+                    'assembly_count': len(assembly_rows),
+                    'assembly_completed_qty': int(assembly_completed_qty),
+                    'assembly_in_progress_id': int(assembly_in_progress_row.get('id') or 0) if assembly_in_progress_row else 0,
                     'assembly_status': _normalize_production_status(assembly_row.get('status')) if assembly_row else '',
                     'assembly_date': assembly_row.get('production_date') if assembly_row else '',
                     'assembly_planned_boxes': float(assembly_row.get('planned_boxes') or 0) if assembly_row else float(assembly_target_qty or 0),
@@ -3598,6 +3996,8 @@ def schedules():
                         'production_start_date': set_row.get('production_start_date') or '',
                         'production_end_date': set_row.get('production_end_date') or '',
                         'note': set_row.get('note') or '',
+                        'created_by': creator_username,
+                        'is_owner': bool(set_row.get('is_owner')),
                         'items': item_summaries,
                         'component_summary': set_view['component_summary'],
                         'component_names': component_name_list,
@@ -3612,6 +4012,9 @@ def schedules():
                         'completed_date': completed_date,
                         'daily_actuals': set_view['daily_actuals'],
                         'assembly_production_id': set_view['assembly_production_id'],
+                        'assembly_count': set_view['assembly_count'],
+                        'assembly_completed_qty': set_view['assembly_completed_qty'],
+                        'assembly_in_progress_id': set_view['assembly_in_progress_id'],
                         'assembly_status': set_view['assembly_status'],
                         'assembly_date': set_view['assembly_date'],
                         'assembly_planned_boxes': set_view['assembly_planned_boxes'],
@@ -4749,12 +5152,13 @@ def delete_schedule(schedule_id):
                 return redirect(request.referrer or url_for('production.schedules'))
 
             if _normalize_production_status(schedule_before['status']) == '?꾨즺':
-                return redirect(request.referrer or url_for('production.schedules'))
+                pass
 
             row = schedule_before
             export_schedule_before = None
             set_schedule_before = None
             excluded_dates_before = []
+            set_excluded_dates_before = []
             if int(row['export_schedule_id'] or 0) > 0:
                 export_schedule_before = cursor.execute(
                     'SELECT * FROM export_schedules WHERE id = ?',
@@ -4769,6 +5173,15 @@ def delete_schedule(schedule_id):
                     'SELECT * FROM set_schedules WHERE id = ?',
                     (int(row['set_schedule_id']),),
                 ).fetchone()
+                if set_schedule_before and row['scheduled_date']:
+                    set_excluded_dates_before = _parse_set_excluded_dates(set_schedule_before['excluded_dates'])
+                    set_excluded_dates_after = sorted(set(set_excluded_dates_before + [str(row['scheduled_date'])]))
+                    _save_set_excluded_dates(cursor, int(row['set_schedule_id']), set_excluded_dates_after)
+
+            if row and row['production_id']:
+                _delete_production_record(conn, int(row['production_id']), session.get('user_id'))
+                row = dict(row)
+                row['production_id'] = None
 
             if row and row['production_id']:
                 production_id = row['production_id']
@@ -4859,6 +5272,7 @@ def delete_schedule(schedule_id):
                 {
                     'before': dict(schedule_before) if schedule_before else None,
                     'export_excluded_dates_before': excluded_dates_before,
+                    'set_excluded_dates_before': set_excluded_dates_before,
                     'export_sync_result': sync_result,
                 },
             )
@@ -5498,14 +5912,15 @@ def update_set_schedule(set_schedule_id):
             ).fetchone()
             if not before_row:
                 raise ValueError('수정할 세트 일정이 없습니다.')
+            _require_set_schedule_owner(cursor, before_row)
             product_row = _find_set_finished_product(cursor, workplace, finished_product_id)
             if not product_row:
                 raise ValueError('선택한 세트 완제품을 찾을 수 없습니다.')
-            existing_assembly = _load_set_assembly_production(cursor, set_schedule_id, int(before_row['finished_product_id'] or 0))
-            if existing_assembly:
-                raise ValueError('완제품 조립이 등록된 세트 일정은 수정할 수 없습니다.')
-            if any(_is_started_set_row(row) for row in _load_set_linked_rows(cursor, set_schedule_id)):
-                raise ValueError('생산이 시작된 세트 일정은 수정할 수 없습니다.')
+            has_set_history = bool(_load_set_assembly_productions(cursor, set_schedule_id, int(before_row['finished_product_id'] or 0))) or any(
+                _is_started_set_row(row) for row in _load_set_linked_rows(cursor, set_schedule_id)
+            )
+            if has_set_history and int(before_row['finished_product_id'] or 0) != finished_product_id:
+                raise ValueError('생산 또는 조립이 진행된 세트 일정은 완제품을 변경할 수 없습니다.')
             cursor.execute(
                 '''
                 UPDATE set_schedules
@@ -5527,7 +5942,8 @@ def update_set_schedule(set_schedule_id):
                     workplace,
                 ),
             )
-            _replace_set_schedule_items(cursor, set_schedule_id, items)
+            saved_items = _replace_set_schedule_items(cursor, set_schedule_id, items)
+            _rebind_started_set_schedule_items(cursor, set_schedule_id, saved_items)
             set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
             sync_result = _sync_set_schedule_rows(
                 conn,
@@ -5565,13 +5981,15 @@ def delete_set_schedule(set_schedule_id):
             ).fetchone()
             if not set_row:
                 raise ValueError('삭제할 세트 일정이 없습니다.')
-            existing_assembly = _load_set_assembly_production(cursor, set_schedule_id, int(set_row['finished_product_id'] or 0))
-            if existing_assembly:
-                raise ValueError('완제품 조립이 등록된 세트 일정은 삭제할 수 없습니다.')
-            linked_rows = _load_set_linked_rows(cursor, set_schedule_id)
-            if any(_is_started_set_row(row) for row in linked_rows):
-                raise ValueError('생산이 시작된 세트 일정은 삭제할 수 없습니다.')
+            _require_set_schedule_owner(
+                cursor,
+                set_row,
+                password=(request.form.get('owner_password') or '').strip(),
+                require_password=True,
+            )
+            linked_rows = _load_set_linked_rows(cursor, set_schedule_id, include_assembly=True)
             _delete_set_generated_rows(
+                conn,
                 cursor,
                 [int(row['schedule_id']) for row in linked_rows if int(row.get('schedule_id') or 0) > 0],
             )
@@ -5609,17 +6027,25 @@ def open_set_assembly(set_schedule_id):
                 raise ValueError('완제품 조립을 진행할 세트 일정을 찾을 수 없습니다.')
             set_row = dict(set_row)
             finished_product_id = int(set_row.get('finished_product_id') or 0)
-            existing_assembly = _load_set_assembly_production(cursor, set_schedule_id, finished_product_id)
-            if existing_assembly:
-                return redirect(url_for('production.production_detail', production_id=int(existing_assembly['id'])))
+            assembly_rows = _load_set_assembly_productions(cursor, set_schedule_id, finished_product_id)
+            in_progress_assembly = next(
+                (row for row in reversed(assembly_rows) if _normalize_production_status(row.get('status')) != '완료'),
+                None,
+            )
+            if in_progress_assembly:
+                return redirect(url_for('production.production_detail', production_id=int(in_progress_assembly['id'])))
 
             item_rows = _load_set_schedule_items(cursor, set_schedule_id)
             if not item_rows:
                 raise ValueError('세트 일정에 등록된 반제품이 없습니다.')
 
-            planned_boxes = _calculate_set_schedule_finished_quantity(cursor, finished_product_id, item_rows)
+            planned_boxes = _calculate_set_assembly_available_quantity(
+                cursor,
+                finished_product_id,
+                _get_set_schedule_component_remaining_stock(cursor, set_schedule_id),
+            )
             if planned_boxes <= 0:
-                raise ValueError('세트 완제품 조립 수량을 계산할 수 없습니다. 반제품 계획 수량을 확인해주세요.')
+                raise ValueError('지금 조립 가능한 반제품 수량이 없습니다. 반제품 생산 완료 수량을 확인해주세요.')
 
             schedule_date = _select_set_assembly_default_date(set_row)
             schedule_note = _build_set_assembly_note(
@@ -5635,7 +6061,7 @@ def open_set_assembly(set_schedule_id):
                 planned_boxes=planned_boxes,
                 note=schedule_note,
                 production_lines_str='',
-                workplace=workplace,
+                workplace=str(set_row.get('workplace') or workplace).strip(),
                 schedule_source='set_assembly',
                 set_schedule_id=set_schedule_id,
                 set_schedule_item_id=None,
@@ -6766,7 +7192,7 @@ def production_detail(production_id):
     production['entry_mode_meta'] = _get_production_entry_mode_meta(production.get('entry_mode'))
     done_status = _normalize_production_status('\uC644\uB8CC')
     viewer_workplace = (get_workplace() or session.get('workplace') or '').strip()
-    production_workplace = (production.get('workplace') or '').strip()
+    production_workplace = _get_effective_production_workplace(cursor, production)
     has_workplace_access = _has_production_workplace_access(viewer_workplace, production_workplace)
     edit_completed = request.args.get('edit') == '1'
     production['uses_actual_quantity'] = _has_entered_actual_boxes(production.get('actual_boxes'))
@@ -7553,7 +7979,7 @@ def edit_production_plan(production_id):
     production['status'] = _normalize_production_status(production.get('status'))
     done_status = _normalize_production_status('\uC644\uB8CC')
     current_workplace = (get_workplace() or session.get('workplace') or '').strip()
-    production_workplace = (production.get('workplace') or '').strip()
+    production_workplace = _get_effective_production_workplace(cursor, production)
     if not _has_production_workplace_access(current_workplace, production_workplace):
         conn_context.__exit__(None, None, None)
         return redirect(url_for('production.production_detail', production_id=production_id))
@@ -7750,7 +8176,7 @@ def update_production_usage(production_id):
         cursor.execute(
             '''
             SELECT pr.planned_boxes, pr.actual_boxes, pr.product_id, pr.production_date, pr.status, pr.raw_sok_mode,
-                   pr.workplace, pr.entry_mode, COALESCE(pr.line_usage_disabled, 0) as line_usage_disabled,
+                   pr.workplace, pr.set_schedule_id, pr.set_schedule_item_id, pr.entry_mode, COALESCE(pr.line_usage_disabled, 0) as line_usage_disabled,
                    p.expiry_months, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
                    p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3,
                    p.category, COALESCE(p.set_item_type, '') as set_item_type
@@ -7761,11 +8187,12 @@ def update_production_usage(production_id):
             (production_id,),
         )
         prod_row = cursor.fetchone()
+        prod_row = dict(prod_row) if prod_row else {}
         planned_boxes = float(prod_row['planned_boxes']) if prod_row and prod_row['planned_boxes'] else 0
         product_id = prod_row['product_id'] if prod_row else None
         touched_material_ids = set()
         current_workplace = (get_workplace() or session.get('workplace') or '').strip()
-        production_workplace = (prod_row['workplace'] if prod_row and prod_row['workplace'] else current_workplace or '').strip()
+        production_workplace = _get_effective_production_workplace(cursor, prod_row) or current_workplace
         if not _has_production_workplace_access(current_workplace, production_workplace):
             rollback_db(conn)
             return (
@@ -8588,6 +9015,7 @@ def update_production_usage(production_id):
                         production_id,
                         current_workplace,
                         session['user']['username'],
+                        production_usage_id=int(usage_id),
                     )
 
         if save_action == 'temp':
@@ -8662,6 +9090,32 @@ def update_production_usage(production_id):
                 'raw_entries': raw_entries,
             },
         )
+
+        linked_set_schedule_id = int(prod_row.get('set_schedule_id') or 0)
+        if (
+            save_action != 'temp'
+            and actual_boxes > 0
+            and linked_set_schedule_id <= 0
+            and _is_set_semi_product_row(prod_row)
+        ):
+            linked_set_schedule_id = int(
+                _link_completed_semi_production_to_set_schedule(
+                    cursor,
+                    production_id,
+                    product_id,
+                    effective_production_date,
+                    production_workplace,
+                )
+                or 0
+            )
+
+        if save_action != 'temp' and actual_boxes > 0 and linked_set_schedule_id > 0:
+            set_schedule_row = cursor.execute(
+                'SELECT * FROM set_schedules WHERE id = ?',
+                (linked_set_schedule_id,),
+            ).fetchone()
+            if set_schedule_row:
+                _sync_set_schedule_rows(conn, cursor, dict(set_schedule_row))
 
         _resync_export_schedule_for_production(conn, cursor, production_id)
         commit_db(conn)
@@ -8822,15 +9276,35 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
     return True
 
 
+SET_SCHEDULE_OWNER_ONLY_MESSAGE = '세트 일정은 등록한 사용자만 수정 및 삭제할 수 있습니다.'
+
+
+def _require_set_schedule_owner(cursor, set_schedule_row, password=None, require_password=False):
+    creator_username = str(set_schedule_row['created_by'] or '').strip()
+    current_username = str((session.get('user') or {}).get('username') or '').strip()
+    if not creator_username or creator_username != current_username:
+        raise ValueError(SET_SCHEDULE_OWNER_ONLY_MESSAGE)
+    if require_password:
+        if not password:
+            raise ValueError('세트 일정 삭제를 위해 등록한 사용자의 비밀번호를 입력해주세요.')
+        user_row = cursor.execute(
+            'SELECT password_hash FROM users WHERE username = ?',
+            (creator_username,),
+        ).fetchone()
+        if not user_row or not verify_password(user_row['password_hash'], password):
+            raise ValueError('등록한 사용자의 비밀번호가 일치하지 않습니다. 세트 일정 삭제가 취소되었습니다.')
+    return creator_username
+
+
 def _delete_production_record_response(production_id, success_redirect):
     try:
         with db_transaction() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT workplace FROM productions WHERE id = ?', (production_id,))
+            cursor.execute('SELECT workplace, set_schedule_id FROM productions WHERE id = ?', (production_id,))
             prod = cursor.fetchone()
             if prod:
                 current_workplace = (get_workplace() or session.get('workplace') or '').strip()
-                production_workplace = (prod['workplace'] or '').strip()
+                production_workplace = _get_effective_production_workplace(cursor, dict(prod))
                 if not _has_production_workplace_access(current_workplace, production_workplace):
                     return redirect(url_for('production.production_detail', production_id=production_id))
             deleted = _delete_production_record(conn, production_id, session.get('user_id'))

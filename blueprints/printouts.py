@@ -5,7 +5,11 @@ import math
 import calendar
 
 from core import get_db, login_required, get_workplace, SHARED_WORKPLACE, today_local
-from .production import _get_production_material_section, _get_production_material_sort_key
+from .production import (
+    _get_production_material_section,
+    _get_production_material_sort_key,
+    _normalize_production_status,
+)
 
 bp = Blueprint('printouts', __name__)
 
@@ -1887,6 +1891,8 @@ def production_print(production_id):
     cursor.execute(
         '''
         SELECT pr.*, p.name as product_name, p.code as product_code, p.box_quantity, p.expiry_months,
+               COALESCE(p.category, '') AS product_category,
+               COALESCE(p.set_item_type, '') AS set_item_type,
                ps.line as schedule_line,
                COALESCE(
                    pr.supply_line,
@@ -2014,6 +2020,130 @@ def production_print(production_id):
             continue
         item['base_sort_key'] = _get_production_material_sort_key(item)
         grouped_materials[_get_production_material_section(item)].append(item)
+
+    # A set finished product consumes semi-finished products.  They are kept in a
+    # separate FIFO usage table because they are product inventory rather than a
+    # conventional material lot, then rendered in the material section of the journal.
+    is_set_finished_product = (
+        str(production['product_category'] or '').strip() == '세트'
+        and str(production['set_item_type'] or '').strip().lower() == 'finished'
+    )
+    if is_set_finished_product:
+        component_usage_rows = cursor.execute(
+            '''
+            SELECT
+                pclu.id AS component_lot_usage_id,
+                pmu.id AS usage_id,
+                cp.code AS material_code,
+                cp.name AS material_name,
+                pclu.quantity AS lot_used_quantity,
+                pclu.quantity AS actual_quantity,
+                pclu.receiving_date AS lot_receiving_date,
+                pclu.expiry_date AS lot_expiry_date
+            FROM production_component_lot_usage pclu
+            JOIN production_material_usage pmu ON pmu.id = pclu.production_usage_id
+            LEFT JOIN products cp ON cp.id = pclu.component_product_id
+            WHERE pmu.production_id = ?
+            ORDER BY pclu.receiving_date ASC, pclu.component_production_id ASC, pclu.id ASC
+            ''',
+            (production_id,),
+        ).fetchall()
+        recorded_usage_ids = set()
+        for row in component_usage_rows:
+            item = dict(row)
+            recorded_usage_ids.add(int(item.get('usage_id') or 0))
+            item.update(
+                {
+                    'material_id': None,
+                    'category': '부재료',
+                    'lot_manufacture_date': '',
+                    'base_sort_key': '00_set_component',
+                }
+            )
+            grouped_materials['base'].append(item)
+
+        # Existing completed set productions predate the FIFO usage table.  Keep their
+        # journals useful by resolving the available semi-finished outputs in FIFO order
+        # at print time, while newly saved production records use the persisted rows above.
+        legacy_component_rows = cursor.execute(
+            '''
+            SELECT pmu.id AS usage_id, pmu.component_product_id,
+                   COALESCE(pmu.actual_quantity, pmu.expected_quantity, 0) AS quantity,
+                   cp.code AS material_code, cp.name AS material_name
+            FROM production_material_usage pmu
+            LEFT JOIN products cp ON cp.id = pmu.component_product_id
+            WHERE pmu.production_id = ?
+              AND pmu.component_product_id IS NOT NULL
+              AND COALESCE(pmu.actual_quantity, pmu.expected_quantity, 0) > 0
+            ORDER BY pmu.id
+            ''',
+            (production_id,),
+        ).fetchall()
+        for legacy_row in legacy_component_rows:
+            legacy = dict(legacy_row)
+            if int(legacy['usage_id'] or 0) in recorded_usage_ids:
+                continue
+            remaining_quantity = float(legacy['quantity'] or 0)
+            source_rows = cursor.execute(
+                '''
+                SELECT id, production_date, status, actual_boxes,
+                       expiry_date, expiry_date_2, expiry_date_3,
+                       expiry_boxes_1, expiry_boxes_2, expiry_boxes_3,
+                       sample_excluded_boxes_1, sample_excluded_boxes_2, sample_excluded_boxes_3
+                FROM productions
+                WHERE product_id = ?
+                  AND workplace = ?
+                  AND COALESCE(actual_boxes, 0) > 0
+                  AND COALESCE(production_date, '') <= ?
+                ORDER BY production_date ASC, id ASC
+                ''',
+                (legacy['component_product_id'], workplace, production['production_date']),
+            ).fetchall()
+            fallback_items = []
+            for source_row in source_rows:
+                source = dict(source_row)
+                if _normalize_production_status(source.get('status')) != '완료':
+                    continue
+                source['box_quantity'] = 1
+                expiry_rows = _build_production_expiry_rows(source)
+                lots = []
+                for expiry_row in expiry_rows:
+                    try:
+                        lot_quantity = float(expiry_row.get('actual_boxes') or 0)
+                    except (TypeError, ValueError):
+                        lot_quantity = 0.0
+                    if lot_quantity > 0:
+                        lots.append((str(expiry_row.get('expiry_date') or ''), lot_quantity))
+                if not lots:
+                    lots = [(str(source.get('expiry_date') or ''), float(source.get('actual_boxes') or 0))]
+                for expiry_date, lot_quantity in lots:
+                    if remaining_quantity <= 1e-9:
+                        break
+                    consumed_quantity = min(remaining_quantity, lot_quantity)
+                    if consumed_quantity <= 1e-9:
+                        continue
+                    fallback_items.append((str(source.get('production_date') or ''), expiry_date, consumed_quantity))
+                    remaining_quantity -= consumed_quantity
+                if remaining_quantity <= 1e-9:
+                    break
+            if remaining_quantity > 1e-9:
+                fallback_items.append(('', '', remaining_quantity))
+            for receiving_date, expiry_date, consumed_quantity in fallback_items:
+                grouped_materials['base'].append(
+                    {
+                        'usage_id': legacy['usage_id'],
+                        'material_id': None,
+                        'material_code': legacy.get('material_code') or '',
+                        'material_name': legacy.get('material_name') or '',
+                        'category': '부재료',
+                        'lot_used_quantity': consumed_quantity,
+                        'actual_quantity': consumed_quantity,
+                        'lot_receiving_date': receiving_date,
+                        'lot_expiry_date': expiry_date,
+                        'lot_manufacture_date': '',
+                        'base_sort_key': '00_set_component',
+                    }
+                )
 
     sort_key = lambda item: (
         item.get('base_sort_key') or '',
