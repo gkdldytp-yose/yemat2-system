@@ -1004,6 +1004,26 @@ def _build_set_schedule_note(set_schedule_id, finished_product_name, component_p
     return f'{prefix} {extra}'.strip()
 
 
+def _get_set_component_display_unit(component_product_name):
+    name = str(component_product_name or '').strip()
+    if '낱캔' in name:
+        return '캔'
+    if '도시락' in name or '전장' in name:
+        return '봉'
+    return 'EA'
+
+
+def _get_set_component_display_type(component_product_name):
+    name = str(component_product_name or '').strip()
+    if '낱캔' in name:
+        return {'key': 'can', 'label': '낱캔'}
+    if '전장' in name:
+        return {'key': 'sheet', 'label': '전장'}
+    if '도시락' in name:
+        return {'key': 'lunch', 'label': '도시락'}
+    return {'key': 'other', 'label': '반제품'}
+
+
 def _build_set_assembly_note(set_schedule_id, finished_product_name, note=''):
     title = str(finished_product_name or '').strip() or '세트 완제품'
     extra = str(note or '').strip()
@@ -2454,11 +2474,10 @@ def _record_component_product_fifo_usage(cursor, production_usage_id, component_
         FROM productions
         WHERE product_id = ?
           AND workplace = ?
-          AND status = ?
           AND COALESCE(actual_boxes, 0) > 0
         ORDER BY production_date ASC, id ASC
         ''',
-        (component_product_id, workplace, '완료'),
+        (component_product_id, workplace),
     ).fetchall()
     used_rows = cursor.execute(
         '''
@@ -3895,12 +3914,16 @@ def schedules():
                             progress['completed_quantity'] += completed_boxes
                         if scheduled_date_value:
                             completed_dates.append(scheduled_date_value)
+                        component_display_type = _get_set_component_display_type(linked_row.get('component_product_name'))
                         daily_actuals.append(
                             {
                                 'date': scheduled_date_value,
                                 'actual_boxes': int(float(linked_row.get('actual_boxes') or linked_row.get('planned_boxes') or 0)),
                                 'planned_boxes': int(float(linked_row.get('planned_boxes') or 0)),
                                 'product_name': linked_row.get('component_product_name') or '',
+                                'unit': _get_set_component_display_unit(linked_row.get('component_product_name')),
+                                'type_key': component_display_type['key'],
+                                'type_label': component_display_type['label'],
                                 'expiry_date': str(linked_row.get('expiry_date') or ''),
                                 'detail_url': (
                                     f"/production/{int(linked_row.get('linked_production_id') or 0)}"
@@ -3947,6 +3970,10 @@ def schedules():
                     (row for row in reversed(assembly_rows) if _normalize_production_status(row.get('status')) != done_status),
                     None,
                 )
+                completed_assembly_rows = [
+                    row for row in assembly_rows
+                    if _normalize_production_status(row.get('status')) == done_status
+                ]
                 component_name_list = [item['component_product_name'] for item in item_summaries if item.get('component_product_name')]
                 component_production_completed = bool(linked_rows) and completed_count == len(linked_rows)
                 is_completed = component_production_completed and assembly_target_qty > 0 and assembly_completed_qty >= assembly_target_qty
@@ -3977,6 +4004,7 @@ def schedules():
                     'started_dates': sorted([value for value in linked_dates if value]),
                     'assembly_production_id': int(assembly_row.get('id') or 0) if assembly_row else 0,
                     'assembly_rows': assembly_rows,
+                    'completed_assembly_rows': completed_assembly_rows,
                     'assembly_count': len(assembly_rows),
                     'assembly_completed_qty': int(assembly_completed_qty),
                     'assembly_in_progress_id': int(assembly_in_progress_row.get('id') or 0) if assembly_in_progress_row else 0,

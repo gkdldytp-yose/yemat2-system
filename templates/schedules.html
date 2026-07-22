@@ -3902,6 +3902,30 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     border-radius:inherit;
     background:linear-gradient(90deg,#38bdf8,#2563eb);
 }
+.export-container-progress {
+    flex:1 1 180px;
+    min-width:150px;
+    color:#2563eb;
+    font-size:0.78rem;
+    font-weight:800;
+}
+.export-container-progress-copy {
+    white-space:nowrap;
+}
+.export-container-progress-track {
+    height:7px;
+    margin-top:0.32rem;
+    overflow:hidden;
+    border-radius:999px;
+    background:#dbeafe;
+}
+.export-container-progress-track span {
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,#38bdf8,#2563eb);
+    transition:width .25s ease;
+}
 .set-remaining-quantity {
     display:inline-flex;
     align-items:center;
@@ -3944,9 +3968,52 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     border-radius:inherit;
     background:linear-gradient(90deg,#22c55e,#0f766e);
 }
+.set-assembly-date-list {
+    display:flex;
+    flex-wrap:wrap;
+    gap:.4rem;
+    margin-top:.6rem;
+}
+.set-assembly-date-link {
+    display:inline-flex;
+    align-items:center;
+    padding:.28rem .5rem;
+    border:1px solid #7dd3fc;
+    border-radius:999px;
+    background:#effaff;
+    color:#0369a1;
+    font-size:.72rem;
+    font-weight:800;
+    text-decoration:none;
+}
+.set-assembly-date-link:hover {background:#dff5ff;color:#075985;text-decoration:none;}
 .set-daily-production-copy {
     min-width:0;
 }
+.export-daily-row.set-daily-type-lunch,
+.export-daily-row.set-daily-type-sheet,
+.export-daily-row.set-daily-type-can {
+    position:relative;
+    padding-left:.8rem;
+}
+.export-daily-row.set-daily-type-lunch {box-shadow:inset 4px 0 0 #38bdf8;}
+.export-daily-row.set-daily-type-sheet {box-shadow:inset 4px 0 0 #f59e0b;}
+.export-daily-row.set-daily-type-can {box-shadow:inset 4px 0 0 #a78bfa;}
+.set-daily-type-badge {
+    display:inline-flex;
+    align-items:center;
+    margin-left:.42rem;
+    padding:.13rem .38rem;
+    border-radius:999px;
+    background:#e2e8f0;
+    color:#334155;
+    font-size:.66rem;
+    font-weight:800;
+    vertical-align:middle;
+}
+.set-daily-type-lunch .set-daily-type-badge {background:#e0f2fe;color:#0369a1;}
+.set-daily-type-sheet .set-daily-type-badge {background:#fef3c7;color:#92400e;}
+.set-daily-type-can .set-daily-type-badge {background:#ede9fe;color:#6d28d9;}
 .set-daily-product-name {
     margin-top:0.16rem;
     color:#0f172a;
@@ -3973,6 +4040,47 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     cursor:pointer;
 }
 .set-daily-toggle-btn:hover {background:rgba(37,99,235,.14);}
+.export-daily-record {
+    align-items:center;
+    margin-top:.48rem;
+    padding:.68rem .78rem;
+    border:1px solid #dbe7f3;
+    border-radius:11px;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    box-shadow:0 5px 12px rgba(15,23,42,.045);
+}
+.export-daily-record:first-of-type {
+    border-top:1px solid #dbe7f3;
+}
+.export-daily-date-copy {
+    min-width:0;
+}
+.export-daily-date-pill {
+    display:inline-flex;
+    align-items:center;
+    padding:.2rem .52rem;
+    border-radius:999px;
+    background:#e0f2fe;
+    color:#0369a1;
+    font-size:.78rem;
+    font-weight:900;
+    text-decoration:none;
+}
+.export-daily-date-pill:hover {background:#bae6fd;color:#075985;text-decoration:none;}
+.export-daily-qty {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:78px;
+    padding:.34rem .58rem;
+    border:1px solid rgba(22,163,74,.28);
+    border-radius:999px;
+    background:#f0fdf4;
+    color:#15803d !important;
+    font-size:.88rem !important;
+    font-weight:900;
+    white-space:nowrap;
+}
 .export-container-remaining,
 .export-daily-row strong {
     font-weight:800;
@@ -4199,24 +4307,33 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 .set-schedule-total-grid {
     width:100%;
     display:grid;
-    grid-template-columns:minmax(0, 240px);
+    grid-template-columns:minmax(0, 1fr);
     gap:0.75rem;
     margin-top:0.25rem;
 }
 .set-schedule-total-card {
-    padding:0.85rem 0.9rem;
+    width:100%;
+    box-sizing:border-box;
+    padding:1rem 1.05rem;
     border:1px solid #dbe3f0;
     border-radius:14px;
     background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
 }
 .set-schedule-total-card label {
+    display:block;
     margin-bottom:0.38rem;
 }
 .set-schedule-total-card input[type="number"] {
+    width:100%;
+    min-height:54px;
+    box-sizing:border-box;
     margin-top:0.2rem;
+    font-size:1.08rem;
+    font-weight:800;
+    text-align:center;
 }
 .set-schedule-total-helper {
-    margin-top:0.35rem;
+    margin-top:0.5rem;
     font-size:0.76rem;
     color:#64748b;
     line-height:1.45;
@@ -4318,7 +4435,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 }
 .set-schedule-line-controls {
     display:grid;
-    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-columns:minmax(0,1fr);
     gap:0.45rem;
     align-items:center;
 }
@@ -4509,8 +4626,13 @@ html[data-theme="dark"] .set-remaining-quantity {background:rgba(22,101,52,.26);
 html[data-theme="dark"] .set-finished-progress {background:linear-gradient(135deg,rgba(20,83,45,.28),rgba(30,58,138,.2));border-color:rgba(74,222,128,.26);}
 html[data-theme="dark"] .set-finished-progress-head {color:#bbf7d0;}
 html[data-theme="dark"] .set-finished-progress-track {background:#14532d;}
+html[data-theme="dark"] .set-assembly-date-link {border-color:#2563eb;background:rgba(37,99,235,.16);color:#bfdbfe;}
+html[data-theme="dark"] .set-assembly-date-link:hover {background:rgba(37,99,235,.28);color:#dbeafe;}
 html[data-theme="dark"] .set-daily-product-name {color:#dbeafe;}
 html[data-theme="dark"] .set-daily-expiry {color:#8ea3bd;}
+html[data-theme="dark"] .set-daily-type-lunch .set-daily-type-badge {background:rgba(14,165,233,.18);color:#7dd3fc;}
+html[data-theme="dark"] .set-daily-type-sheet .set-daily-type-badge {background:rgba(245,158,11,.18);color:#fcd34d;}
+html[data-theme="dark"] .set-daily-type-can .set-daily-type-badge {background:rgba(139,92,246,.2);color:#c4b5fd;}
 html[data-theme="dark"] .set-daily-toggle-btn {border-color:#3b82f6;background:rgba(37,99,235,.16);color:#bfdbfe;}
 html[data-theme="dark"] .set-assemble-btn {
     border-color:rgba(110,231,183,0.36) !important;
@@ -4787,6 +4909,11 @@ html[data-theme="dark"] .export-raw-card-total,
 html[data-theme="dark"] .export-raw-item-metrics span{color:#93c5fd;}
 html[data-theme="dark"] .export-raw-item{border-top-color:#223047;}
 html[data-theme="dark"] .export-progress-track{background:#314155;}
+html[data-theme="dark"] .export-container-progress-track{background:#223e69;}
+html[data-theme="dark"] .export-daily-record{background:linear-gradient(180deg,#162133 0%,#121a2a 100%);border-color:#314155;}
+html[data-theme="dark"] .export-daily-date-pill{background:rgba(14,165,233,.18);color:#7dd3fc;}
+html[data-theme="dark"] .export-daily-date-pill:hover{background:rgba(14,165,233,.28);color:#bae6fd;}
+html[data-theme="dark"] .export-daily-qty{background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.3);color:#86efac !important;}
 html[data-theme="dark"] .calendar-weekdays{background:#182234;border-bottom-color:#253246;}
 html[data-theme="dark"] .calendar-days{background:#263244;}
 html[data-theme="dark"] .calendar-day{background:#121a2a;border-color:#263244;}
@@ -5920,9 +6047,13 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     <td>
                         <div class="export-actions">
                             {% if can_prod %}
-                            <button type="button" class="calendar-action-btn export-mini-btn" onclick="openExportModal({{ export.id }})">수정</button>
+                            <button type="button" class="calendar-action-btn export-mini-btn set-manage-btn set-edit-btn" onclick="openExportModal({{ export.id }})">
+                                <span class="btn-copy"><span class="btn-title">일정 수정</span></span>
+                            </button>
                             <form method="POST" action="/schedules/export/delete/{{ export.id }}" onsubmit="return confirm('이 수출 일정을 삭제하시겠습니까?');">
-                                <button type="submit" class="export-delete-btn">삭제</button>
+                                <button type="submit" class="calendar-action-btn export-mini-btn set-manage-btn set-delete-btn">
+                                    <span class="btn-copy"><span class="btn-title">일정 삭제</span></span>
+                                </button>
                             </form>
                             {% endif %}
                         </div>
@@ -5992,12 +6123,17 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">PO {{ container.po_number }}</div>
                             {% endif %}
                         </div>
-                        <div class="export-container-math">{{ export_box(container.target_boxes) }} box - 생산 {{ export_box(container.produced_boxes) }} box</div>
+                        <div class="export-container-progress">
+                            <div class="export-container-progress-copy">생산 {{ export_box(container.produced_boxes) }} / 목표 {{ export_box(container.target_boxes) }} box</div>
+                            <div class="export-container-progress-track">
+                                <span style="width: {{ ((container.produced_boxes / container.target_boxes) * 100) if container.target_boxes else 0 }}%;"></span>
+                            </div>
+                        </div>
                         <div class="export-container-remaining">
                             {% if container.is_completed %}
-                            완료
+                            <span class="set-remaining-quantity">완료</span>
                             {% else %}
-                            남은 수량 {{ export_box(container.remaining_boxes) }} box
+                            <span class="set-remaining-quantity">남은 수량 {{ export_box(container.remaining_boxes) }} box</span>
                             {% endif %}
                         </div>
                     </div>
@@ -6029,16 +6165,16 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% if export.daily_actuals %}
                         {% for daily in export.daily_actuals %}
                         <div
-                            class="export-daily-row"
+                            class="export-daily-row export-daily-record"
                             {% if loop.revindex > 5 %}
                             data-export-daily-group="exportDailyRows{{ export.id }}"
                             style="display:none;"
                             {% endif %}>
-                            <div>
+                            <div class="export-daily-date-copy">
                                 {% if daily.detail_url %}
-                                <a href="{{ daily.detail_url }}" class="export-daily-date-link">{{ daily.date }}</a>
+                                <a href="{{ daily.detail_url }}" class="export-daily-date-pill">{{ daily.date }}</a>
                                 {% else %}
-                                <span>{{ daily.date }}</span>
+                                <span class="export-daily-date-pill">{{ daily.date }}</span>
                                 {% endif %}
                                 {% if daily.expiry_breakdowns %}
                                 <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
@@ -6057,7 +6193,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                 </div>
                                 {% endif %}
                             </div>
-                            <strong>{{ export_box(daily.actual_boxes) }} box</strong>
+                            <strong class="export-daily-qty">완료 {{ export_box(daily.actual_boxes) }} box</strong>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -6392,7 +6528,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% endfor %}
                     <div class="set-component-stock-panel">
                         <div class="set-component-stock-head">
-                            <div>
+                            <div class="export-daily-production-copy">
                                 <h5>반제품 재고 현황</h5>
                                 <p>이 세트 일정에서 생산 완료된 반제품과 완제품 조립 사용량 기준</p>
                             </div>
@@ -6425,21 +6561,31 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             <span style="width: {{ ((item.assembly_completed_qty / item.assembly_target_qty) * 100) if item.assembly_target_qty else 0 }}%;"></span>
                         </div>
                         <div class="req-muted" style="margin-top:.42rem;">조립 {{ item.assembly_count }}회{% if item.assembly_in_progress_id %} · 진행 중 조립 있음{% endif %}</div>
+                        {% if item.completed_assembly_rows %}
+                        <div class="set-assembly-date-list">
+                            {% for assembly in item.completed_assembly_rows | reverse %}
+                            <a href="/production/{{ assembly.id }}" class="set-assembly-date-link" title="조립 생산 상세 보기">
+                                조립 완료 {{ assembly.production_date or '-' }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     {% if item.daily_actuals %}
                         <div id="setDailyActuals{{ item.id }}" class="set-daily-actuals">
                         {% for daily in item.daily_actuals %}
-                        <div class="export-daily-row{% if loop.revindex > 5 %} set-daily-row-extra{% endif %}">
+                        <div class="export-daily-row set-daily-type-{{ daily.type_key or 'other' }}{% if loop.revindex > 5 %} set-daily-row-extra{% endif %}">
                             <div class="set-daily-production-copy">
                                 {% if daily.detail_url %}
                                 <a href="{{ daily.detail_url }}" class="export-daily-date-link">{{ daily.date }}</a>
                                 {% else %}
                                 <span>{{ daily.date }}</span>
                                 {% endif %}
+                                <span class="set-daily-type-badge">{{ daily.type_label or '반제품' }}</span>
                                 <div class="set-daily-product-name">{{ daily.product_name or '-' }}</div>
                                 <div class="set-daily-expiry">소비기한 {{ daily.expiry_date or '미입력' }}</div>
                             </div>
-                            <strong>{{ export_box(daily.actual_boxes) }} BOX</strong>
+                            <strong>{{ export_box(daily.actual_boxes) }} {{ daily.unit or 'EA' }}</strong>
                         </div>
                         {% endfor %}
                         </div>
@@ -9276,6 +9422,20 @@ function addSetScheduleLine(button) {
     renderSetScheduleSelectedLines(picker);
 }
 
+function addSetScheduleLineFromSelect(select) {
+    const picker = select?.closest('.set-schedule-line-picker');
+    if (!picker) return;
+    const hidden = picker.querySelector('input[name="component_line[]"]');
+    const nextValue = String(select.value || '').trim();
+    if (!hidden || !nextValue) return;
+    const values = parseSetScheduleLineValues(hidden.value);
+    if (!values.includes(nextValue)) {
+        values.push(nextValue);
+        hidden.value = values.join(',');
+    }
+    renderSetScheduleSelectedLines(picker);
+}
+
 function removeSetScheduleLine(button, lineValue) {
     const picker = button?.closest('.set-schedule-line-picker');
     if (!picker) return;
@@ -9358,8 +9518,7 @@ function renderSetScheduleItems(productId, presetItems = []) {
                     <div class="set-schedule-line-picker">
                         <input type="hidden" name="component_line[]" value="${escapeHtml(lineValue)}">
                         <div class="set-schedule-line-controls">
-                            <select class="set-schedule-line-select">${buildSetScheduleLineSelectOptions(parseSetScheduleLineValues(lineValue))}</select>
-                            <button type="button" class="set-schedule-line-add-btn" onclick="addSetScheduleLine(this)">추가</button>
+                            <select class="set-schedule-line-select" onchange="addSetScheduleLineFromSelect(this)">${buildSetScheduleLineSelectOptions(parseSetScheduleLineValues(lineValue))}</select>
                         </div>
                         <div class="set-schedule-line-selected"></div>
                         <div class="req-muted">여러 라인을 함께 선택할 수 있습니다. 선택하지 않으면 라인 사용 안함으로 등록됩니다.</div>
