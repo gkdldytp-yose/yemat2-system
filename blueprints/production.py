@@ -876,7 +876,7 @@ def _load_schedule_set_finished_products(cursor, workplace):
                 'current_stock': float(row.get('current_stock') or 0),
             }
         )
-    return sorted(
+    products = sorted(
         product_map.values(),
         key=lambda item: (
             0 if _normalize_schedule_product_workplace(item.get('workplace')) == normalized_workplace else 1,
@@ -884,6 +884,28 @@ def _load_schedule_set_finished_products(cursor, workplace):
             int(item.get('id') or 0),
         ),
     )
+    # A virtual choice for the two package sizes that share the same can semi-finished product.
+    # The individual finished products remain in the list for their existing standalone workflow.
+    shinan_3 = next(
+        (item for item in products if '신안 1004 캔' in item['name'] and '3입' in item['name']),
+        None,
+    )
+    shinan_6 = next(
+        (item for item in products if '신안 1004 캔' in item['name'] and '6입' in item['name']),
+        None,
+    )
+    if shinan_3 and shinan_6:
+        products.append(
+            {
+                'id': -1004,
+                'name': '신안 1004 캔 3입 & 6입',
+                'code': '혼용 생산',
+                'workplace': normalized_workplace,
+                'components': [],
+                'mixed_product_ids': [int(shinan_3['id']), int(shinan_6['id'])],
+            },
+        )
+    return products
 
 
 def _parse_set_schedule_items(form):
@@ -921,6 +943,171 @@ def _parse_set_schedule_items(form):
         raise ValueError('세트 일정에 포함할 반제품을 하나 이상 입력해주세요.')
     items.sort(key=lambda item: (int(item.get('priority') or 0), int(item.get('component_product_id') or 0)))
     return items
+
+
+def _parse_set_finished_product_quantities(form, cursor, workplace, primary_product_id):
+    """Return the selected set finished products and their planned box quantities."""
+    product_ids = form.getlist('finished_product_id[]')
+    quantities = form.getlist('finished_product_quantity[]')
+    if not product_ids:
+        return [{'product_id': int(primary_product_id), 'planned_boxes': 0}]
+
+    targets = []
+    seen_ids = set()
+    for index, raw_product_id in enumerate(product_ids):
+        product_id = _parse_positive_int(raw_product_id, f'{index + 1}번째 세트 완제품')
+        if product_id in seen_ids:
+            continue
+        quantity_raw = quantities[index] if index < len(quantities) else '0'
+        try:
+            planned_boxes = int(float(quantity_raw or 0))
+        except (TypeError, ValueError):
+            raise ValueError(f'{index + 1}번째 세트 완제품 수량을 확인해주세요.')
+        if planned_boxes < 0:
+            raise ValueError('세트 완제품 수량은 0 이상이어야 합니다.')
+        if not _find_set_finished_product(cursor, workplace, product_id):
+            raise ValueError('선택한 세트 완제품을 찾을 수 없습니다.')
+        seen_ids.add(product_id)
+        targets.append({'product_id': product_id, 'planned_boxes': planned_boxes})
+
+    targets = [target for target in targets if target['planned_boxes'] > 0]
+    if not targets:
+        raise ValueError('세트 완제품 수량을 1박스 이상 입력해주세요.')
+    if int(primary_product_id) not in {target['product_id'] for target in targets}:
+        primary_product_id = targets[0]['product_id']
+    return targets
+
+
+def _build_set_schedule_items_for_finished_products(cursor, targets, submitted_items):
+    """Aggregate semi-finished quantities from all selected finished-product BOMs."""
+    submitted_by_component = {
+        int(item.get('component_product_id') or 0): item
+        for item in submitted_items
+        if int(item.get('component_product_id') or 0) > 0
+    }
+    required_by_component = defaultdict(int)
+    for target in targets:
+        product_id = int(target.get('product_id') or 0)
+        planned_boxes = int(target.get('planned_boxes') or 0)
+        if product_id <= 0 or planned_boxes <= 0:
+            continue
+        bom_rows = cursor.execute(
+            '''
+            SELECT b.component_product_id, COALESCE(b.quantity_per_box, 0) AS quantity_per_box,
+                   COALESCE(p.category, '') AS category, COALESCE(p.set_item_type, '') AS set_item_type
+            FROM bom b
+            JOIN products p ON p.id = b.component_product_id
+            WHERE b.product_id = ? AND b.component_product_id IS NOT NULL
+            ''',
+            (product_id,),
+        ).fetchall()
+        for row in bom_rows:
+            if _normalize_set_item_type(row['set_item_type'], row['category']) != 'semi':
+                continue
+            component_id = int(row['component_product_id'] or 0)
+            per_box = float(row['quantity_per_box'] or 0)
+            if component_id > 0 and per_box > 0:
+                required_by_component[component_id] += int(round(planned_boxes * per_box))
+
+    if not required_by_component:
+        raise ValueError('선택한 세트 완제품에 연결된 반제품 BOM이 없습니다.')
+    items = []
+    for component_id, required_quantity in sorted(required_by_component.items()):
+        submitted = submitted_by_component.get(component_id)
+        if not submitted:
+            raise ValueError('세트 반제품 계획을 다시 불러와주세요.')
+        items.append({
+            'component_product_id': component_id,
+            'required_quantity': required_quantity,
+            'priority': int(submitted.get('priority') or 1),
+            'line': str(submitted.get('line') or '').strip(),
+        })
+    return items
+
+
+def _build_set_finished_product_component_plans(cursor, targets):
+    """Build display rows per finished product, without merging shared semi-finished products."""
+    plans = []
+    for target in targets:
+        product_id = int(target.get('product_id') or 0)
+        planned_boxes = int(target.get('planned_boxes') or 0)
+        if product_id <= 0 or planned_boxes <= 0:
+            continue
+        rows = cursor.execute(
+            '''
+            SELECT
+                b.component_product_id,
+                COALESCE(b.quantity_per_box, 0) AS quantity_per_box,
+                COALESCE(cp.name, '') AS component_product_name,
+                COALESCE(cp.code, '') AS component_product_code,
+                COALESCE(cp.category, '') AS component_category,
+                COALESCE(cp.set_item_type, '') AS component_set_item_type
+            FROM bom b
+            JOIN products cp ON cp.id = b.component_product_id
+            WHERE b.product_id = ? AND b.component_product_id IS NOT NULL
+            ORDER BY b.id
+            ''',
+            (product_id,),
+        ).fetchall()
+        for row in rows:
+            if _normalize_set_item_type(row['component_set_item_type'], row['component_category']) != 'semi':
+                continue
+            quantity_per_box = float(row['quantity_per_box'] or 0)
+            if quantity_per_box <= 0:
+                continue
+            plans.append(
+                {
+                    'finished_product_id': product_id,
+                    'finished_product_name': str(target.get('name') or '').strip(),
+                    'finished_product_code': str(target.get('code') or '').strip(),
+                    'planned_boxes': planned_boxes,
+                    'component_product_id': int(row['component_product_id'] or 0),
+                    'component_product_name': str(row['component_product_name'] or '').strip(),
+                    'component_product_code': str(row['component_product_code'] or '').strip(),
+                    'required_quantity': int(round(planned_boxes * quantity_per_box)),
+                }
+            )
+    return plans
+
+
+def _get_set_finished_product_targets(set_schedule_row):
+    """Read the multi-finished-product plan, while keeping old schedules compatible."""
+    raw_value = str(set_schedule_row.get('finished_product_quantities') or '').strip()
+    targets = []
+    if raw_value:
+        try:
+            parsed = json.loads(raw_value)
+            for item in parsed if isinstance(parsed, list) else []:
+                product_id = int(item.get('product_id') or 0)
+                planned_boxes = int(item.get('planned_boxes') or 0)
+                if product_id > 0 and planned_boxes > 0:
+                    targets.append({'product_id': product_id, 'planned_boxes': planned_boxes})
+        except (TypeError, ValueError, json.JSONDecodeError):
+            pass
+    if not targets and int(set_schedule_row.get('finished_product_id') or 0) > 0:
+        targets.append({'product_id': int(set_schedule_row['finished_product_id']), 'planned_boxes': 0})
+    return targets
+
+
+def _load_set_finished_product_target_details(cursor, set_schedule_row):
+    targets = _get_set_finished_product_targets(set_schedule_row)
+    if not targets:
+        return []
+    ids = [int(target['product_id']) for target in targets]
+    placeholders = ','.join(['?'] * len(ids))
+    rows = cursor.execute(
+        f"SELECT id, COALESCE(name, '') AS name, COALESCE(code, '') AS code FROM products WHERE id IN ({placeholders})",
+        ids,
+    ).fetchall()
+    products_by_id = {int(row['id']): dict(row) for row in rows}
+    return [
+        {
+            **target,
+            'name': products_by_id.get(int(target['product_id']), {}).get('name', ''),
+            'code': products_by_id.get(int(target['product_id']), {}).get('code', ''),
+        }
+        for target in targets
+    ]
 
 
 def _load_set_schedule_items(cursor, set_schedule_id):
@@ -1085,6 +1272,8 @@ def _load_set_assembly_production(cursor, set_schedule_id, finished_product_id=0
         SELECT
             pr.id,
             pr.product_id,
+            COALESCE(p.name, '') AS product_name,
+            COALESCE(p.code, '') AS product_code,
             pr.production_date,
             pr.planned_boxes,
             pr.actual_boxes,
@@ -1094,6 +1283,7 @@ def _load_set_assembly_production(cursor, set_schedule_id, finished_product_id=0
             COALESCE(ps.line_usage_disabled, pr.line_usage_disabled, 0) AS line_usage_disabled
         FROM productions pr
         LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        LEFT JOIN products p ON p.id = pr.product_id
         WHERE COALESCE(pr.set_schedule_id, 0) = ?
           AND COALESCE(pr.set_schedule_item_id, 0) = 0
           AND COALESCE(ps.schedule_source, '') = 'set_assembly'
@@ -1117,6 +1307,8 @@ def _load_set_assembly_productions(cursor, set_schedule_id, finished_product_id=
         SELECT
             pr.id,
             pr.product_id,
+            COALESCE(p.name, '') AS product_name,
+            COALESCE(p.code, '') AS product_code,
             pr.production_date,
             pr.planned_boxes,
             pr.actual_boxes,
@@ -1126,6 +1318,7 @@ def _load_set_assembly_productions(cursor, set_schedule_id, finished_product_id=
             COALESCE(ps.line_usage_disabled, pr.line_usage_disabled, 0) AS line_usage_disabled
         FROM productions pr
         LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        LEFT JOIN products p ON p.id = pr.product_id
         WHERE COALESCE(pr.set_schedule_id, 0) = ?
           AND COALESCE(pr.set_schedule_item_id, 0) = 0
           AND COALESCE(ps.schedule_source, '') = 'set_assembly'
@@ -3864,19 +4057,26 @@ def schedules():
                 creator_username = str(set_row.get('created_by') or '').strip()
                 current_username = str((session.get('user') or {}).get('username') or '').strip()
                 set_row['is_owner'] = bool(creator_username and creator_username == current_username)
+                finished_product_targets = _load_set_finished_product_target_details(cursor, set_row)
+                if finished_product_targets:
+                    set_row['finished_product_name'] = ' / '.join(
+                        str(target.get('name') or '').strip() for target in finished_product_targets
+                    )
                 item_rows = _load_set_schedule_items(cursor, int(set_row['id']))
                 linked_rows = _load_set_linked_rows(cursor, int(set_row['id']))
                 assembly_rows = _load_set_assembly_productions(
                     cursor,
                     int(set_row['id']),
-                    int(set_row.get('finished_product_id') or 0),
                 )
                 assembly_row = assembly_rows[-1] if assembly_rows else None
-                assembly_target_qty = _calculate_set_schedule_finished_quantity(
+                legacy_assembly_target_qty = _calculate_set_schedule_finished_quantity(
                     cursor,
                     int(set_row.get('finished_product_id') or 0),
                     item_rows,
                 )
+                assembly_target_qty = sum(
+                    int(target.get('planned_boxes') or 0) for target in finished_product_targets
+                ) or legacy_assembly_target_qty
                 total_required_qty = sum(int(item.get('required_quantity') or 0) for item in item_rows)
                 total_generated_qty = sum(int(float(row.get('planned_boxes') or 0)) for row in linked_rows)
                 completed_qty = 0
@@ -3966,6 +4166,36 @@ def schedules():
                     for row in assembly_rows
                     if _normalize_production_status(row.get('status')) == done_status
                 )
+                finished_product_component_plans = (
+                    _build_set_finished_product_component_plans(cursor, finished_product_targets)
+                    if len(finished_product_targets) > 1
+                    else []
+                )
+                plans_by_component = defaultdict(list)
+                for plan in finished_product_component_plans:
+                    plans_by_component[int(plan.get('component_product_id') or 0)].append(plan)
+                for component_product_id, plans in plans_by_component.items():
+                    total_required = sum(int(plan.get('required_quantity') or 0) for plan in plans)
+                    completed_total = int(component_progress.get(component_product_id, {}).get('completed_quantity') or 0)
+                    allocated_completed = 0
+                    for index, plan in enumerate(plans):
+                        required_quantity = int(plan.get('required_quantity') or 0)
+                        if index == len(plans) - 1:
+                            completed_quantity = min(max(completed_total - allocated_completed, 0), required_quantity)
+                        elif total_required > 0:
+                            completed_quantity = int(round(completed_total * required_quantity / total_required))
+                            completed_quantity = min(completed_quantity, required_quantity)
+                        else:
+                            completed_quantity = 0
+                        allocated_completed += completed_quantity
+                        plan['completed_quantity'] = completed_quantity
+                        plan['remaining_quantity'] = max(required_quantity - completed_quantity, 0)
+                completed_assembly_by_product = defaultdict(float)
+                for row in assembly_rows:
+                    if _normalize_production_status(row.get('status')) == done_status:
+                        completed_assembly_by_product[int(row.get('product_id') or 0)] += float(
+                            row.get('actual_boxes') or row.get('planned_boxes') or 0
+                        )
                 assembly_in_progress_row = next(
                     (row for row in reversed(assembly_rows) if _normalize_production_status(row.get('status')) != done_status),
                     None,
@@ -3976,11 +4206,21 @@ def schedules():
                 ]
                 component_name_list = [item['component_product_name'] for item in item_summaries if item.get('component_product_name')]
                 component_production_completed = bool(linked_rows) and completed_count == len(linked_rows)
-                is_completed = component_production_completed and assembly_target_qty > 0 and assembly_completed_qty >= assembly_target_qty
+                if any(int(target.get('planned_boxes') or 0) > 0 for target in finished_product_targets):
+                    assembly_plan_completed = all(
+                        completed_assembly_by_product.get(int(target['product_id']), 0) >= int(target['planned_boxes'])
+                        for target in finished_product_targets
+                        if int(target.get('planned_boxes') or 0) > 0
+                    )
+                else:
+                    assembly_plan_completed = assembly_completed_qty >= assembly_target_qty
+                is_completed = component_production_completed and assembly_target_qty > 0 and assembly_plan_completed
                 completed_date = max(completed_dates) if completed_dates and is_completed else ''
                 has_started = started_count > 0 or completed_count > 0
                 set_view = {
                     **set_row,
+                    'finished_product_targets': finished_product_targets,
+                    'finished_product_component_plans': finished_product_component_plans,
                     'items': item_summaries,
                     'linked_rows': linked_rows,
                     'component_names': component_name_list,
@@ -4021,6 +4261,8 @@ def schedules():
                         'finished_product_id': int(set_row.get('finished_product_id') or 0),
                         'finished_product_name': set_row.get('finished_product_name') or '',
                         'finished_product_code': set_row.get('finished_product_code') or '',
+                        'finished_product_targets': finished_product_targets,
+                        'finished_product_component_plans': finished_product_component_plans,
                         'production_start_date': set_row.get('production_start_date') or '',
                         'production_end_date': set_row.get('production_end_date') or '',
                         'note': set_row.get('note') or '',
@@ -5872,24 +6114,30 @@ def add_set_schedule():
         start_date = (request.form.get('production_start_date') or '').strip()
         production_end_date = (request.form.get('production_end_date') or '').strip()
         note = (request.form.get('note') or '').strip()
-        items = _parse_set_schedule_items(request.form)
+        submitted_items = _parse_set_schedule_items(request.form)
 
         with db_transaction() as conn:
             cursor = conn.cursor()
             product_row = _find_set_finished_product(cursor, workplace, finished_product_id)
             if not product_row:
                 raise ValueError('선택한 세트 완제품을 찾을 수 없습니다.')
+            finished_product_targets = _parse_set_finished_product_quantities(
+                request.form, cursor, workplace, finished_product_id
+            )
+            items = _build_set_schedule_items_for_finished_products(cursor, finished_product_targets, submitted_items)
+            finished_product_id = int(finished_product_targets[0]['product_id'])
             cursor.execute(
                 '''
                 INSERT INTO set_schedules (
-                    workplace, finished_product_id, production_start_date, production_end_date,
+                    workplace, finished_product_id, finished_product_quantities, production_start_date, production_end_date,
                     note, created_by, updated_by
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     workplace,
                     finished_product_id,
+                    json.dumps(finished_product_targets, ensure_ascii=False),
                     start_date,
                     production_end_date,
                     note,
@@ -5909,6 +6157,7 @@ def add_set_schedule():
                 {
                     'finished_product_id': finished_product_id,
                     'finished_product_name': product_row.get('name') or '',
+                    'finished_product_targets': finished_product_targets,
                     'production_start_date': start_date,
                     'production_end_date': production_end_date,
                     'note': note,
@@ -5930,7 +6179,7 @@ def update_set_schedule(set_schedule_id):
         start_date = (request.form.get('production_start_date') or '').strip()
         production_end_date = (request.form.get('production_end_date') or '').strip()
         note = (request.form.get('note') or '').strip()
-        items = _parse_set_schedule_items(request.form)
+        submitted_items = _parse_set_schedule_items(request.form)
 
         with db_transaction() as conn:
             cursor = conn.cursor()
@@ -5944,7 +6193,12 @@ def update_set_schedule(set_schedule_id):
             product_row = _find_set_finished_product(cursor, workplace, finished_product_id)
             if not product_row:
                 raise ValueError('선택한 세트 완제품을 찾을 수 없습니다.')
-            has_set_history = bool(_load_set_assembly_productions(cursor, set_schedule_id, int(before_row['finished_product_id'] or 0))) or any(
+            finished_product_targets = _parse_set_finished_product_quantities(
+                request.form, cursor, workplace, finished_product_id
+            )
+            items = _build_set_schedule_items_for_finished_products(cursor, finished_product_targets, submitted_items)
+            finished_product_id = int(finished_product_targets[0]['product_id'])
+            has_set_history = bool(_load_set_assembly_productions(cursor, set_schedule_id)) or any(
                 _is_started_set_row(row) for row in _load_set_linked_rows(cursor, set_schedule_id)
             )
             if has_set_history and int(before_row['finished_product_id'] or 0) != finished_product_id:
@@ -5953,6 +6207,7 @@ def update_set_schedule(set_schedule_id):
                 '''
                 UPDATE set_schedules
                 SET finished_product_id = ?,
+                    finished_product_quantities = ?,
                     production_start_date = ?,
                     production_end_date = ?,
                     note = ?,
@@ -5962,6 +6217,7 @@ def update_set_schedule(set_schedule_id):
                 ''',
                 (
                     finished_product_id,
+                    json.dumps(finished_product_targets, ensure_ascii=False),
                     start_date,
                     production_end_date,
                     note,
@@ -6054,7 +6310,11 @@ def open_set_assembly(set_schedule_id):
             if not set_row:
                 raise ValueError('완제품 조립을 진행할 세트 일정을 찾을 수 없습니다.')
             set_row = dict(set_row)
-            finished_product_id = int(set_row.get('finished_product_id') or 0)
+            finished_product_id = _parse_positive_int(request.form.get('finished_product_id'), '조립할 세트 완제품')
+            finished_product_targets = _get_set_finished_product_targets(set_row)
+            target_product_ids = {int(target['product_id']) for target in finished_product_targets}
+            if finished_product_id not in target_product_ids:
+                raise ValueError('이 세트 일정에 등록되지 않은 완제품입니다.')
             assembly_rows = _load_set_assembly_productions(cursor, set_schedule_id, finished_product_id)
             in_progress_assembly = next(
                 (row for row in reversed(assembly_rows) if _normalize_production_status(row.get('status')) != '완료'),
@@ -6072,8 +6332,20 @@ def open_set_assembly(set_schedule_id):
                 finished_product_id,
                 _get_set_schedule_component_remaining_stock(cursor, set_schedule_id),
             )
+            selected_target = next(
+                (target for target in finished_product_targets if int(target['product_id']) == finished_product_id),
+                {},
+            )
+            target_planned_boxes = int(selected_target.get('planned_boxes') or 0)
+            if target_planned_boxes > 0:
+                completed_target_boxes = sum(
+                    float(row.get('actual_boxes') or row.get('planned_boxes') or 0)
+                    for row in assembly_rows
+                    if _normalize_production_status(row.get('status')) == '완료'
+                )
+                planned_boxes = min(planned_boxes, max(target_planned_boxes - completed_target_boxes, 0))
             if planned_boxes <= 0:
-                raise ValueError('지금 조립 가능한 반제품 수량이 없습니다. 반제품 생산 완료 수량을 확인해주세요.')
+                raise ValueError('선택한 완제품의 조립 가능 수량이 없습니다. 반제품 재고와 계획 수량을 확인해주세요.')
 
             schedule_date = _select_set_assembly_default_date(set_row)
             schedule_note = _build_set_assembly_note(
@@ -7725,6 +7997,19 @@ def production_detail(production_id):
             for row in cursor.fetchall()
             if int(row['product_id'] or 0) > 0
         }
+    # 세트 완제품 조립은 일반 상품 재고가 아니라 해당 세트에서 생산 완료된
+    # 반제품에서 기존 조립 사용량을 제외한 수량을 사용한다. 일반 product_stocks는
+    # 세트 반제품 생산 이력과 동기화되지 않을 수 있어 조립 상세의 재고와 달라진다.
+    set_schedule_id = int(production.get('set_schedule_id') or 0)
+    set_schedule_item_id = int(production.get('set_schedule_item_id') or 0)
+    if set_schedule_id > 0 and set_schedule_item_id == 0 and component_product_ids:
+        set_component_stock_map = _get_set_schedule_component_remaining_stock(cursor, set_schedule_id)
+        for component_product_id in component_product_ids:
+            if component_product_id in set_component_stock_map:
+                component_stock_map[component_product_id] = max(
+                    float(set_component_stock_map[component_product_id] or 0),
+                    0.0,
+                )
     for row in material_usage:
         row['base_sort_key'] = _get_production_material_sort_key(row)
         material_id = row.get('material_id')
@@ -8218,6 +8503,11 @@ def update_production_usage(production_id):
         prod_row = dict(prod_row) if prod_row else {}
         planned_boxes = float(prod_row['planned_boxes']) if prod_row and prod_row['planned_boxes'] else 0
         product_id = prod_row['product_id'] if prod_row else None
+        is_set_assembly_production = (
+            int(prod_row.get('set_schedule_id') or 0) > 0
+            and int(prod_row.get('set_schedule_item_id') or 0) <= 0
+            and _is_set_finished_product_row(prod_row)
+        )
         touched_material_ids = set()
         current_workplace = (get_workplace() or session.get('workplace') or '').strip()
         production_workplace = _get_effective_production_workplace(cursor, prod_row) or current_workplace
@@ -8829,11 +9119,7 @@ def update_production_usage(production_id):
                     )
 
             for component_product_id, need_qty in needed_by_component.items():
-                if (
-                    int(prod_row.get('set_schedule_id') or 0) > 0
-                    and int(prod_row.get('set_schedule_item_id') or 0) <= 0
-                    and _is_set_finished_product_row(prod_row)
-                ):
+                if is_set_assembly_production:
                     set_available_map = _get_set_schedule_component_remaining_stock(
                         cursor,
                         int(prod_row.get('set_schedule_id') or 0),
@@ -8851,6 +9137,9 @@ def update_production_usage(production_id):
                                 'need': need_qty,
                             }
                         )
+                    # 세트 조립 반제품은 일반 상품 재고가 아니라 세트 생산분을 사용한다.
+                    # 아래 일반 product_stocks 검증을 중복 적용하지 않는다.
+                    continue
                 available = _get_product_stock(cursor, component_product_id, current_workplace)
                 cursor.execute('SELECT name FROM products WHERE id = ?', (component_product_id,))
                 component_row = cursor.fetchone()
@@ -9035,7 +9324,12 @@ def update_production_usage(production_id):
                         (request.form.get(f'mat_info_expiry_none_{usage_id}') or '').strip() == '1',
                     )
                     touched_material_ids.add(row['material_id'])
-                elif save_action != 'temp' and row['component_product_id'] and not skip_stock_impact:
+                elif (
+                    save_action != 'temp'
+                    and row['component_product_id']
+                    and not skip_stock_impact
+                    and not is_set_assembly_production
+                ):
                     _consume_component_product_stock(
                         cursor,
                         int(row['component_product_id']),
@@ -9070,9 +9364,45 @@ def update_production_usage(production_id):
                     'raw_entries': raw_entries,
                 },
             )
+            if request.form.get('move_to_materials') == '1':
+                shortage_ids = request.form.getlist('shortage_material_id[]')
+                shortage_qtys = request.form.getlist('shortage_qty[]')
+                issue_prefill_by_material = {}
+                for index, raw_material_id in enumerate(shortage_ids):
+                    try:
+                        material_id = int(raw_material_id or 0)
+                        shortage_qty = float(shortage_qtys[index] if index < len(shortage_qtys) else 0)
+                    except (TypeError, ValueError):
+                        continue
+                    if material_id <= 0 or shortage_qty <= 0:
+                        continue
+                    issue_prefill_by_material[material_id] = (
+                        issue_prefill_by_material.get(material_id, 0.0) + shortage_qty
+                    )
+                if issue_prefill_by_material:
+                    placeholders = ','.join(['?'] * len(issue_prefill_by_material))
+                    material_rows = cursor.execute(
+                        f'''
+                        SELECT id, name, unit
+                        FROM materials
+                        WHERE id IN ({placeholders})
+                        ''',
+                        list(issue_prefill_by_material),
+                    ).fetchall()
+                    session['production_issue_prefill'] = [
+                        {
+                            'material_id': int(row['id']),
+                            'requested_quantity': round(issue_prefill_by_material[int(row['id'])], 2),
+                            'material_name': str(row['name'] or '').strip(),
+                            'unit': str(row['unit'] or '').strip(),
+                            'note': f'생산번호 {production_id} 부자재 부족분',
+                        }
+                        for row in material_rows
+                        if issue_prefill_by_material.get(int(row['id']), 0) > 0
+                    ]
             commit_db(conn)
             if request.form.get('move_to_materials') == '1':
-                return redirect(url_for('materials.materials'))
+                return redirect(url_for('materials.materials', req_tab='issue', issue_status='pending'))
             return redirect(url_for('production.production_detail', production_id=production_id))
 
         # 4. ??밴텦 ?꾨즺 筌ｌ꼶??

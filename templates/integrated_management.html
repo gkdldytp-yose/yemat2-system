@@ -117,6 +117,36 @@
 .modal-box .modal-title{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:1rem;}
 .modal-box{background:white;border-radius:12px;padding:1.5rem;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;}
+.supplier-management-modal{max-width:980px !important;padding:1.25rem !important;}
+.supplier-management-header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #dbe5f0;}
+.supplier-management-header h3{margin:0;font-size:1.2rem;}
+.supplier-management-header p{margin:.32rem 0 0;color:#64748b;font-size:.88rem;}
+.supplier-management-form{padding:1rem;border:1px solid #dbe5f0;border-radius:14px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);}
+.supplier-management-form label{font-weight:750;color:#334155;font-size:.82rem;}
+.supplier-management-form input,.supplier-management-form textarea,.supplier-search-input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:.58rem .68rem;background:#fff;color:#0f172a;}
+.supplier-management-form input:focus,.supplier-management-form textarea:focus,.supplier-search-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.14);}
+.supplier-management-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin:1rem 0 .55rem;}
+.supplier-management-count{font-size:.82rem;color:#64748b;font-weight:700;}
+.supplier-search-input{max-width:280px;}
+.supplier-management-table{max-height:330px;overflow:auto;border:1px solid #dbe5f0;border-radius:12px;background:#fff;}
+.supplier-management-table table{margin:0;min-width:760px;}
+.supplier-management-table th{position:sticky;top:0;z-index:1;background:#f1f5f9;color:#475569;font-size:.78rem;}
+.supplier-management-table td{vertical-align:middle;}
+.supplier-management-table .supplier-name{font-weight:800;color:#0f172a;}
+html[data-theme="dark"] .supplier-management-modal{background:linear-gradient(180deg,#121a2a,#0d1524);border:1px solid #263244;box-shadow:0 28px 64px rgba(0,0,0,.5);color:#e5edf8;}
+html[data-theme="dark"] .supplier-management-header{border-bottom-color:#263244;}
+html[data-theme="dark"] .supplier-management-header h3{color:#f1f5f9;}
+html[data-theme="dark"] .supplier-management-header p,html[data-theme="dark"] .supplier-management-count{color:#8ea3bd;}
+html[data-theme="dark"] .supplier-management-form{background:linear-gradient(135deg,#162133,#111b2b);border-color:#2b3a50;}
+html[data-theme="dark"] .supplier-management-form label{color:#c7d3e3;}
+html[data-theme="dark"] .supplier-management-form input,html[data-theme="dark"] .supplier-management-form textarea,html[data-theme="dark"] .supplier-search-input{background:#0d1728;border-color:#304159;color:#e5edf8;}
+html[data-theme="dark"] .supplier-management-form input::placeholder,html[data-theme="dark"] .supplier-management-form textarea::placeholder,html[data-theme="dark"] .supplier-search-input::placeholder{color:#71849c;}
+html[data-theme="dark"] .supplier-management-table{background:#101827;border-color:#2b3a50;}
+html[data-theme="dark"] .supplier-management-table th{background:#162133;color:#c7d3e3;border-bottom-color:#2b3a50;}
+html[data-theme="dark"] .supplier-management-table td{color:#dbe7f5;border-bottom-color:#223046;}
+html[data-theme="dark"] .supplier-management-table tr:hover{background:#17253a;}
+html[data-theme="dark"] .supplier-management-table .supplier-name{color:#f1f5f9;}
+@media(max-width:700px){.supplier-management-modal{padding:1rem !important;}.supplier-management-header{align-items:center;}.supplier-search-input{max-width:none;}.supplier-management-form .form-grid{grid-template-columns:1fr;}}
 .material-modal{max-width:1100px;padding:1.25rem;background:#f8fafc;border:1px solid #dbe5f0;}
 .material-modal-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem;padding-bottom:0.6rem;border-bottom:1px solid #e2e8f0;}
 .material-header-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0.55rem;margin:0.75rem 0 1rem;}
@@ -1336,6 +1366,9 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
             </form>
             {% endif %}
             {% if tab == 'materials' %}
+            {% if not integrated_readonly %}
+            <button type="button" class="btn btn-small" style="background:#0f766e;border-color:#0f766e;color:#fff;" onclick="openSupplierManagementModal()">🏢 공급업체 관리</button>
+            {% endif %}
             <button type="button" id="materialBulkAssignToggleBtn" class="btn btn-small" style="background:#2563eb;" onclick="toggleMaterialBulkAssignMode()">작업장 일괄 변경</button>
             <button type="button" class="btn btn-small" style="margin-left:auto;background:#dc2626;border-color:#dc2626;color:#fff;" onclick="openMaterialResetModal()">재고 초기화</button>
             {% endif %}
@@ -2860,6 +2893,53 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
     </div>
 </div>
 
+{% if tab == 'materials' and not integrated_readonly %}
+<div id="supplierManagementModal" class="modal-bg" style="display:none;">
+    <div class="modal-box supplier-management-modal">
+        <div class="supplier-management-header">
+            <div>
+                <h3 id="supplierModalTitle">🏢 공급업체 관리</h3>
+                <p>원·부자재 제조사 및 발주업체 정보를 등록하고 수정할 수 있습니다.</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-small" onclick="closeSupplierManagementModal()">닫기</button>
+        </div>
+        <form method="POST" action="/integrated-management/suppliers/save" id="supplierManagementForm" class="supplier-management-form">
+            <input type="hidden" name="supplier_id" id="supplierManagementId">
+            <div class="form-grid">
+                <div class="form-group"><label>업체 코드</label><input type="text" name="code" id="supplierManagementCode" placeholder="선택 입력"></div>
+                <div class="form-group"><label>공급업체명 *</label><input type="text" name="name" id="supplierManagementName" required></div>
+                <div class="form-group"><label>담당자 / 연락처</label><input type="text" name="contact" id="supplierManagementContact" placeholder="담당자명, 전화번호"></div>
+                <div class="form-group"><label>주소</label><input type="text" name="address" id="supplierManagementAddress"></div>
+            </div>
+            <div class="form-group" style="margin-top:.75rem;"><label>비고</label><textarea name="note" id="supplierManagementNote" rows="2" placeholder="취급 품목, 발주 관련 메모"></textarea></div>
+            <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:.85rem;">
+                <button type="button" class="btn btn-secondary btn-small" onclick="resetSupplierManagementForm()">신규 등록</button>
+                <button type="submit" class="btn btn-small">저장</button>
+            </div>
+        </form>
+        <div class="supplier-management-toolbar">
+            <span class="supplier-management-count">등록된 공급업체 {{ suppliers|length }}곳</span>
+            <input type="search" id="supplierManagementSearch" class="supplier-search-input" placeholder="업체명 · 코드 · 연락처 검색" oninput="filterSupplierManagementList()">
+        </div>
+        <div class="supplier-management-table">
+            <table>
+                <thead><tr><th>코드</th><th>공급업체</th><th>담당자 / 연락처</th><th>주소</th><th>비고</th><th>관리</th></tr></thead>
+                <tbody>
+                    {% for supplier in suppliers %}
+                    <tr class="supplier-management-row" data-search="{{ [supplier.code, supplier.name, supplier.contact, supplier.address, supplier.note]|join(' ')|lower|e }}">
+                        <td>{{ supplier.code or '-' }}</td><td><strong class="supplier-name">{{ supplier.name }}</strong></td><td>{{ supplier.contact or '-' }}</td><td>{{ supplier.address or '-' }}</td><td>{{ supplier.note or '-' }}</td>
+                        <td><button type="button" class="btn btn-small" onclick='editSupplierManagement({{ supplier.id }}, {{ supplier.code|tojson }}, {{ supplier.name|tojson }}, {{ supplier.contact|tojson }}, {{ supplier.address|tojson }}, {{ supplier.note|tojson }})'>수정</button></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" style="text-align:center;color:#64748b;padding:1.2rem;">등록된 공급업체가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- 원초 사용/입고 내역 모달 -->
 <div id="rawActivityModal" class="modal-bg">
     <div class="modal-box" style="max-width:1100px;">
@@ -3015,6 +3095,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                     <option value="소금">소금</option>
                     <option value="외포">외포</option>
                     <option value="내포">내포</option>
+                    <option value="캔">캔</option>
                     <option value="실리카겔">실리카겔</option>
                     <option value="트레이">트레이</option>
                     <option value="박스">박스</option>
@@ -3591,7 +3672,7 @@ let requirementCalcUsageValues = {};
 let requirementCalcExtraPercent = 0;
 let requirementCalcActiveDraftId = null;
 const requirementCalcProductsMaster = {{ (calculator_products or [])|tojson }};
-const requirementCalcCategoryOptions = ['원초', '기름', '소금', '내포', '외포', '박스', '실리카', '트레이', '뚜껑', '각대', '기타'];
+const requirementCalcCategoryOptions = ['원초', '기름', '소금', '내포', '외포', '캔', '박스', '실리카', '트레이', '뚜껑', '각대', '기타'];
 const requirementCalcDraftStorageKey = 'integrated_requirement_calc_drafts_v2';
 let requirementCalcDrafts = [];
 const requirementCalcTwoMonthPreset = [
@@ -6526,6 +6607,54 @@ if (materialResetModal) {
             closeMaterialResetModal();
         }
     });
+}
+
+function openSupplierManagementModal() {
+    const modal = document.getElementById('supplierManagementModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+}
+
+function closeSupplierManagementModal() {
+    const modal = document.getElementById('supplierManagementModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+}
+
+function resetSupplierManagementForm() {
+    const form = document.getElementById('supplierManagementForm');
+    if (form) form.reset();
+    const idInput = document.getElementById('supplierManagementId');
+    if (idInput) idInput.value = '';
+    const title = document.getElementById('supplierModalTitle');
+    if (title) title.textContent = '공급업체 관리';
+    document.getElementById('supplierManagementName')?.focus();
+}
+
+function editSupplierManagement(id, code, name, contact, address, note) {
+    openSupplierManagementModal();
+    document.getElementById('supplierManagementId').value = id || '';
+    document.getElementById('supplierManagementCode').value = code || '';
+    document.getElementById('supplierManagementName').value = name || '';
+    document.getElementById('supplierManagementContact').value = contact || '';
+    document.getElementById('supplierManagementAddress').value = address || '';
+    document.getElementById('supplierManagementNote').value = note || '';
+    document.getElementById('supplierModalTitle').textContent = '공급업체 수정';
+}
+
+function filterSupplierManagementList() {
+    const keyword = String(document.getElementById('supplierManagementSearch')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('.supplier-management-row').forEach((row) => {
+        row.style.display = !keyword || String(row.dataset.search || '').includes(keyword) ? '' : 'none';
+    });
+}
+
+const supplierManagementModal = document.getElementById('supplierManagementModal');
+if (supplierManagementModal) {
+    supplierManagementModal.addEventListener('click', function(event) {
+        if (event.target === supplierManagementModal) closeSupplierManagementModal();
+    });
+    if ({{ (request.args.get('supplier_modal') == '1')|tojson }}) openSupplierManagementModal();
 }
 
 function confirmRestoreBackup(form) {

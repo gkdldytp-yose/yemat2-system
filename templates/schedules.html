@@ -3793,6 +3793,23 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     margin-bottom:0.85rem;
     flex-wrap:wrap;
 }
+.set-schedule-card-head{display:grid;grid-template-columns:38% minmax(0,1fr) 28px;align-items:start;cursor:pointer;padding:.35rem .45rem;border-radius:12px;transition:background .18s ease;}
+.set-schedule-card-head .export-active-metrics{justify-content:flex-start;}
+.set-schedule-card-head:hover,.set-schedule-card-head:focus{background:rgba(59,130,246,.08);outline:none;}
+.set-schedule-card-toggle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(59,130,246,.12);color:#2563eb;font-size:1.05rem;font-weight:800;flex:0 0 auto;transition:transform .2s ease,background .2s ease;}
+.export-active-card.set-schedule-card{margin:0.85rem 0;padding:0.75rem;border:1px solid #cbd5e1;border-radius:14px;background:#fff;box-shadow:0 4px 12px rgba(15,23,42,.05);transition:border-color .18s ease,box-shadow .18s ease;}
+.export-active-card.set-schedule-card:first-of-type{border-top:1px solid #cbd5e1;}
+.export-active-card.set-schedule-card:hover{border-color:#93c5fd;box-shadow:0 8px 18px rgba(37,99,235,.1);}
+.export-active-card.set-schedule-card .set-schedule-card-head{margin-bottom:0;min-height:58px;}
+.export-active-card.set-schedule-card .set-schedule-card-content{margin-top:0.75rem;padding-top:0.9rem;border-top:1px solid #dbeafe;}
+.export-active-card.set-schedule-collapsed .set-schedule-card-content{display:none;}
+.export-active-card.set-schedule-collapsed .set-schedule-card-toggle{transform:rotate(180deg);}
+html[data-theme="dark"] .set-schedule-card-head:hover,html[data-theme="dark"] .set-schedule-card-head:focus{background:rgba(96,165,250,.13);}
+html[data-theme="dark"] .set-schedule-card-toggle{background:rgba(59,130,246,.2);color:#93c5fd;}
+html[data-theme="dark"] .export-active-card.set-schedule-card{border-color:#334155;background:linear-gradient(135deg,rgba(30,41,59,.96),rgba(15,23,42,.98));box-shadow:0 7px 18px rgba(0,0,0,.2);}
+html[data-theme="dark"] .export-active-card.set-schedule-card:hover{border-color:#3b82f6;box-shadow:0 9px 24px rgba(30,64,175,.22);}
+html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card-content{border-top-color:#334155;}
+@media (max-width:760px){.set-schedule-card-head{display:flex;}.set-schedule-card-head .export-active-metrics{flex:1;}.set-schedule-card-toggle{margin-left:auto;}}
 .export-active-metrics {
     display:flex;
     gap:0.45rem;
@@ -3987,6 +4004,9 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     text-decoration:none;
 }
 .set-assembly-date-link:hover {background:#dff5ff;color:#075985;text-decoration:none;}
+.set-assembly-product-badge {display:inline-flex;align-items:center;margin-right:.3rem;padding:.1rem .34rem;border:1px solid transparent;border-radius:999px;font-size:.68rem;line-height:1.2;}
+.set-assembly-product-badge.set-assembly-product-3 {background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;}
+.set-assembly-product-badge.set-assembly-product-6 {background:#f3e8ff;color:#7e22ce;border-color:#d8b4fe;}
 .set-daily-production-copy {
     min-width:0;
 }
@@ -4009,11 +4029,15 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     color:#334155;
     font-size:.66rem;
     font-weight:800;
+    border:1px solid transparent;
     vertical-align:middle;
 }
 .set-daily-type-lunch .set-daily-type-badge {background:#e0f2fe;color:#0369a1;}
 .set-daily-type-sheet .set-daily-type-badge {background:#fef3c7;color:#92400e;}
 .set-daily-type-can .set-daily-type-badge {background:#ede9fe;color:#6d28d9;}
+.set-daily-type-badge.set-daily-component-can {background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;}
+.set-daily-type-badge.set-daily-component-unsalted {background:#ffedd5;color:#c2410c;border-color:#fdba74;}
+.set-daily-type-badge.set-daily-component-salted {background:#dcfce7;color:#15803d;border-color:#86efac;}
 .set-daily-product-name {
     margin-top:0.16rem;
     color:#0f172a;
@@ -4628,11 +4652,16 @@ html[data-theme="dark"] .set-finished-progress-head {color:#bbf7d0;}
 html[data-theme="dark"] .set-finished-progress-track {background:#14532d;}
 html[data-theme="dark"] .set-assembly-date-link {border-color:#2563eb;background:rgba(37,99,235,.16);color:#bfdbfe;}
 html[data-theme="dark"] .set-assembly-date-link:hover {background:rgba(37,99,235,.28);color:#dbeafe;}
+html[data-theme="dark"] .set-assembly-product-badge.set-assembly-product-3 {background:rgba(37,99,235,.25);color:#bfdbfe;border-color:rgba(96,165,250,.65);}
+html[data-theme="dark"] .set-assembly-product-badge.set-assembly-product-6 {background:rgba(147,51,234,.24);color:#e9d5ff;border-color:rgba(192,132,252,.65);}
 html[data-theme="dark"] .set-daily-product-name {color:#dbeafe;}
 html[data-theme="dark"] .set-daily-expiry {color:#8ea3bd;}
 html[data-theme="dark"] .set-daily-type-lunch .set-daily-type-badge {background:rgba(14,165,233,.18);color:#7dd3fc;}
 html[data-theme="dark"] .set-daily-type-sheet .set-daily-type-badge {background:rgba(245,158,11,.18);color:#fcd34d;}
 html[data-theme="dark"] .set-daily-type-can .set-daily-type-badge {background:rgba(139,92,246,.2);color:#c4b5fd;}
+html[data-theme="dark"] .set-daily-type-badge.set-daily-component-can {background:rgba(37,99,235,.25);color:#bfdbfe;border-color:rgba(96,165,250,.65);}
+html[data-theme="dark"] .set-daily-type-badge.set-daily-component-unsalted {background:rgba(234,88,12,.24);color:#fed7aa;border-color:rgba(251,146,60,.65);}
+html[data-theme="dark"] .set-daily-type-badge.set-daily-component-salted {background:rgba(22,163,74,.24);color:#bbf7d0;border-color:rgba(74,222,128,.6);}
 html[data-theme="dark"] .set-daily-toggle-btn {border-color:#3b82f6;background:rgba(37,99,235,.16);color:#bfdbfe;}
 html[data-theme="dark"] .set-assemble-btn {
     border-color:rgba(110,231,183,0.36) !important;
@@ -5760,7 +5789,9 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div class="view-toggle">
         <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
         <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
+        {% if set_finished_products %}
         <button data-view="set" onclick="switchView('set')">🎁 세트 일정표</button>
+        {% endif %}
         <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
         <button data-view="capacity" onclick="switchView('capacity')">📦 생산 가능량 계산기</button>
         <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
@@ -6415,7 +6446,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% endif %}
                     </td>
                     <td>
-                        {% for component in item['items'] %}
+                        {% set component_plans = item.finished_product_component_plans or item['items'] %}
+                        {% for component in component_plans %}
+                        {% if component.finished_product_name %}
+                        <div class="req-muted" style="margin-bottom:.1rem;">{{ component.finished_product_name }} {{ export_box(component.planned_boxes) }}</div>
+                        {% endif %}
                         <div style="margin-bottom:.2rem;">{{ component.component_product_name }} {{ export_box(component.required_quantity) }}</div>
                         {% endfor %}
                     </td>
@@ -6434,7 +6469,13 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     <td>
                         <div class="export-actions">
                             {% if can_prod %}
+                            {% if item.finished_product_targets|length > 1 %}
+                            <button type="button" class="calendar-action-btn export-mini-btn set-manage-btn set-assemble-btn" onclick='openSetAssemblyModal({{ item.id }}, {{ item.finished_product_targets|tojson }})'>
+                                <span class="btn-copy"><span class="btn-title">완제품 조립</span></span>
+                            </button>
+                            {% else %}
                             <form method="POST" action="/schedules/set/assemble/{{ item.id }}" onsubmit="return confirm('완제품 조립 등록 하시겠습니까?');">
+                                <input type="hidden" name="finished_product_id" value="{{ item.finished_product_id }}">
                                 <button type="submit" class="calendar-action-btn export-mini-btn set-manage-btn set-assemble-btn">
                                     <span class="btn-copy">
                                         <span class="btn-title">
@@ -6447,6 +6488,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                     </span>
                                 </button>
                             </form>
+                            {% endif %}
                             {% endif %}
                             {% if can_prod %}
                             <button type="button" class="calendar-action-btn export-mini-btn set-manage-btn set-edit-btn" onclick="openSetModal({{ item.id }})">
@@ -6480,12 +6522,12 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 {% macro render_set_cards(rows, empty_message, item_class='') -%}
     {% if rows %}
         {% for item in rows %}
-        <div class="export-active-card {{ item_class }}"
+        <div class="export-active-card set-schedule-card {{ item_class }}"
             data-product-name="{{ item.finished_product_name or '' }}"
             data-component-names="{{ (item.component_names or []) | join(' ') }}"
             data-production-dates="{{ item.daily_actuals | map(attribute='date') | join(',') }}"
             {% if item.completed_date %}data-completed-date="{{ item.completed_date }}"{% endif %}>
-            <div class="export-active-head">
+            <div class="export-active-head set-schedule-card-head" role="button" tabindex="0" aria-expanded="true" onclick="toggleSetScheduleCard(this)" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); toggleSetScheduleCard(this); }" title="클릭하여 상세 일정 접기/펼치기">
                 <div>
                     <strong>{{ item.finished_product_name or '-' }}</strong>
                     {% if item.finished_product_code %}
@@ -6497,18 +6539,23 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     </div>
                 </div>
                 <div class="export-active-metrics">
-                    <span>반제품 {{ item['items']|length }}종</span>
+                    <span>반제품 {{ (item.finished_product_component_plans or item['items'])|length }}건</span>
                     <span>생성 {{ item.generated_count }}건</span>
                     <span>완료 {{ item.completed_count }}건</span>
                     <span>완료 수량 {{ export_box(item.completed_qty) }}</span>
                 </div>
+                <span class="set-schedule-card-toggle" aria-hidden="true">⌃</span>
             </div>
-            <div class="export-active-grid">
+            <div class="export-active-grid set-schedule-card-content">
                 <div class="export-active-pane">
                     <h4>반제품 계획</h4>
-                    {% for component in item['items'] %}
+                    {% set component_plans = item.finished_product_component_plans or item['items'] %}
+                    {% for component in component_plans %}
                     <div class="export-container-row">
                         <div class="export-container-label">
+                            {% if component.finished_product_name %}
+                            <div class="req-muted" style="font-size:.72rem;margin-bottom:.15rem;">{{ component.finished_product_name }} {{ export_box(component.planned_boxes) }}</div>
+                            {% endif %}
                             {{ component.component_product_name }}
                             {% if component.component_product_code %}
                             <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">{{ component.component_product_code }}</div>
@@ -6565,6 +6612,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         <div class="set-assembly-date-list">
                             {% for assembly in item.completed_assembly_rows | reverse %}
                             <a href="/production/{{ assembly.id }}" class="set-assembly-date-link" title="조립 생산 상세 보기">
+                                {% if item.finished_product_targets|length > 1 and '3입' in (assembly.product_name or '') %}
+                                <span class="set-assembly-product-badge set-assembly-product-3">3입</span>
+                                {% elif item.finished_product_targets|length > 1 and '6입' in (assembly.product_name or '') %}
+                                <span class="set-assembly-product-badge set-assembly-product-6">6입</span>
+                                {% endif %}
                                 조립 완료 {{ assembly.production_date or '-' }}
                             </a>
                             {% endfor %}
@@ -6581,8 +6633,29 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                 {% else %}
                                 <span>{{ daily.date }}</span>
                                 {% endif %}
-                                <span class="set-daily-type-badge">{{ daily.type_label or '반제품' }}</span>
+                                {% set daily_product_key = (daily.product_name or '') | replace(' ', '') %}
+                                {% set component_badge = daily.type_label or '반제품' %}
+                                {% set is_gopchang_component = false %}
+                                {% set component_badge_class = '' %}
+                                {% if (item.finished_product_name or '') == '예맛 곱창돌김 세트' %}
+                                    {% if daily_product_key == '예맛신안1004돌김캔' %}
+                                        {% set component_badge = '캔' %}
+                                        {% set is_gopchang_component = true %}
+                                        {% set component_badge_class = 'set-daily-component-can' %}
+                                    {% elif daily_product_key == '예맛무조미구운곱창돌김' %}
+                                        {% set component_badge = '무전장' %}
+                                        {% set is_gopchang_component = true %}
+                                        {% set component_badge_class = 'set-daily-component-unsalted' %}
+                                    {% elif daily_product_key == '예맛구운곱창돌김' %}
+                                        {% set component_badge = '유전장' %}
+                                        {% set is_gopchang_component = true %}
+                                        {% set component_badge_class = 'set-daily-component-salted' %}
+                                    {% endif %}
+                                {% endif %}
+                                <span class="set-daily-type-badge {{ component_badge_class }}"{% if is_gopchang_component %} title="{{ daily.product_name }}"{% endif %}>{{ component_badge }}</span>
+                                {% if not is_gopchang_component %}
                                 <div class="set-daily-product-name">{{ daily.product_name or '-' }}</div>
+                                {% endif %}
                                 <div class="set-daily-expiry">소비기한 {{ daily.expiry_date or '미입력' }}</div>
                             </div>
                             <strong>{{ export_box(daily.actual_boxes) }} {{ daily.unit or 'EA' }}</strong>
@@ -7298,6 +7371,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         <button type="button" onclick="clearSetFinishedSelection()" class="schedule-selected-product-cancel">취소</button>
                     </div>
                 </div>
+                <div id="setFinishedProductQuantities" class="export-form-grid" style="display:none;margin-top:.65rem;"></div>
                 <div class="req-muted" style="margin-top:.35rem;">등록된 세트 완제품의 BOM 반제품을 기본값으로 불러옵니다.</div>
             </div>
 
@@ -7339,6 +7413,22 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             <div style="text-align: right; margin-top: 1rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeSetModal()">취소</button>
                 <button type="submit" class="btn" id="setSubmitBtn">등록</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="setAssemblyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="setAssemblyModalTitle">
+    <div class="modal-content" style="max-width:430px;">
+        <span class="close" onclick="closeSetAssemblyModal()">&times;</span>
+        <h2 id="setAssemblyModalTitle" style="margin-bottom:.6rem;">완제품 조립 선택</h2>
+        <p class="req-muted" style="margin:0 0 1rem;">조립할 완제품을 선택하면 생산 입력 화면으로 이동합니다.</p>
+        <form method="POST" id="setAssemblyForm">
+            <input type="hidden" name="finished_product_id" id="setAssemblyFinishedProductId">
+            <div id="setAssemblyProductOptions" class="set-schedule-items-list"></div>
+            <div style="text-align:right;margin-top:1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeSetAssemblyModal()">취소</button>
+                <button type="submit" class="btn" id="setAssemblySubmitBtn" disabled>생산 입력으로 이동</button>
             </div>
         </form>
     </div>
@@ -8239,6 +8329,13 @@ function applyExportCompletedFilter() {
     if (tableEmpty) tableEmpty.style.display = visibleTableCount > 0 ? 'none' : '';
     const cardEmpty = document.getElementById('exportCompletedCardEmpty');
     if (cardEmpty) cardEmpty.style.display = visibleCardCount > 0 ? 'none' : '';
+}
+
+function toggleSetScheduleCard(header) {
+    const card = header?.closest('.export-active-card');
+    if (!card) return;
+    const isCollapsed = card.classList.toggle('set-schedule-collapsed');
+    header.setAttribute('aria-expanded', String(!isCollapsed));
 }
 
 function toggleSetDailyActuals(setScheduleId, button) {
@@ -9179,16 +9276,79 @@ function getSetFinishedProductById(productId) {
     return setFinishedProducts.find((item) => Number(item.id) === Number(productId)) || null;
 }
 
+function getCompatibleSetFinishedProducts(productId) {
+    const selected = getSetFinishedProductById(productId);
+    if (!selected) return [];
+    if (Array.isArray(selected.mixed_product_ids) && selected.mixed_product_ids.length) {
+        return selected.mixed_product_ids
+            .map((id) => getSetFinishedProductById(id))
+            .filter(Boolean);
+    }
+    return [selected];
+}
+
+function getSetFinishedProductPlans(fallbackPlans = []) {
+    const fields = Array.from(document.querySelectorAll('#setFinishedProductQuantities input[name="finished_product_id[]"]'));
+    if (fields.length) {
+        return fields.map((field) => {
+            const quantityInput = field.closest('.form-group')?.querySelector('input[name="finished_product_quantity[]"]');
+            return {
+                product_id: Number(field.value || 0),
+                planned_boxes: Math.max(0, Math.floor(Number(quantityInput?.value || 0) || 0)),
+            };
+        });
+    }
+    return (fallbackPlans || []).map((plan) => ({
+        product_id: Number(plan.product_id || 0),
+        planned_boxes: Math.max(0, Math.floor(Number(plan.planned_boxes || 0) || 0)),
+    }));
+}
+
+function renderSetFinishedProductQuantityInputs(productId, presetPlans = []) {
+    const wrap = document.getElementById('setFinishedProductQuantities');
+    if (!wrap) return;
+    const presetById = new Map((presetPlans || []).map((plan) => [Number(plan.product_id), plan]));
+    const products = getCompatibleSetFinishedProducts(productId);
+    wrap.innerHTML = products.map((product) => {
+        const preset = presetById.get(Number(product.id)) || {};
+        const quantity = Math.max(0, Math.floor(Number(preset.planned_boxes || 0) || 0));
+        return `
+            <div class="form-group">
+                <label>${escapeHtml(product.name || '')} 박스 수</label>
+                <input type="hidden" name="finished_product_id[]" value="${Number(product.id)}">
+                <input type="number" name="finished_product_quantity[]" min="0" step="1" value="${quantity}" placeholder="수량 입력" onchange="handleSetFinishedProductQuantityChange()">
+            </div>
+        `;
+    }).join('');
+    wrap.style.display = products.length ? '' : 'none';
+}
+
+function collectSetScheduleItems() {
+    return Array.from(document.querySelectorAll('#setScheduleItemsList .set-schedule-item-card')).map((card) => ({
+        component_product_id: Number(card.querySelector('input[name="component_product_id[]"]')?.value || 0),
+        required_quantity: Number(card.querySelector('input[name="required_quantity[]"]')?.value || 0),
+        priority: Number(card.querySelector('input[name="priority[]"]')?.value || 1),
+        line: String(card.querySelector('input[name="component_line[]"]')?.value || ''),
+    }));
+}
+
+function handleSetFinishedProductQuantityChange() {
+    const input = document.getElementById('setFinishedProductId');
+    const productId = Number(input?.dataset.displayProductId || input?.value || 0);
+    renderSetScheduleItems(productId, collectSetScheduleItems(), getSetFinishedProductPlans());
+}
+
 function renderSetFinishedProductList(products) {
     const list = document.getElementById('setFinishedProductList');
     if (!list) return;
     list.innerHTML = '';
-    if (!products.length) {
+    const visibleProducts = products.filter((product) => !product.hide_from_set_schedule_picker);
+    if (!visibleProducts.length) {
         list.innerHTML = '<div class="schedule-product-empty">검색 결과가 없습니다.</div>';
         list.style.display = 'block';
         return;
     }
-    products.forEach((product) => {
+    visibleProducts.forEach((product) => {
         const item = document.createElement('div');
         item.className = 'product-item';
         const codeText = String(product.code || '').trim();
@@ -9225,7 +9385,8 @@ function searchSetFinishedProducts() {
 }
 
 function syncSetFinishedProductSelectionCard() {
-    const productId = Number(document.getElementById('setFinishedProductId')?.value || 0);
+    const input = document.getElementById('setFinishedProductId');
+    const productId = Number(input?.dataset.displayProductId || input?.value || 0);
     const selectedWrap = document.getElementById('setFinishedProductSelected');
     const selectedName = document.getElementById('setFinishedProductSelectedName');
     const selectedMeta = document.getElementById('setFinishedProductSelectedMeta');
@@ -9247,7 +9408,12 @@ function syncSetFinishedProductSelectionCard() {
 function selectSetFinishedProduct(productId) {
     const product = getSetFinishedProductById(productId);
     if (!product) return;
-    document.getElementById('setFinishedProductId').value = String(product.id || '');
+    const input = document.getElementById('setFinishedProductId');
+    const primaryProductId = Array.isArray(product.mixed_product_ids) && product.mixed_product_ids.length
+        ? product.mixed_product_ids[0]
+        : product.id;
+    input.value = String(primaryProductId || '');
+    input.dataset.displayProductId = String(product.id || '');
     document.getElementById('setFinishedProductSearch').value = '';
     document.getElementById('setFinishedProductList').style.display = 'none';
     syncSetFinishedProductSelectionCard();
@@ -9255,7 +9421,9 @@ function selectSetFinishedProduct(productId) {
 }
 
 function clearSetFinishedSelection() {
-    document.getElementById('setFinishedProductId').value = '';
+    const input = document.getElementById('setFinishedProductId');
+    input.value = '';
+    delete input.dataset.displayProductId;
     document.getElementById('setFinishedProductSearch').value = '';
     document.getElementById('setFinishedProductList').style.display = 'none';
     syncSetFinishedProductSelectionCard();
@@ -9454,13 +9622,26 @@ function initializeSetScheduleLinePickers(scope = document) {
     });
 }
 
-function renderSetScheduleItems(productId, presetItems = []) {
+function renderSetScheduleItems(productId, presetItems = [], presetPlans = []) {
     const list = document.getElementById('setScheduleItemsList');
     const empty = document.getElementById('setScheduleItemsEmpty');
     const submitBtn = document.getElementById('setSubmitBtn');
     if (!list) return;
-    const product = getSetFinishedProductById(productId);
-    const components = Array.isArray(product?.components) ? product.components : [];
+    const compatibleProducts = getCompatibleSetFinishedProducts(productId);
+    const plans = getSetFinishedProductPlans(presetPlans);
+    const planByProductId = new Map(plans.map((plan) => [Number(plan.product_id), Number(plan.planned_boxes || 0)]));
+    const componentsById = new Map();
+    compatibleProducts.forEach((product) => {
+        const plannedBoxes = Math.max(0, Number(planByProductId.get(Number(product.id)) || 0));
+        (product.components || []).forEach((component) => {
+            const componentId = Number(component.component_product_id || 0);
+            if (!componentId) return;
+            const existing = componentsById.get(componentId) || { ...component, default_quantity: 0 };
+            existing.default_quantity += plannedBoxes * Number(component.default_quantity || 0);
+            componentsById.set(componentId, existing);
+        });
+    });
+    const components = Array.from(componentsById.values());
     const presetMap = new Map((presetItems || []).map((item) => [Number(item.component_product_id), item]));
     const totalQuantityInput = document.getElementById('setTotalQuantityInput');
     list.innerHTML = '';
@@ -9472,12 +9653,10 @@ function renderSetScheduleItems(productId, presetItems = []) {
     }
     if (empty) empty.style.display = 'none';
     if (submitBtn) submitBtn.disabled = false;
-    if (totalQuantityInput && presetItems.length) {
-        totalQuantityInput.value = inferSetTotalQuantity(product, presetItems);
-    }
+    if (totalQuantityInput) totalQuantityInput.closest('.set-schedule-total-grid').style.display = 'none';
     components.forEach((component, index) => {
         const preset = presetMap.get(Number(component.component_product_id)) || {};
-        const quantityValue = Number(preset.required_quantity ?? component.default_quantity ?? 0);
+        const quantityValue = Number(component.default_quantity || preset.required_quantity || 0);
         const priorityValue = Number(preset.priority ?? (index + 1));
         const lineValue = String(preset.line || '').trim();
         const row = document.createElement('div');
@@ -9529,13 +9708,14 @@ function renderSetScheduleItems(productId, presetItems = []) {
         list.appendChild(row);
         initializeSetScheduleLinePickers(row);
     });
-    applySetTotalQuantityToInputs();
     normalizeSetPriorityInputs();
 }
 
 function handleSetFinishedProductChange() {
-    const productId = Number(document.getElementById('setFinishedProductId')?.value || 0);
+    const input = document.getElementById('setFinishedProductId');
+    const productId = Number(input?.dataset.displayProductId || input?.value || 0);
     syncSetFinishedProductSelectionCard();
+    renderSetFinishedProductQuantityInputs(productId);
     renderSetScheduleItems(productId);
 }
 
@@ -9549,10 +9729,14 @@ function resetSetModal() {
     document.getElementById('setSubmitBtn').textContent = '등록';
     document.getElementById('setScheduleItemsList').innerHTML = '';
     document.getElementById('setTotalQuantityInput').value = '';
+    document.getElementById('setTotalQuantityInput').closest('.set-schedule-total-grid').style.display = 'none';
     document.getElementById('setScheduleItemsEmpty').style.display = 'none';
     document.getElementById('setSubmitBtn').disabled = false;
     document.getElementById('setFinishedProductSearch').value = '';
     document.getElementById('setFinishedProductList').style.display = 'none';
+    delete document.getElementById('setFinishedProductId').dataset.displayProductId;
+    document.getElementById('setFinishedProductQuantities').innerHTML = '';
+    document.getElementById('setFinishedProductQuantities').style.display = 'none';
     syncSetFinishedProductSelectionCard();
 }
 
@@ -9568,12 +9752,24 @@ function openSetModal(setScheduleId = null) {
         document.getElementById('setModalTitle').textContent = '세트 일정 수정';
         document.getElementById('setSubmitBtn').textContent = '수정';
         document.getElementById('setScheduleForm').action = `/schedules/set/update/${setScheduleId}`;
-        document.getElementById('setFinishedProductId').value = String(target.finished_product_id || '');
+        const targetProductIds = (target.finished_product_targets || []).map((plan) => Number(plan.product_id || 0));
+        const mixedProduct = setFinishedProducts.find((product) =>
+            Array.isArray(product.mixed_product_ids)
+            && product.mixed_product_ids.length === targetProductIds.length
+            && product.mixed_product_ids.every((id) => targetProductIds.includes(Number(id)))
+        );
+        const finishedProductInput = document.getElementById('setFinishedProductId');
+        finishedProductInput.value = String(target.finished_product_id || '');
+        if (mixedProduct) {
+            finishedProductInput.dataset.displayProductId = String(mixedProduct.id);
+        }
         document.getElementById('setStartDateInput').value = target.production_start_date || '';
         document.getElementById('setEndDateInput').value = target.production_end_date || '';
         document.getElementById('setNoteInput').value = target.note || '';
         syncSetFinishedProductSelectionCard();
-        renderSetScheduleItems(target.finished_product_id, target.items || []);
+        const displayProductId = Number(finishedProductInput.dataset.displayProductId || target.finished_product_id || 0);
+        renderSetFinishedProductQuantityInputs(displayProductId, target.finished_product_targets || []);
+        renderSetScheduleItems(displayProductId, target.items || [], target.finished_product_targets || []);
     }
     document.getElementById('setModal').style.display = 'block';
     syncModalOpenState();
@@ -9618,6 +9814,37 @@ function submitSetScheduleDelete() {
 
 function closeSetModal() {
     document.getElementById('setModal').style.display = 'none';
+    syncModalOpenState();
+}
+
+function openSetAssemblyModal(setScheduleId, targets) {
+    const modal = document.getElementById('setAssemblyModal');
+    const form = document.getElementById('setAssemblyForm');
+    const options = document.getElementById('setAssemblyProductOptions');
+    const productInput = document.getElementById('setAssemblyFinishedProductId');
+    const submitBtn = document.getElementById('setAssemblySubmitBtn');
+    if (!modal || !form || !options || !productInput || !submitBtn) return;
+    form.action = `/schedules/set/assemble/${Number(setScheduleId)}`;
+    productInput.value = '';
+    submitBtn.disabled = true;
+    options.innerHTML = (targets || []).map((target) => `
+        <label class="set-schedule-item-card" style="cursor:pointer;">
+            <input type="radio" name="setAssemblyProductChoice" value="${Number(target.product_id)}" onchange="selectSetAssemblyProduct(this.value)">
+            <strong style="margin-left:.45rem;">${escapeHtml(target.name || '')}</strong>
+            <span class="req-muted" style="margin-left:.35rem;">계획 ${formatQuantity(target.planned_boxes || 0)}박스</span>
+        </label>
+    `).join('');
+    modal.style.display = 'block';
+    syncModalOpenState();
+}
+
+function selectSetAssemblyProduct(productId) {
+    document.getElementById('setAssemblyFinishedProductId').value = String(productId || '');
+    document.getElementById('setAssemblySubmitBtn').disabled = !productId;
+}
+
+function closeSetAssemblyModal() {
+    document.getElementById('setAssemblyModal').style.display = 'none';
     syncModalOpenState();
 }
 
@@ -10765,6 +10992,7 @@ window.onclick = function(event) {
     const copyModal = document.getElementById('copyModal');
     const exportModal = document.getElementById('exportModal');
     const setModal = document.getElementById('setModal');
+    const setAssemblyModal = document.getElementById('setAssemblyModal');
     const statsDetailModal = document.getElementById('statsDetailModal');
     
     if (event.target == addModal) {
@@ -10781,6 +11009,9 @@ window.onclick = function(event) {
     }
     if (event.target == setModal) {
         closeSetModal();
+    }
+    if (event.target == setAssemblyModal) {
+        closeSetAssemblyModal();
     }
     if (event.target == statsDetailModal) {
         closeStatsDetailModal();

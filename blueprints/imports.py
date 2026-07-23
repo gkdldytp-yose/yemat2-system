@@ -593,11 +593,11 @@ def _should_include_material_ledger_row(code: str, name: str, category_text: str
         return True
 
     guessed = _guess_material_category(name)
-    if guessed in {'기름', '소금', '실리카', '내포', '외포', '박스', '트레이', '뚜껑', '각대'}:
+    if guessed in {'기름', '소금', '실리카', '내포', '외포', '캔', '박스', '트레이', '뚜껑', '각대'}:
         return True
 
     master_category = _normalize_text((master_row or {}).get('category'))
-    if any(keyword in master_category for keyword in ['부재료', '기름', '소금', '실리카', '내포', '외포', '박스', '트레이', '뚜껑', '각대']):
+    if any(keyword in master_category for keyword in ['부재료', '기름', '소금', '실리카', '내포', '외포', '캔', '박스', '트레이', '뚜껑', '각대']):
         return True
 
     code_prefix = _normalize_text(code)[:1]
@@ -911,6 +911,8 @@ def _guess_material_category(name: str) -> str:
         return '내포'
     if '외포' in text:
         return '외포'
+    if '캔' in text:
+        return '캔'
     if '박스' in text:
         return '박스'
     if '실리카' in text:

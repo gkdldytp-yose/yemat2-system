@@ -4079,7 +4079,7 @@ def integrated_management():
             data = [row for row in data if q_lower in row['filename'].lower()]
 
     # ?????嶺뚮ㅎ?э㎗??耀붾굝?????????붾눀?袁⑸븸亦껋꼷伊???(????????????꾨굴??/?????곌떽釉붾???
-    cursor.execute('SELECT id, name FROM suppliers ORDER BY name')
+    cursor.execute('SELECT id, code, name, contact, address, note FROM suppliers ORDER BY name, id')
     suppliers = cursor.fetchall()
 
     conn.close()
@@ -5030,6 +5030,42 @@ def integrated_download_db_backup(filename):
 
 
 # Integrated management - add product
+@bp.route('/integrated-management/suppliers/save', methods=['POST'])
+@login_required
+def integrated_save_supplier():
+    if not session['user'].get('is_admin'):
+        return '관리자 권한이 필요합니다.', 403
+
+    supplier_id = request.form.get('supplier_id', type=int)
+    code = (request.form.get('code') or '').strip()
+    name = (request.form.get('name') or '').strip()
+    contact = (request.form.get('contact') or '').strip()
+    address = (request.form.get('address') or '').strip()
+    note = (request.form.get('note') or '').strip()
+    if not name:
+        return "<script>alert('공급업체명을 입력해주세요.'); history.back();</script>", 400
+
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        if supplier_id:
+            before = cursor.execute('SELECT * FROM suppliers WHERE id = ?', (supplier_id,)).fetchone()
+            if not before:
+                return "<script>alert('수정할 공급업체를 찾을 수 없습니다.'); history.back();</script>", 404
+            cursor.execute(
+                'UPDATE suppliers SET code = ?, name = ?, contact = ?, address = ?, note = ? WHERE id = ?',
+                (code, name, contact, address, note, supplier_id),
+            )
+            audit_log(conn, 'update', 'supplier', supplier_id, {'before': dict(before), 'after': {'code': code, 'name': name, 'contact': contact, 'address': address, 'note': note}})
+        else:
+            cursor.execute(
+                'INSERT INTO suppliers (code, name, contact, address, note) VALUES (?, ?, ?, ?, ?)',
+                (code, name, contact, address, note),
+            )
+            supplier_id = int(cursor.lastrowid)
+            audit_log(conn, 'create', 'supplier', supplier_id, {'code': code, 'name': name, 'contact': contact, 'address': address, 'note': note})
+    return redirect(url_for('admin.integrated_management', tab='materials', supplier_modal='1'))
+
+
 @bp.route('/integrated-management/products/add', methods=['POST'])
 @login_required
 def integrated_add_product():

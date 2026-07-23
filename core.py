@@ -951,6 +951,7 @@ def _ensure_production_schema(conn):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 workplace TEXT NOT NULL,
                 finished_product_id INTEGER NOT NULL,
+                finished_product_quantities TEXT NOT NULL DEFAULT '',
                 production_start_date TEXT NOT NULL,
                 production_end_date TEXT NOT NULL,
                 excluded_dates TEXT NOT NULL DEFAULT '',
@@ -1029,6 +1030,8 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE set_schedules ADD COLUMN workplace TEXT NOT NULL DEFAULT ''")
         if 'finished_product_id' not in set_schedule_cols:
             conn.execute("ALTER TABLE set_schedules ADD COLUMN finished_product_id INTEGER NOT NULL DEFAULT 0")
+        if 'finished_product_quantities' not in set_schedule_cols:
+            conn.execute("ALTER TABLE set_schedules ADD COLUMN finished_product_quantities TEXT NOT NULL DEFAULT ''")
         if 'production_start_date' not in set_schedule_cols:
             conn.execute("ALTER TABLE set_schedules ADD COLUMN production_start_date TEXT NOT NULL DEFAULT ''")
         if 'production_end_date' not in set_schedule_cols:

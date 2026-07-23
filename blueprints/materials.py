@@ -2184,6 +2184,9 @@ def materials():
     conn_context.__exit__(None, None, None)
     current_view_url = request.full_path[:-1] if request.full_path.endswith('?') else request.full_path
     dashboard_issue_prefill = session.pop('dashboard_issue_prefill', [])
+    production_issue_prefill = session.pop('production_issue_prefill', [])
+    if production_issue_prefill:
+        dashboard_issue_prefill = [*dashboard_issue_prefill, *production_issue_prefill]
 
     return render_template(
         'materials.html',
