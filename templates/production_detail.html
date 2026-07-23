@@ -1227,7 +1227,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     </div>
     <table class="mat-tbl">
         <thead><tr><th>반제품명</th><th>단위</th><th>예상량</th><th>실제 사용량</th><th>로스량</th><th>수율</th></tr></thead>
-        <tbody>
+        <tbody id="componentBody">
         {% for u in component_list %}
         <tr data-uid="{{ u.id }}" data-pbox="{{ ((u.expected_quantity|default(0)) / calc_base_boxes)|round(6) if calc_base_boxes else 0 }}">
             <td><strong>{{ u.material_name }}</strong></td>
@@ -1535,6 +1535,10 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 <form method="POST" action="/production/{{ production.id }}/update-usage" style="margin:0;">
                     {% for item in material_shortage_popup.form_payload %}
                     <input type="hidden" name="{{ item.name }}" value="{{ item.value }}">
+                    {% endfor %}
+                    {% for shortage in material_shortage_popup.shortages %}
+                    <input type="hidden" name="shortage_material_id[]" value="{{ shortage.material_id }}">
+                    <input type="hidden" name="shortage_qty[]" value="{{ ((shortage.need|float) - (shortage.have|float)) if (shortage.need|float) > (shortage.have|float) else 0 }}">
                     {% endfor %}
                     <input type="hidden" name="save_action" value="temp">
                     <input type="hidden" name="move_to_materials" value="1">
@@ -1864,7 +1868,7 @@ function recalcAll(){
     const tn = document.getElementById('totalNeed');
     if(tn) tn.textContent = `${formatRawNumber(need)}속`;
 
-    document.querySelectorAll('#matBody tr, #packBody tr').forEach(row => {
+    document.querySelectorAll('#componentBody tr, #matBody tr, #packBody tr').forEach(row => {
         const uid = row.dataset.uid;
         const pb = parseFloat(row.dataset.pbox) || 0;
         const newExp = Math.ceil(pb * boxes * 10) / 10;
