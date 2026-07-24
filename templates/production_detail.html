@@ -1090,7 +1090,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         <div class="raw-summary-metrics">
         <input type="hidden" name="raw_sok_mode" id="rawSokMode" value="{{ production.raw_sok_mode or 1 }}">
         <span>매수 <strong id="rawSheetsLabel">{{ production.active_sheets_per_pack or 0 }}매</strong></span>
-        <span>1박스당 <strong id="rawPerBoxLabel">{{ "%.1f"|format(production.active_sok_per_box or 0) }}속</strong></span>
+        <span>1박스당 <strong id="rawPerBoxLabel">{{ production.active_sok_per_box or 0 }}속</strong></span>
         {% if production.raw_sok_values and (production.raw_sok_values|length) > 1 and can_edit %}
         <button type="button" id="rawSokModeBtn" onclick="toggleRawSokMode()" style="background:#eef2ff;border:1px solid #4f46e5;color:#3730a3;padding:0.38rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.82rem;font-weight:700;position:relative;top:-2px;">매수 변경</button>
         {% endif %}
@@ -1836,7 +1836,7 @@ function syncRawSokUi(){
     const sheetsLabel = document.getElementById('rawSheetsLabel');
     const modeInput = document.getElementById('rawSokMode');
     const btn = document.getElementById('rawSokModeBtn');
-    if(label) label.textContent = `${perBox.toFixed(1)}속`;
+    if(label) label.textContent = `${formatRawNumber(perBox)}속`;
     if(sheetsLabel) sheetsLabel.textContent = `${sheets}매`;
     if(modeInput) modeInput.value = currentRawSokMode;
     if(btn) btn.textContent = currentRawSokMode > 1 ? '기본 매수' : '매수 변경';
@@ -1929,7 +1929,7 @@ function formatRawNumber(value){
     if(!Number.isFinite(num)) return '0';
     return Number.isInteger(num)
         ? num.toLocaleString('ko-KR')
-        : num.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+        : num.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 }
 
 function getRawOptionKind(option){
