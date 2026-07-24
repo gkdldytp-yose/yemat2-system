@@ -1427,6 +1427,59 @@ def _get_set_schedule_component_assembly_usage(cursor, set_schedule_id):
     return {component_id: round(quantity, 4) for component_id, quantity in usage_map.items()}
 
 
+def _get_manual_set_component_planned_quantity(cursor, set_schedule_row, component_ids):
+    """Return manually planned semi-product quantities within a set schedule period.
+
+    Calendar schedules created separately from the set schedule have no
+    ``set_schedule_id``.  They are still committed production plans when they
+    target a semi-product in the same set schedule period, so regenerating the
+    set schedule must not add the same quantity again.
+    """
+    component_ids = sorted({int(value or 0) for value in component_ids if int(value or 0) > 0})
+    start_date = str(set_schedule_row.get('production_start_date') or '').strip()
+    end_date = str(set_schedule_row.get('production_end_date') or '').strip()
+    workplace = str(set_schedule_row.get('workplace') or '').strip()
+    if not component_ids or not start_date or not end_date or not workplace:
+        return {}
+
+    placeholders = ','.join('?' for _ in component_ids)
+    rows = cursor.execute(
+        f'''
+        SELECT
+            ps.product_id AS component_product_id,
+            ps.planned_boxes AS schedule_planned_boxes,
+            pr.planned_boxes AS production_planned_boxes,
+            pr.actual_boxes,
+            pr.status AS production_status,
+            ps.status AS schedule_status
+        FROM production_schedules ps
+        LEFT JOIN productions pr ON pr.id = ps.production_id
+        WHERE ps.product_id IN ({placeholders})
+          AND COALESCE(ps.set_schedule_id, 0) = 0
+          AND COALESCE(pr.set_schedule_id, 0) = 0
+          AND COALESCE(ps.schedule_source, 'manual') = 'manual'
+          AND COALESCE(ps.workplace, pr.workplace, '') = ?
+          AND ps.scheduled_date BETWEEN ? AND ?
+        ''',
+        [*component_ids, workplace, start_date, end_date],
+    ).fetchall()
+
+    done_status = _normalize_production_status('완료')
+    quantities = defaultdict(float)
+    for row in rows:
+        component_product_id = int(row['component_product_id'] or 0)
+        if component_product_id <= 0:
+            continue
+        status = _normalize_schedule_state(row['production_status'] or row['schedule_status'])
+        if status == done_status:
+            quantity = row['actual_boxes'] or row['production_planned_boxes'] or row['schedule_planned_boxes'] or 0
+        else:
+            quantity = row['production_planned_boxes'] or row['schedule_planned_boxes'] or 0
+        if float(quantity or 0) > 0:
+            quantities[component_product_id] += float(quantity)
+    return {component_id: round(quantity, 4) for component_id, quantity in quantities.items()}
+
+
 def _load_set_linked_rows(cursor, set_schedule_id, include_assembly=False):
     schedule_source_filter = '' if include_assembly else "AND COALESCE(ps.schedule_source, '') <> 'set_assembly'"
     rows = cursor.execute(
@@ -1576,14 +1629,24 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
             frozen_quantity = row.get('actual_boxes') if status_value == '완료' else row.get('planned_boxes')
             started_planned_by_component[component_product_id] += int(float(frozen_quantity or row.get('planned_boxes') or 0))
 
+    # Calendar에서 별도로 등록한 반제품 계획도 같은 세트 기간의 필요량을
+    # 충족하는 계획으로 취급한다. 연결된 세트 행만 계산하면 수동 계획과 동일한
+    # 반제품 일정이 다음 달에 중복 생성된다.
+    manual_planned_by_component = _get_manual_set_component_planned_quantity(
+        cursor,
+        set_schedule_row,
+        [item.get('component_product_id') for item in item_rows],
+    )
+
     remaining_items = []
     for item in item_rows:
         component_product_id = int(item.get('component_product_id') or 0)
         required_quantity = int(item.get('required_quantity') or 0)
-        frozen_quantity = int(started_planned_by_component.get(component_product_id, 0))
-        if required_quantity < frozen_quantity:
+        started_quantity = int(started_planned_by_component.get(component_product_id, 0))
+        manual_planned_quantity = int(manual_planned_by_component.get(component_product_id, 0))
+        if required_quantity < started_quantity:
             raise ValueError('이미 시작된 반제품의 계획 수량보다 적게 변경할 수 없습니다.')
-        remaining_quantity = max(required_quantity - frozen_quantity, 0)
+        remaining_quantity = max(required_quantity - started_quantity - manual_planned_quantity, 0)
         if remaining_quantity > 0:
             remaining_items.append({**item, 'required_quantity': remaining_quantity})
 
@@ -2956,7 +3019,9 @@ def _get_product_raw_options(product_row):
         except (TypeError, ValueError, AttributeError):
             sheet_value = 0
         values.append({
-            'sok_per_box': round(sok_value, 2),
+            # 0.0089속처럼 소수 넷째 자리까지 등록된 원초 사용량을 보존한다.
+            # 둘째 자리 반올림은 생산 수량을 곱할 때 큰 오차를 만든다.
+            'sok_per_box': round(sok_value, 4),
             'sheets_per_pack': sheet_value,
         })
     return values
@@ -6090,7 +6155,7 @@ def delete_export_schedule(export_schedule_id):
             linked_rows = _load_export_linked_rows(cursor, export_schedule_id)
             started_rows = [row for row in linked_rows if _is_started_export_row(row)]
             if started_rows:
-                raise ValueError('?앹궛???쒖옉???섏텧 ?쇱젙? ??젣?????놁뒿?덈떎.')
+                raise ValueError('생산을 시작한 수출 일정은 삭제할 수 없습니다.')
             _delete_export_generated_rows(cursor, export_schedule_id, [int(row['schedule_id']) for row in linked_rows])
             cursor.execute('DELETE FROM export_schedules WHERE id = ? AND workplace = ?', (export_schedule_id, workplace))
             audit_log(
@@ -7061,52 +7126,12 @@ def production_register_mode():
                     expected_value = actual_value
                 raw_code = (raw_code or '').strip()
                 raw_name = (raw_name or '').strip()
-                resolved_raw_id = int(raw_id or 0) if str(raw_id or '').strip().isdigit() else 0
-                if not raw_name and resolved_raw_id > 0:
-                    cursor.execute('SELECT name, code FROM raw_materials WHERE id = ?', (resolved_raw_id,))
+                selected_raw_id = int(raw_id or 0) if str(raw_id or '').strip().isdigit() else 0
+                if not raw_name and selected_raw_id > 0:
+                    cursor.execute('SELECT name, code FROM raw_materials WHERE id = ?', (selected_raw_id,))
                     raw_row = cursor.fetchone()
                     raw_name = (raw_row['name'] if raw_row else '') or ''
                     raw_code = raw_code or ((raw_row['code'] if raw_row else '') or '')
-                if resolved_raw_id <= 0 and (raw_code or raw_name):
-                    clean_receiving_date = (override_receiving_date or '').strip()
-                    clean_car_number = (override_car_number or '').strip()
-                    cursor.execute(
-                        '''
-                        SELECT id
-                        FROM raw_materials
-                        WHERE COALESCE(workplace, '') = ?
-                          AND COALESCE(NULLIF(TRIM(code), ''), '') = ?
-                          AND COALESCE(NULLIF(TRIM(name), ''), '') = ?
-                          AND COALESCE(NULLIF(TRIM(receiving_date), ''), '') = ?
-                          AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = ?
-                        ORDER BY id DESC
-                        LIMIT 1
-                        ''',
-                        (target_workplace, raw_code, raw_name, clean_receiving_date, clean_car_number),
-                    )
-                    existing_raw = cursor.fetchone()
-                    if existing_raw:
-                        resolved_raw_id = existing_raw['id']
-                    else:
-                        cursor.execute(
-                            '''
-                            INSERT INTO raw_materials
-                            (
-                                name, code, lot, sheets_per_sok, receiving_date, ja_ho, car_number,
-                                total_stock, current_stock, used_quantity, workplace
-                            )
-                            VALUES (?, ?, NULL, 0, ?, ?, ?, 0, 0, 0, ?)
-                            ''',
-                            (
-                                raw_name or raw_code or '등록모드 원초',
-                                raw_code or None,
-                                clean_receiving_date or None,
-                                clean_car_number or None,
-                                clean_car_number or None,
-                                target_workplace,
-                            ),
-                        )
-                        resolved_raw_id = cursor.lastrowid
                 loss_quantity = round(actual_value - expected_value, 4)
                 yield_rate = round(expected_value / actual_value * 100, 2) if actual_value > 0 and expected_value > 0 else None
                 cursor.execute(
@@ -7115,13 +7140,12 @@ def production_register_mode():
                     (
                         production_id, material_id, raw_material_id, raw_material_name,
                         expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note,
-                        override_receiving_date, override_expiry_date, override_car_number
+                        override_receiving_date, override_expiry_date, override_car_number, raw_material_code_snapshot
                     )
-                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+                    VALUES (?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
                     ''',
                     (
                         production_id,
-                        resolved_raw_id if resolved_raw_id > 0 else None,
                         raw_name or None,
                         expected_value,
                         actual_value,
@@ -7130,6 +7154,7 @@ def production_register_mode():
                         (usage_note or '').strip(),
                         (override_receiving_date or '').strip(),
                         (override_car_number or '').strip(),
+                        raw_code or None,
                     ),
                 )
 
@@ -7327,7 +7352,7 @@ def production_register_mode():
             SELECT
                 pr.product_id,
                 pmu.raw_material_id,
-                COALESCE(NULLIF(TRIM(rm.code), ''), '') as raw_material_code,
+                COALESCE(NULLIF(TRIM(pmu.raw_material_code_snapshot), ''), NULLIF(TRIM(rm.code), ''), '') as raw_material_code,
                 COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), NULLIF(TRIM(rm.name), ''), '') as raw_material_name,
                 COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as receiving_date,
                 COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') as car_number,
@@ -7446,7 +7471,7 @@ def production_detail(production_id):
         numeric = _coerce_float(value)
         if numeric.is_integer():
             return f'{int(numeric):,}'
-        return f'{numeric:,.1f}'.rstrip('0').rstrip('.')
+        return f'{numeric:,.4f}'.rstrip('0').rstrip('.')
 
     material_shortage_popup = session.pop('material_shortage_popup', None)
     if material_shortage_popup and int(material_shortage_popup.get('production_id', 0) or 0) != int(production_id):
@@ -8095,13 +8120,13 @@ def production_detail(production_id):
 
     total_raw_selected_qty = round(
         sum(float(item.get('qty') or 0) for item in raw_saved_map.values()),
-        1,
+        4,
     )
     total_raw_need_qty = round(
         float(production.get('active_sok_per_box') or 0) * float(production.get('actual_boxes') or production.get('planned_boxes') or 0),
-        1,
+        4,
     )
-    total_raw_remain_qty = round(total_raw_need_qty - total_raw_selected_qty, 1)
+    total_raw_remain_qty = round(total_raw_need_qty - total_raw_selected_qty, 4)
     total_raw_yield_rate = (
         round((total_raw_need_qty / total_raw_selected_qty) * 100, 1)
         if total_raw_selected_qty > 0 and total_raw_need_qty > 0
@@ -9555,7 +9580,9 @@ def _delete_production_record(conn, production_id, actor_user_id=None):
         except Exception:
             actor_username = ''
 
-    if status == '?꾨즺' and not _is_register_entry_mode(entry_mode):
+    # ``status`` is normalized above.  Comparing it to a legacy mojibake
+    # literal skips every completed-production rollback during deletion.
+    if status == _normalize_production_status('\uC644\uB8CC') and not _is_register_entry_mode(entry_mode):
         cursor.execute(
             '''
             SELECT raw_material_id, material_id, actual_quantity

@@ -1224,6 +1224,41 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_manufacture_date TEXT")
         if 'override_car_number' not in usage_cols:
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_car_number TEXT")
+        if 'raw_material_code_snapshot' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN raw_material_code_snapshot TEXT")
+        # 등록 모드는 재고 원초를 실제로 소비한 기록이 아니라 과거 생산 내역을
+        # 수기로 남기는 용도다. 기존 등록 모드 이력에 남은 원초 FK도 스냅샷으로
+        # 보존한 뒤 분리해 원초 재고 삭제/사용량에 영향을 주지 않게 한다.
+        conn.execute(
+            '''
+            UPDATE production_material_usage
+            SET raw_material_code_snapshot = COALESCE(
+                NULLIF(TRIM(raw_material_code_snapshot), ''),
+                (
+                    SELECT COALESCE(NULLIF(TRIM(rm.code), ''), '')
+                    FROM raw_materials rm
+                    WHERE rm.id = production_material_usage.raw_material_id
+                ),
+                ''
+            )
+            WHERE raw_material_id IS NOT NULL
+              AND production_id IN (
+                  SELECT id FROM productions
+                  WHERE LOWER(COALESCE(entry_mode, '')) = 'register'
+              )
+            '''
+        )
+        conn.execute(
+            '''
+            UPDATE production_material_usage
+            SET raw_material_id = NULL
+            WHERE raw_material_id IS NOT NULL
+              AND production_id IN (
+                  SELECT id FROM productions
+                  WHERE LOWER(COALESCE(entry_mode, '')) = 'register'
+              )
+            '''
+        )
         conn.execute(
             '''
             CREATE TABLE IF NOT EXISTS production_component_lot_usage (

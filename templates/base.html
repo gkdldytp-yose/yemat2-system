@@ -1299,7 +1299,7 @@ function focusFirstModalField(modal) {
 
 function closeModalElement(modal) {
     if (!modal) return;
-    const closeTrigger = modal.querySelector('.close, [onclick*="closeModal"], [onclick*="closeAddModal"], [onclick*="closeSearchModal"], [onclick*="closeCopyModal"], [onclick*="closeEditModal"], [onclick*="closeMaterialDetailModal"], [onclick*="closeRawLotModal"], [onclick*="closeRawActivityModal"]');
+    const closeTrigger = modal.querySelector('.close, [onclick*="closeModal"], [onclick*="closeAddModal"], [onclick*="closeSearchModal"], [onclick*="closeCopyModal"], [onclick*="closeEditModal"], [onclick*="closeMaterialDetailModal"], [onclick*="closeRawLotModal"], [onclick*="closeRawActivityModal"], [onclick*="closeStatsDetailModal"]');
     if (closeTrigger && typeof closeTrigger.click === 'function') {
         closeTrigger.click();
         return;

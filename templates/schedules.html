@@ -3622,6 +3622,162 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     color:#ff3b30 !important;
     font-weight:900;
 }
+.export-schedule-table {
+    min-width:1160px;
+    table-layout:fixed;
+}
+.export-schedule-table th {
+    padding:0.78rem 0.5rem;
+    text-align:center;
+    white-space:nowrap;
+}
+.export-schedule-table td {
+    padding:0.85rem 0.5rem;
+    vertical-align:middle;
+    border-top-color:#dbe7f5;
+}
+.export-schedule-table th:nth-child(1),
+.export-schedule-table th:nth-child(2),
+.export-schedule-table th:nth-child(11),
+.export-schedule-table td:nth-child(1),
+.export-schedule-table td:nth-child(2),
+.export-schedule-table td:nth-child(11) {
+    text-align:left;
+}
+.export-schedule-table td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(11)) {
+    text-align:center;
+}
+.export-schedule-product-name {
+    display:block;
+    line-height:1.35;
+}
+.export-schedule-unit-box {
+    color:#1e3a8a;
+    font-weight:800;
+    line-height:1.4;
+}
+.export-schedule-unit-box .export-box-summary {
+    display:grid;
+    gap:0.12rem;
+    margin-top:0.18rem;
+}
+.export-container-box-quantity {
+    display:block;
+    white-space:nowrap;
+}
+.schedule-detail-row {
+    cursor:pointer;
+    transition:background .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.schedule-detail-row:hover,
+.schedule-detail-row:focus-visible {
+    outline:none;
+    background:rgba(59,130,246,.1);
+    box-shadow:inset 0 0 0 1px rgba(96,165,250,.5);
+}
+.schedule-detail-target {
+    scroll-margin-top:1rem;
+    animation:schedule-detail-highlight 1.6s ease;
+}
+@keyframes schedule-detail-highlight {
+    0%, 100% { box-shadow:0 4px 12px rgba(15,23,42,.05); }
+    35% { box-shadow:0 0 0 3px rgba(59,130,246,.7),0 12px 28px rgba(37,99,235,.24); }
+}
+.export-schedule-quantity,
+.export-schedule-date {
+    display:inline-block;
+    color:#0f3b6d;
+    font-weight:800;
+    white-space:nowrap;
+}
+.export-schedule-progress {
+    display:grid;
+    justify-items:start;
+    gap:0.22rem;
+    min-width:126px;
+}
+.export-schedule-progress > div:first-child {
+    color:#0f3b6d;
+    font-weight:900;
+    white-space:nowrap;
+}
+.export-schedule-progress .req-muted {
+    margin:0;
+}
+.export-schedule-lines {
+    display:flex;
+    justify-content:center;
+    gap:0.24rem;
+    flex-wrap:wrap;
+}
+.export-schedule-remaining {
+    display:inline-flex;
+    align-items:center;
+    padding:0.32rem 0.46rem;
+    border-radius:8px;
+    background:#ecfdf5;
+    color:#047857 !important;
+    font-size:0.84rem;
+    line-height:1.35;
+}
+.set-component-plan-list {
+    display:grid;
+    gap:0.45rem;
+    min-width:190px;
+}
+.set-component-plan {
+    padding:0.46rem 0.55rem;
+    border:1px solid #d7e4f5;
+    border-left:3px solid #3b82f6;
+    border-radius:8px;
+    background:linear-gradient(135deg,#f8fbff,#eef6ff);
+}
+.set-component-plan-finished {
+    margin-bottom:0.28rem;
+    color:#2563eb;
+    font-size:0.76rem;
+    font-weight:800;
+    line-height:1.3;
+}
+.set-component-plan-detail {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:0.5rem;
+    color:#1e293b;
+    font-size:0.87rem;
+    font-weight:700;
+    line-height:1.35;
+}
+.set-component-plan-quantity {
+    flex:0 0 auto;
+    color:#0f766e;
+    font-weight:900;
+    white-space:nowrap;
+}
+.export-active-card.set-schedule-card .set-component-plan-row {
+    display:grid;
+    grid-template-columns:minmax(155px,1.45fr) minmax(78px,.72fr) minmax(155px,1.25fr) auto;
+    align-items:center;
+    gap:.7rem;
+    padding:.55rem 0;
+    border:0;
+    border-top:1px solid #dbe7f3;
+    border-radius:0;
+    background:transparent;
+}
+.export-active-card.set-schedule-card .set-component-plan-row:first-of-type {
+    border-top:0;
+}
+.export-active-card.set-schedule-card .set-component-plan-row + .set-component-plan-row {
+    margin-top:0;
+}
+.export-active-card.set-schedule-card .set-component-plan-row .export-container-label {
+    min-width:0;
+}
+.export-active-card.set-schedule-card .set-component-plan-row .export-container-remaining {
+    white-space:nowrap;
+}
 .export-section .req-muted {
     font-size:0.86rem;
     line-height:1.45;
@@ -3793,6 +3949,13 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     margin-bottom:0.85rem;
     flex-wrap:wrap;
 }
+.export-schedule-card-head{position:relative;cursor:pointer;padding:.35rem 2.5rem .35rem .45rem;border-radius:12px;transition:background .18s ease;}
+.export-schedule-card-head:hover,.export-schedule-card-head:focus{background:rgba(59,130,246,.08);outline:none;}
+.export-schedule-card-head::after{content:'⌃';position:absolute;top:.35rem;right:.45rem;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(59,130,246,.12);color:#2563eb;font-size:1.05rem;font-weight:800;transition:transform .2s ease,background .2s ease;}
+.export-schedule-collapsed > .export-active-grid,.export-schedule-collapsed > .export-raw-footer{display:none;}
+.export-schedule-collapsed .export-schedule-card-head::after{transform:rotate(180deg);}
+html[data-theme="dark"] .export-schedule-card-head:hover,html[data-theme="dark"] .export-schedule-card-head:focus{background:rgba(96,165,250,.13);}
+html[data-theme="dark"] .export-schedule-card-head::after{background:rgba(59,130,246,.2);color:#93c5fd;}
 .set-schedule-card-head{display:grid;grid-template-columns:38% minmax(0,1fr) 28px;align-items:start;cursor:pointer;padding:.35rem .45rem;border-radius:12px;transition:background .18s ease;}
 .set-schedule-card-head .export-active-metrics{justify-content:flex-start;}
 .set-schedule-card-head:hover,.set-schedule-card-head:focus{background:rgba(59,130,246,.08);outline:none;}
@@ -4189,6 +4352,7 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     padding-bottom:0;
 }
 .export-raw-item-main {
+    flex:1;
     min-width:0;
 }
 .export-raw-item-title {
@@ -5311,6 +5475,39 @@ html[data-theme="dark"] .export-table td strong,
 html[data-theme="dark"] .export-remaining-total {
     color:#7CFF6B !important;
 }
+html[data-theme="dark"] .export-schedule-table td {
+    border-top-color:#26364d;
+}
+html[data-theme="dark"] .export-schedule-unit-box,
+html[data-theme="dark"] .export-schedule-quantity,
+html[data-theme="dark"] .export-schedule-date,
+html[data-theme="dark"] .export-schedule-progress > div:first-child {
+    color:#dbeafe;
+}
+html[data-theme="dark"] .schedule-detail-row:hover,
+html[data-theme="dark"] .schedule-detail-row:focus-visible {
+    background:rgba(59,130,246,.16);
+    box-shadow:inset 0 0 0 1px rgba(96,165,250,.65);
+}
+html[data-theme="dark"] .export-schedule-remaining {
+    background:rgba(22,163,74,0.16);
+    color:#7CFF6B !important;
+}
+html[data-theme="dark"] .set-component-plan,
+html[data-theme="dark"] .set-component-plan-row {
+    border-color:#315171;
+    border-left-color:#60a5fa;
+    background:linear-gradient(135deg,#17283d,#132238);
+}
+html[data-theme="dark"] .set-component-plan-finished {
+    color:#93c5fd;
+}
+html[data-theme="dark"] .set-component-plan-detail {
+    color:#e2e8f0;
+}
+html[data-theme="dark"] .set-component-plan-quantity {
+    color:#5eead4;
+}
 html[data-theme="dark"] .export-container-remaining,
 html[data-theme="dark"] .export-daily-row strong {
     color:#7CFF6B;
@@ -5978,10 +6175,26 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 {%- endif -%}
 {%- endmacro %}
 
+{% macro set_schedule_date(value) -%}
+{%- set text = (value or '')|string -%}
+{%- if text and text|length >= 10 and text[0:2] == '20' -%}
+{{ text[2:10] }}
+{%- elif text -%}
+{{ text }}
+{%- else -%}
+-
+{%- endif -%}
+{%- endmacro %}
+
 {% macro render_export_table(rows, empty_message, item_class='') -%}
     {% if rows %}
     <div class="table-container">
-        <table class="export-table">
+        <table class="export-table export-schedule-table">
+            <colgroup>
+                <col style="width:16%;"><col style="width:11%;"><col style="width:5%;"><col style="width:6%;">
+                <col style="width:7%;"><col style="width:7%;"><col style="width:6%;"><col style="width:6%;">
+                <col style="width:12%;"><col style="width:9%;"><col style="width:15%;">
+            </colgroup>
             <thead>
                 <tr>
                     <th>제품</th>
@@ -5999,7 +6212,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             </thead>
             <tbody>
                 {% for export in rows %}
-                <tr class="{{ item_class }}"
+                <tr class="{{ item_class }} schedule-detail-row" role="button" tabindex="0" onclick="handleScheduleDetailRowClick(event, 'export', {{ export.id }})" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); scrollToScheduleDetail('export', {{ export.id }}); }"
+                    data-schedule-id="{{ export.id }}"
                     data-product-name="{{ export.product_name or '' }}"
                     data-po-numbers="{{ (export.po_numbers or []) | join(' ') }}"
                     data-start-date="{{ export.production_start_date or '' }}"
@@ -6007,8 +6221,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     data-cutoff-date="{{ export.cutoff_date or '' }}"
                     data-production-dates="{{ export.daily_actuals | map(attribute='date') | join(',') }}"
                     {% if export.completed_date %}data-completed-date="{{ export.completed_date }}"{% endif %}>
-                    <td>
-                        <strong>{{ export.product_name or '-' }}</strong>
+                    <td class="export-schedule-product-cell">
+                        <strong class="export-schedule-product-name">{{ export.product_name or '-' }}</strong>
                         {% set po_numbers = export.po_numbers | select | list %}
                         {% if po_numbers %}
                         <div class="req-muted" style="margin-top:.2rem;">
@@ -6041,24 +6255,25 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         </div>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="export-schedule-unit-box">
                         {% if export.has_custom_container_quantities %}
                         <div>개별 입력</div>
                         <div class="export-box-summary">
                             {% for quantity in export.container_box_quantities %}
-                            {{ loop.index }}{{ export.unit_label_short }} {{ export_box(quantity) }} box{% if not loop.last %} / {% endif %}
+                            <span class="export-container-box-quantity">{{ loop.index }}{{ export.unit_label_short }} {{ export_box(quantity) }} box</span>
                             {% endfor %}
                         </div>
                         {% else %}
                         1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box
                         {% endif %}
                     </td>
-                    <td>{{ export.container_count }}{{ export.unit_label_short }}</td>
-                    <td>{{ export_box(export.export_quantity) }} box</td>
-                    <td>{{ export_date(export.production_start_date) }}</td>
-                    <td>{{ export_date(export.production_end_date) }}</td>
-                    <td>{{ export_date(export.cutoff_date) }}</td>
+                    <td><span class="export-schedule-quantity">{{ export.container_count }}{{ export.unit_label_short }}</span></td>
+                    <td><span class="export-schedule-quantity">{{ export_box(export.export_quantity) }} box</span></td>
+                    <td><span class="export-schedule-date">{{ export_date(export.production_start_date) }}</span></td>
+                    <td><span class="export-schedule-date">{{ export_date(export.production_end_date) }}</span></td>
+                    <td><span class="export-schedule-date">{{ export_date(export.cutoff_date) }}</span></td>
                     <td>
+                        <div class="export-schedule-lines">
                         {% if export.line %}
                             {% for line_num in export.line.split(',') %}
                             <span class="line-badge">L{{ line_num.strip() }}</span>
@@ -6066,15 +6281,18 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% else %}
                             <span class="req-muted">-</span>
                         {% endif %}
+                        </div>
                     </td>
                     <td>
+                        <div class="export-schedule-progress">
                         <div>{{ export_box(export.produced_total) }} / {{ export_box(export.export_quantity) }} box</div>
                         <div class="export-progress-track">
                             <div class="export-progress-bar" style="width: {{ export.completion_rate }}%;"></div>
                         </div>
                         <div class="req-muted">{{ export.completion_rate }}%{% if export.external_completed_count %} · 기존 완료 {{ export.external_completed_count }}건 포함{% endif %}</div>
+                        </div>
                     </td>
-                    <td><strong class="export-remaining-total">남은 수량 {{ export_box(export.remaining_total) }} box</strong></td>
+                    <td><strong class="export-remaining-total export-schedule-remaining">남은 수량 {{ export_box(export.remaining_total) }} box</strong></td>
                     <td>
                         <div class="export-actions">
                             {% if can_prod %}
@@ -6102,7 +6320,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 {% macro render_export_cards(rows, empty_message, item_class='') -%}
     {% if rows %}
         {% for export in rows %}
-        <div class="export-active-card {{ item_class }}"
+        <div id="exportScheduleDetail{{ export.id }}" class="export-active-card {{ item_class }}"
+            data-schedule-id="{{ export.id }}"
             data-product-name="{{ export.product_name or '' }}"
             data-po-numbers="{{ (export.po_numbers or []) | join(' ') }}"
             data-start-date="{{ export.production_start_date or '' }}"
@@ -6110,7 +6329,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             data-cutoff-date="{{ export.cutoff_date or '' }}"
             data-production-dates="{{ export.daily_actuals | map(attribute='date') | join(',') }}"
             {% if export.completed_date %}data-completed-date="{{ export.completed_date }}"{% endif %}>
-            <div class="export-active-head">
+            <div class="export-active-head export-schedule-card-head" role="button" tabindex="0" aria-expanded="true" onclick="toggleExportScheduleCard(this)" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); toggleExportScheduleCard(this); }" title="클릭하여 상세 일정 접기/펼치기">
                 <div>
                     <strong>{{ export.product_name or '-' }}</strong>
                     {% set po_numbers = export.po_numbers | select | list %}
@@ -6422,13 +6641,13 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             </thead>
             <tbody>
                 {% for item in rows %}
-                <tr class="{{ item_class }}"
+                <tr class="{{ item_class }} schedule-detail-row" role="button" tabindex="0" onclick="handleScheduleDetailRowClick(event, 'set', {{ item.id }})" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); scrollToScheduleDetail('set', {{ item.id }}); }"
                     data-product-name="{{ item.finished_product_name or '' }}"
                     data-component-names="{{ (item.component_names or []) | join(' ') }}"
                     data-production-dates="{{ item.daily_actuals | map(attribute='date') | join(',') }}"
                     {% if item.completed_date %}data-completed-date="{{ item.completed_date }}"{% endif %}>
                     <td>
-                        <strong>{{ item.finished_product_name or '-' }}</strong>
+                        <strong>{% if item.finished_product_targets|length > 1 %}{% for target in item.finished_product_targets %}{{ target.name or '-' }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}{{ item.finished_product_name or '-' }}{% endif %}</strong>
                         {% if item.finished_product_code %}
                         <div class="req-muted" style="margin-top:.18rem;">{{ item.finished_product_code }}</div>
                         {% endif %}
@@ -6440,19 +6659,26 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% endif %}
                     </td>
                     <td>
-                        <div>{{ item.production_start_date or '-' }} ~ {{ item.production_end_date or '-' }}</div>
+                        <div>{{ set_schedule_date(item.production_start_date) }} ~ {{ set_schedule_date(item.production_end_date) }}</div>
                         {% if item.started_dates %}
-                        <div class="req-muted" style="margin-top:.18rem;">시작 일정 {{ item.started_dates[0] }}{% if item.started_dates|length > 1 %} 외 {{ item.started_dates|length - 1 }}일{% endif %}</div>
+                        <div class="req-muted" style="margin-top:.18rem;">시작 일정 {{ set_schedule_date(item.started_dates[0]) }}{% if item.started_dates|length > 1 %} 외 {{ item.started_dates|length - 1 }}일{% endif %}</div>
                         {% endif %}
                     </td>
                     <td>
                         {% set component_plans = item.finished_product_component_plans or item['items'] %}
+                        <div class="set-component-plan-list">
                         {% for component in component_plans %}
-                        {% if component.finished_product_name %}
-                        <div class="req-muted" style="margin-bottom:.1rem;">{{ component.finished_product_name }} {{ export_box(component.planned_boxes) }}</div>
-                        {% endif %}
-                        <div style="margin-bottom:.2rem;">{{ component.component_product_name }} {{ export_box(component.required_quantity) }}</div>
+                        <div class="set-component-plan">
+                            {% if component.finished_product_name %}
+                            <div class="set-component-plan-finished">{{ component.finished_product_name }} · 계획 {{ export_box(component.planned_boxes) }}</div>
+                            {% endif %}
+                            <div class="set-component-plan-detail">
+                                <span>{{ component.component_product_name }}</span>
+                                <span class="set-component-plan-quantity">{{ export_box(component.required_quantity) }}</span>
+                            </div>
+                        </div>
                         {% endfor %}
+                        </div>
                     </td>
                     <td>
                         <div>{{ item.generated_count }}건 생성</div>
@@ -6522,20 +6748,20 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 {% macro render_set_cards(rows, empty_message, item_class='') -%}
     {% if rows %}
         {% for item in rows %}
-        <div class="export-active-card set-schedule-card {{ item_class }}"
+        <div id="setScheduleDetail{{ item.id }}" class="export-active-card set-schedule-card {{ item_class }}"
             data-product-name="{{ item.finished_product_name or '' }}"
             data-component-names="{{ (item.component_names or []) | join(' ') }}"
             data-production-dates="{{ item.daily_actuals | map(attribute='date') | join(',') }}"
             {% if item.completed_date %}data-completed-date="{{ item.completed_date }}"{% endif %}>
             <div class="export-active-head set-schedule-card-head" role="button" tabindex="0" aria-expanded="true" onclick="toggleSetScheduleCard(this)" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); toggleSetScheduleCard(this); }" title="클릭하여 상세 일정 접기/펼치기">
                 <div>
-                    <strong>{{ item.finished_product_name or '-' }}</strong>
+                    <strong>{% if item.finished_product_targets|length > 1 %}{% for target in item.finished_product_targets %}{{ target.name or '-' }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}{{ item.finished_product_name or '-' }}{% endif %}</strong>
                     {% if item.finished_product_code %}
                     <div class="req-muted" style="margin-top:.2rem;">{{ item.finished_product_code }}</div>
                     {% endif %}
                     <div class="req-muted">
-                        {{ item.production_start_date or '-' }} 시작 / 종료 {{ item.production_end_date or '-' }}
-                        {% if item.completed_date %} / 완료 {{ item.completed_date }}{% endif %}
+                        {{ set_schedule_date(item.production_start_date) }} 시작 / 종료 {{ set_schedule_date(item.production_end_date) }}
+                        {% if item.completed_date %} / 완료 {{ set_schedule_date(item.completed_date) }}{% endif %}
                     </div>
                 </div>
                 <div class="export-active-metrics">
@@ -6551,10 +6777,10 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     <h4>반제품 계획</h4>
                     {% set component_plans = item.finished_product_component_plans or item['items'] %}
                     {% for component in component_plans %}
-                    <div class="export-container-row">
+                    <div class="export-container-row set-component-plan-row">
                         <div class="export-container-label">
                             {% if component.finished_product_name %}
-                            <div class="req-muted" style="font-size:.72rem;margin-bottom:.15rem;">{{ component.finished_product_name }} {{ export_box(component.planned_boxes) }}</div>
+                            <div class="set-component-plan-finished">{{ component.finished_product_name }} · 계획 {{ export_box(component.planned_boxes) }}</div>
                             {% endif %}
                             {{ component.component_product_name }}
                             {% if component.component_product_code %}
@@ -8301,15 +8527,19 @@ function applyExportCompletedFilter() {
     };
 
     let visibleTableCount = 0;
+    const visibleScheduleIds = new Set();
     document.querySelectorAll('.export-completed-table-row').forEach((row) => {
         const show = matchesFilter(row);
         row.style.display = show ? '' : 'none';
-        if (show) visibleTableCount += 1;
+        if (show) {
+            visibleTableCount += 1;
+            visibleScheduleIds.add(String(row.dataset.scheduleId || ''));
+        }
     });
 
     let visibleCardCount = 0;
     document.querySelectorAll('.export-completed-card').forEach((card) => {
-        const show = matchesFilter(card);
+        const show = visibleScheduleIds.has(String(card.dataset.scheduleId || ''));
         card.style.display = show ? '' : 'none';
         if (show) visibleCardCount += 1;
     });
@@ -8336,6 +8566,41 @@ function toggleSetScheduleCard(header) {
     if (!card) return;
     const isCollapsed = card.classList.toggle('set-schedule-collapsed');
     header.setAttribute('aria-expanded', String(!isCollapsed));
+}
+
+function toggleExportScheduleCard(header) {
+    const card = header?.closest('.export-active-card');
+    if (!card) return;
+    const isCollapsed = card.classList.toggle('export-schedule-collapsed');
+    header.setAttribute('aria-expanded', String(!isCollapsed));
+}
+
+function handleScheduleDetailRowClick(event, scheduleType, scheduleId) {
+    if (event.target.closest('a, button, input, select, textarea, form, label')) return;
+    scrollToScheduleDetail(scheduleType, scheduleId);
+}
+
+function scrollToScheduleDetail(scheduleType, scheduleId) {
+    const targetId = scheduleType === 'set'
+        ? `setScheduleDetail${Number(scheduleId)}`
+        : `exportScheduleDetail${Number(scheduleId)}`;
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    if (scheduleType === 'set' && target.classList.contains('set-schedule-collapsed')) {
+        const header = target.querySelector('.set-schedule-card-head');
+        if (header) toggleSetScheduleCard(header);
+    }
+    if (scheduleType === 'export' && target.classList.contains('export-schedule-collapsed')) {
+        const header = target.querySelector('.export-schedule-card-head');
+        if (header) toggleExportScheduleCard(header);
+    }
+
+    target.classList.remove('schedule-detail-target');
+    void target.offsetWidth;
+    target.classList.add('schedule-detail-target');
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => target.classList.remove('schedule-detail-target'), 1700);
 }
 
 function toggleSetDailyActuals(setScheduleId, button) {

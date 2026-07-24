@@ -121,6 +121,7 @@ def create_tables(conn):
         actual_quantity REAL,
         loss_quantity REAL,
         usage_note TEXT,
+        raw_material_code_snapshot TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (production_id) REFERENCES productions(id),
         FOREIGN KEY (material_id) REFERENCES materials(id)
