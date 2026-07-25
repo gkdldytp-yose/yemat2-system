@@ -862,7 +862,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         <div class="info-item">
             <div class="lbl">생산일</div>
             {% if can_edit and production.entry_mode == 'register' %}
-            <input type="date" class="note-textarea auto-grow" name="production_date" required value="{{ production.production_date }}" style="min-height:42px;height:42px;">
+            <input type="date" class="note-textarea auto-grow" name="production_date" required value="{{ production.production_date }}" style="min-height:42px;height:42px;" onchange="syncRegisterProductionExpiry(this, {{ production.expiry_months or 12 }});">
             <div class="display-readonly-hint">등록모드 생산건은 수정 저장 시 생산일도 함께 변경됩니다.</div>
             {% else %}
             <div class="val">{{ production.production_date }}</div>
@@ -1552,6 +1552,20 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% endif %}
 
 <script>
+function syncRegisterProductionExpiry(input, expiryMonths) {
+    const productionDate = String(input?.value || '').trim();
+    const expiryInput = document.getElementById('expiryDate1');
+    if (!productionDate || !expiryInput) return;
+    const [year, month, day] = productionDate.split('-').map(Number);
+    if (!year || !month || !day) return;
+    const targetMonth = (month - 1) + Number(expiryMonths || 12);
+    const targetYear = year + Math.floor(targetMonth / 12);
+    const normalizedMonth = (targetMonth % 12) + 1;
+    const lastDay = new Date(targetYear, normalizedMonth, 0).getDate();
+    const expiry = new Date(targetYear, normalizedMonth - 1, Math.min(day, lastDay));
+    expiry.setDate(expiry.getDate() - 1);
+    expiryInput.value = `${expiry.getFullYear()}-${String(expiry.getMonth() + 1).padStart(2, '0')}-${String(expiry.getDate()).padStart(2, '0')}`;
+}
 const RAW_SOK_VALUES = {{ (production.raw_sok_values or [production.active_sok_per_box or 0])|tojson }};
 const RAW_SHEET_VALUES = {{ (production.raw_sheet_values or [production.active_sheets_per_pack or 0])|tojson }};
 let currentRawSokMode = {{ production.raw_sok_mode or 1 }};
