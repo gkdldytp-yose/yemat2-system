@@ -1966,13 +1966,14 @@ def _load_production_raw_usage_by_ja_ho(cursor, production_ids):
         f'''
         SELECT
             pmu.production_id,
-            COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '미지정') AS ja_ho,
-            COALESCE(NULLIF(TRIM(rm.name), ''), NULLIF(TRIM(pmu.raw_material_name), ''), '원초') AS raw_name,
+            COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '미지정') AS ja_ho,
+            COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), NULLIF(TRIM(rm.name), ''), '원초') AS raw_name,
             SUM(COALESCE(pmu.actual_quantity, 0)) AS raw_qty
         FROM production_material_usage pmu
         LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
         WHERE pmu.production_id IN ({placeholders})
-          AND pmu.raw_material_id IS NOT NULL
+          AND pmu.material_id IS NULL
+          AND pmu.component_product_id IS NULL
           AND COALESCE(pmu.actual_quantity, 0) > 0
         GROUP BY pmu.production_id, ja_ho, raw_name
         ORDER BY pmu.production_id, raw_qty DESC, raw_name ASC
@@ -7159,6 +7160,7 @@ def production_register_mode():
                 )
 
             material_ids = request.form.getlist('material_id[]')
+            component_product_ids = request.form.getlist('component_product_id[]')
             material_expected = request.form.getlist('material_expected_quantity[]')
             material_actual = request.form.getlist('material_actual_quantity[]')
             material_actual_units = request.form.getlist('material_actual_unit[]')
@@ -7167,12 +7169,15 @@ def production_register_mode():
             material_manufacture_dates = request.form.getlist('material_override_manufacture_date[]')
             if len(material_actual_units) < len(material_ids):
                 material_actual_units.extend(['kg'] * (len(material_ids) - len(material_actual_units)))
-            for material_id, expected_qty, actual_qty, actual_unit, override_receiving_date, override_expiry_date, override_manufacture_date in zip(material_ids, material_expected, material_actual, material_actual_units, material_receiving_dates, material_expiry_dates, material_manufacture_dates):
+            if len(component_product_ids) < len(material_ids):
+                component_product_ids.extend([''] * (len(material_ids) - len(component_product_ids)))
+            for material_id, component_product_id, expected_qty, actual_qty, actual_unit, override_receiving_date, override_expiry_date, override_manufacture_date in zip(material_ids, component_product_ids, material_expected, material_actual, material_actual_units, material_receiving_dates, material_expiry_dates, material_manufacture_dates):
                 resolved_material_id = int(material_id or 0) if str(material_id or '').strip().isdigit() else 0
-                if resolved_material_id <= 0:
+                resolved_component_product_id = int(component_product_id or 0) if str(component_product_id or '').strip().isdigit() else 0
+                if resolved_material_id <= 0 and resolved_component_product_id <= 0:
                     continue
                 actual_value = round(_to_float(actual_qty, 0), 4)
-                if (actual_unit or '').strip().upper() == 'L':
+                if resolved_material_id > 0 and (actual_unit or '').strip().upper() == 'L':
                     cursor.execute('SELECT COALESCE(name, "") as name FROM materials WHERE id = ?', (resolved_material_id,))
                     material_row = cursor.fetchone()
                     if material_row and '참기름' in (material_row['name'] or ''):
@@ -7186,14 +7191,15 @@ def production_register_mode():
                     '''
                     INSERT INTO production_material_usage
                     (
-                        production_id, material_id, raw_material_name, expected_quantity, actual_quantity,
+                        production_id, material_id, component_product_id, raw_material_name, expected_quantity, actual_quantity,
                         loss_quantity, yield_rate, usage_note, override_receiving_date, override_expiry_date, override_manufacture_date, override_car_number
                     )
-                    VALUES (?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)
+                    VALUES (?, ?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)
                     ''',
                     (
                         production_id,
-                        resolved_material_id,
+                        resolved_material_id or None,
+                        resolved_component_product_id or None,
                         expected_value,
                         actual_value,
                         loss_quantity,
@@ -7302,17 +7308,25 @@ def production_register_mode():
                 SELECT
                     b.product_id,
                     b.material_id,
-                    m.name as material_name,
-                    COALESCE(NULLIF(TRIM(m.code), ''), printf('MAT%05d', m.id)) as material_code,
-                    COALESCE(m.unit, 'EA') as unit,
-                    COALESCE(m.category, '') as material_category,
+                    b.component_product_id,
+                    COALESCE(m.name, cp.name) as material_name,
+                    CASE
+                        WHEN b.component_product_id IS NOT NULL THEN COALESCE(NULLIF(TRIM(cp.code), ''), printf('P%05d', cp.id))
+                        ELSE COALESCE(NULLIF(TRIM(m.code), ''), printf('MAT%05d', m.id))
+                    END as material_code,
+                    CASE WHEN b.component_product_id IS NOT NULL THEN '개' ELSE COALESCE(m.unit, 'EA') END as unit,
+                    CASE WHEN b.component_product_id IS NOT NULL THEN '반제품' ELSE COALESCE(m.category, '') END as material_category,
                     b.quantity_per_box,
+                    COALESCE(p.category, '') as product_category,
+                    COALESCE(p.set_item_type, '') as product_set_item_type,
                     COALESCE(p.selected_silica_material_id, 0) as selected_silica_material_id,
                     COALESCE(p.selected_pouch_material_id, 0) as selected_pouch_material_id
                 FROM bom b
-                JOIN materials m ON b.material_id = m.id
+                LEFT JOIN materials m ON b.material_id = m.id
+                LEFT JOIN products cp ON b.component_product_id = cp.id
                 JOIN products p ON p.id = b.product_id
                 WHERE p.id IN ({product_placeholders})
+                  AND (b.material_id IS NOT NULL OR b.component_product_id IS NOT NULL)
                 ORDER BY b.product_id, material_category, material_name
                 ''',
                 product_ids,
@@ -7421,6 +7435,29 @@ def production_register_mode():
                     'actual_quantity': row['actual_quantity'] or 0,
                 }
 
+        cursor.execute(
+            '''
+            SELECT
+                pr.product_id,
+                COALESCE(ps.line, pr.supply_line, '') AS line,
+                COALESCE(ps.line_usage_disabled, pr.line_usage_disabled, 0) AS line_usage_disabled
+            FROM productions pr
+            LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+            WHERE COALESCE(pr.workplace, '') = ?
+              AND COALESCE(pr.entry_mode, '') = 'register'
+            ORDER BY pr.id DESC
+            ''',
+            (workplace,),
+        )
+        last_production_lines = {}
+        for row in cursor.fetchall():
+            product_key = str(row['product_id'] or '')
+            if product_key and product_key not in last_production_lines:
+                last_production_lines[product_key] = {
+                    'line': row['line'] or '',
+                    'line_usage_disabled': bool(row['line_usage_disabled']),
+                }
+
     raw_bom_map = defaultdict(list)
     for row in raw_bom_rows:
         raw_bom_map[int(row['product_id'])].append(row)
@@ -7439,6 +7476,7 @@ def production_register_mode():
         material_bom_json=json.dumps(material_bom_map, ensure_ascii=False),
         last_raw_defaults_json=json.dumps(last_raw_defaults, ensure_ascii=False),
         last_material_defaults_json=json.dumps(last_material_defaults, ensure_ascii=False),
+        last_production_lines_json=json.dumps(last_production_lines, ensure_ascii=False),
         raw_catalog_json=json.dumps(raw_catalog, ensure_ascii=False),
         material_catalog_json=json.dumps(material_catalog, ensure_ascii=False),
         next_url=next_url,
@@ -7581,11 +7619,11 @@ def production_detail(production_id):
     production['raw_sok_values'] = [float(item.get('sok_per_box') or 0) for item in product_raw_options]
     production['raw_sheet_values'] = [int(item.get('sheets_per_pack') or 0) for item in product_raw_options]
 
-    if production['status'] == done_status and not edit_completed:
+    if production['status'] == done_status and (not edit_completed or _is_register_entry_mode(production.get('entry_mode'))):
         # ?꾨즺椰? ??쇱젫 ??????癒?겧 疫꿸퀡以???뽯뻻 (???춭???癒?겧????已???뽯뻻)
         cursor.execute(
             '''
-            SELECT pmu.raw_material_id as rm_id, 
+            SELECT COALESCE(pmu.raw_material_id, -pmu.id) as rm_id,
                    pmu.actual_quantity as quantity_per_box,
                    pmu.actual_quantity as actual_quantity,
                    pmu.expected_quantity as expected_quantity,
@@ -7597,9 +7635,10 @@ def production_detail(production_id):
             FROM production_material_usage pmu
             LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
             WHERE pmu.production_id = ? 
-            AND pmu.raw_material_id IS NOT NULL
+            AND pmu.material_id IS NULL
+            AND pmu.component_product_id IS NULL
             AND pmu.actual_quantity > 0
-            ORDER BY rm.receiving_date ASC
+            ORDER BY COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date) ASC, pmu.id ASC
         ''',
             (production_id,),
         )
@@ -8112,8 +8151,13 @@ def production_detail(production_id):
 
     raw_saved_map = {}
     for row in material_usage:
-        if row['raw_material_id'] and row['actual_quantity'] is not None:
-            entry = raw_saved_map.setdefault(row['raw_material_id'], {'qty': 0, 'note': ''})
+        is_raw_usage = (
+            int(row.get('material_id') or 0) <= 0
+            and int(row.get('component_product_id') or 0) <= 0
+        )
+        if is_raw_usage and row['actual_quantity'] is not None:
+            raw_key = int(row['raw_material_id'] or 0) or -int(row['id'])
+            entry = raw_saved_map.setdefault(raw_key, {'qty': 0, 'note': ''})
             entry['qty'] = float(entry.get('qty') or 0) + float(row['actual_quantity'] or 0)
             if row.get('usage_note'):
                 entry['note'] = row.get('usage_note') or ''

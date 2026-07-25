@@ -379,24 +379,9 @@ def index():
         return [dict(row) for row in cursor.fetchall()]
 
     def _load_fallback_raw_shortages():
-        cursor.execute(
-            '''
-            SELECT
-                COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) AS code,
-                MIN(COALESCE(NULLIF(TRIM(name), ''), '원초')) AS name,
-                '속' AS unit,
-                ROUND(COALESCE(SUM(COALESCE(current_stock, 0)), 0), 1) AS current_stock,
-                0.0 AS required_qty,
-                0.0 AS shortage_qty
-            FROM raw_materials
-            WHERE workplace = ?
-            GROUP BY COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id))
-            HAVING ROUND(COALESCE(SUM(COALESCE(current_stock, 0)), 0), 1) <= 0
-            ORDER BY name ASC, code ASC
-            ''',
-            (workplace,),
-        )
-        return [dict(row) for row in cursor.fetchall()]
+        # 원초 부족은 예정 생산량에서 산출한 필요 수량이 있을 때만 판단한다.
+        # 재고가 0이라는 사실만으로는 부족 수량이 0인 항목이 알림에 표시될 수 있다.
+        return []
 
     # 금주 생산 스케줄
     today = today_local()

@@ -73,7 +73,7 @@
 .product-filter-reset:hover{border-color:#67e8f9;background:#12313b;color:#eff6ff;}
 .product-search-drop{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;max-height:260px;overflow:auto;border:1px solid #35506b;border-radius:8px;background:#101a2b;box-shadow:0 18px 32px rgba(2,6,23,.32);}
 .product-search-option{padding:.78rem .85rem;border-bottom:1px solid rgba(148,163,184,.12);cursor:pointer;}
-.product-search-option:hover{background:#152235;}
+.product-search-option:hover,.product-search-option.keyboard-active{background:#152235;}
 .product-search-option strong{display:block;color:#eff6ff;}
 .product-search-meta{margin-top:.22rem;color:#8ea3bd;font-size:.76rem;}
 .product-search-badge{display:inline-flex;align-items:center;padding:.16rem .45rem;border-radius:999px;background:#12313b;color:#a5f3fc;border:1px solid rgba(34,211,238,.18);font-size:.68rem;font-weight:900;margin-right:.35rem;}
@@ -209,7 +209,7 @@ html:not([data-theme="dark"]) .product-filter-tab.active{background:#e0f7ff;bord
 html:not([data-theme="dark"]) .product-filter-reset{background:#f8fbff;border-color:#cbd8e6;color:#475569;}
 html:not([data-theme="dark"]) .product-filter-reset:hover{background:#eff6ff;border-color:#67e8f9;color:#0f172a;}
 html:not([data-theme="dark"]) .product-search-option{border-bottom-color:#e2e8f0;}
-html:not([data-theme="dark"]) .product-search-option:hover{background:#f0f9ff;}
+html:not([data-theme="dark"]) .product-search-option:hover,html:not([data-theme="dark"]) .product-search-option.keyboard-active{background:#f0f9ff;}
 html:not([data-theme="dark"]) .product-search-option strong{color:#0f172a;}
 html:not([data-theme="dark"]) .product-search-meta{color:#64748b;}
 html:not([data-theme="dark"]) .product-search-badge{background:#e0f7ff;color:#0e7490;border-color:rgba(6,182,212,.2);}
@@ -541,6 +541,7 @@ const rawBomMap = {{ raw_bom_json|safe }};
 const materialBomMap = {{ material_bom_json|safe }};
 const lastRawDefaults = {{ last_raw_defaults_json|safe }};
 const lastMaterialDefaults = {{ last_material_defaults_json|safe }};
+const lastProductionLines = {{ last_production_lines_json|safe }};
 const rawCatalog = {{ raw_catalog_json|safe }};
 const materialCatalog = {{ material_catalog_json|safe }};
 const availableWorkplaces = {{ available_workplaces_json|safe }};
@@ -556,6 +557,8 @@ let rawLotGroupSeq = 0;
 let registerSaveConfirmed = false;
 let activeProductFilter = getSavedProductFilter();
 const registerVariantSelections = {};
+let productSearchResults = [];
+let productSearchActiveIndex = -1;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -1363,7 +1366,10 @@ function formatRegisterDateValue(year, month, day) {
 function parseRegisterDateValue(rawValue) {
     const source = String(rawValue || '').trim();
     if (!source) return '';
-    const normalizedSource = source.replace(/\./g, '-').replace(/\//g, '-').replace(/\s+/g, '');
+    const suffixMatch = source.match(/([A-Za-z]+)$/);
+    const suffix = suffixMatch ? suffixMatch[1].toUpperCase() : '';
+    const dateSource = suffix ? source.slice(0, -suffix.length) : source;
+    const normalizedSource = dateSource.replace(/\./g, '-').replace(/\//g, '-').replace(/\s+/g, '');
     let yearPart = '';
     let monthPart = '';
     let dayPart = '';
@@ -1391,7 +1397,7 @@ function parseRegisterDateValue(rawValue) {
     if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) {
         return null;
     }
-    return formatRegisterDateValue(year, month, day);
+    return `${formatRegisterDateValue(year, month, day)}${suffix}`;
 }
 function syncDatePickerProxy(input) {
     if (!input) return;
@@ -1570,7 +1576,8 @@ function materialLotCardHtml(row, mode, groupId, options = {}) {
     const dateMode = materialDateMode(row, mode);
     const unit = row.unit || '';
     const isSesame = isSesameOilMaterial(row);
-    const defaultReceivingUnknown = mode === 'pack' && isBoxPackagingMaterial(row);
+    const defaultReceivingUnknown = isComponentProduct(row)
+        || (mode === 'pack' && (isBoxPackagingMaterial(row) || isSetProduct(row)));
     const inputUnit = isSesame ? (options.inputUnit || getSavedSesameUnit()) : 'kg';
     const expectedValue = options.expectedValue || usageExpected(row);
     const actualValue = options.actualValue || expectedValue;
@@ -1585,9 +1592,11 @@ function materialLotCardHtml(row, mode, groupId, options = {}) {
                 <strong>${escapeHtml(row.material_name || '자재')} <span class="lot-count-badge js-lot-label">로트 1</span></strong>
                 <span>${escapeHtml(row.material_code || '-')} ${unit ? `· ${escapeHtml(unit)}` : ''}</span>
                 <input type="hidden" name="material_id[]" value="${escapeHtml(row.material_id || '')}">
+                <input type="hidden" name="component_product_id[]" value="${escapeHtml(row.component_product_id || '')}">
                 <input type="hidden" name="material_expected_quantity[]" value="${escapeHtml(expectedValue)}">
                 <input type="hidden" name="material_actual_unit[]" value="${escapeHtml(inputUnit)}">
             </div>
+            <div class="field"><label>예상 사용량</label><div class="calc-box need js-need-value">${formatQty(expectedValue)}<span class="calc-unit">${escapeHtml(unit)}</span></div></div>
             <div class="field required">
                 <div class="date-field-head">
                     <label>실제 사용량</label>
@@ -1600,7 +1609,6 @@ function materialLotCardHtml(row, mode, groupId, options = {}) {
             </div>
             ${dateInputHtml('material_override_receiving_date[]', options.receivingDate || '', '입고일', true, { unknownDefault: defaultReceivingUnknown })}
             ${dateFields}
-            <div class="field"><label>필요량</label><div class="calc-box need js-need-value">${formatQty(expectedValue)}<span class="calc-unit">${escapeHtml(unit)}</span></div></div>
             <div class="field"><label>로스량</label><div class="calc-box loss good js-loss-value">0<span class="calc-unit">${escapeHtml(unit)}</span></div></div>
             <div class="field"><label>수율</label><div class="calc-box yield good js-yield-value">100<span class="calc-unit">%</span></div></div>
             ${options.canRemove ? '<button type="button" class="danger-lite-btn" onclick="removeMaterialLot(this)">로트 삭제</button>' : ''}
@@ -1608,18 +1616,20 @@ function materialLotCardHtml(row, mode, groupId, options = {}) {
     `;
 }
 function rawLotCardHtml(row, options = {}) {
+    const expectedValue = toNumber(options.expectedValue);
     return `
-        <div class="usage-card raw" data-lot-card="raw" data-unit="속">
+        <div class="usage-card raw" data-lot-card="raw" data-need="${escapeHtml(expectedValue)}" data-unit="속">
             <div class="usage-name">
                 <strong>${escapeHtml(row.raw_material_name || '원초')} <span class="lot-count-badge js-lot-label">로트</span></strong>
                 <span>${escapeHtml(row.raw_material_code || '-')}</span>
                 <input type="hidden" name="raw_material_id[]" value="${escapeHtml(row.raw_material_id || '')}">
                 <input type="hidden" name="raw_material_code[]" value="${escapeHtml(row.raw_material_code || '')}">
                 <input type="hidden" name="raw_material_name[]" value="${escapeHtml(row.raw_material_name || '')}">
-                <input type="hidden" name="raw_expected_quantity[]" value="0">
+                <input type="hidden" name="raw_expected_quantity[]" value="${escapeHtml(expectedValue)}">
             </div>
-            ${dateInputHtml('raw_override_receiving_date[]', options.receivingDate || '', '입고일')}
             <div class="field required"><label>자호</label><input type="text" class="register-input required-input" name="raw_override_car_number[]" value="${escapeHtml(options.carNumber || '')}" placeholder="자호"></div>
+            ${dateInputHtml('raw_override_receiving_date[]', options.receivingDate || '', '입고일')}
+            <div class="field"><label>예상 사용량</label><div class="calc-box need js-need-value">${formatQty(expectedValue)}<span class="calc-unit">속</span></div></div>
             <div class="field required"><label>실제 사용량</label><input type="number" inputmode="decimal" class="register-input required-input js-actual-input" name="raw_actual_quantity[]" step="any" min="0" value="${escapeHtml(options.actualValue || '0')}" oninput="updateRawActualForLot(this)"></div>
             <div class="field"><label>메모</label><textarea class="register-textarea usage-note" name="raw_usage_note[]" placeholder="필요 시 입력">${escapeHtml(options.note || '')}</textarea></div>
             <button type="button" class="danger-lite-btn" onclick="removeRawLot(this)">로트 삭제</button>
@@ -1644,6 +1654,7 @@ function addRawLot(buttonEl) {
     wrapper.innerHTML = rawLotCardHtml(row, {
         receivingDate: existingCount === 0 ? (list.dataset.defaultReceivingDate || '') : '',
         carNumber: existingCount === 0 ? (list.dataset.defaultCarNumber || '') : '',
+        expectedValue: existingCount === 0 ? groupEl.dataset.totalNeed : remainingNeed,
         actualValue: existingCount === 0 ? (list.dataset.defaultActual || remainingNeed || '0') : (remainingNeed || '0'),
         note: existingCount === 0 ? (list.dataset.defaultNote || '') : '',
     });
@@ -1661,9 +1672,19 @@ function renderUsageRows() {
     const allMaterialRows = productId ? (materialBomMap[String(productId)] || []) : [];
     const variantChoiceHtml = renderVariantChoicePanel(allMaterialRows);
     const materialRows = filterRegisterModeMaterialRows(allMaterialRows);
-    const baseRows = materialRows.filter(isBaseMaterial);
+    const baseRows = materialRows
+        .filter((row) => isBaseMaterial(row) || isComponentProduct(row))
+        .sort((a, b) => {
+            const aIsComponent = isComponentProduct(a);
+            const bIsComponent = isComponentProduct(b);
+            if (aIsComponent && bIsComponent) {
+                return componentProductSortRank(a) - componentProductSortRank(b)
+                    || String(a.material_name || '').localeCompare(String(b.material_name || ''));
+            }
+            return Number(aIsComponent) - Number(bIsComponent);
+        });
     const packRows = materialRows
-        .filter((row) => !isBaseMaterial(row))
+        .filter((row) => !isBaseMaterial(row) && !isComponentProduct(row))
         .sort((a, b) => packSortRank(a) - packSortRank(b) || String(a.material_name || '').localeCompare(String(b.material_name || '')));
     document.getElementById('rawUsageWrap').innerHTML = rawRows.length ? rawRows.map(rawCard).join('') + '<div id="extraRawRows" class="usage-list"></div>' : '<div class="empty-state">기본 원초가 없습니다. 필요하면 원초를 추가해 주세요.</div><div id="extraRawRows" class="usage-list"></div>';
     document.getElementById('baseMaterialUsageWrap').innerHTML = baseRows.length ? baseRows.map((row) => materialCard(row, 'base')).join('') + '<div id="extraBaseMaterialRows" class="usage-list"></div>' : '<div class="empty-state">기본 원자재가 없습니다. 필요하면 직접 추가해 주세요.</div><div id="extraBaseMaterialRows" class="usage-list"></div>';
@@ -1749,6 +1770,7 @@ function addMaterialLot(buttonEl) {
     }
     const row = {
         material_id: firstCard.querySelector('input[name="material_id[]"]').value,
+        component_product_id: firstCard.querySelector('input[name="component_product_id[]"]')?.value || '',
         material_name: firstCard.querySelector('.usage-name strong').childNodes[0].textContent.trim(),
         material_code: firstCard.querySelector('.usage-name span').textContent.split('·')[0].trim(),
         unit: firstCard.dataset.unit || '',
@@ -1774,8 +1796,10 @@ function addExtraMaterialRow(mode) {
             <div class="usage-name">
                 <strong>추가 ${showExpiry ? '원자재' : '부재료'}</strong><span>생산일지 기준 직접 선택</span>
                 <select class="register-select" name="material_id[]" onchange="syncMaterialSelect(this)"><option value="">자재 선택</option>${materialSelectOptions(mode)}</select>
+                <input type="hidden" name="component_product_id[]" value="">
                 <input type="hidden" name="material_actual_unit[]" value="kg">
             </div>
+            <div class="field required"><label>예상 사용량</label><input type="number" inputmode="decimal" class="register-input required-input js-expected-input" name="material_expected_quantity[]" step="any" min="0" value="0" oninput="updateExpectedForCard(this)"></div>
             <div class="field required">
                 <div class="date-field-head">
                     <label>실제 사용량</label>
@@ -1788,7 +1812,6 @@ function addExtraMaterialRow(mode) {
             </div>
             ${dateInputHtml('material_override_receiving_date[]', '', '입고일')}
             ${showExpiry ? `<div data-extra-manufacture-field class="hidden-field">${dateInputHtml('material_override_manufacture_date[]', '', '제조일')}</div><div data-extra-expiry-field>${dateInputHtml('material_override_expiry_date[]', '', '소비기한')}</div>` : '<input type="hidden" name="material_override_manufacture_date[]" value=""><input type="hidden" name="material_override_expiry_date[]" value="">'}
-            <div class="field required"><label>필요량</label><input type="number" inputmode="decimal" class="register-input required-input js-expected-input" name="material_expected_quantity[]" step="any" min="0" value="0" oninput="updateExpectedForCard(this)"></div>
             <div class="field"><label>필요량 확인</label><div class="calc-box need js-need-value">0<span class="calc-unit"></span></div></div>
             <div class="field"><label>로스량</label><div class="calc-box loss good js-loss-value">0<span class="calc-unit"></span></div></div>
             <div class="field"><label>수율</label><div class="calc-box yield good js-yield-value">0<span class="calc-unit">%</span></div></div>
@@ -1809,13 +1832,57 @@ function updateConfirm() {
 }
 function renderProductOptions(list) {
     const drop = document.getElementById('productSearchDrop');
-    drop.innerHTML = list.length ? list.map((product) => `
-        <div class="product-search-option" onclick="selectProduct(${product.id})">
+    productSearchResults = Array.isArray(list) ? list : [];
+    productSearchActiveIndex = -1;
+    drop.innerHTML = productSearchResults.length ? productSearchResults.map((product) => `
+        <div class="product-search-option" data-product-id="${escapeHtml(product.id)}" role="option" aria-selected="false" onclick="selectProduct(${product.id})">
             <strong>${escapeHtml(product.name)}</strong>
             <div class="product-search-meta"><span class="product-search-badge${product.workplace && product.workplace !== currentRegisterWorkplace ? ' shared' : ''}">${escapeHtml(product.workplace || '-')}</span>${escapeHtml(product.code || '-')} · 박스당 ${formatQty(product.box_quantity)}개</div>
         </div>
     `).join('') : '<div class="product-search-option"><strong>검색 결과가 없습니다</strong><div class="product-search-meta">품목명, 코드, 작업장을 다시 확인해 주세요.</div></div>';
     drop.style.display = 'block';
+}
+function isComponentProduct(row) {
+    return Number(row.component_product_id || 0) > 0;
+}
+function isSetProduct(row) {
+    return String(row.product_category || '').includes('세트');
+}
+function componentProductSortRank(row) {
+    const text = `${row.material_name || ''} ${row.material_code || ''}`;
+    if (text.includes('캔')) return 0;
+    if (text.includes('도시락')) return 1;
+    if (text.includes('전장')) return 2;
+    return 3;
+}
+function restoreLastProductionLines(productId) {
+    const saved = lastProductionLines[String(productId || '')] || {};
+    const disabledInput = document.getElementById('registerLineUsageDisabled');
+    const savedLines = new Set(
+        String(saved.line || '')
+            .split(',')
+            .map((line) => line.trim())
+            .filter(Boolean)
+    );
+    if (disabledInput) disabledInput.checked = Boolean(saved.line_usage_disabled);
+    document.querySelectorAll('input[name="production_lines"]').forEach((input) => {
+        input.checked = !saved.line_usage_disabled && savedLines.has(String(input.value));
+    });
+    syncRegisterModeLineUsageDisabled();
+}
+function setProductSearchActiveIndex(index) {
+    const options = Array.from(document.querySelectorAll('#productSearchDrop .product-search-option[data-product-id]'));
+    if (!options.length) {
+        productSearchActiveIndex = -1;
+        return;
+    }
+    productSearchActiveIndex = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, optionIndex) => {
+        const isActive = optionIndex === productSearchActiveIndex;
+        option.classList.toggle('keyboard-active', isActive);
+        option.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    options[productSearchActiveIndex].scrollIntoView({ block: 'nearest' });
 }
 function filterProducts() {
     const query = document.getElementById('productSearch').value.trim().toLowerCase();
@@ -1827,6 +1894,7 @@ function selectProduct(productId) {
     document.getElementById('productSearch').value = selectedProduct ? selectedProduct.name : '';
     document.getElementById('productSearchDrop').style.display = 'none';
     document.getElementById('saveWorkplaceInput').value = currentRegisterWorkplace;
+    restoreLastProductionLines(selectedProduct?.id);
     completedSteps.clear();
     updateSummary();
     syncExpiryInputs();
@@ -1887,6 +1955,37 @@ document.getElementById('registerModeForm').addEventListener('keydown', (event) 
 document.getElementById('productionDate')?.addEventListener('change', (event) => {
     storeRegisterModeProductionDate(event.target.value || '');
     syncExpiryInputs();
+});
+document.getElementById('productSearch')?.addEventListener('keydown', (event) => {
+    if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) return;
+
+    const drop = document.getElementById('productSearchDrop');
+    if (event.key === 'Escape') {
+        if (drop) drop.style.display = 'none';
+        productSearchActiveIndex = -1;
+        return;
+    }
+
+    if (!productSearchResults.length || drop?.style.display === 'none') {
+        filterProducts();
+    }
+    if (!productSearchResults.length) return;
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setProductSearchActiveIndex(productSearchActiveIndex + 1);
+        return;
+    }
+    if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setProductSearchActiveIndex(productSearchActiveIndex - 1);
+        return;
+    }
+    if (productSearchActiveIndex >= 0) {
+        event.preventDefault();
+        const product = productSearchResults[productSearchActiveIndex];
+        if (product) selectProduct(product.id);
+    }
 });
 document.getElementById('registerModeForm').addEventListener('focusout', (event) => {
     if (!event.target.classList.contains('js-register-date-input')) return;

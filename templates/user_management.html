@@ -101,6 +101,10 @@
 .list-user-main{display:flex;flex-direction:column;gap:.22rem;min-width:0;}
 .list-user-sub{font-size:.78rem;color:#64748b;word-break:break-word;}
 .list-access-form{display:flex;flex-direction:column;gap:.7rem;min-width:280px;padding:.15rem 0;}
+.list-access-form{display:none;}
+.list-access-form.open{display:flex;}
+.list-edit-toggle{border:1px solid #93c5fd;border-radius:10px;background:#eff6ff;color:#1d4ed8;padding:.52rem .72rem;font-size:.78rem;font-weight:900;cursor:pointer;}
+.list-edit-toggle:hover{background:#dbeafe;border-color:#60a5fa;}
 .list-access-top{display:grid;grid-template-columns:minmax(150px,190px) 1fr;gap:.55rem;align-items:start;padding:.55rem .6rem;border:1px solid #e2e8f0;border-radius:14px;background:linear-gradient(180deg,#fbfdff,#f8fafc);}
 .list-workplaces{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.45rem;}
 .list-workplaces .wp-chip{padding:.45rem .62rem;font-size:.78rem;}
@@ -172,6 +176,8 @@ html[data-theme="dark"] .user-list-table td{background:#121a2a;color:#dbe7f5;bor
 html[data-theme="dark"] .user-list-table td:first-child{border-left-color:#263244;}
 html[data-theme="dark"] .user-list-table td:last-child{border-right-color:#263244;}
 html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;border-color:#314155;}
+html[data-theme="dark"] .list-edit-toggle{background:rgba(37,99,235,.16);border-color:rgba(96,165,250,.32);color:#bfdbfe;}
+html[data-theme="dark"] .list-edit-toggle:hover{background:rgba(37,99,235,.26);}
 @media (max-width: 768px){
     .user-grid{grid-template-columns:1fr;}
     .user-meta{grid-template-columns:1fr;}
@@ -396,12 +402,12 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
         <div class="panel-head">
             <div>
                 <h2>계정 목록</h2>
-                <p>기본은 카드형으로 보고, 필요하면 리스트형으로 빠르게 전환할 수 있습니다.</p>
+                <p>리스트형에서 계정과 권한을 빠르게 비교하고, 필요한 계정만 펼쳐 수정할 수 있습니다.</p>
             </div>
             <div class="toolbar">
                 <div class="view-tabs">
-                    <button type="button" class="view-tab active" data-view-tab="card" onclick="setUserView('card')">카드형</button>
-                    <button type="button" class="view-tab" data-view-tab="list" onclick="setUserView('list')">리스트형</button>
+                    <button type="button" class="view-tab" data-view-tab="card" onclick="setUserView('card')">카드형</button>
+                    <button type="button" class="view-tab active" data-view-tab="list" onclick="setUserView('list')">리스트형</button>
                 </div>
                 <input type="search" id="userSearchInput" class="toolbar-search" placeholder="이름, 아이디, 부서, 작업장 검색">
                 <select id="roleFilterSelect" class="toolbar-filter">
@@ -416,7 +422,7 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
             </div>
         </div>
 
-        <div class="account-view active" id="accountViewCard">
+        <div class="account-view" id="accountViewCard">
             <div class="user-grid" id="approvedUserGrid">
                 {% for u in users_list %}
                 {% set urole = u.role_value %}
@@ -568,7 +574,7 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
             </div>
         </div>
 
-        <div class="account-view" id="accountViewList">
+        <div class="account-view active" id="accountViewList">
             <div class="user-list-wrap">
                 <table class="user-list-table">
                     <thead>
@@ -632,6 +638,7 @@ html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;bo
                             </td>
                             <td>
                                 {% if u.id != session_user_id %}
+                                <button type="button" class="list-edit-toggle" onclick="toggleUserAccessForm(this)">권한·작업장 수정</button>
                                 <form method="POST" action="/users/{{ u.id }}/update-access" class="list-access-form">
                                     <div class="list-access-top">
                                         <select name="role" class="role-select role-select-input">
@@ -724,6 +731,14 @@ function setWorkplaceSelection(form, mode){
         const requested = Array.from(form.closest('.user-card')?.querySelectorAll('.req-chip') || []).map(chip => chip.textContent.trim());
         inputs.forEach(input => input.checked = requested.includes(input.value));
     }
+}
+
+function toggleUserAccessForm(button){
+    const form = button.nextElementSibling;
+    if (!form || !form.classList.contains('list-access-form')) return;
+    const willOpen = !form.classList.contains('open');
+    form.classList.toggle('open', willOpen);
+    button.textContent = willOpen ? '수정 닫기' : '권한·작업장 수정';
 }
 
 function setUserView(view){
