@@ -536,16 +536,16 @@ def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days
                     html_parts.append('<span class="done-badge">완료</span>')
                 html_parts.append('<div class="schedule-info">')
                 if is_completed:
-                    html_parts.append(f'<span style="color:#3b82f6">실제 {_format_schedule_quantity(schedule.get("actual_boxes"))}박스</span>')
+                    html_parts.append(f'<span style="color:#3b82f6">실제 {_format_schedule_quantity(schedule.get("actual_boxes"))}{escape(str(schedule.get("quantity_unit") or "박스"))}</span>')
                 else:
-                    html_parts.append(f'<span style="color:#3b82f6">계획 {_format_schedule_quantity(schedule.get("planned_boxes"))}박스</span>')
+                    html_parts.append(f'<span style="color:#3b82f6">계획 {_format_schedule_quantity(schedule.get("planned_boxes"))}{escape(str(schedule.get("quantity_unit") or "박스"))}</span>')
                 if line_text:
                     html_parts.append('<div class="line-container">')
                     for line_value in [item.strip() for item in line_text.split(',') if item.strip()]:
                         html_parts.append(f'<span class="line-tag">L{escape(line_value)}</span>')
                     html_parts.append('</div>')
                 html_parts.append('</div>')
-                tooltip = f'{str(schedule.get("product_name") or "")} - {_format_schedule_quantity(schedule.get("planned_boxes"))}박스'
+                tooltip = f'{str(schedule.get("product_name") or "")} - {_format_schedule_quantity(schedule.get("planned_boxes"))}{str(schedule.get("quantity_unit") or "박스")}'
                 if line_text:
                     tooltip += f'&#10;라인: {line_text}'
                 delete_title = '완료 건은 삭제할 수 없습니다.' if is_completed else ('수출 일정에서 이 날짜를 제외합니다.' if str(schedule.get('source') or '') == 'export' else '삭제')
@@ -624,8 +624,9 @@ def _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_d
             html_parts.append('</div><div class="mobile-schedule-meta">')
             html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">날짜</span><span class="mobile-meta-value">{current_date.month}월 {current_date.day}일</span></div>')
             html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">요일</span><span class="mobile-meta-value">{weekdays[current_date.weekday()]}</span></div>')
-            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">계획수량</span><span class="mobile-meta-value">{_format_schedule_quantity(schedule.get("planned_boxes"))}박스</span></div>')
-            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">실제수량</span><span class="mobile-meta-value">{(_format_schedule_quantity(schedule.get("actual_boxes")) + "박스") if is_completed else "-"}</span></div>')
+            quantity_unit = escape(str(schedule.get('quantity_unit') or '박스'))
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">계획수량</span><span class="mobile-meta-value">{_format_schedule_quantity(schedule.get("planned_boxes"))}{quantity_unit}</span></div>')
+            html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">실제수량</span><span class="mobile-meta-value">{(_format_schedule_quantity(schedule.get("actual_boxes")) + quantity_unit) if is_completed else "-"}</span></div>')
             html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">라인</span><span class="mobile-meta-value">{escape("라인 " + line_text) if line_text else "-"}</span></div>')
             html_parts.append(f'<div class="mobile-meta-item"><span class="mobile-meta-label">상태</span><span class="mobile-meta-value">{status_text}</span></div>')
             html_parts.append('</div></div>')
@@ -1200,6 +1201,20 @@ def _get_set_component_display_unit(component_product_name):
     return 'EA'
 
 
+def _get_schedule_calendar_quantity_unit(schedule):
+    """Return the user-facing quantity unit for a production-calendar row."""
+    try:
+        is_set_component = (
+            int(schedule.get('set_schedule_id') or 0) > 0
+            and int(schedule.get('set_schedule_item_id') or 0) > 0
+        )
+    except (AttributeError, TypeError, ValueError):
+        is_set_component = False
+    if is_set_component:
+        return _get_set_component_display_unit(schedule.get('product_name') or '')
+    return '박스'
+
+
 def _get_set_component_display_type(component_product_name):
     name = str(component_product_name or '').strip()
     if '낱캔' in name:
@@ -1594,12 +1609,6 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
     if started_rows:
         if original_finished_product_id and int(original_finished_product_id) != finished_product_id:
             raise ValueError('생산이 시작된 세트 일정은 완제품을 변경할 수 없습니다.')
-        earliest_started_date = min(str(row.get('scheduled_date') or '') for row in started_rows if row.get('scheduled_date'))
-        latest_started_date = max(str(row.get('scheduled_date') or '') for row in started_rows if row.get('scheduled_date'))
-        if earliest_started_date and start_date.isoformat() > earliest_started_date:
-            raise ValueError('생산이 시작된 세트 일정은 시작일을 늦출 수 없습니다.')
-        if latest_started_date and production_end_date.isoformat() < latest_started_date:
-            raise ValueError('생산이 시작된 세트 일정은 종료일을 앞당길 수 없습니다.')
 
     if pending_rows:
         _delete_set_generated_rows(conn, cursor, [int(row['schedule_id']) for row in pending_rows if int(row.get('schedule_id') or 0) > 0])
@@ -1609,6 +1618,9 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
         value for value in _get_business_schedule_dates(conn, cursor, start_date, production_end_date)
         if value not in excluded_date_set
     ]
+    # 생산 중·완료 건은 실적과 함께 고정한다. 수정된 세트 수량은 이 고정분을
+    # 제외한 계획 건에만 다시 배분하며, 이미 진행된 날짜 이전으로 계획을 만들지
+    # 않는다.
     if started_rows:
         latest_started_date = max(
             (str(row.get('scheduled_date') or '') for row in started_rows),
@@ -1624,11 +1636,11 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
     started_planned_by_component = defaultdict(int)
     for row in started_rows:
         component_product_id = int(row.get('component_product_id') or 0)
-        if component_product_id > 0:
-            status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
-            frozen_quantity = row.get('actual_boxes') if status_value == '완료' else row.get('planned_boxes')
-            started_planned_by_component[component_product_id] += int(float(frozen_quantity or row.get('planned_boxes') or 0))
-
+        if component_product_id <= 0:
+            continue
+        status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
+        frozen_quantity = row.get('actual_boxes') if status_value == '완료' else row.get('planned_boxes')
+        started_planned_by_component[component_product_id] += int(float(frozen_quantity or row.get('planned_boxes') or 0))
     # Calendar에서 별도로 등록한 반제품 계획도 같은 세트 기간의 필요량을
     # 충족하는 계획으로 취급한다. 연결된 세트 행만 계산하면 수동 계획과 동일한
     # 반제품 일정이 다음 달에 중복 생성된다.
@@ -1644,8 +1656,8 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
         required_quantity = int(item.get('required_quantity') or 0)
         started_quantity = int(started_planned_by_component.get(component_product_id, 0))
         manual_planned_quantity = int(manual_planned_by_component.get(component_product_id, 0))
-        if required_quantity < started_quantity:
-            raise ValueError('이미 시작된 반제품의 계획 수량보다 적게 변경할 수 없습니다.')
+        # 시작·완료분보다 수량을 낮춰도 허용한다. 이 경우 남은 계획만 0이 되며,
+        # 시작·완료된 생산 건은 변경하지 않는다.
         remaining_quantity = max(required_quantity - started_quantity - manual_planned_quantity, 0)
         if remaining_quantity > 0:
             remaining_items.append({**item, 'required_quantity': remaining_quantity})
@@ -4403,6 +4415,7 @@ def schedules():
             view_row['display_weekday'] = weekday_text
             view_row['display_work_type'] = work_type_text
             view_row['display_overtime_hours'] = overtime_hours
+            view_row['quantity_unit'] = _get_schedule_calendar_quantity_unit(view_row)
             schedules_view.append(view_row)
 
             schedules_list.append(
@@ -4416,6 +4429,9 @@ def schedules():
                     'line': s['line'] if s['line'] else '',
                     'production_id': s['linked_production_id'],
                     'actual_boxes': s['prod_actual_boxes'],
+                    'quantity_unit': _get_schedule_calendar_quantity_unit(view_row),
+                    'set_schedule_id': s['set_schedule_id'] if 'set_schedule_id' in s.keys() else None,
+                    'set_schedule_item_id': s['set_schedule_item_id'] if 'set_schedule_item_id' in s.keys() else None,
                     'is_completed': status_value == done_status,
                     'source': s['schedule_source'] if 'schedule_source' in s.keys() and s['schedule_source'] else 'manual',
                     'export_schedule_id': s['export_schedule_id'] if 'export_schedule_id' in s.keys() else None,
@@ -6393,25 +6409,21 @@ def open_set_assembly(set_schedule_id):
             if not item_rows:
                 raise ValueError('세트 일정에 등록된 반제품이 없습니다.')
 
-            planned_boxes = _calculate_set_assembly_available_quantity(
-                cursor,
-                finished_product_id,
-                _get_set_schedule_component_remaining_stock(cursor, set_schedule_id),
-            )
             selected_target = next(
                 (target for target in finished_product_targets if int(target['product_id']) == finished_product_id),
                 {},
             )
             target_planned_boxes = int(selected_target.get('planned_boxes') or 0)
-            if target_planned_boxes > 0:
-                completed_target_boxes = sum(
-                    float(row.get('actual_boxes') or row.get('planned_boxes') or 0)
-                    for row in assembly_rows
-                    if _normalize_production_status(row.get('status')) == '완료'
-                )
-                planned_boxes = min(planned_boxes, max(target_planned_boxes - completed_target_boxes, 0))
+            completed_target_boxes = sum(
+                float(row.get('actual_boxes') or row.get('planned_boxes') or 0)
+                for row in assembly_rows
+                if _normalize_production_status(row.get('status')) == '완료'
+            )
+            # 조립 계획은 반제품 재고와 무관하게 세트 목표 수량만큼 먼저 등록한다.
+            # 반제품 차감·부족 검증은 실제 생산 완료 처리에서 수행한다.
+            planned_boxes = max(target_planned_boxes - completed_target_boxes, 0)
             if planned_boxes <= 0:
-                raise ValueError('선택한 완제품의 조립 가능 수량이 없습니다. 반제품 재고와 계획 수량을 확인해주세요.')
+                raise ValueError('선택한 완제품의 남은 세트 조립 계획 수량이 없습니다.')
 
             schedule_date = _select_set_assembly_default_date(set_row)
             schedule_note = _build_set_assembly_note(
@@ -9240,6 +9252,7 @@ def update_production_usage(production_id):
                     'production_id': int(production_id),
                     'shortages': material_shortages,
                     'form_payload': form_payload,
+                    'shortage_label': '반제품' if is_set_assembly_production else '부자재',
                 }
                 return redirect(url_for('production.production_detail', production_id=production_id))
 

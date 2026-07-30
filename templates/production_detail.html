@@ -1516,11 +1516,11 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% if material_shortage_popup %}
 <div class="shortage-modal-bg" id="materialShortageModal">
     <div class="shortage-modal">
-        <div class="shortage-head">부자재 재고 부족 알림</div>
+        <div class="shortage-head">{{ material_shortage_popup.shortage_label or '부자재' }} 재고 부족 알림</div>
         <div class="shortage-body">
-            <p class="shortage-desc">아래 부자재의 재고가 부족합니다.</p>
+            <p class="shortage-desc">아래 {{ material_shortage_popup.shortage_label or '부자재' }}의 재고가 부족하여 생산 완료를 등록할 수 없습니다.</p>
             <table class="shortage-table">
-                <thead><tr><th>부자재</th><th>현재고</th><th>필요 재고</th></tr></thead>
+                <thead><tr><th>{{ material_shortage_popup.shortage_label or '부자재' }}</th><th>현재고</th><th>필요 재고</th></tr></thead>
                 <tbody>
                     {% for s in material_shortage_popup.shortages %}
                     <tr>
@@ -1532,6 +1532,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 </tbody>
             </table>
             <div class="shortage-actions">
+                {% if (material_shortage_popup.shortage_label or '') != '반제품' %}
                 <form method="POST" action="/production/{{ production.id }}/update-usage" style="margin:0;">
                     {% for item in material_shortage_popup.form_payload %}
                     <input type="hidden" name="{{ item.name }}" value="{{ item.value }}">
@@ -1544,6 +1545,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                     <input type="hidden" name="move_to_materials" value="1">
                     <button type="submit" class="btn">임시 저장 후 부자재 관리로 이동</button>
                 </form>
+                {% endif %}
                 <button type="button" class="btn btn-secondary" onclick="closeMaterialShortageModal()">닫기</button>
             </div>
         </div>

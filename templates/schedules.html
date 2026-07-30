@@ -1997,6 +1997,10 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 .special-note-modal .modal-content {
     max-width: 620px;
 }
+.schedule-info .schedule-quantity {
+    flex:0 0 auto;
+    white-space:nowrap;
+}
 .special-note-toolbar {
     display: flex;
     align-items: center;
@@ -3457,6 +3461,21 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     margin:0;
     font-size:1.04rem;
 }
+/* 세트 일정표는 한 화면에 계획과 상세 생산 현황을 함께 보여야 하므로,
+   활성 탭의 섹션 제목·섹션 간 간격만 더 촘촘하게 유지한다. */
+#setTabActivePane .export-section {
+    margin:0.55rem 1.4rem 0.7rem;
+}
+#setTabActivePane .export-section-head {
+    padding:0.52rem 0.9rem;
+}
+#setTabActivePane .export-section-head h3 {
+    font-size:1rem;
+    line-height:1.25;
+}
+#setTabActivePane .export-active-card.set-schedule-card {
+    margin:0.42rem 0 0.6rem;
+}
 .export-filter-head {
     display:flex;
     justify-content:space-between;
@@ -3719,6 +3738,27 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     color:#047857 !important;
     font-size:0.84rem;
     line-height:1.35;
+}
+.set-finished-plan-summary {
+    display:inline-flex;
+    align-items:center;
+    gap:0.42rem;
+    max-width:100%;
+    margin-top:0.38rem;
+    padding:0.27rem 0.48rem;
+    border:1px solid #bfdbfe;
+    border-radius:7px;
+    background:#eff6ff;
+    color:#1e40af;
+    font-size:0.76rem;
+    font-weight:800;
+    line-height:1.15;
+    white-space:nowrap;
+}
+.set-finished-plan-summary strong {
+    color:#0f766e;
+    font-size:0.82rem;
+    font-weight:900;
 }
 .set-component-plan-list {
     display:grid;
@@ -4854,6 +4894,12 @@ html[data-theme="dark"] .export-custom-box-remove-btn:hover {
     background:#3f4f65 !important;
     border-color:#64748b !important;
 }
+html[data-theme="dark"] .set-finished-plan-summary {
+    border-color:#285c92;
+    background:#162d4c;
+    color:#bfdbfe;
+}
+html[data-theme="dark"] .set-finished-plan-summary strong {color:#5eead4;}
 .export-po-toggle-btn.is-active {
     background:linear-gradient(135deg,#059669,#047857) !important;
     border-color:#065f46 !important;
@@ -6651,6 +6697,10 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% if item.finished_product_code %}
                         <div class="req-muted" style="margin-top:.18rem;">{{ item.finished_product_code }}</div>
                         {% endif %}
+                        <div class="set-finished-plan-summary" aria-label="총 세트 박스 생산 계획">
+                            <span>총 세트 생산 계획</span>
+                            <strong>{{ export_box(item.assembly_target_qty) }}박스</strong>
+                        </div>
                         {% if item.completed_date %}
                         <div class="req-muted" style="margin-top:.18rem;">완료일 {{ item.completed_date }}</div>
                         {% endif %}
@@ -7848,6 +7898,19 @@ function formatQuantity(value) {
     const num = Number(value || 0);
     if (!Number.isFinite(num)) return '-';
     return num.toLocaleString('ko-KR');
+}
+
+function getScheduleQuantityUnit(schedule) {
+    const unit = String(schedule?.quantity_unit || '').trim();
+    if (unit && unit !== 'EA') return unit;
+    const isSetComponent = Number(schedule?.set_schedule_id || 0) > 0
+        && Number(schedule?.set_schedule_item_id || 0) > 0;
+    if (!isSetComponent) return '\uBC15\uC2A4';
+
+    const productName = String(schedule?.product_name || '');
+    if (productName.includes('\uB0B1\uCEA4')) return '\uCEA4';
+    if (productName.includes('\uC804\uC7A5') || productName.includes('\uB3C4\uC2DC\uB77D')) return '\uBD09';
+    return unit || 'EA';
 }
 
 function syncModalOpenState() {
@@ -9095,11 +9158,13 @@ function renderCalendar() {
     
     // 박스 수
     const boxesSpan = document.createElement('span');
+    boxesSpan.className = 'schedule-quantity';
     boxesSpan.style.color = '#3b82f6';
+    const quantityUnit = getScheduleQuantityUnit(schedule);
     if (schedule.is_completed) {
-        boxesSpan.textContent = `실제 ${schedule.actual_boxes || 0}박스`;
+        boxesSpan.textContent = `실제 ${schedule.actual_boxes || 0}${quantityUnit}`;
     } else {
-        boxesSpan.textContent = `계획 ${schedule.planned_boxes}박스`;
+        boxesSpan.textContent = `계획 ${schedule.planned_boxes}${quantityUnit}`;
     }
     infoDiv.appendChild(boxesSpan);
 
@@ -9120,7 +9185,7 @@ function renderCalendar() {
     scheduleItem.appendChild(infoDiv);
 
     // 툴팁 설정 (기존과 동일)
-    let tooltip = `${String(schedule.product_name || '')} - ${schedule.planned_boxes}박스`;
+    let tooltip = `${String(schedule.product_name || '')} - ${schedule.planned_boxes}${quantityUnit}`;
     if (lineText) tooltip += `\n라인: ${lineText}`;
     scheduleItem.title = tooltip;
     scheduleItem.style.cursor = 'pointer';
@@ -9231,6 +9296,7 @@ function renderMobileScheduleList() {
             const statusClass = isCompleted ? 'done' : 'planned';
             const actualBoxes = isCompleted ? formatQuantity(schedule.actual_boxes) : '-';
             const plannedBoxes = formatQuantity(schedule.planned_boxes);
+            const quantityUnit = getScheduleQuantityUnit(schedule);
             const lineText = schedule.line ? `라인 ${escapeHtml(schedule.line)}` : '-';
             const exportBadge = schedule.source === 'export'
                 ? `<div class="req-muted" style="margin-top:0.2rem;color:#1d4ed8;font-weight:700;">${schedule.export_container_label ? `수출 ${escapeHtml(schedule.export_container_label)}` : '수출'}</div>`
@@ -9248,8 +9314,8 @@ function renderMobileScheduleList() {
                     <div class="mobile-schedule-meta">
                         <div class="mobile-meta-item"><span class="mobile-meta-label">날짜</span><span class="mobile-meta-value">${dateMeta.dateText}</span></div>
                         <div class="mobile-meta-item"><span class="mobile-meta-label">요일</span><span class="mobile-meta-value">${dateMeta.weekdayText}</span></div>
-                        <div class="mobile-meta-item"><span class="mobile-meta-label">계획수량</span><span class="mobile-meta-value">${plannedBoxes}박스</span></div>
-                        <div class="mobile-meta-item"><span class="mobile-meta-label">실제수량</span><span class="mobile-meta-value">${actualBoxes === '-' ? '-' : `${actualBoxes}박스`}</span></div>
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">계획수량</span><span class="mobile-meta-value">${plannedBoxes}${quantityUnit}</span></div>
+                        <div class="mobile-meta-item"><span class="mobile-meta-label">실제수량</span><span class="mobile-meta-value">${actualBoxes === '-' ? '-' : `${actualBoxes}${quantityUnit}`}</span></div>
                         <div class="mobile-meta-item"><span class="mobile-meta-label">라인</span><span class="mobile-meta-value">${lineText}</span></div>
                         <div class="mobile-meta-item"><span class="mobile-meta-label">상태</span><span class="mobile-meta-value">${statusText}</span></div>
                     </div>
@@ -9411,10 +9477,12 @@ function renderCalendar() {
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'schedule-info';
                 const boxesSpan = document.createElement('span');
+                boxesSpan.className = 'schedule-quantity';
                 boxesSpan.style.color = '#3b82f6';
+                const quantityUnit = getScheduleQuantityUnit(schedule);
                 boxesSpan.textContent = isCompleted
-                    ? `실제 ${formatQuantity(schedule.actual_boxes)}박스`
-                    : `계획 ${formatQuantity(schedule.planned_boxes)}박스`;
+                    ? `실제 ${formatQuantity(schedule.actual_boxes)}${quantityUnit}`
+                    : `계획 ${formatQuantity(schedule.planned_boxes)}${quantityUnit}`;
                 infoDiv.appendChild(boxesSpan);
 
                 if (lineText) {
