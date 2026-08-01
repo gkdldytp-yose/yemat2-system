@@ -1366,7 +1366,14 @@ def _calculate_set_assembly_available_quantity(cursor, finished_product_id, comp
     return max(int(min(quantities)), 0) if quantities else 0
 
 
-def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id):
+def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id, exclude_assembly_production_id=0):
+    """Return set-produced component stock, optionally before one assembly's usage.
+
+    Completed assemblies retain their usage rows until a successful edit is
+    saved.  When validating that same assembly again, its existing usage must
+    be added back virtually; otherwise the production is compared against only
+    the leftover stock and cannot be edited.
+    """
     produced_rows = cursor.execute(
         '''
         SELECT
@@ -1393,8 +1400,13 @@ def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id):
           AND pmu.component_product_id IS NOT NULL
           AND COALESCE(pr.set_schedule_item_id, 0) = 0
           AND COALESCE(ps.schedule_source, '') = 'set_assembly'
+          AND (? <= 0 OR pr.id <> ?)
         ''',
-        (int(set_schedule_id or 0),),
+        (
+            int(set_schedule_id or 0),
+            int(exclude_assembly_production_id or 0),
+            int(exclude_assembly_production_id or 0),
+        ),
     ).fetchall()
     done_status = _normalize_production_status('완료')
     produced_map = defaultdict(float)
@@ -4230,6 +4242,10 @@ def schedules():
                             int(item.get('required_quantity') or 0) - int(progress.get('completed_quantity') or 0),
                             0,
                         ),
+                        'overproduced_quantity': max(
+                            int(progress.get('completed_quantity') or 0) - int(item.get('required_quantity') or 0),
+                            0,
+                        ),
                         'completed_count': int(progress.get('completed_count') or 0),
                         'generated_count': int(progress.get('generated_count') or 0),
                         'assembly_used_quantity': int(round(component_assembly_usage.get(component_product_id, 0) or 0)),
@@ -4244,6 +4260,7 @@ def schedules():
                     for row in assembly_rows
                     if _normalize_production_status(row.get('status')) == done_status
                 )
+                assembly_remaining_qty = max(assembly_target_qty - assembly_completed_qty, 0)
                 finished_product_component_plans = (
                     _build_set_finished_product_component_plans(cursor, finished_product_targets)
                     if len(finished_product_targets) > 1
@@ -4259,7 +4276,8 @@ def schedules():
                     for index, plan in enumerate(plans):
                         required_quantity = int(plan.get('required_quantity') or 0)
                         if index == len(plans) - 1:
-                            completed_quantity = min(max(completed_total - allocated_completed, 0), required_quantity)
+                            # Keep shared semi-finished overproduction visible on the final plan row.
+                            completed_quantity = max(completed_total - allocated_completed, 0)
                         elif total_required > 0:
                             completed_quantity = int(round(completed_total * required_quantity / total_required))
                             completed_quantity = min(completed_quantity, required_quantity)
@@ -4268,6 +4286,7 @@ def schedules():
                         allocated_completed += completed_quantity
                         plan['completed_quantity'] = completed_quantity
                         plan['remaining_quantity'] = max(required_quantity - completed_quantity, 0)
+                        plan['overproduced_quantity'] = max(completed_quantity - required_quantity, 0)
                 completed_assembly_by_product = defaultdict(float)
                 for row in assembly_rows:
                     if _normalize_production_status(row.get('status')) == done_status:
@@ -4325,6 +4344,7 @@ def schedules():
                     'completed_assembly_rows': completed_assembly_rows,
                     'assembly_count': len(assembly_rows),
                     'assembly_completed_qty': int(assembly_completed_qty),
+                    'assembly_remaining_qty': int(assembly_remaining_qty),
                     'assembly_in_progress_id': int(assembly_in_progress_row.get('id') or 0) if assembly_in_progress_row else 0,
                     'assembly_status': _normalize_production_status(assembly_row.get('status')) if assembly_row else '',
                     'assembly_date': assembly_row.get('production_date') if assembly_row else '',
@@ -4362,6 +4382,7 @@ def schedules():
                         'assembly_production_id': set_view['assembly_production_id'],
                         'assembly_count': set_view['assembly_count'],
                         'assembly_completed_qty': set_view['assembly_completed_qty'],
+                        'assembly_remaining_qty': set_view['assembly_remaining_qty'],
                         'assembly_in_progress_id': set_view['assembly_in_progress_id'],
                         'assembly_status': set_view['assembly_status'],
                         'assembly_date': set_view['assembly_date'],
@@ -9204,6 +9225,7 @@ def update_production_usage(production_id):
                     set_available_map = _get_set_schedule_component_remaining_stock(
                         cursor,
                         int(prod_row.get('set_schedule_id') or 0),
+                        exclude_assembly_production_id=production_id,
                     )
                     set_available = float(set_available_map.get(component_product_id, 0.0) or 0.0)
                     if set_available + 1e-9 < need_qty:

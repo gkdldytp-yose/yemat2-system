@@ -50,6 +50,19 @@ def _normalize_production_status(status_value):
     return s
 
 
+def _completed_production_status_sql(column_name):
+    """Return a SQLite predicate that accepts every persisted 완료 status form.
+
+    Older databases can contain a mojibake version of the Korean status text.
+    Comparing the text directly to ``'완료'`` drops those otherwise completed
+    production records from material usage history.
+    """
+    return (
+        f"LOWER(HEX(COALESCE({column_name}, ''))) "
+        "IN ('ec9984eba38c', '3feabea8eca6ba')"
+    )
+
+
 def _parse_manual_processed_at(raw_value):
     value = (raw_value or '').strip()
     if not value:
@@ -2583,7 +2596,7 @@ def material_detail(material_id):
         }
 
         cursor.execute(
-            """
+            f"""
 SELECT
                 COALESCE(p.production_date, substr(pmu.created_at, 1, 10)) as use_date,
                 COALESCE(
@@ -2654,7 +2667,7 @@ SELECT
             LEFT JOIN material_lots ml ON ml.id = pmlu.material_lot_id
             WHERE pmu.material_id = ?
               AND COALESCE(pmu.actual_quantity, 0) > 0
-              AND COALESCE(p.status, '') = '완료'
+              AND {_completed_production_status_sql('p.status')}
             ORDER BY
                 COALESCE(p.production_date, pmu.created_at) DESC,
                 pmu.id DESC,
