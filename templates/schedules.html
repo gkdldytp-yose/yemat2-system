@@ -4160,6 +4160,20 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     font-weight:900;
     white-space:nowrap;
 }
+.set-overproduced-quantity {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:72px;
+    padding:0.28rem 0.48rem;
+    border:1px solid rgba(220,38,38,0.32);
+    border-radius:999px;
+    background:rgba(254,242,242,0.94);
+    color:#dc2626;
+    font-size:0.78rem;
+    font-weight:900;
+    white-space:nowrap;
+}
 .set-finished-progress {
     margin:0 0 0.7rem;
     padding:0.72rem 0.78rem;
@@ -4187,6 +4201,32 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     height:100%;
     border-radius:inherit;
     background:linear-gradient(90deg,#22c55e,#0f766e);
+}
+.set-finished-progress-meta {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.55rem;
+    margin-top:.55rem;
+}
+.set-finished-progress-meta .req-muted {margin:0;}
+.set-assembly-remaining {
+    display:inline-flex;
+    align-items:baseline;
+    gap:.38rem;
+    padding:.36rem .58rem;
+    border:1px solid #f59e0b;
+    border-radius:8px;
+    background:linear-gradient(135deg,#fffbeb,#fef3c7);
+    color:#92400e;
+    font-size:.76rem;
+    font-weight:800;
+    white-space:nowrap;
+}
+.set-assembly-remaining strong {
+    color:#b45309;
+    font-size:.98rem;
+    font-weight:900;
 }
 .set-assembly-date-list {
     display:flex;
@@ -4851,9 +4891,12 @@ html[data-theme="dark"] .set-schedule-line-add-btn {
 html[data-theme="dark"] .set-component-progress {color:#93c5fd;}
 html[data-theme="dark"] .set-component-progress-track {background:#223e69;}
 html[data-theme="dark"] .set-remaining-quantity {background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.34);color:#86efac;}
+html[data-theme="dark"] .set-overproduced-quantity {background:rgba(127,29,29,.3);border-color:rgba(248,113,113,.48);color:#fca5a5;}
 html[data-theme="dark"] .set-finished-progress {background:linear-gradient(135deg,rgba(20,83,45,.28),rgba(30,58,138,.2));border-color:rgba(74,222,128,.26);}
 html[data-theme="dark"] .set-finished-progress-head {color:#bbf7d0;}
 html[data-theme="dark"] .set-finished-progress-track {background:#14532d;}
+html[data-theme="dark"] .set-assembly-remaining {border-color:rgba(251,191,36,.74);background:rgba(120,53,15,.3);color:#fde68a;box-shadow:0 0 14px rgba(245,158,11,.14);}
+html[data-theme="dark"] .set-assembly-remaining strong {color:#fbbf24;}
 html[data-theme="dark"] .set-assembly-date-link {border-color:#2563eb;background:rgba(37,99,235,.16);color:#bfdbfe;}
 html[data-theme="dark"] .set-assembly-date-link:hover {background:rgba(37,99,235,.28);color:#dbeafe;}
 html[data-theme="dark"] .set-assembly-product-badge.set-assembly-product-3 {background:rgba(37,99,235,.25);color:#bfdbfe;border-color:rgba(96,165,250,.65);}
@@ -6845,7 +6888,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             </div>
                         </div>
                         <div class="export-container-remaining">
+                            {% if component.overproduced_quantity|default(0) > 0 %}
+                            <span class="set-overproduced-quantity">초과 생산 {{ export_box(component.overproduced_quantity) }}</span>
+                            {% else %}
                             <span class="set-remaining-quantity">생산 잔량 {{ export_box(component.remaining_quantity) }}</span>
+                            {% endif %}
                         </div>
                     </div>
                     {% endfor %}
@@ -6883,7 +6930,13 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         <div class="set-finished-progress-track">
                             <span style="width: {{ ((item.assembly_completed_qty / item.assembly_target_qty) * 100) if item.assembly_target_qty else 0 }}%;"></span>
                         </div>
-                        <div class="req-muted" style="margin-top:.42rem;">조립 {{ item.assembly_count }}회{% if item.assembly_in_progress_id %} · 진행 중 조립 있음{% endif %}</div>
+                        <div class="set-finished-progress-meta">
+                            <span class="req-muted">조립 {{ item.assembly_count }}회{% if item.assembly_in_progress_id %} · 진행 중 조립 있음{% endif %}</span>
+                            <span class="set-assembly-remaining">
+                                <span>남은 조립</span>
+                                <strong>{{ export_box(item.assembly_remaining_qty) }}박스</strong>
+                            </span>
+                        </div>
                         {% if item.completed_assembly_rows %}
                         <div class="set-assembly-date-list">
                             {% for assembly in item.completed_assembly_rows | reverse %}
