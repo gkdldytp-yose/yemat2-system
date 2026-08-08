@@ -23,10 +23,17 @@ LOW_STOCK_MATERIAL_GROUP_ORDER = ['내포', '외포', '박스', '실리카', '�
 
 def _normalize_dashboard_schedule_status(status_value):
     s = (status_value or '').strip()
+    normalized = s.lower()
     broken_planned_statuses = {'?\ub349\uc819'}
     broken_completed_statuses = {'?\uafa8\uc9ba', '\ufffd\u03f7\ufffd'}
     if not s:
         return '예정'
+    if normalized in {'planned', 'plan', 'scheduled', 'pending'}:
+        return '예정'
+    if normalized in {'in_progress', 'in progress', 'processing'}:
+        return '진행중'
+    if normalized in {'completed', 'complete', 'done'}:
+        return '완료'
     if s in broken_completed_statuses or s == '완료' or '완료' in s:
         return '완료'
     if s == '진행중':

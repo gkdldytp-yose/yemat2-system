@@ -3772,6 +3772,8 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     border-radius:8px;
     background:linear-gradient(135deg,#f8fbff,#eef6ff);
 }
+.set-stock-deduct-clickable { cursor:pointer; }
+.set-stock-deduct-clickable:hover { box-shadow:0 0 0 1px rgba(59,130,246,.45); }
 .set-component-plan-finished {
     margin-bottom:0.28rem;
     color:#2563eb;
@@ -4210,6 +4212,67 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     margin-top:.55rem;
 }
 .set-finished-progress-meta .req-muted {margin:0;}
+.set-stock-deduction-summary {
+    display:flex;
+    align-items:center;
+    gap:.38rem;
+    margin-top:.55rem;
+    color:#64748b;
+    font-size:.74rem;
+    line-height:1.25;
+    white-space:nowrap;
+    overflow:hidden;
+}
+.set-stock-deduction-summary strong { color:#d97706; font-size:.78rem; }
+.set-stock-deduction-summary .set-stock-deduction-product {
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.set-stock-deduction-badge {
+    display:inline-flex;
+    align-items:center;
+    margin-top:.28rem;
+    padding:.13rem .34rem;
+    border:1px solid rgba(245,158,11,.52);
+    border-radius:999px;
+    color:#b45309;
+    font-size:.68rem;
+    font-weight:800;
+    line-height:1.15;
+    white-space:nowrap;
+}
+.set-stock-deduction-badge[data-set-stock-deduct="1"] { cursor:pointer; }
+.set-stock-deduction-history-row {
+    margin-top:.38rem;
+    padding:.42rem .48rem;
+    border-top:1px solid rgba(100,116,139,.28);
+}
+.set-stock-deduction-history-row:first-of-type { border-top:0; }
+.set-stock-deduction-history-head {
+    display:flex;
+    align-items:center;
+    gap:.45rem;
+    color:#cbd5e1;
+}
+.set-stock-deduction-history-copy {
+    margin-top:.28rem;
+    color:#94a3b8;
+    line-height:1.45;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+.set-stock-deduction-edit-btn {
+    margin-left:auto;
+    padding:.28rem .52rem;
+    border:1px solid #3b82f6;
+    border-radius:7px;
+    background:linear-gradient(135deg,#2563eb,#0ea5e9);
+    color:#eff6ff;
+    font-size:.72rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.set-stock-deduction-edit-btn:hover { filter:brightness(1.1); }
 .set-assembly-remaining {
     display:inline-flex;
     align-items:baseline;
@@ -4662,6 +4725,17 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     gap:0.75rem;
     align-items:start;
 }
+.set-schedule-item-workplace {
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    gap:.7rem;
+    align-items:center;
+    padding:.75rem 0 0;
+    border-top:1px dashed #dbe3f0;
+}
+.set-schedule-item-workplace label { font-size:.84rem; font-weight:800; color:#334155; }
+.set-schedule-item-workplace select { min-height:44px; }
+.set-schedule-item-excluded { opacity:.52; }
 .set-schedule-field {
     display:block;
 }
@@ -4893,6 +4967,10 @@ html[data-theme="dark"] .set-component-progress-track {background:#223e69;}
 html[data-theme="dark"] .set-remaining-quantity {background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.34);color:#86efac;}
 html[data-theme="dark"] .set-overproduced-quantity {background:rgba(127,29,29,.3);border-color:rgba(248,113,113,.48);color:#fca5a5;}
 html[data-theme="dark"] .set-finished-progress {background:linear-gradient(135deg,rgba(20,83,45,.28),rgba(30,58,138,.2));border-color:rgba(74,222,128,.26);}
+html[data-theme="dark"] .set-stock-deduction-summary {color:#94a3b8;}
+html[data-theme="dark"] .set-stock-deduction-summary strong {color:#fbbf24;}
+html[data-theme="dark"] .set-stock-deduction-badge {border-color:rgba(251,191,36,.6);color:#fbbf24;}
+html[data-theme="dark"] .set-stock-deduction-history-row {border-top-color:#334155;}
 html[data-theme="dark"] .set-finished-progress-head {color:#bbf7d0;}
 html[data-theme="dark"] .set-finished-progress-track {background:#14532d;}
 html[data-theme="dark"] .set-assembly-remaining {border-color:rgba(251,191,36,.74);background:rgba(120,53,15,.3);color:#fde68a;box-shadow:0 0 14px rgba(245,158,11,.14);}
@@ -6075,7 +6153,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div class="view-toggle">
         <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
         <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
-        {% if set_finished_products %}
+        {% if set_finished_products or set_schedules %}
         <button data-view="set" onclick="switchView('set')">🎁 세트 일정표</button>
         {% endif %}
         <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
@@ -6736,6 +6814,9 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     data-production-dates="{{ item.daily_actuals | map(attribute='date') | join(',') }}"
                     {% if item.completed_date %}data-completed-date="{{ item.completed_date }}"{% endif %}>
                     <td>
+                        {% set table_finished_target = item.finished_product_targets|first if item.finished_product_targets else {} %}
+                        {% set table_finished_product_id = item.finished_product_id or table_finished_target.product_id %}
+                        {% set table_finished_deduction = item.stock_deduction_by_product.get(table_finished_product_id) %}
                         <strong>{% if item.finished_product_targets|length > 1 %}{% for target in item.finished_product_targets %}{{ target.name or '-' }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}{{ item.finished_product_name or '-' }}{% endif %}</strong>
                         {% if item.finished_product_code %}
                         <div class="req-muted" style="margin-top:.18rem;">{{ item.finished_product_code }}</div>
@@ -6744,6 +6825,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             <span>총 세트 생산 계획</span>
                             <strong>{{ export_box(item.assembly_target_qty) }}박스</strong>
                         </div>
+                        {% if table_finished_deduction %}<span class="set-stock-deduction-badge"
+                            {% if can_prod and table_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ table_finished_product_id }}" data-product-name="{{ item.finished_product_name or '' }}" data-workplace="{{ table_finished_target.workplace or item.workplace or '' }}" title="클릭하여 차감 내역 확인 및 수정"{% endif %}>완제품 차감 {{ export_box(table_finished_deduction.quantity) }}</span>{% endif %}
                         {% if item.completed_date %}
                         <div class="req-muted" style="margin-top:.18rem;">완료일 {{ item.completed_date }}</div>
                         {% endif %}
@@ -6761,7 +6844,9 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% set component_plans = item.finished_product_component_plans or item['items'] %}
                         <div class="set-component-plan-list">
                         {% for component in component_plans %}
-                        <div class="set-component-plan">
+                        {% set component_deduction = item.stock_deduction_by_product.get(component.component_product_id) %}
+                        <div class="set-component-plan{% if can_prod and component.component_product_id %} set-stock-deduct-clickable{% endif %}"
+                            {% if can_prod and component.component_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ component.component_product_id }}" data-product-name="{{ component.component_product_name or '' }}" data-workplace="{{ component.workplace or item.workplace or '' }}" title="클릭하여 재고 차감 및 특이사항 등록"{% endif %}>
                             {% if component.finished_product_name %}
                             <div class="set-component-plan-finished">{{ component.finished_product_name }} · 계획 {{ export_box(component.planned_boxes) }}</div>
                             {% endif %}
@@ -6769,6 +6854,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                 <span>{{ component.component_product_name }}</span>
                                 <span class="set-component-plan-quantity">{{ export_box(component.required_quantity) }}</span>
                             </div>
+                            {% if component_deduction %}<span class="set-stock-deduction-badge">재고 차감 {{ export_box(component_deduction.quantity) }}</span>{% endif %}
                         </div>
                         {% endfor %}
                         </div>
@@ -6870,7 +6956,9 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     <h4>반제품 계획</h4>
                     {% set component_plans = item.finished_product_component_plans or item['items'] %}
                     {% for component in component_plans %}
-                    <div class="export-container-row set-component-plan-row">
+                    {% set component_deduction = item.stock_deduction_by_product.get(component.component_product_id) %}
+                    <div class="export-container-row set-component-plan-row{% if can_prod and component.component_product_id %} set-stock-deduct-clickable{% endif %}"
+                        {% if can_prod and component.component_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ component.component_product_id }}" data-product-name="{{ component.component_product_name or '' }}" data-workplace="{{ component.workplace or item.workplace or '' }}" title="클릭하여 재고 차감 및 특이사항 등록"{% endif %}>
                         <div class="export-container-label">
                             {% if component.finished_product_name %}
                             <div class="set-component-plan-finished">{{ component.finished_product_name }} · 계획 {{ export_box(component.planned_boxes) }}</div>
@@ -6879,6 +6967,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             {% if component.component_product_code %}
                             <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">{{ component.component_product_code }}</div>
                             {% endif %}
+                            {% if component_deduction %}<span class="set-stock-deduction-badge">차감 {{ export_box(component_deduction.quantity) }}</span>{% endif %}
                         </div>
                         <div class="export-container-math">필요 {{ export_box(component.required_quantity) }}</div>
                         <div class="set-component-progress">
@@ -6912,6 +7001,10 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                     <span>생산 <strong>{{ export_box(component.completed_quantity) }}</strong></span>
                                     <i>−</i>
                                     <span>조립 사용 <strong>{{ export_box(component.assembly_used_quantity) }}</strong></span>
+                                    {% if component.stock_deducted_quantity %}
+                                    <i>-</i>
+                                    <span>차감 <strong>{{ export_box(component.stock_deducted_quantity) }}</strong></span>
+                                    {% endif %}
                                     <i>=</i>
                                     <span class="set-component-stock-available">재고 <strong>{{ export_box(component.available_stock_quantity) }}</strong></span>
                                 </div>
@@ -6922,8 +7015,14 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 </div>
                 <div class="export-active-pane">
                     <h4>생산일자별 완료 수량</h4>
+                    {% set stock_finished_target = item.finished_product_targets|first if item.finished_product_targets else {} %}
+                    {% set stock_finished_product_id = item.finished_product_id or stock_finished_target.product_id %}
+                    {% set stock_finished_product_name = item.finished_product_name or stock_finished_target.name %}
+                    {% set stock_finished_workplace = stock_finished_target.workplace or item.workplace or '' %}
+                    {% set finished_deduction = item.stock_deduction_by_product.get(stock_finished_product_id) %}
                     <div class="set-finished-progress">
-                        <div class="set-finished-progress-head">
+                        <div class="set-finished-progress-head{% if can_prod and stock_finished_product_id %} set-stock-deduct-clickable{% endif %}"
+                            {% if can_prod and stock_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ stock_finished_product_id }}" data-product-name="{{ stock_finished_product_name or '' }}" data-workplace="{{ stock_finished_workplace }}" title="클릭하여 재고 차감 및 특이사항 등록"{% endif %}>
                             <span>완제품 조립 진행</span>
                             <strong>{{ export_box(item.assembly_completed_qty) }} / {{ export_box(item.assembly_target_qty) }}</strong>
                         </div>
@@ -6931,12 +7030,14 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             <span style="width: {{ ((item.assembly_completed_qty / item.assembly_target_qty) * 100) if item.assembly_target_qty else 0 }}%;"></span>
                         </div>
                         <div class="set-finished-progress-meta">
-                            <span class="req-muted">조립 {{ item.assembly_count }}회{% if item.assembly_in_progress_id %} · 진행 중 조립 있음{% endif %}</span>
+                            <span class="req-muted">조립 {{ item.assembly_count }}회{% if item.assembly_in_progress_id %} · 진행 중 조립 있음{% endif %}{% if item.finished_product_targets|length == 1 %} · 완제품 재고 {{ export_box(item.finished_product_current_stock) }}{% endif %}</span>
                             <span class="set-assembly-remaining">
                                 <span>남은 조립</span>
                                 <strong>{{ export_box(item.assembly_remaining_qty) }}박스</strong>
                             </span>
                         </div>
+                        {% if finished_deduction %}<span class="set-stock-deduction-badge"
+                            {% if can_prod and stock_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ stock_finished_product_id }}" data-product-name="{{ stock_finished_product_name or '' }}" data-workplace="{{ stock_finished_workplace }}" title="클릭하여 차감 내역 확인 및 수정"{% endif %}>완제품 재고 차감 {{ export_box(finished_deduction.quantity) }}</span>{% endif %}
                         {% if item.completed_assembly_rows %}
                         <div class="set-assembly-date-list">
                             {% for assembly in item.completed_assembly_rows | reverse %}
@@ -7676,6 +7777,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div class="modal-content">
         <span class="close" onclick="closeSetModal()">&times;</span>
         <h2 id="setModalTitle" style="margin-bottom: 1.5rem;">세트 일정 추가</h2>
+        <button type="button" class="btn btn-secondary" id="setCompletedRecordBtn" style="display:none;margin:-.8rem 0 1rem;" onclick="openSetCompletedRecordModal()">완료 일정 추가</button>
 
         <form method="POST" action="/schedules/set/add" id="setScheduleForm" class="schedule-add-form">
 <div class="form-group">
@@ -7747,6 +7849,35 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     </div>
 </div>
 
+<div id="setCompletedRecordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="setCompletedRecordModalTitle">
+    <div class="modal-content" style="max-width:680px;">
+        <span class="close" onclick="closeSetCompletedRecordModal()">&times;</span>
+        <h2 id="setCompletedRecordModalTitle" style="margin-bottom:.45rem;">완료 생산건 추가</h2>
+        <p class="req-muted" style="margin:0 0 1rem;">선택한 작업장에서 세트 기간 내 완료된 반제품 생산건을 선택해 연결합니다. 등록 모드 생산건도 포함됩니다.</p>
+        <div class="form-group">
+            <label for="setCompletedRecordWorkplace">생산 작업장</label>
+            <select id="setCompletedRecordWorkplace" onchange="loadSetCompletedRecords()"></select>
+        </div>
+        <div id="setCompletedRecordList" class="set-schedule-items-list" style="max-height:360px;overflow:auto;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:.55rem;margin-top:1rem;">
+            <button type="button" class="btn btn-secondary" onclick="closeSetCompletedRecordModal()">취소</button>
+            <button type="button" class="btn" id="setCompletedRecordSubmitBtn" onclick="submitSetCompletedRecords()">선택 생산건 연결</button>
+        </div>
+    </div>
+</div>
+
+<div id="setStockDeductModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width:440px;">
+        <span class="close" onclick="closeSetStockDeductModal()">&times;</span>
+        <h2 style="margin-bottom:.5rem;">세트 재고 차감</h2>
+        <p id="setStockDeductProduct" class="req-muted" style="margin:0 0 1rem;"></p>
+        <div id="setStockDeductHistory" class="req-muted" style="display:none;margin:0 0 .8rem;padding:.45rem .55rem;border:1px solid #36516f;border-radius:8px;font-size:.76rem;"></div>
+        <div class="form-group"><label>차감 수량</label><input id="setStockDeductQuantity" type="number" min="0.1" step="0.1" placeholder="수량 입력"></div>
+        <div class="form-group"><label>차감 사유</label><textarea id="setStockDeductReason" rows="3" placeholder="예: 영업팀 홍길동 완제품 1세트 출고"></textarea></div>
+        <div style="display:flex;justify-content:flex-end;gap:.55rem;margin-top:1rem;"><button type="button" class="btn btn-secondary" onclick="closeSetStockDeductModal()">취소</button><button type="button" class="btn" id="setStockDeductSubmitBtn" onclick="submitSetStockDeduction()">재고 차감</button></div>
+    </div>
+</div>
+
 <div id="setAssemblyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="setAssemblyModalTitle">
     <div class="modal-content" style="max-width:430px;">
         <span class="close" onclick="closeSetAssemblyModal()">&times;</span>
@@ -7792,6 +7923,7 @@ const workDays = {{ work_days_json|safe }};
 const exportSchedules = {{ export_schedules_json|safe }};
 const setSchedules = {{ set_schedules_json|safe }};
 const setFinishedProducts = {{ set_finished_products_json|safe }};
+const SET_COMPONENT_WORKPLACES = {{ set_component_workplaces|tojson }};
 const CAN_MANAGE_SCHEDULE = {{ can_manage_schedule|tojson }};
 const SCHEDULE_ADMIN_PERMISSION_MESSAGE = '해당 작업에 대한 권한이 없습니다. 관리자에게 문의 부탁드립니다.';
 const exportCompletedSchedules = exportSchedules.filter((row) => Boolean(row.is_completed) && String(row.completed_date || '').trim());
@@ -8692,7 +8824,7 @@ function toggleExportScheduleCard(header) {
 }
 
 function handleScheduleDetailRowClick(event, scheduleType, scheduleId) {
-    if (event.target.closest('a, button, input, select, textarea, form, label')) return;
+    if (event.target.closest('a, button, input, select, textarea, form, label, .set-stock-deduct-clickable')) return;
     scrollToScheduleDetail(scheduleType, scheduleId);
 }
 
@@ -9715,6 +9847,8 @@ function collectSetScheduleItems() {
         required_quantity: Number(card.querySelector('input[name="required_quantity[]"]')?.value || 0),
         priority: Number(card.querySelector('input[name="priority[]"]')?.value || 1),
         line: String(card.querySelector('input[name="component_line[]"]')?.value || ''),
+        workplace: String(card.querySelector('select[name="component_workplace[]"]')?.value || ''),
+        included: Boolean(card.querySelector('input[name="component_included_ids[]"]')?.checked),
     }));
 }
 
@@ -10008,6 +10142,19 @@ function initializeSetScheduleLinePickers(scope = document) {
     });
 }
 
+function toggleSetScheduleItemIncluded(checkbox) {
+    const card = checkbox?.closest('.set-schedule-item-card');
+    if (!card) return;
+    const included = Boolean(checkbox.checked);
+    card.classList.toggle('set-schedule-item-excluded', !included);
+}
+
+function buildSetComponentWorkplaceOptions(selectedWorkplace = '') {
+    const selected = String(selectedWorkplace || '').trim();
+    const choices = Array.from(new Set([selected, ...SET_COMPONENT_WORKPLACES].filter(Boolean)));
+    return choices.map((workplace) => `<option value="${escapeHtml(workplace)}" ${workplace === selected ? 'selected' : ''}>${escapeHtml(workplace)}</option>`).join('');
+}
+
 function renderSetScheduleItems(productId, presetItems = [], presetPlans = []) {
     const list = document.getElementById('setScheduleItemsList');
     const empty = document.getElementById('setScheduleItemsEmpty');
@@ -10045,6 +10192,8 @@ function renderSetScheduleItems(productId, presetItems = [], presetPlans = []) {
         const quantityValue = Number(component.default_quantity || preset.required_quantity || 0);
         const priorityValue = Number(preset.priority ?? (index + 1));
         const lineValue = String(preset.line || '').trim();
+        const included = presetMap.size === 0 || presetMap.has(Number(component.component_product_id));
+        const workplaceValue = String(preset.workplace || component.workplace || SET_COMPONENT_WORKPLACES[0] || '').trim();
         const row = document.createElement('div');
         row.className = 'set-schedule-item-card';
         row.innerHTML = `
@@ -10075,6 +10224,10 @@ function renderSetScheduleItems(productId, presetItems = [], presetPlans = []) {
                         <input type="number" name="priority[]" min="1" step="1" required value="${Math.max(1, priorityValue || 1)}" oninput="handleSetPriorityChange(this)" onchange="handleSetPriorityChange(this)">
                     </label>
                 </div>
+                <div class="set-schedule-item-workplace">
+                    <label><input type="checkbox" name="component_included_ids[]" value="${Number(component.component_product_id)}" ${included ? 'checked' : ''} onchange="toggleSetScheduleItemIncluded(this)"> 생산 포함</label>
+                    <select name="component_workplace[]">${buildSetComponentWorkplaceOptions(workplaceValue)}</select>
+                </div>
                 <div class="set-schedule-line-section">
                     <span class="set-schedule-field-label">
                         <span class="set-schedule-field-title">생산 라인</span>
@@ -10093,6 +10246,7 @@ function renderSetScheduleItems(productId, presetItems = [], presetPlans = []) {
         `;
         list.appendChild(row);
         initializeSetScheduleLinePickers(row);
+        toggleSetScheduleItemIncluded(row.querySelector('input[name="component_included_ids[]"]'));
     });
     normalizeSetPriorityInputs();
 }
@@ -10104,6 +10258,164 @@ function handleSetFinishedProductChange() {
     renderSetFinishedProductQuantityInputs(productId);
     renderSetScheduleItems(productId);
 }
+
+let activeSetCompletedRecordScheduleId = null;
+
+function closeSetCompletedRecordModal() {
+    const modal = document.getElementById('setCompletedRecordModal');
+    if (modal) modal.style.display = 'none';
+    syncModalOpenState();
+}
+
+async function openSetCompletedRecordModal() {
+    const scheduleId = Number(activeSetCompletedRecordScheduleId || 0);
+    if (!scheduleId) return;
+    const modal = document.getElementById('setCompletedRecordModal');
+    const list = document.getElementById('setCompletedRecordList');
+    if (list) list.innerHTML = '<div class="req-muted">완료 생산건을 불러오는 중입니다...</div>';
+    if (modal) modal.style.display = 'block';
+    syncModalOpenState();
+    await loadSetCompletedRecords(true);
+}
+
+async function loadSetCompletedRecords(resetWorkplace = false) {
+    const scheduleId = Number(activeSetCompletedRecordScheduleId || 0);
+    const workplaceSelect = document.getElementById('setCompletedRecordWorkplace');
+    const list = document.getElementById('setCompletedRecordList');
+    if (!scheduleId || !workplaceSelect || !list) return;
+    try {
+        const selectedWorkplace = resetWorkplace ? '' : String(workplaceSelect.value || '');
+        const query = selectedWorkplace ? `?workplace=${encodeURIComponent(selectedWorkplace)}` : '';
+        const response = await fetch(`/schedules/set/${scheduleId}/completed-records${query}`);
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) throw new Error(payload.message || '완료 생산건을 불러오지 못했습니다.');
+        const workplaces = payload.workplaces || [];
+        const nextWorkplace = selectedWorkplace && workplaces.includes(selectedWorkplace) ? selectedWorkplace : (workplaces[0] || '');
+        workplaceSelect.innerHTML = workplaces.map((workplace) => `<option value="${escapeHtml(workplace)}">${escapeHtml(workplace)}</option>`).join('');
+        workplaceSelect.value = nextWorkplace;
+        if (!selectedWorkplace && nextWorkplace && !resetWorkplace) return;
+        const records = payload.records || [];
+        list.innerHTML = records.length ? records.map((record) => `
+            <label class="set-schedule-item-card" style="cursor:pointer;display:block;">
+                <div style="display:flex;gap:.7rem;align-items:flex-start;">
+                    <input type="checkbox" name="set_completed_record_id" value="${Number(record.production_id)}" style="margin-top:.3rem;">
+                    <div>
+                        <strong>${escapeHtml(record.product_name || '')}</strong>
+                        <div class="set-schedule-item-meta">
+                            <span class="set-schedule-item-chip">${escapeHtml(record.production_date || '')}</span>
+                            <span class="set-schedule-item-chip">실제 ${formatQuantity(record.actual_boxes || 0)}</span>
+                            <span class="set-schedule-item-chip">${escapeHtml(record.workplace || '')}</span>
+                            ${record.entry_mode === 'register' ? '<span class="set-schedule-item-chip">등록 모드</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            </label>
+        `).join('') : '<div class="req-muted">선택한 작업장·기간에 연결 가능한 완료 생산건이 없습니다.</div>';
+        if (resetWorkplace && nextWorkplace) await loadSetCompletedRecords();
+    } catch (error) {
+        list.innerHTML = `<div class="req-muted">${escapeHtml(error.message || '완료 생산건을 불러오지 못했습니다.')}</div>`;
+    }
+}
+
+async function submitSetCompletedRecords() {
+    const scheduleId = Number(activeSetCompletedRecordScheduleId || 0);
+    const productionIds = Array.from(document.querySelectorAll('input[name="set_completed_record_id"]:checked'))
+        .map((input) => Number(input.value || 0)).filter(Boolean);
+    if (!scheduleId || !productionIds.length) {
+        alert('연결할 완료 생산건을 선택해주세요.');
+        return;
+    }
+    const button = document.getElementById('setCompletedRecordSubmitBtn');
+    if (button) button.disabled = true;
+    try {
+        const response = await fetch(`/schedules/set/${scheduleId}/completed-records/add`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({production_ids: productionIds}),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) throw new Error(payload.message || '완료 생산건을 연결하지 못했습니다.');
+        window.location.reload();
+    } catch (error) {
+        alert(error.message || '완료 생산건을 연결하지 못했습니다.');
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+let setStockDeductTarget = null;
+let setStockDeductionRows = [];
+document.addEventListener('click', function(event) {
+    const target = event.target.closest('[data-set-stock-deduct="1"]');
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openSetStockDeductModal(
+        target.dataset.setScheduleId,
+        target.dataset.productId,
+        target.dataset.productName,
+        target.dataset.workplace,
+    );
+}, true);
+function openSetStockDeductModal(setScheduleId, productId, productName, workplace) {
+    setStockDeductTarget = {setScheduleId: Number(setScheduleId), productId: Number(productId), productName: String(productName || ''), workplace: String(workplace || ''), deductionId: null};
+    document.getElementById('setStockDeductProduct').textContent = `${setStockDeductTarget.productName} · ${setStockDeductTarget.workplace}`;
+    document.getElementById('setStockDeductQuantity').value = '';
+    document.getElementById('setStockDeductReason').value = '';
+    document.getElementById('setStockDeductSubmitBtn').textContent = '재고 차감';
+    document.getElementById('setStockDeductHistory').style.display = 'none';
+    document.getElementById('setStockDeductHistory').innerHTML = '';
+    document.getElementById('setStockDeductModal').style.display = 'block';
+    syncModalOpenState();
+    loadSetStockDeductionHistory();
+}
+function closeSetStockDeductModal() {
+    document.getElementById('setStockDeductModal').style.display = 'none';
+    setStockDeductTarget = null;
+    syncModalOpenState();
+}
+async function submitSetStockDeduction() {
+    if (!setStockDeductTarget) return;
+    const quantity = Number(document.getElementById('setStockDeductQuantity').value || 0);
+    const reason = String(document.getElementById('setStockDeductReason').value || '').trim();
+    if (!(quantity > 0) || !reason) { alert('차감 수량과 사유를 입력해주세요.'); return; }
+    try {
+        const endpoint = setStockDeductTarget.deductionId
+            ? `/schedules/set/${setStockDeductTarget.setScheduleId}/stock-deduct/${setStockDeductTarget.deductionId}`
+            : `/schedules/set/${setStockDeductTarget.setScheduleId}/stock-deduct`;
+        const body = setStockDeductTarget.deductionId
+            ? {quantity, reason}
+            : {product_id:setStockDeductTarget.productId, quantity, reason};
+        const response = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) throw new Error(payload.message || '재고를 차감하지 못했습니다.');
+        window.location.reload();
+    } catch (error) { alert(error.message || '재고를 차감하지 못했습니다.'); }
+}
+async function loadSetStockDeductionHistory() {
+    if (!setStockDeductTarget) return;
+    const history = document.getElementById('setStockDeductHistory');
+    try {
+        const response = await fetch(`/schedules/set/${setStockDeductTarget.setScheduleId}/stock-deductions?product_id=${setStockDeductTarget.productId}`);
+        const payload = await response.json();
+        if (!response.ok || !payload.ok || !payload.rows?.length) return;
+        setStockDeductionRows = payload.rows;
+        history.style.display = 'block';
+        history.innerHTML = `<div style="margin-bottom:.18rem;font-weight:800;">기존 차감 내역</div>${payload.rows.map((row) => `<div class="set-stock-deduction-history-row"><div class="set-stock-deduction-history-head"><strong>${Number(row.quantity).toLocaleString()}</strong><span>${escapeHtml(String(row.created_at || '').slice(0, 16))}</span><button type="button" class="set-stock-deduction-edit-btn" data-set-deduction-edit-id="${Number(row.id)}">수정</button></div><div class="set-stock-deduction-history-copy">${escapeHtml(row.reason || '').replace(/\n/g, '<br>')}</div></div>`).join('')}`;
+    } catch (_) { /* 차감 이력이 없거나 조회 권한이 없는 경우 입력 기능은 그대로 제공 */ }
+}
+document.addEventListener('click', function(event) {
+    const button = event.target.closest('[data-set-deduction-edit-id]');
+    if (!button || !setStockDeductTarget) return;
+    const row = setStockDeductionRows.find((item) => Number(item.id) === Number(button.dataset.setDeductionEditId));
+    if (!row) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setStockDeductTarget.deductionId = Number(row.id);
+    document.getElementById('setStockDeductQuantity').value = row.quantity;
+    document.getElementById('setStockDeductReason').value = row.reason || '';
+    document.getElementById('setStockDeductSubmitBtn').textContent = '차감 내용 수정';
+}, true);
 
 function resetSetModal() {
     const form = document.getElementById('setScheduleForm');
@@ -10123,6 +10435,8 @@ function resetSetModal() {
     delete document.getElementById('setFinishedProductId').dataset.displayProductId;
     document.getElementById('setFinishedProductQuantities').innerHTML = '';
     document.getElementById('setFinishedProductQuantities').style.display = 'none';
+    activeSetCompletedRecordScheduleId = null;
+    document.getElementById('setCompletedRecordBtn').style.display = 'none';
     syncSetFinishedProductSelectionCard();
 }
 
@@ -10138,6 +10452,8 @@ function openSetModal(setScheduleId = null) {
         document.getElementById('setModalTitle').textContent = '세트 일정 수정';
         document.getElementById('setSubmitBtn').textContent = '수정';
         document.getElementById('setScheduleForm').action = `/schedules/set/update/${setScheduleId}`;
+        activeSetCompletedRecordScheduleId = Number(setScheduleId);
+        document.getElementById('setCompletedRecordBtn').style.display = '';
         const targetProductIds = (target.finished_product_targets || []).map((plan) => Number(plan.product_id || 0));
         const mixedProduct = setFinishedProducts.find((product) =>
             Array.isArray(product.mixed_product_ids)
@@ -11378,6 +11694,7 @@ window.onclick = function(event) {
     const copyModal = document.getElementById('copyModal');
     const exportModal = document.getElementById('exportModal');
     const setModal = document.getElementById('setModal');
+    const setCompletedRecordModal = document.getElementById('setCompletedRecordModal');
     const setAssemblyModal = document.getElementById('setAssemblyModal');
     const statsDetailModal = document.getElementById('statsDetailModal');
     
@@ -11395,6 +11712,9 @@ window.onclick = function(event) {
     }
     if (event.target == setModal) {
         closeSetModal();
+    }
+    if (event.target == setCompletedRecordModal) {
+        closeSetCompletedRecordModal();
     }
     if (event.target == setAssemblyModal) {
         closeSetAssemblyModal();

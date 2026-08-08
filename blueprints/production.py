@@ -875,6 +875,7 @@ def _load_schedule_set_finished_products(cursor, workplace):
                 'component_product_code': str(row.get('component_product_code') or '').strip(),
                 'default_quantity': int(round(float(row.get('quantity_per_box') or 0))),
                 'current_stock': float(row.get('current_stock') or 0),
+                'workplace': _normalize_schedule_product_workplace(row.get('component_workplace')),
             }
         )
     products = sorted(
@@ -914,7 +915,12 @@ def _parse_set_schedule_items(form):
     required_quantities = form.getlist('required_quantity[]')
     priorities = form.getlist('priority[]')
     lines = form.getlist('component_line[]')
-    max_len = max(len(component_ids), len(required_quantities), len(priorities), len(lines), 0)
+    workplaces = form.getlist('component_workplace[]')
+    included_component_ids = {
+        int(value) for value in form.getlist('component_included_ids[]')
+        if str(value or '').strip().isdigit()
+    }
+    max_len = max(len(component_ids), len(required_quantities), len(priorities), len(lines), len(workplaces), 0)
     items = []
     seen_component_ids = set()
     for index in range(max_len):
@@ -922,9 +928,15 @@ def _parse_set_schedule_items(form):
         quantity_raw = required_quantities[index] if index < len(required_quantities) else ''
         priority_raw = priorities[index] if index < len(priorities) else ''
         line_raw = lines[index] if index < len(lines) else ''
+        workplace_raw = workplaces[index] if index < len(workplaces) else ''
         if not str(component_raw or '').strip():
             continue
         component_product_id = _parse_positive_int(component_raw, f'{index + 1}번째 반제품')
+        if component_product_id not in included_component_ids:
+            continue
+        component_workplace = str(workplace_raw or '').strip()
+        if component_workplace and component_workplace not in WORKPLACES:
+            raise ValueError(f'{index + 1}번째 반제품의 작업장을 확인해주세요.')
         if component_product_id in seen_component_ids:
             raise ValueError('같은 반제품을 중복으로 등록할 수 없습니다.')
         required_quantity = _parse_positive_int(quantity_raw, f'{index + 1}번째 반제품 수량')
@@ -938,6 +950,7 @@ def _parse_set_schedule_items(form):
                 'required_quantity': required_quantity,
                 'priority': priority,
                 'line': line,
+                'workplace': component_workplace,
             }
         )
     if not items:
@@ -1016,13 +1029,17 @@ def _build_set_schedule_items_for_finished_products(cursor, targets, submitted_i
     for component_id, required_quantity in sorted(required_by_component.items()):
         submitted = submitted_by_component.get(component_id)
         if not submitted:
-            raise ValueError('세트 반제품 계획을 다시 불러와주세요.')
+            # Unchecked components are intentionally excluded from this set schedule.
+            continue
         items.append({
             'component_product_id': component_id,
             'required_quantity': required_quantity,
             'priority': int(submitted.get('priority') or 1),
             'line': str(submitted.get('line') or '').strip(),
+            'workplace': str(submitted.get('workplace') or '').strip(),
         })
+    if not items:
+        raise ValueError('세트 일정에 포함할 반제품을 하나 이상 선택해주세요.')
     return items
 
 
@@ -1097,7 +1114,7 @@ def _load_set_finished_product_target_details(cursor, set_schedule_row):
     ids = [int(target['product_id']) for target in targets]
     placeholders = ','.join(['?'] * len(ids))
     rows = cursor.execute(
-        f"SELECT id, COALESCE(name, '') AS name, COALESCE(code, '') AS code FROM products WHERE id IN ({placeholders})",
+        f"SELECT id, COALESCE(name, '') AS name, COALESCE(code, '') AS code, COALESCE(workplace, '') AS workplace FROM products WHERE id IN ({placeholders})",
         ids,
     ).fetchall()
     products_by_id = {int(row['id']): dict(row) for row in rows}
@@ -1106,6 +1123,7 @@ def _load_set_finished_product_target_details(cursor, set_schedule_row):
             **target,
             'name': products_by_id.get(int(target['product_id']), {}).get('name', ''),
             'code': products_by_id.get(int(target['product_id']), {}).get('code', ''),
+            'workplace': products_by_id.get(int(target['product_id']), {}).get('workplace', ''),
         }
         for target in targets
     ]
@@ -1121,6 +1139,7 @@ def _load_set_schedule_items(cursor, set_schedule_id):
             ssi.required_quantity,
             ssi.priority,
             COALESCE(ssi.line, '') AS line,
+            COALESCE(NULLIF(ssi.workplace, ''), p.workplace, '') AS workplace,
             COALESCE(p.name, '') AS component_product_name,
             COALESCE(p.code, '') AS component_product_code
         FROM set_schedule_items ssi
@@ -1133,14 +1152,59 @@ def _load_set_schedule_items(cursor, set_schedule_id):
     return [dict(row) for row in rows]
 
 
+def _load_set_schedule_eligible_components(cursor, set_schedule_row):
+    """Return every direct semi-finished BOM component eligible for a set record link."""
+    saved_items = _load_set_schedule_items(cursor, int(set_schedule_row.get('id') or 0))
+    saved_by_product = {int(item.get('component_product_id') or 0): item for item in saved_items}
+    targets = _get_set_finished_product_targets(set_schedule_row)
+    target_quantities = {int(target['product_id']): int(target.get('planned_boxes') or 0) for target in targets}
+    component_totals = defaultdict(int)
+    if target_quantities:
+        placeholders = ','.join('?' for _ in target_quantities)
+        rows = cursor.execute(
+            f'''
+            SELECT b.product_id, b.component_product_id, COALESCE(b.quantity_per_box, 0) AS quantity_per_box,
+                   COALESCE(p.workplace, '') AS workplace, COALESCE(p.category, '') AS category,
+                   COALESCE(p.set_item_type, '') AS set_item_type
+            FROM bom b
+            JOIN products p ON p.id = b.component_product_id
+            WHERE b.product_id IN ({placeholders}) AND b.component_product_id IS NOT NULL
+            ''',
+            list(target_quantities),
+        ).fetchall()
+        for raw_row in rows:
+            row = dict(raw_row)
+            if _normalize_set_item_type(row.get('set_item_type'), row.get('category')) != 'semi':
+                continue
+            component_id = int(row.get('component_product_id') or 0)
+            if component_id > 0:
+                component_totals[component_id] += int(round(target_quantities.get(int(row['product_id']), 0) * float(row.get('quantity_per_box') or 0)))
+    result = {}
+    for component_id, required_quantity in component_totals.items():
+        product_row = cursor.execute('SELECT COALESCE(workplace, \'\') AS workplace FROM products WHERE id = ?', (component_id,)).fetchone()
+        saved = saved_by_product.get(component_id) or {}
+        result[component_id] = {
+            'component_product_id': component_id,
+            'required_quantity': int(saved.get('required_quantity') or required_quantity or 1),
+            'priority': int(saved.get('priority') or (len(result) + 1)),
+            'line': str(saved.get('line') or ''),
+            'workplace': str(saved.get('workplace') or (product_row['workplace'] if product_row else '') or set_schedule_row.get('workplace') or '').strip(),
+            'saved_item_id': int(saved.get('id') or 0),
+        }
+    # Keep legacy/saved components eligible even if a historical BOM was changed.
+    for component_id, item in saved_by_product.items():
+        result.setdefault(component_id, {**item, 'saved_item_id': int(item.get('id') or 0)})
+    return result
+
+
 def _replace_set_schedule_items(cursor, set_schedule_id, items):
     cursor.execute('DELETE FROM set_schedule_items WHERE set_schedule_id = ?', (set_schedule_id,))
     saved_items = []
     for item in items:
         cursor.execute(
             '''
-            INSERT INTO set_schedule_items (set_schedule_id, component_product_id, required_quantity, priority, line)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO set_schedule_items (set_schedule_id, component_product_id, required_quantity, priority, line, workplace)
+            VALUES (?, ?, ?, ?, ?, ?)
             ''',
             (
                 set_schedule_id,
@@ -1148,6 +1212,7 @@ def _replace_set_schedule_items(cursor, set_schedule_id, items):
                 int(item.get('required_quantity') or 0),
                 int(item.get('priority') or 0),
                 str(item.get('line') or '').strip(),
+                str(item.get('workplace') or '').strip(),
             ),
         )
         saved_items.append({**item, 'id': int(cursor.lastrowid or 0)})
@@ -1465,15 +1530,21 @@ def _get_manual_set_component_planned_quantity(cursor, set_schedule_row, compone
     component_ids = sorted({int(value or 0) for value in component_ids if int(value or 0) > 0})
     start_date = str(set_schedule_row.get('production_start_date') or '').strip()
     end_date = str(set_schedule_row.get('production_end_date') or '').strip()
-    workplace = str(set_schedule_row.get('workplace') or '').strip()
-    if not component_ids or not start_date or not end_date or not workplace:
+    if not component_ids or not start_date or not end_date:
         return {}
+
+    item_rows = _load_set_schedule_items(cursor, int(set_schedule_row.get('id') or 0))
+    workplace_by_component = {
+        int(item.get('component_product_id') or 0): str(item.get('workplace') or set_schedule_row.get('workplace') or '').strip()
+        for item in item_rows
+    }
 
     placeholders = ','.join('?' for _ in component_ids)
     rows = cursor.execute(
         f'''
         SELECT
             ps.product_id AS component_product_id,
+            COALESCE(ps.workplace, pr.workplace, '') AS workplace,
             ps.planned_boxes AS schedule_planned_boxes,
             pr.planned_boxes AS production_planned_boxes,
             pr.actual_boxes,
@@ -1485,17 +1556,21 @@ def _get_manual_set_component_planned_quantity(cursor, set_schedule_row, compone
           AND COALESCE(ps.set_schedule_id, 0) = 0
           AND COALESCE(pr.set_schedule_id, 0) = 0
           AND COALESCE(ps.schedule_source, 'manual') = 'manual'
-          AND COALESCE(ps.workplace, pr.workplace, '') = ?
           AND ps.scheduled_date BETWEEN ? AND ?
         ''',
-        [*component_ids, workplace, start_date, end_date],
+        [*component_ids, start_date, end_date],
     ).fetchall()
 
     done_status = _normalize_production_status('완료')
     quantities = defaultdict(float)
-    for row in rows:
+    for raw_row in rows:
+        row = dict(raw_row)
         component_product_id = int(row['component_product_id'] or 0)
         if component_product_id <= 0:
+            continue
+        item_workplace = workplace_by_component.get(component_product_id, '')
+        schedule_workplace = str(row.get('workplace') or '').strip()
+        if item_workplace and schedule_workplace != item_workplace:
             continue
         status = _normalize_schedule_state(row['production_status'] or row['schedule_status'])
         if status == done_status:
@@ -1516,6 +1591,7 @@ def _load_set_linked_rows(cursor, set_schedule_id, include_assembly=False):
             ps.scheduled_date,
             ps.planned_boxes,
             ps.status AS schedule_status,
+            COALESCE(ps.schedule_source, '') AS schedule_source,
             ps.note,
             ps.production_id,
             ps.set_schedule_item_id,
@@ -1544,6 +1620,106 @@ def _load_set_linked_rows(cursor, set_schedule_id, include_assembly=False):
 def _is_started_set_row(row):
     status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
     return status_value in {'진행중', '완료'}
+
+
+def _link_existing_completed_set_component_records(cursor, set_schedule_row, item_rows, production_ids=None):
+    """Attach completed component records already made in the set period.
+
+    A set may be registered after its semi-finished products were produced.  Those
+    records are part of the set, not new work to schedule.  Records without a
+    calendar schedule receive a lightweight linked schedule so they remain visible
+    in the set schedule table and calendar.
+    """
+    set_schedule_id = int(set_schedule_row.get('id') or 0)
+    start_date = str(set_schedule_row.get('production_start_date') or '').strip()
+    end_date = str(set_schedule_row.get('production_end_date') or '').strip()
+    if set_schedule_id <= 0 or not start_date or not end_date:
+        return 0
+
+    done_status = _normalize_production_status('완료')
+    selected_production_ids = {int(value) for value in (production_ids or []) if int(value or 0) > 0}
+    linked_count = 0
+    for item in item_rows:
+        component_product_id = int(item.get('component_product_id') or 0)
+        item_id = int(item.get('id') or 0)
+        item_workplace = str(item.get('workplace') or set_schedule_row.get('workplace') or '').strip()
+        if component_product_id <= 0 or item_id <= 0 or not item_workplace:
+            continue
+        id_filter = ''
+        params = [component_product_id, item_workplace, start_date, end_date]
+        if selected_production_ids:
+            placeholders = ','.join('?' for _ in selected_production_ids)
+            id_filter = f' AND pr.id IN ({placeholders})'
+            params.extend(sorted(selected_production_ids))
+        rows = cursor.execute(
+            '''
+            SELECT pr.id, pr.schedule_id, pr.production_date, pr.planned_boxes,
+                   pr.actual_boxes, pr.status, COALESCE(ps.line, '') AS line
+            FROM productions pr
+            LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+            WHERE pr.product_id = ?
+              AND pr.workplace = ?
+              AND pr.production_date BETWEEN ? AND ?
+              AND COALESCE(pr.set_schedule_id, 0) = 0
+              AND COALESCE(ps.set_schedule_id, 0) = 0
+            ''' + id_filter + '''
+            ORDER BY pr.production_date, pr.id
+            ''',
+            params,
+        ).fetchall()
+        for raw_row in rows:
+            row = dict(raw_row)
+            if _normalize_production_status(row.get('status')) != done_status:
+                continue
+            production_id = int(row.get('id') or 0)
+            if production_id <= 0:
+                continue
+            schedule_id = int(row.get('schedule_id') or 0)
+            if schedule_id > 0:
+                cursor.execute(
+                    '''
+                    UPDATE production_schedules
+                    SET set_schedule_id = ?, set_schedule_item_id = ?
+                    WHERE id = ? AND COALESCE(set_schedule_id, 0) = 0
+                    ''',
+                    (set_schedule_id, item_id, schedule_id),
+                )
+            else:
+                planned_boxes = int(float(row.get('actual_boxes') or row.get('planned_boxes') or 0))
+                cursor.execute(
+                    '''
+                    INSERT INTO production_schedules (
+                        product_id, scheduled_date, planned_boxes, note, status, line, workplace,
+                        production_id, schedule_source, set_schedule_id, set_schedule_item_id, line_usage_disabled
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'set_existing', ?, ?, ?)
+                    ''',
+                    (
+                        component_product_id,
+                        row.get('production_date') or start_date,
+                        planned_boxes,
+                        f'[세트기록 #{set_schedule_id}] 기존 생산기록 연동',
+                        done_status,
+                        str(row.get('line') or ''),
+                        item_workplace,
+                        production_id,
+                        set_schedule_id,
+                        item_id,
+                        0 if str(row.get('line') or '').strip() else 1,
+                    ),
+                )
+                schedule_id = int(cursor.lastrowid or 0)
+                cursor.execute('UPDATE productions SET schedule_id = ? WHERE id = ?', (schedule_id, production_id))
+            cursor.execute(
+                '''
+                UPDATE productions
+                SET set_schedule_id = ?, set_schedule_item_id = ?
+                WHERE id = ? AND COALESCE(set_schedule_id, 0) = 0
+                ''',
+                (set_schedule_id, item_id, production_id),
+            )
+            linked_count += 1
+    return linked_count
 
 
 def _delete_set_generated_rows(conn, cursor, schedule_ids):
@@ -1600,7 +1776,13 @@ def _allocate_set_item_business_dates(items, business_dates):
     return allocations
 
 
-def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_product_id=None):
+def _sync_set_schedule_rows(
+    conn,
+    cursor,
+    set_schedule_row,
+    original_finished_product_id=None,
+    allow_unallocated_remaining=False,
+):
     set_schedule_id = int(set_schedule_row['id'] or 0)
     finished_product_id = int(set_schedule_row.get('finished_product_id') or 0)
     workplace = (set_schedule_row.get('workplace') or '').strip()
@@ -1615,9 +1797,17 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
     if not item_rows:
         raise ValueError('세트 일정에 등록된 반제품이 없습니다.')
 
+    existing_record_count = 0
     linked_rows = _load_set_linked_rows(cursor, set_schedule_id)
     started_rows = [row for row in linked_rows if _is_started_set_row(row)]
-    pending_rows = [row for row in linked_rows if not _is_started_set_row(row)]
+    pending_rows = [
+        row for row in linked_rows
+        if not _is_started_set_row(row) and str(row.get('schedule_source') or '') != 'set_manual'
+    ]
+    manual_pending_rows = [
+        row for row in linked_rows
+        if not _is_started_set_row(row) and str(row.get('schedule_source') or '') == 'set_manual'
+    ]
     if started_rows:
         if original_finished_product_id and int(original_finished_product_id) != finished_product_id:
             raise ValueError('생산이 시작된 세트 일정은 완제품을 변경할 수 없습니다.')
@@ -1653,6 +1843,11 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
         status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
         frozen_quantity = row.get('actual_boxes') if status_value == '완료' else row.get('planned_boxes')
         started_planned_by_component[component_product_id] += int(float(frozen_quantity or row.get('planned_boxes') or 0))
+    manual_linked_planned_by_component = defaultdict(int)
+    for row in manual_pending_rows:
+        component_product_id = int(row.get('component_product_id') or 0)
+        if component_product_id > 0:
+            manual_linked_planned_by_component[component_product_id] += int(float(row.get('planned_boxes') or 0))
     # Calendar에서 별도로 등록한 반제품 계획도 같은 세트 기간의 필요량을
     # 충족하는 계획으로 취급한다. 연결된 세트 행만 계산하면 수동 계획과 동일한
     # 반제품 일정이 다음 달에 중복 생성된다.
@@ -1667,16 +1862,24 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
         component_product_id = int(item.get('component_product_id') or 0)
         required_quantity = int(item.get('required_quantity') or 0)
         started_quantity = int(started_planned_by_component.get(component_product_id, 0))
+        manual_linked_quantity = int(manual_linked_planned_by_component.get(component_product_id, 0))
         manual_planned_quantity = int(manual_planned_by_component.get(component_product_id, 0))
         # 시작·완료분보다 수량을 낮춰도 허용한다. 이 경우 남은 계획만 0이 되며,
         # 시작·완료된 생산 건은 변경하지 않는다.
-        remaining_quantity = max(required_quantity - started_quantity - manual_planned_quantity, 0)
+        remaining_quantity = max(
+            required_quantity - started_quantity - manual_linked_quantity - manual_planned_quantity,
+            0,
+        )
         if remaining_quantity > 0:
             remaining_items.append({**item, 'required_quantity': remaining_quantity})
 
-    if remaining_items and not business_dates:
+    if remaining_items and not business_dates and not allow_unallocated_remaining:
         raise ValueError('남은 세트 생산량을 배정할 작업일이 없습니다. 종료일을 확인해주세요.')
-    allocations = _allocate_set_item_business_dates(remaining_items, business_dates) if remaining_items else []
+    allocations = (
+        _allocate_set_item_business_dates(remaining_items, business_dates)
+        if remaining_items and business_dates
+        else []
+    )
     generated_rows = []
     for item in allocations:
         component_product_id = int(item.get('component_product_id') or 0)
@@ -1707,7 +1910,7 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
                 planned_boxes=planned_boxes,
                 note=schedule_note,
                 production_lines_str=item_line,
-                workplace=workplace,
+                workplace=str(item.get('workplace') or workplace).strip(),
                 schedule_source='set',
                 set_schedule_id=set_schedule_id,
                 set_schedule_item_id=int(item.get('id') or 0),
@@ -1728,6 +1931,7 @@ def _sync_set_schedule_rows(conn, cursor, set_schedule_row, original_finished_pr
         'generated_count': len(generated_rows),
         'generated_rows': generated_rows,
         'started_count': len(started_rows),
+        'existing_record_count': existing_record_count,
     }
 
 
@@ -2434,7 +2638,7 @@ def _link_completed_semi_production_to_set_schedule(cursor, production_id, produ
         SELECT ss.id AS set_schedule_id, ssi.id AS set_schedule_item_id
         FROM set_schedules ss
         JOIN set_schedule_items ssi ON ssi.set_schedule_id = ss.id
-        WHERE ss.workplace = ?
+        WHERE COALESCE(NULLIF(ssi.workplace, ''), ss.workplace) = ?
           AND ssi.component_product_id = ?
           AND ss.production_start_date <= ?
           AND ss.production_end_date >= ?
@@ -2466,6 +2670,61 @@ def _link_completed_semi_production_to_set_schedule(cursor, production_id, produ
         WHERE production_id = ?
         ''',
         (set_schedule_id, set_schedule_item_id, production_id),
+    )
+    return set_schedule_id
+
+
+def _link_manual_semi_schedule_to_set_schedule(
+    cursor, schedule_id, production_id, product_id, scheduled_date, workplace
+):
+    """Link a newly added semi-finished plan to the matching active set schedule.
+
+    Manual plans added from the calendar remain manual plans, but are marked as a
+    set-manual row so the set progress view includes them and later set re-syncs
+    do not delete or duplicate their quantity.
+    """
+    component_product_id = int(product_id or 0)
+    effective_date = str(scheduled_date or '').strip()
+    effective_workplace = str(workplace or '').strip()
+    if not schedule_id or not production_id or component_product_id <= 0 or not effective_date or not effective_workplace:
+        return None
+
+    match = cursor.execute(
+        '''
+        SELECT ss.id AS set_schedule_id, ssi.id AS set_schedule_item_id
+        FROM set_schedules ss
+        JOIN set_schedule_items ssi ON ssi.set_schedule_id = ss.id
+        WHERE COALESCE(NULLIF(ssi.workplace, ''), ss.workplace) = ?
+          AND ssi.component_product_id = ?
+          AND ss.production_start_date <= ?
+          AND ss.production_end_date >= ?
+        ORDER BY ss.production_start_date DESC, ss.id DESC
+        LIMIT 1
+        ''',
+        (effective_workplace, component_product_id, effective_date, effective_date),
+    ).fetchone()
+    if not match:
+        return None
+
+    set_schedule_id = int(match['set_schedule_id'])
+    set_schedule_item_id = int(match['set_schedule_item_id'])
+    cursor.execute(
+        '''
+        UPDATE production_schedules
+        SET set_schedule_id = ?, set_schedule_item_id = ?, schedule_source = 'set_manual'
+        WHERE id = ? AND COALESCE(set_schedule_id, 0) = 0
+        ''',
+        (set_schedule_id, set_schedule_item_id, int(schedule_id)),
+    )
+    if cursor.rowcount <= 0:
+        return None
+    cursor.execute(
+        '''
+        UPDATE productions
+        SET set_schedule_id = ?, set_schedule_item_id = ?
+        WHERE id = ? AND COALESCE(set_schedule_id, 0) = 0
+        ''',
+        (set_schedule_id, set_schedule_item_id, int(production_id)),
     )
     return set_schedule_id
 
@@ -2890,6 +3149,48 @@ def _is_register_entry_mode(entry_mode):
     return _normalize_production_entry_mode(entry_mode) == 'register'
 
 
+def _refresh_register_usage_expected_quantity(cursor, production_id, where_sql, where_params, total_expected):
+    """Refresh expected/loss/yield values for register-mode usage rows.
+
+    One BOM item can have several lot rows.  Distribute the updated BOM total by
+    their actual use so the total expected quantity is not duplicated per lot.
+    """
+    rows = cursor.execute(
+        f'''
+        SELECT id, COALESCE(actual_quantity, 0) AS actual_quantity
+        FROM production_material_usage
+        WHERE production_id = ? AND ({where_sql})
+        ORDER BY id
+        ''',
+        [production_id, *where_params],
+    ).fetchall()
+    if not rows:
+        return 0
+    expected_total = round(float(total_expected or 0), 4)
+    actual_total = sum(max(float(row['actual_quantity'] or 0), 0) for row in rows)
+    allocated = 0.0
+    for index, row in enumerate(rows):
+        actual = max(float(row['actual_quantity'] or 0), 0)
+        if index == len(rows) - 1:
+            expected = round(expected_total - allocated, 4)
+        elif actual_total > 0:
+            expected = round(expected_total * actual / actual_total, 4)
+        else:
+            expected = round(expected_total / len(rows), 4)
+        allocated += expected
+        loss = round(actual - expected, 4)
+        yield_rate = round(expected / actual * 100, 2) if actual > 0 and expected > 0 else None
+        cursor.execute(
+            '''
+            UPDATE production_material_usage
+            SET expected_quantity = ?, loss_quantity = ?, yield_rate = ?
+            WHERE id = ?
+            ''',
+            (expected, loss, yield_rate, row['id']),
+        )
+    return len(rows)
+
+
 def _get_production_entry_mode_meta(entry_mode):
     if _is_register_entry_mode(entry_mode):
         return {
@@ -2908,16 +3209,23 @@ def _normalize_workplace_key(workplace_value):
     return ''.join(str(workplace_value or '').strip().lower().split())
 
 
-def _has_production_workplace_access(viewer_workplace, production_workplace):
+def _has_production_workplace_access(viewer_workplace, production_workplace, user=None):
     viewer_key = _normalize_workplace_key(viewer_workplace)
     production_key = _normalize_workplace_key(production_workplace)
     if not viewer_key or not production_key:
         return True
-    return viewer_key == production_key
+    if viewer_key == production_key:
+        return True
+    # A user assigned the production/admin role at the record's workplace may
+    # edit it without first switching the global workplace selector.
+    return get_effective_user_role(user or session.get('user'), production_workplace) in {'admin', 'production'}
 
 
 def _get_effective_production_workplace(cursor, production):
     production = production or {}
+    record_workplace = str(production.get('workplace') or '').strip()
+    if record_workplace:
+        return record_workplace
     set_schedule_id = int(production.get('set_schedule_id') or 0)
     if set_schedule_id > 0:
         row = cursor.execute(
@@ -2926,7 +3234,7 @@ def _get_effective_production_workplace(cursor, production):
         ).fetchone()
         if row and str(row['workplace'] or '').strip():
             return str(row['workplace']).strip()
-    return str(production.get('workplace') or '').strip()
+    return ''
 
 
 def _load_schedule_stats_products(cursor, workplace):
@@ -3793,6 +4101,7 @@ def schedules():
             set_completed_schedules=[],
             set_schedules_json='[]',
             set_finished_products_json='[]',
+            set_component_workplaces=list(WORKPLACES),
             monthly_stats=[],
             monthly_stats_summary=empty_summary,
             month_start=fallback_month_start,
@@ -3821,9 +4130,15 @@ def schedules():
                 FROM set_schedules ss
                 LEFT JOIN products fp ON fp.id = ss.finished_product_id
                 WHERE ss.workplace = ?
+                   OR EXISTS (
+                       SELECT 1
+                       FROM set_schedule_items visible_ssi
+                       WHERE visible_ssi.set_schedule_id = ss.id
+                         AND COALESCE(NULLIF(visible_ssi.workplace, ''), ss.workplace) = ?
+                   )
                 ORDER BY ss.production_start_date ASC, ss.id DESC
                 ''',
-                (workplace,),
+                (workplace, workplace),
             )
             set_schedule_rows = cursor.fetchall()
             cursor.execute(
@@ -3852,12 +4167,11 @@ def schedules():
             FROM production_schedules ps
             LEFT JOIN products p ON ps.product_id = p.id
             LEFT JOIN productions pr ON pr.schedule_id = ps.id
-            LEFT JOIN set_schedules ss ON ss.id = ps.set_schedule_id
             WHERE ps.scheduled_date BETWEEN ? AND ?
-            AND (ps.workplace = ? OR ss.workplace = ?)
+            AND ps.workplace = ?
             ORDER BY ps.scheduled_date
         ''',
-            (month_start.isoformat(), month_end.isoformat(), workplace, workplace),
+            (month_start.isoformat(), month_end.isoformat(), workplace),
         )
         schedules = cursor.fetchall()
 
@@ -4153,6 +4467,26 @@ def schedules():
                         str(target.get('name') or '').strip() for target in finished_product_targets
                     )
                 item_rows = _load_set_schedule_items(cursor, int(set_row['id']))
+                deduction_rows = [dict(row) for row in cursor.execute(
+                    '''
+                    SELECT d.id, d.product_id, d.quantity, d.reason, d.workplace, d.created_at,
+                           COALESCE(p.name, '') AS product_name
+                    FROM set_schedule_stock_deductions d
+                    LEFT JOIN products p ON p.id = d.product_id
+                    WHERE d.set_schedule_id = ?
+                    ORDER BY d.id DESC
+                    ''',
+                    (int(set_row['id']),),
+                ).fetchall()]
+                deduction_total = sum(float(row.get('quantity') or 0) for row in deduction_rows)
+                deduction_by_product = {}
+                for deduction in deduction_rows:
+                    product_id = int(deduction.get('product_id') or 0)
+                    if product_id <= 0:
+                        continue
+                    summary = deduction_by_product.setdefault(product_id, {'quantity': 0.0, 'count': 0})
+                    summary['quantity'] += float(deduction.get('quantity') or 0)
+                    summary['count'] += 1
                 linked_rows = _load_set_linked_rows(cursor, int(set_row['id']))
                 assembly_rows = _load_set_assembly_productions(
                     cursor,
@@ -4228,6 +4562,9 @@ def schedules():
                 for item in item_rows:
                     component_product_id = int(item.get('component_product_id') or 0)
                     progress = component_progress.get(component_product_id, {})
+                    deducted_quantity = float(
+                        deduction_by_product.get(component_product_id, {}).get('quantity') or 0
+                    )
                     item_summaries.append({
                         'id': int(item.get('id') or 0),
                         'component_product_id': int(item.get('component_product_id') or 0),
@@ -4236,6 +4573,8 @@ def schedules():
                         'required_quantity': int(item.get('required_quantity') or 0),
                         'priority': int(item.get('priority') or 0),
                         'line': str(item.get('line') or '').strip(),
+                        'workplace': str(item.get('workplace') or set_row.get('workplace') or '').strip(),
+                        'current_stock': _get_product_stock(cursor, int(item.get('component_product_id') or 0), str(item.get('workplace') or set_row.get('workplace') or '').strip()),
                         'planned_quantity': int(progress.get('planned_quantity') or 0),
                         'completed_quantity': int(progress.get('completed_quantity') or 0),
                         'remaining_quantity': max(
@@ -4249,8 +4588,9 @@ def schedules():
                         'completed_count': int(progress.get('completed_count') or 0),
                         'generated_count': int(progress.get('generated_count') or 0),
                         'assembly_used_quantity': int(round(component_assembly_usage.get(component_product_id, 0) or 0)),
+                        'stock_deducted_quantity': int(round(deducted_quantity)),
                         'available_stock_quantity': max(
-                            int(round(component_available_stock.get(component_product_id, 0) or 0)),
+                            int(round((component_available_stock.get(component_product_id, 0) or 0) - deducted_quantity)),
                             0,
                         ),
                     }
@@ -4261,6 +4601,14 @@ def schedules():
                     if _normalize_production_status(row.get('status')) == done_status
                 )
                 assembly_remaining_qty = max(assembly_target_qty - assembly_completed_qty, 0)
+                finished_product_current_stock = 0.0
+                if len(finished_product_targets) == 1:
+                    finished_target = finished_product_targets[0]
+                    finished_product_current_stock = _get_product_stock(
+                        cursor,
+                        int(finished_target.get('product_id') or 0),
+                        str(finished_target.get('workplace') or set_row.get('workplace') or '').strip(),
+                    )
                 finished_product_component_plans = (
                     _build_set_finished_product_component_plans(cursor, finished_product_targets)
                     if len(finished_product_targets) > 1
@@ -4317,12 +4665,15 @@ def schedules():
                 set_view = {
                     **set_row,
                     'finished_product_targets': finished_product_targets,
+                    'stock_deductions': deduction_rows,
+                    'stock_deduction_total': deduction_total,
+                    'stock_deduction_by_product': deduction_by_product,
                     'finished_product_component_plans': finished_product_component_plans,
                     'items': item_summaries,
                     'linked_rows': linked_rows,
                     'component_names': component_name_list,
                     'component_summary': ', '.join(
-                        f"{item['priority']}순위 {item['component_product_name']} {item['required_quantity']}"
+                        f"{item['priority']}순위 {item['component_product_name']} {item['required_quantity']} ({item.get('workplace') or '-'})"
                         for item in item_summaries
                     ),
                     'total_required_qty': total_required_qty,
@@ -4351,6 +4702,7 @@ def schedules():
                     'assembly_planned_boxes': float(assembly_row.get('planned_boxes') or 0) if assembly_row else float(assembly_target_qty or 0),
                     'assembly_actual_boxes': float(assembly_row.get('actual_boxes') or 0) if assembly_row else 0.0,
                     'assembly_target_qty': int(assembly_target_qty or 0),
+                    'finished_product_current_stock': finished_product_current_stock,
                 }
                 set_rows_view.append(set_view)
                 set_rows_json.append(
@@ -4360,6 +4712,9 @@ def schedules():
                         'finished_product_name': set_row.get('finished_product_name') or '',
                         'finished_product_code': set_row.get('finished_product_code') or '',
                         'finished_product_targets': finished_product_targets,
+                        'stock_deductions': deduction_rows,
+                        'stock_deduction_total': deduction_total,
+                        'stock_deduction_by_product': deduction_by_product,
                         'finished_product_component_plans': finished_product_component_plans,
                         'production_start_date': set_row.get('production_start_date') or '',
                         'production_end_date': set_row.get('production_end_date') or '',
@@ -4512,6 +4867,7 @@ def schedules():
         set_completed_schedules=set_completed_rows,
         set_schedules_json=set_schedules_json,
         set_finished_products_json=set_finished_products_json,
+        set_component_workplaces=list(WORKPLACES),
         monthly_stats=monthly_stats_rows,
         monthly_stats_summary=monthly_stats_summary,
         month_start=month_start,
@@ -5390,6 +5746,7 @@ def add_schedule():
         return "<script>alert('?곹뭹???좏깮??二쇱꽭??');history.back();</script>", 400
     with db_transaction() as conn:
         cursor = conn.cursor()
+        linked_set_schedule_ids = set()
         product_row = _is_schedule_product_selectable(cursor, workplace, product_id)
         if not product_row:
             return "<script>alert('?좏깮???곹뭹??李얠쓣 ???놁뒿?덈떎. ?ㅼ떆 ?좏깮??二쇱꽭??');history.back();</script>", 400
@@ -5415,6 +5772,11 @@ def add_schedule():
                 )
                 production_id = cursor.lastrowid
                 cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
+                linked_set_schedule_id = _link_manual_semi_schedule_to_set_schedule(
+                    cursor, schedule_id, production_id, product_id, scheduled_date, workplace
+                )
+                if linked_set_schedule_id:
+                    linked_set_schedule_ids.add(int(linked_set_schedule_id))
                 audit_log(
                     conn,
                     'create',
@@ -5430,6 +5792,12 @@ def add_schedule():
                         'workplace': workplace,
                         'production_id': production_id,
                     },
+                )
+        for set_schedule_id in linked_set_schedule_ids:
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
+            if set_row:
+                _sync_set_schedule_rows(
+                    conn, cursor, dict(set_row), allow_unallocated_remaining=True
                 )
 
     return redirect(url_for('production.schedules'))
@@ -5860,6 +6228,9 @@ def add_schedule_to_date(date):
         )
         production_id = cursor.lastrowid
         cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
+        linked_set_schedule_id = _link_manual_semi_schedule_to_set_schedule(
+            cursor, schedule_id, production_id, product_id, date, workplace
+        )
         audit_log(
             conn,
             'create',
@@ -5875,6 +6246,12 @@ def add_schedule_to_date(date):
                 'production_id': production_id,
             },
         )
+        if linked_set_schedule_id:
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (linked_set_schedule_id,)).fetchone()
+            if set_row:
+                _sync_set_schedule_rows(
+                    conn, cursor, dict(set_row), allow_unallocated_remaining=True
+                )
 
     return redirect(url_for('production.schedule_detail', date=date))
 
@@ -6353,6 +6730,287 @@ def update_set_schedule(set_schedule_id):
         return _redirect_schedule_view('set')
     except ValueError as exc:
         return _schedule_error_response(str(exc), view='set')
+
+
+@bp.route('/schedules/set/<int:set_schedule_id>/completed-records')
+@role_required('production')
+def get_set_completed_records(set_schedule_id):
+    try:
+        workplace = (request.args.get('workplace') or '').strip()
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
+            if not set_row:
+                raise ValueError('세트 일정을 찾을 수 없습니다.')
+            _require_set_schedule_owner(cursor, set_row)
+            item_rows = _load_set_schedule_eligible_components(cursor, dict(set_row))
+            allowed_workplaces = list(WORKPLACES)
+            if workplace and workplace not in allowed_workplaces:
+                raise ValueError('생산 작업장을 선택해주세요.')
+            items_by_product = {
+                int(item['component_product_id']): item
+                for item in item_rows.values()
+            }
+            if not items_by_product:
+                return jsonify({'ok': True, 'workplaces': allowed_workplaces, 'records': []})
+            placeholders = ','.join('?' for _ in items_by_product)
+            rows = cursor.execute(
+                f'''
+                SELECT pr.id, pr.product_id, pr.production_date, pr.actual_boxes, pr.planned_boxes,
+                       pr.status, pr.workplace, pr.entry_mode, pr.schedule_id,
+                       COALESCE(ps.set_schedule_id, 0) AS schedule_set_schedule_id,
+                       COALESCE(p.name, '') AS product_name, COALESCE(p.code, '') AS product_code
+                FROM productions pr
+                LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+                LEFT JOIN products p ON p.id = pr.product_id
+                WHERE pr.product_id IN ({placeholders})
+                  AND pr.production_date BETWEEN ? AND ?
+                  AND COALESCE(pr.set_schedule_id, 0) = 0
+                  AND COALESCE(ps.set_schedule_id, 0) = 0
+                  {'AND pr.workplace = ?' if workplace else ''}
+                ORDER BY pr.production_date DESC, pr.id DESC
+                ''',
+                [*items_by_product.keys(), set_row['production_start_date'], set_row['production_end_date'], *([workplace] if workplace else [])],
+            ).fetchall()
+            records = []
+            for raw_row in rows:
+                row = dict(raw_row)
+                item = items_by_product.get(int(row.get('product_id') or 0))
+                if not item:
+                    continue
+                if _normalize_production_status(row.get('status')) != _normalize_production_status('완료'):
+                    continue
+                records.append({
+                    'production_id': int(row['id']),
+                    'product_id': int(row['product_id']),
+                    'product_name': row.get('product_name') or '',
+                    'product_code': row.get('product_code') or '',
+                    'production_date': row.get('production_date') or '',
+                    'actual_boxes': float(row.get('actual_boxes') or 0),
+                    'workplace': row.get('workplace') or '',
+                    'entry_mode': _normalize_production_entry_mode(row.get('entry_mode')),
+                })
+            return jsonify({'ok': True, 'workplaces': allowed_workplaces, 'records': records})
+    except ValueError as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
+
+@bp.route('/schedules/set/<int:set_schedule_id>/completed-records/add', methods=['POST'])
+@role_required('production')
+def add_set_completed_records(set_schedule_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        raw_ids = payload.get('production_ids') if isinstance(payload, dict) else None
+        if not isinstance(raw_ids, list):
+            raw_ids = request.form.getlist('production_ids[]')
+        production_ids = sorted({int(value) for value in raw_ids or [] if str(value or '').strip().isdigit()})
+        if not production_ids:
+            raise ValueError('연결할 완료 생산건을 선택해주세요.')
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
+            if not set_row:
+                raise ValueError('세트 일정을 찾을 수 없습니다.')
+            _require_set_schedule_owner(cursor, set_row)
+            set_row = dict(set_row)
+            placeholders = ','.join('?' for _ in production_ids)
+            selected_rows = cursor.execute(
+                f'''
+                SELECT id, product_id, workplace, production_date, status
+                FROM productions
+                WHERE id IN ({placeholders})
+                  AND COALESCE(set_schedule_id, 0) = 0
+                ''',
+                production_ids,
+            ).fetchall()
+            eligible_components = _load_set_schedule_eligible_components(cursor, set_row)
+            item_by_product = dict(eligible_components)
+            workplace_by_product = {}
+            for raw_row in selected_rows:
+                row = dict(raw_row)
+                product_id = int(row.get('product_id') or 0)
+                if (
+                    product_id not in item_by_product
+                    or not (set_row['production_start_date'] <= str(row.get('production_date') or '') <= set_row['production_end_date'])
+                    or _normalize_production_status(row.get('status')) != _normalize_production_status('완료')
+                ):
+                    raise ValueError('선택한 생산건 중 세트 기간 또는 반제품 조건에 맞지 않는 건이 있습니다.')
+                record_workplace = str(row.get('workplace') or '').strip()
+                if product_id in workplace_by_product and workplace_by_product[product_id] != record_workplace:
+                    raise ValueError('같은 반제품은 한 번에 하나의 작업장 생산건만 연결할 수 있습니다.')
+                workplace_by_product[product_id] = record_workplace
+            if len(selected_rows) != len(production_ids):
+                raise ValueError('선택한 생산건을 찾을 수 없습니다.')
+            for product_id, record_workplace in workplace_by_product.items():
+                item = item_by_product[product_id]
+                if int(item.get('saved_item_id') or item.get('id') or 0) <= 0:
+                    cursor.execute(
+                        '''
+                        INSERT INTO set_schedule_items
+                        (set_schedule_id, component_product_id, required_quantity, priority, line, workplace)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ''',
+                        (
+                            set_schedule_id, product_id, int(item.get('required_quantity') or 1),
+                            int(item.get('priority') or 1), str(item.get('line') or ''), record_workplace,
+                        ),
+                    )
+                else:
+                    cursor.execute(
+                        'UPDATE set_schedule_items SET workplace = ? WHERE set_schedule_id = ? AND component_product_id = ?',
+                        (record_workplace, set_schedule_id, product_id),
+                    )
+            linked_count = _link_existing_completed_set_component_records(
+                cursor, set_row, _load_set_schedule_items(cursor, set_schedule_id), production_ids
+            )
+            if linked_count != len(production_ids):
+                raise ValueError('선택한 생산건 중 세트 기간·반제품·작업장 조건에 맞지 않는 건이 있습니다.')
+            sync_result = _sync_set_schedule_rows(
+                conn, cursor, set_row, allow_unallocated_remaining=True
+            )
+            audit_log(conn, 'link', 'set_schedule_completed_records', set_schedule_id, {
+                'production_ids': production_ids, 'linked_count': linked_count, 'sync_result': sync_result,
+            })
+        return jsonify({'ok': True, 'linked_count': linked_count})
+    except ValueError as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
+
+@bp.route('/schedules/set/<int:set_schedule_id>/stock-deduct', methods=['POST'])
+@role_required('production')
+def deduct_set_schedule_stock(set_schedule_id):
+    try:
+        payload = request.get_json(silent=True) or request.form
+        product_id = _parse_positive_int(payload.get('product_id'), '차감할 품목')
+        quantity = float(payload.get('quantity') or 0)
+        reason = str(payload.get('reason') or '').strip()
+        if quantity <= 0:
+            raise ValueError('차감 수량은 0보다 커야 합니다.')
+        if not reason:
+            raise ValueError('재고 차감 사유를 입력해주세요.')
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
+            if not set_row:
+                raise ValueError('세트 일정을 찾을 수 없습니다.')
+            _require_set_schedule_owner(cursor, set_row)
+            set_row = dict(set_row)
+            workplace = ''
+            if product_id in {int(target['product_id']) for target in _get_set_finished_product_targets(set_row)}:
+                row = cursor.execute('SELECT COALESCE(workplace, \'\') AS workplace FROM products WHERE id = ?', (product_id,)).fetchone()
+                workplace = str(row['workplace'] if row else '').strip() or str(set_row.get('workplace') or '').strip()
+            else:
+                item = next((item for item in _load_set_schedule_items(cursor, set_schedule_id) if int(item.get('component_product_id') or 0) == product_id), None)
+                if not item:
+                    raise ValueError('이 세트 일정에 포함된 완제품 또는 반제품만 차감할 수 있습니다.')
+                workplace = str(item.get('workplace') or set_row.get('workplace') or '').strip()
+            note = f'[세트일정 #{set_schedule_id}] {reason}'
+            remaining_stock = _adjust_product_stock(
+                cursor, product_id, workplace, -quantity, 'SET_SCHEDULE_DEDUCT', note,
+                created_by=session.get('user', {}).get('username'),
+            )
+            cursor.execute(
+                '''
+                INSERT INTO set_schedule_stock_deductions
+                (set_schedule_id, product_id, workplace, quantity, reason, created_by)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''',
+                (set_schedule_id, product_id, workplace, quantity, reason, session.get('user', {}).get('username')),
+            )
+            audit_log(conn, 'stock_deduct', 'set_schedule', set_schedule_id, {
+                'product_id': product_id, 'workplace': workplace, 'quantity': quantity, 'reason': reason,
+            })
+        return jsonify({'ok': True, 'remaining_stock': remaining_stock})
+    except (ValueError, TypeError) as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
+
+@bp.route('/schedules/set/<int:set_schedule_id>/stock-deductions', methods=['GET'])
+@role_required('production')
+def get_set_schedule_stock_deductions(set_schedule_id):
+    try:
+        product_id = _parse_positive_int(request.args.get('product_id'), '품목')
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
+            if not set_row:
+                raise ValueError('세트 일정을 찾을 수 없습니다.')
+            _require_set_schedule_owner(cursor, set_row)
+            rows = cursor.execute(
+                '''
+                SELECT d.id, d.quantity, d.reason, d.workplace, d.created_at
+                FROM set_schedule_stock_deductions d
+                WHERE d.set_schedule_id = ? AND d.product_id = ?
+                ORDER BY d.id DESC
+                ''',
+                (set_schedule_id, product_id),
+            ).fetchall()
+        return jsonify({'ok': True, 'rows': [dict(row) for row in rows]})
+    except (ValueError, TypeError) as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
+
+@bp.route('/schedules/set/<int:set_schedule_id>/stock-deduct/<int:deduction_id>', methods=['POST'])
+@role_required('production')
+def update_set_schedule_stock_deduction(set_schedule_id, deduction_id):
+    try:
+        payload = request.get_json(silent=True) or request.form
+        quantity = float(payload.get('quantity') or 0)
+        reason = str(payload.get('reason') or '').strip()
+        if quantity <= 0:
+            raise ValueError('차감 수량은 0보다 커야 합니다.')
+        if not reason:
+            raise ValueError('재고 차감 사유를 입력해주세요.')
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
+            if not set_row:
+                raise ValueError('세트 일정을 찾을 수 없습니다.')
+            _require_set_schedule_owner(cursor, set_row)
+            deduction = cursor.execute(
+                '''
+                SELECT id, product_id, workplace, quantity, reason
+                FROM set_schedule_stock_deductions
+                WHERE id = ? AND set_schedule_id = ?
+                ''',
+                (deduction_id, set_schedule_id),
+            ).fetchone()
+            if not deduction:
+                raise ValueError('수정할 재고 차감 기록을 찾을 수 없습니다.')
+            deduction = dict(deduction)
+            previous_quantity = float(deduction.get('quantity') or 0)
+            quantity_difference = quantity - previous_quantity
+            workplace = str(deduction.get('workplace') or '').strip()
+            if abs(quantity_difference) > 1e-9:
+                _adjust_product_stock(
+                    cursor,
+                    int(deduction['product_id']),
+                    workplace,
+                    -quantity_difference,
+                    'SET_SCHEDULE_DEDUCT_EDIT',
+                    f'[세트일정 #{set_schedule_id}] 차감 수정: {reason}',
+                    created_by=session.get('user', {}).get('username'),
+                )
+            cursor.execute(
+                '''
+                UPDATE set_schedule_stock_deductions
+                SET quantity = ?, reason = ?
+                WHERE id = ? AND set_schedule_id = ?
+                ''',
+                (quantity, reason, deduction_id, set_schedule_id),
+            )
+            audit_log(conn, 'stock_deduct_update', 'set_schedule', set_schedule_id, {
+                'deduction_id': deduction_id,
+                'product_id': int(deduction['product_id']),
+                'workplace': workplace,
+                'previous_quantity': previous_quantity,
+                'quantity': quantity,
+                'previous_reason': deduction.get('reason') or '',
+                'reason': reason,
+            })
+        return jsonify({'ok': True})
+    except (ValueError, TypeError) as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
 
 
 @bp.route('/schedules/set/delete/<int:set_schedule_id>', methods=['POST'])
@@ -7176,10 +7834,11 @@ def production_register_mode():
                         expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note,
                         override_receiving_date, override_expiry_date, override_car_number, raw_material_code_snapshot
                     )
-                    VALUES (?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
                     ''',
                     (
                         production_id,
+                        selected_raw_id or None,
                         raw_name or None,
                         expected_value,
                         actual_value,
@@ -8248,9 +8907,46 @@ def production_detail(production_id):
     raw_checksheet_options = []
     seen_raw_ids = set()
     if _is_register_entry_mode(production.get('entry_mode')):
+        def _resolve_legacy_register_raw_id(row):
+            """Find the lot for register-mode rows saved before raw_material_id was retained."""
+            raw_code = (row.get('raw_material_code_snapshot') or '').strip()
+            raw_name = (row.get('raw_material_name') or '').strip()
+            if not raw_code and not raw_name:
+                return 0
+
+            receiving_date = (row.get('override_receiving_date') or '').strip()
+            car_number = (row.get('override_car_number') or '').strip()
+            cursor.execute(
+                '''
+                SELECT id
+                FROM raw_materials
+                WHERE workplace = ?
+                  AND (
+                      (? <> '' AND COALESCE(NULLIF(TRIM(code), ''), '') = ?)
+                      OR (? <> '' AND COALESCE(NULLIF(TRIM(name), ''), '') = ?)
+                  )
+                ORDER BY
+                    CASE WHEN ? <> '' AND receiving_date = ? THEN 0 ELSE 1 END,
+                    CASE WHEN ? <> '' AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = ? THEN 0 ELSE 1 END,
+                    id DESC
+                LIMIT 1
+                ''',
+                (
+                    production.get('workplace') or current_workplace,
+                    raw_code, raw_code,
+                    raw_name, raw_name,
+                    receiving_date, receiving_date,
+                    car_number, car_number,
+                ),
+            )
+            matched = cursor.fetchone()
+            return int(matched['id'] or 0) if matched else 0
+
         seen_raw_lot_keys = set()
         for row in material_usage:
             raw_id = int(row.get('raw_material_id') or 0)
+            if raw_id <= 0:
+                raw_id = _resolve_legacy_register_raw_id(row)
             if raw_id <= 0:
                 continue
             used_qty = float(row.get('actual_quantity') or 0)
@@ -8876,12 +9572,15 @@ def update_production_usage(production_id):
 
             cursor.execute(
                 '''
-                SELECT b.product_id, b.material_id, b.component_product_id, b.quantity_per_box,
+                SELECT b.product_id, b.material_id, b.raw_material_id, b.component_product_id, b.quantity_per_box,
                        COALESCE(m.category, '') AS material_category,
+                       COALESCE(rm.code, '') AS raw_material_code,
+                       COALESCE(rm.name, '') AS raw_material_name,
                        COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
                        COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
                 FROM bom b
                 LEFT JOIN materials m ON m.id = b.material_id
+                LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
                 LEFT JOIN products p ON p.id = b.product_id
                 WHERE b.product_id = (SELECT product_id FROM productions WHERE id = ?)
                 AND (b.material_id IS NOT NULL OR b.component_product_id IS NOT NULL)
@@ -8893,23 +9592,30 @@ def update_production_usage(production_id):
             for bom in bom_mats:
                 exact = float(bom['quantity_per_box']) * actual_boxes
                 new_expected = math.ceil(exact * 100) / 100
-                if bom.get('material_id'):
-                    cursor.execute(
-                        '''
-                        UPDATE production_material_usage
-                        SET expected_quantity = ?
-                        WHERE production_id = ? AND material_id = ?
-                    ''',
-                        (new_expected, production_id, bom['material_id']),
+                if bom.get('raw_material_id'):
+                    raw_material_id = int(bom['raw_material_id'])
+                    refreshed = _refresh_register_usage_expected_quantity(
+                        cursor, production_id, 'raw_material_id = ?', [raw_material_id], new_expected
+                    )
+                    # Old register-mode rows may only contain the raw code/name snapshot.
+                    if not refreshed:
+                        raw_code = str(bom.get('raw_material_code') or '').strip()
+                        raw_name = str(bom.get('raw_material_name') or '').strip()
+                        if raw_code:
+                            refreshed = _refresh_register_usage_expected_quantity(
+                                cursor, production_id, 'raw_material_code_snapshot = ?', [raw_code], new_expected
+                            )
+                        if not refreshed and raw_name:
+                            _refresh_register_usage_expected_quantity(
+                                cursor, production_id, 'raw_material_name = ?', [raw_name], new_expected
+                            )
+                elif bom.get('material_id'):
+                    _refresh_register_usage_expected_quantity(
+                        cursor, production_id, 'material_id = ?', [int(bom['material_id'])], new_expected
                     )
                 elif bom.get('component_product_id'):
-                    cursor.execute(
-                        '''
-                        UPDATE production_material_usage
-                        SET expected_quantity = ?
-                        WHERE production_id = ? AND component_product_id = ?
-                    ''',
-                        (new_expected, production_id, bom['component_product_id']),
+                    _refresh_register_usage_expected_quantity(
+                        cursor, production_id, 'component_product_id = ?', [int(bom['component_product_id'])], new_expected
                     )
 
         # 2. ?癒?겧 ??쇱㉦ ?醫뤾문 筌ｌ꼶??(raw_rm_id_N ?類ㅻ뻼)
@@ -9030,7 +9736,9 @@ def update_production_usage(production_id):
             (product_id,),
         )
         has_raw_bom = (cursor.fetchone()['cnt'] or 0) > 0
-        if save_action != 'temp' and has_raw_bom and not raw_requests:
+        # 등록 모드 생산건은 원초/부자재 재고를 차감하지 않는다. 완료건 수정에서도
+        # 일반 생산건의 원초 사용량 필수 검증을 적용하면 안 된다.
+        if save_action != 'temp' and not skip_stock_impact and has_raw_bom and not raw_requests:
             rollback_db(conn)
             return "<script>alert('Please enter raw material usage.'); window.history.back();</script>"
 
@@ -9577,7 +10285,9 @@ def update_production_usage(production_id):
                 (linked_set_schedule_id,),
             ).fetchone()
             if set_schedule_row:
-                _sync_set_schedule_rows(conn, cursor, dict(set_schedule_row))
+                _sync_set_schedule_rows(
+                    conn, cursor, dict(set_schedule_row), allow_unallocated_remaining=True
+                )
 
         _resync_export_schedule_for_production(conn, cursor, production_id)
         commit_db(conn)
