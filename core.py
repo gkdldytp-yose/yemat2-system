@@ -972,6 +972,7 @@ def _ensure_production_schema(conn):
                 required_quantity INTEGER NOT NULL DEFAULT 0,
                 priority INTEGER NOT NULL DEFAULT 1,
                 line TEXT NOT NULL DEFAULT '',
+                workplace TEXT NOT NULL DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(set_schedule_id, component_product_id)
             )
@@ -1059,6 +1060,8 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE set_schedule_items ADD COLUMN priority INTEGER NOT NULL DEFAULT 1")
         if 'line' not in set_schedule_item_cols:
             conn.execute("ALTER TABLE set_schedule_items ADD COLUMN line TEXT NOT NULL DEFAULT ''")
+        if 'workplace' not in set_schedule_item_cols:
+            conn.execute("ALTER TABLE set_schedule_items ADD COLUMN workplace TEXT NOT NULL DEFAULT ''")
         if 'created_at' not in set_schedule_item_cols:
             conn.execute("ALTER TABLE set_schedule_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
         conn.execute(
@@ -1066,6 +1069,9 @@ def _ensure_production_schema(conn):
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_set_schedule_items_schedule_priority ON set_schedule_items(set_schedule_id, priority, id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_set_schedule_items_workplace ON set_schedule_items(workplace, set_schedule_id)"
         )
 
         schedule_cols = [row['name'] for row in conn.execute("PRAGMA table_info(production_schedules)").fetchall()]
@@ -1377,6 +1383,23 @@ def _ensure_products_schema(conn):
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_product_stock_logs_product_workplace ON product_stock_logs(product_id, workplace, created_at)"
+        )
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS set_schedule_stock_deductions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                set_schedule_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                workplace TEXT NOT NULL,
+                quantity REAL NOT NULL,
+                reason TEXT NOT NULL,
+                created_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_set_schedule_stock_deductions_schedule ON set_schedule_stock_deductions(set_schedule_id, created_at DESC)"
         )
     except Exception:
         pass
