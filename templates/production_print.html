@@ -543,7 +543,7 @@
         <th>코드</th>
         <th>품 목</th>
         <th>사용량</th>
-        <th>입고일</th>
+        <th>{{ '생산일' if is_set_finished_product else '입고일' }}</th>
         <th>소비기한</th>
         <th>비 고</th>
       </tr>

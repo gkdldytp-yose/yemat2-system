@@ -6826,7 +6826,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             <strong>{{ export_box(item.assembly_target_qty) }}박스</strong>
                         </div>
                         {% if table_finished_deduction %}<span class="set-stock-deduction-badge"
-                            {% if can_prod and table_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ table_finished_product_id }}" data-product-name="{{ item.finished_product_name or '' }}" data-workplace="{{ table_finished_target.workplace or item.workplace or '' }}" title="클릭하여 차감 내역 확인 및 수정"{% endif %}>완제품 차감 {{ export_box(table_finished_deduction.quantity) }}</span>{% endif %}
+                            {% if can_prod and table_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ table_finished_product_id }}" data-product-name="{{ item.finished_product_name or '' }}" data-workplace="{{ table_finished_target.workplace or item.workplace or '' }}" title="클릭하여 재고 추가 내역 확인 및 수정"{% endif %}>완제품 재고 추가 {{ export_box(table_finished_deduction.quantity) }}</span>{% endif %}
                         {% if item.completed_date %}
                         <div class="req-muted" style="margin-top:.18rem;">완료일 {{ item.completed_date }}</div>
                         {% endif %}
@@ -7022,7 +7022,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% set finished_deduction = item.stock_deduction_by_product.get(stock_finished_product_id) %}
                     <div class="set-finished-progress">
                         <div class="set-finished-progress-head{% if can_prod and stock_finished_product_id %} set-stock-deduct-clickable{% endif %}"
-                            {% if can_prod and stock_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ stock_finished_product_id }}" data-product-name="{{ stock_finished_product_name or '' }}" data-workplace="{{ stock_finished_workplace }}" title="클릭하여 재고 차감 및 특이사항 등록"{% endif %}>
+                            {% if can_prod and stock_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ stock_finished_product_id }}" data-product-name="{{ stock_finished_product_name or '' }}" data-workplace="{{ stock_finished_workplace }}" title="클릭하여 재고 추가 및 특이사항 등록"{% endif %}>
                             <span>완제품 조립 진행</span>
                             <strong>{{ export_box(item.assembly_completed_qty) }} / {{ export_box(item.assembly_target_qty) }}</strong>
                         </div>
@@ -7037,7 +7037,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             </span>
                         </div>
                         {% if finished_deduction %}<span class="set-stock-deduction-badge"
-                            {% if can_prod and stock_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ stock_finished_product_id }}" data-product-name="{{ stock_finished_product_name or '' }}" data-workplace="{{ stock_finished_workplace }}" title="클릭하여 차감 내역 확인 및 수정"{% endif %}>완제품 재고 차감 {{ export_box(finished_deduction.quantity) }}</span>{% endif %}
+                            {% if can_prod and stock_finished_product_id %}data-set-stock-deduct="1" data-set-schedule-id="{{ item.id }}" data-product-id="{{ stock_finished_product_id }}" data-product-name="{{ stock_finished_product_name or '' }}" data-workplace="{{ stock_finished_workplace }}" title="클릭하여 재고 추가 내역 확인 및 수정"{% endif %}>완제품 재고 추가 {{ export_box(finished_deduction.quantity) }}</span>{% endif %}
                         {% if item.completed_assembly_rows %}
                         <div class="set-assembly-date-list">
                             {% for assembly in item.completed_assembly_rows | reverse %}
@@ -7869,12 +7869,12 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 <div id="setStockDeductModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width:440px;">
         <span class="close" onclick="closeSetStockDeductModal()">&times;</span>
-        <h2 style="margin-bottom:.5rem;">세트 재고 차감</h2>
+        <h2 style="margin-bottom:.5rem;">세트 재고 반영</h2>
         <p id="setStockDeductProduct" class="req-muted" style="margin:0 0 1rem;"></p>
         <div id="setStockDeductHistory" class="req-muted" style="display:none;margin:0 0 .8rem;padding:.45rem .55rem;border:1px solid #36516f;border-radius:8px;font-size:.76rem;"></div>
-        <div class="form-group"><label>차감 수량</label><input id="setStockDeductQuantity" type="number" min="0.1" step="0.1" placeholder="수량 입력"></div>
-        <div class="form-group"><label>차감 사유</label><textarea id="setStockDeductReason" rows="3" placeholder="예: 영업팀 홍길동 완제품 1세트 출고"></textarea></div>
-        <div style="display:flex;justify-content:flex-end;gap:.55rem;margin-top:1rem;"><button type="button" class="btn btn-secondary" onclick="closeSetStockDeductModal()">취소</button><button type="button" class="btn" id="setStockDeductSubmitBtn" onclick="submitSetStockDeduction()">재고 차감</button></div>
+        <div class="form-group"><label>수량</label><input id="setStockDeductQuantity" type="number" min="0.1" step="0.1" placeholder="수량 입력"></div>
+        <div class="form-group"><label>반영 사유</label><textarea id="setStockDeductReason" rows="3" placeholder="예: 완제품 1세트 재고 추가"></textarea></div>
+        <div style="display:flex;justify-content:flex-end;gap:.55rem;margin-top:1rem;"><button type="button" class="btn btn-secondary" onclick="closeSetStockDeductModal()">취소</button><button type="button" class="btn" id="setStockDeductSubmitBtn" onclick="submitSetStockDeduction()">재고 반영</button></div>
     </div>
 </div>
 
@@ -10362,7 +10362,7 @@ function openSetStockDeductModal(setScheduleId, productId, productName, workplac
     document.getElementById('setStockDeductProduct').textContent = `${setStockDeductTarget.productName} · ${setStockDeductTarget.workplace}`;
     document.getElementById('setStockDeductQuantity').value = '';
     document.getElementById('setStockDeductReason').value = '';
-    document.getElementById('setStockDeductSubmitBtn').textContent = '재고 차감';
+    document.getElementById('setStockDeductSubmitBtn').textContent = '재고 반영';
     document.getElementById('setStockDeductHistory').style.display = 'none';
     document.getElementById('setStockDeductHistory').innerHTML = '';
     document.getElementById('setStockDeductModal').style.display = 'block';
@@ -10378,7 +10378,7 @@ async function submitSetStockDeduction() {
     if (!setStockDeductTarget) return;
     const quantity = Number(document.getElementById('setStockDeductQuantity').value || 0);
     const reason = String(document.getElementById('setStockDeductReason').value || '').trim();
-    if (!(quantity > 0) || !reason) { alert('차감 수량과 사유를 입력해주세요.'); return; }
+    if (!(quantity > 0) || !reason) { alert('수량과 반영 사유를 입력해주세요.'); return; }
     try {
         const endpoint = setStockDeductTarget.deductionId
             ? `/schedules/set/${setStockDeductTarget.setScheduleId}/stock-deduct/${setStockDeductTarget.deductionId}`
@@ -10388,9 +10388,9 @@ async function submitSetStockDeduction() {
             : {product_id:setStockDeductTarget.productId, quantity, reason};
         const response = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
         const payload = await response.json();
-        if (!response.ok || !payload.ok) throw new Error(payload.message || '재고를 차감하지 못했습니다.');
+        if (!response.ok || !payload.ok) throw new Error(payload.message || '재고를 반영하지 못했습니다.');
         window.location.reload();
-    } catch (error) { alert(error.message || '재고를 차감하지 못했습니다.'); }
+    } catch (error) { alert(error.message || '재고를 반영하지 못했습니다.'); }
 }
 async function loadSetStockDeductionHistory() {
     if (!setStockDeductTarget) return;
@@ -10401,7 +10401,18 @@ async function loadSetStockDeductionHistory() {
         if (!response.ok || !payload.ok || !payload.rows?.length) return;
         setStockDeductionRows = payload.rows;
         history.style.display = 'block';
-        history.innerHTML = `<div style="margin-bottom:.18rem;font-weight:800;">기존 차감 내역</div>${payload.rows.map((row) => `<div class="set-stock-deduction-history-row"><div class="set-stock-deduction-history-head"><strong>${Number(row.quantity).toLocaleString()}</strong><span>${escapeHtml(String(row.created_at || '').slice(0, 16))}</span><button type="button" class="set-stock-deduction-edit-btn" data-set-deduction-edit-id="${Number(row.id)}">수정</button></div><div class="set-stock-deduction-history-copy">${escapeHtml(row.reason || '').replace(/\n/g, '<br>')}</div></div>`).join('')}`;
+        queueMicrotask(() => {
+            history.querySelectorAll('[data-set-deduction-edit-id]').forEach((editButton) => {
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'set-stock-deduction-edit-btn';
+                deleteButton.dataset.setDeductionDeleteId = editButton.dataset.setDeductionEditId;
+                deleteButton.textContent = '삭제';
+                deleteButton.style.marginLeft = '.35rem';
+                editButton.insertAdjacentElement('afterend', deleteButton);
+            });
+        });
+        history.innerHTML = `<div style="margin-bottom:.18rem;font-weight:800;">기존 재고 반영 내역</div>${payload.rows.map((row) => `<div class="set-stock-deduction-history-row"><div class="set-stock-deduction-history-head"><strong>${Number(row.quantity).toLocaleString()}</strong><span>${escapeHtml(String(row.created_at || '').slice(0, 16))}</span><button type="button" class="set-stock-deduction-edit-btn" data-set-deduction-edit-id="${Number(row.id)}">수정</button></div><div class="set-stock-deduction-history-copy">${escapeHtml(row.reason || '').replace(/\n/g, '<br>')}</div></div>`).join('')}`;
     } catch (_) { /* 차감 이력이 없거나 조회 권한이 없는 경우 입력 기능은 그대로 제공 */ }
 }
 document.addEventListener('click', function(event) {
@@ -10414,7 +10425,27 @@ document.addEventListener('click', function(event) {
     setStockDeductTarget.deductionId = Number(row.id);
     document.getElementById('setStockDeductQuantity').value = row.quantity;
     document.getElementById('setStockDeductReason').value = row.reason || '';
-    document.getElementById('setStockDeductSubmitBtn').textContent = '차감 내용 수정';
+    document.getElementById('setStockDeductSubmitBtn').textContent = '재고 반영 내용 수정';
+}, true);
+document.addEventListener('click', async function(event) {
+    const button = event.target.closest('[data-set-deduction-delete-id]');
+    if (!button || !setStockDeductTarget) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!confirm('이 재고 반영 내역을 삭제하시겠습니까? 재고 수량도 함께 되돌립니다.')) return;
+    button.disabled = true;
+    try {
+        const response = await fetch(
+            `/schedules/set/${setStockDeductTarget.setScheduleId}/stock-deduct/${Number(button.dataset.setDeductionDeleteId)}/delete`,
+            {method: 'POST'},
+        );
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) throw new Error(payload.message || '재고 반영 내역을 삭제하지 못했습니다.');
+        window.location.reload();
+    } catch (error) {
+        button.disabled = false;
+        alert(error.message || '재고 반영 내역을 삭제하지 못했습니다.');
+    }
 }, true);
 
 function resetSetModal() {
