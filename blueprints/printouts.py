@@ -2092,12 +2092,14 @@ def production_print(production_id):
                        sample_excluded_boxes_1, sample_excluded_boxes_2, sample_excluded_boxes_3
                 FROM productions
                 WHERE product_id = ?
-                  AND workplace = ?
                   AND COALESCE(actual_boxes, 0) > 0
                   AND COALESCE(production_date, '') <= ?
                 ORDER BY production_date ASC, id ASC
                 ''',
-                (legacy['component_product_id'], workplace, production['production_date']),
+                # Set components can be produced at a different workplace from
+                # the final set assembly.  Restricting this fallback to the
+                # assembly workplace loses their production date/expiry trace.
+                (legacy['component_product_id'], production['production_date']),
             ).fetchall()
             fallback_items = []
             for source_row in source_rows:
@@ -2181,6 +2183,7 @@ def production_print(production_id):
         raw_usages=raw_usages,
         material_usages=material_usages,
         packaging_usages=packaging_usages,
+        is_set_finished_product=is_set_finished_product,
         date_str=date_str,
         weekday=weekday,
         workplace=workplace,

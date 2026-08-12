@@ -1487,6 +1487,51 @@ def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id, exclude
         if component_product_id <= 0 or _normalize_production_status(row['status']) != done_status:
             continue
         consumed_map[component_product_id] += float(row['actual_quantity'] or 0)
+
+    # 완제품 특이사항으로 반영한 수량은 출고가 아니라 세트 완제품 재고의
+    # 추가분이다. 따라서 해당 완제품 BOM만큼의 반제품이 조립에 사용된 것으로
+    # 계산해야, 반제품 잔량과 다음 조립 가능 수량이 실제와 맞는다.
+    set_schedule_row = cursor.execute(
+        'SELECT * FROM set_schedules WHERE id = ?', (int(set_schedule_id or 0),)
+    ).fetchone()
+    if set_schedule_row:
+        finished_ids = {
+            int(target.get('product_id') or 0)
+            for target in _get_set_finished_product_targets(dict(set_schedule_row))
+            if int(target.get('product_id') or 0) > 0
+        }
+        if finished_ids:
+            placeholders = ','.join('?' for _ in finished_ids)
+            addition_rows = cursor.execute(
+                f'''
+                SELECT product_id, COALESCE(SUM(quantity), 0) AS quantity
+                FROM set_schedule_stock_deductions
+                WHERE set_schedule_id = ? AND product_id IN ({placeholders})
+                GROUP BY product_id
+                ''',
+                [int(set_schedule_id), *sorted(finished_ids)],
+            ).fetchall()
+            for addition in addition_rows:
+                finished_product_id = int(addition['product_id'] or 0)
+                added_quantity = float(addition['quantity'] or 0)
+                if added_quantity <= 0:
+                    continue
+                bom_rows = cursor.execute(
+                    '''
+                    SELECT component_product_id, quantity_per_box
+                    FROM bom
+                    WHERE product_id = ?
+                      AND component_product_id IS NOT NULL
+                      AND COALESCE(quantity_per_box, 0) > 0
+                    ''',
+                    (finished_product_id,),
+                ).fetchall()
+                for bom in bom_rows:
+                    component_product_id = int(bom['component_product_id'] or 0)
+                    if component_product_id > 0:
+                        consumed_map[component_product_id] += (
+                            added_quantity * float(bom['quantity_per_box'] or 0)
+                        )
     component_ids = set(produced_map.keys()) | set(consumed_map.keys())
     return {
         component_id: round(float(produced_map.get(component_id, 0)) - float(consumed_map.get(component_id, 0)), 4)
@@ -1516,6 +1561,42 @@ def _get_set_schedule_component_assembly_usage(cursor, set_schedule_id):
         component_product_id = int(row['component_product_id'] or 0)
         if component_product_id > 0:
             usage_map[component_product_id] += float(row['actual_quantity'] or 0)
+    # See _get_set_schedule_component_remaining_stock: completed finished-goods
+    # additions consume the same BOM components as a normal assembly.
+    set_schedule_row = cursor.execute(
+        'SELECT * FROM set_schedules WHERE id = ?', (int(set_schedule_id or 0),)
+    ).fetchone()
+    if set_schedule_row:
+        finished_ids = {
+            int(target.get('product_id') or 0)
+            for target in _get_set_finished_product_targets(dict(set_schedule_row))
+            if int(target.get('product_id') or 0) > 0
+        }
+        if finished_ids:
+            placeholders = ','.join('?' for _ in finished_ids)
+            additions = cursor.execute(
+                f'''
+                SELECT product_id, COALESCE(SUM(quantity), 0) AS quantity
+                FROM set_schedule_stock_deductions
+                WHERE set_schedule_id = ? AND product_id IN ({placeholders})
+                GROUP BY product_id
+                ''',
+                [int(set_schedule_id), *sorted(finished_ids)],
+            ).fetchall()
+            for addition in additions:
+                quantity = float(addition['quantity'] or 0)
+                if quantity <= 0:
+                    continue
+                bom_rows = cursor.execute(
+                    '''SELECT component_product_id, quantity_per_box FROM bom
+                       WHERE product_id = ? AND component_product_id IS NOT NULL
+                         AND COALESCE(quantity_per_box, 0) > 0''',
+                    (int(addition['product_id'] or 0),),
+                ).fetchall()
+                for bom in bom_rows:
+                    component_product_id = int(bom['component_product_id'] or 0)
+                    if component_product_id > 0:
+                        usage_map[component_product_id] += quantity * float(bom['quantity_per_box'] or 0)
     return {component_id: round(quantity, 4) for component_id, quantity in usage_map.items()}
 
 
@@ -4595,19 +4676,31 @@ def schedules():
                         ),
                     }
                     )
+                finished_stock_additions_by_product = {
+                    int(target['product_id']): float(
+                        deduction_by_product.get(int(target['product_id']), {}).get('quantity') or 0
+                    )
+                    for target in finished_product_targets
+                }
                 assembly_completed_qty = sum(
                     float(row.get('actual_boxes') or row.get('planned_boxes') or 0)
                     for row in assembly_rows
                     if _normalize_production_status(row.get('status')) == done_status
-                )
+                ) + sum(finished_stock_additions_by_product.values())
                 assembly_remaining_qty = max(assembly_target_qty - assembly_completed_qty, 0)
                 finished_product_current_stock = 0.0
                 if len(finished_product_targets) == 1:
                     finished_target = finished_product_targets[0]
-                    finished_product_current_stock = _get_product_stock(
-                        cursor,
-                        int(finished_target.get('product_id') or 0),
-                        str(finished_target.get('workplace') or set_row.get('workplace') or '').strip(),
+                    # 이 값은 일반 상품 재고가 아니라 세트에서 조립 완료되어
+                    # 물류로 출고된 완제품 수량이다. 특이사항 재고 반영분과
+                    # product_stocks의 별도 조정은 여기 표시하지 않는다.
+                    finished_product_current_stock = sum(
+                        float(row.get('actual_boxes') or row.get('planned_boxes') or 0)
+                        for row in assembly_rows
+                        if (
+                            _normalize_production_status(row.get('status')) == done_status
+                            and int(row.get('product_id') or 0) == int(finished_target.get('product_id') or 0)
+                        )
                     )
                 finished_product_component_plans = (
                     _build_set_finished_product_component_plans(cursor, finished_product_targets)
@@ -4641,6 +4734,8 @@ def schedules():
                         completed_assembly_by_product[int(row.get('product_id') or 0)] += float(
                             row.get('actual_boxes') or row.get('planned_boxes') or 0
                         )
+                for product_id, quantity in finished_stock_additions_by_product.items():
+                    completed_assembly_by_product[product_id] += quantity
                 assembly_in_progress_row = next(
                     (row for row in reversed(assembly_rows) if _normalize_production_status(row.get('status')) != done_status),
                     None,
@@ -6896,7 +6991,10 @@ def deduct_set_schedule_stock(set_schedule_id):
             _require_set_schedule_owner(cursor, set_row)
             set_row = dict(set_row)
             workplace = ''
-            if product_id in {int(target['product_id']) for target in _get_set_finished_product_targets(set_row)}:
+            is_finished_product = product_id in {
+                int(target['product_id']) for target in _get_set_finished_product_targets(set_row)
+            }
+            if is_finished_product:
                 row = cursor.execute('SELECT COALESCE(workplace, \'\') AS workplace FROM products WHERE id = ?', (product_id,)).fetchone()
                 workplace = str(row['workplace'] if row else '').strip() or str(set_row.get('workplace') or '').strip()
             else:
@@ -6904,9 +7002,12 @@ def deduct_set_schedule_stock(set_schedule_id):
                 if not item:
                     raise ValueError('이 세트 일정에 포함된 완제품 또는 반제품만 차감할 수 있습니다.')
                 workplace = str(item.get('workplace') or set_row.get('workplace') or '').strip()
-            note = f'[세트일정 #{set_schedule_id}] {reason}'
+            stock_delta = quantity if is_finished_product else -quantity
+            action = 'SET_SCHEDULE_FINISHED_ADD' if is_finished_product else 'SET_SCHEDULE_DEDUCT'
+            action_label = '완제품 재고 추가' if is_finished_product else '반제품 재고 차감'
+            note = f'[세트일정 #{set_schedule_id}] {action_label}: {reason}'
             remaining_stock = _adjust_product_stock(
-                cursor, product_id, workplace, -quantity, 'SET_SCHEDULE_DEDUCT', note,
+                cursor, product_id, workplace, stock_delta, action, note,
                 created_by=session.get('user', {}).get('username'),
             )
             cursor.execute(
@@ -6918,7 +7019,8 @@ def deduct_set_schedule_stock(set_schedule_id):
                 (set_schedule_id, product_id, workplace, quantity, reason, session.get('user', {}).get('username')),
             )
             audit_log(conn, 'stock_deduct', 'set_schedule', set_schedule_id, {
-                'product_id': product_id, 'workplace': workplace, 'quantity': quantity, 'reason': reason,
+                'product_id': product_id, 'workplace': workplace, 'quantity': quantity,
+                'stock_delta': stock_delta, 'reason': reason,
             })
         return jsonify({'ok': True, 'remaining_stock': remaining_stock})
     except (ValueError, TypeError) as exc:
@@ -6981,14 +7083,18 @@ def update_set_schedule_stock_deduction(set_schedule_id, deduction_id):
             previous_quantity = float(deduction.get('quantity') or 0)
             quantity_difference = quantity - previous_quantity
             workplace = str(deduction.get('workplace') or '').strip()
+            is_finished_product = int(deduction['product_id']) in {
+                int(target['product_id']) for target in _get_set_finished_product_targets(dict(set_row))
+            }
             if abs(quantity_difference) > 1e-9:
                 _adjust_product_stock(
                     cursor,
                     int(deduction['product_id']),
                     workplace,
-                    -quantity_difference,
-                    'SET_SCHEDULE_DEDUCT_EDIT',
-                    f'[세트일정 #{set_schedule_id}] 차감 수정: {reason}',
+                    quantity_difference if is_finished_product else -quantity_difference,
+                    'SET_SCHEDULE_FINISHED_ADD_EDIT' if is_finished_product else 'SET_SCHEDULE_DEDUCT_EDIT',
+                    f'[세트일정 #{set_schedule_id}] '
+                    f"{'완제품 재고 추가' if is_finished_product else '반제품 재고 차감'} 수정: {reason}",
                     created_by=session.get('user', {}).get('username'),
                 )
             cursor.execute(
@@ -7007,6 +7113,60 @@ def update_set_schedule_stock_deduction(set_schedule_id, deduction_id):
                 'quantity': quantity,
                 'previous_reason': deduction.get('reason') or '',
                 'reason': reason,
+            })
+        return jsonify({'ok': True})
+    except (ValueError, TypeError) as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
+
+@bp.route('/schedules/set/<int:set_schedule_id>/stock-deduct/<int:deduction_id>/delete', methods=['POST'])
+@role_required('production')
+def delete_set_schedule_stock_deduction(set_schedule_id, deduction_id):
+    """Delete a set stock adjustment and restore the stock it had changed."""
+    try:
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            set_row = cursor.execute('SELECT * FROM set_schedules WHERE id = ?', (set_schedule_id,)).fetchone()
+            if not set_row:
+                raise ValueError('세트 일정을 찾을 수 없습니다.')
+            _require_set_schedule_owner(cursor, set_row)
+            deduction = cursor.execute(
+                '''
+                SELECT id, product_id, workplace, quantity, reason
+                FROM set_schedule_stock_deductions
+                WHERE id = ? AND set_schedule_id = ?
+                ''',
+                (deduction_id, set_schedule_id),
+            ).fetchone()
+            if not deduction:
+                raise ValueError('삭제할 재고 반영 기록을 찾을 수 없습니다.')
+            deduction = dict(deduction)
+            quantity = float(deduction.get('quantity') or 0)
+            is_finished_product = int(deduction['product_id']) in {
+                int(target['product_id']) for target in _get_set_finished_product_targets(dict(set_row))
+            }
+            # 완제품은 등록 시 더했으므로 삭제 시 빼고, 반제품은 그 반대다.
+            stock_delta = -quantity if is_finished_product else quantity
+            _adjust_product_stock(
+                cursor,
+                int(deduction['product_id']),
+                str(deduction.get('workplace') or '').strip(),
+                stock_delta,
+                'SET_SCHEDULE_FINISHED_ADD_DELETE' if is_finished_product else 'SET_SCHEDULE_DEDUCT_DELETE',
+                f"[세트일정 #{set_schedule_id}] {'완제품 재고 추가' if is_finished_product else '반제품 재고 차감'} 삭제: {deduction.get('reason') or ''}",
+                created_by=session.get('user', {}).get('username'),
+            )
+            cursor.execute(
+                'DELETE FROM set_schedule_stock_deductions WHERE id = ? AND set_schedule_id = ?',
+                (deduction_id, set_schedule_id),
+            )
+            audit_log(conn, 'stock_deduct_delete', 'set_schedule', set_schedule_id, {
+                'deduction_id': deduction_id,
+                'product_id': int(deduction['product_id']),
+                'workplace': deduction.get('workplace') or '',
+                'quantity': quantity,
+                'stock_delta': stock_delta,
+                'reason': deduction.get('reason') or '',
             })
         return jsonify({'ok': True})
     except (ValueError, TypeError) as exc:
