@@ -228,7 +228,7 @@
         .todo-modal-action-btn.primary{border-color:#93c5fd;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 14px 28px rgba(37,99,235,.24);}
         .todo-modal-action-btn.close{border-color:rgba(148,163,184,.22);background:linear-gradient(180deg,rgba(255,255,255,.16) 0%,rgba(226,232,240,.08) 100%);color:#475569;box-shadow:inset 0 1px 0 rgba(255,255,255,.32);}
         .todo-modal-action-btn.close::before{content:"✕";display:inline-flex;align-items:center;justify-content:center;width:1.1rem;height:1.1rem;border-radius:999px;background:rgba(71,85,105,.08);font-size:.72rem;line-height:1;}
-        .todo-quick-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.7rem;margin-bottom:1rem;}
+        .todo-quick-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.7rem;margin-bottom:1rem;}
         .todo-stat{padding:0.8rem 0.9rem;border-radius:16px;color:#fff;}
         .todo-filter-stat{border:none;cursor:pointer;text-align:left;position:relative;overflow:hidden;transition:transform .16s ease, box-shadow .18s ease, filter .16s ease;}
         .todo-filter-stat:hover{transform:translateY(-1px);filter:brightness(1.03);}
@@ -261,6 +261,8 @@
         .todo-message-bubble.status-processing{box-shadow:0 12px 24px rgba(37,99,235,0.08);}
         .todo-message-bubble.status-info-needed{background:#fffbeb;border-color:#fcd34d;box-shadow:0 12px 24px rgba(245,158,11,0.12);}
         .todo-message-bubble.status-completed{background:#ecfdf5;border-color:#86efac;box-shadow:0 12px 24px rgba(34,197,94,0.12);}
+        .todo-message-bubble.is-announcement{background:linear-gradient(135deg,#fff7ed,#fffbeb);border-color:#f59e0b;box-shadow:0 12px 26px rgba(217,119,6,.14);}
+        .todo-message-bubble.is-private{background:linear-gradient(135deg,#f5f3ff,#eef2ff);border-color:#8b5cf6;box-shadow:0 12px 26px rgba(124,58,237,.14);}
         .todo-message-tools{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;margin-bottom:0.8rem;}
         .todo-status-bar{display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;}
         .todo-status-btn{display:inline-flex;align-items:center;gap:0.35rem;padding:0.42rem 0.66rem;border-radius:999px;border:1px solid #cbd5e1;background:#f8fafc;color:#475569;font-size:0.74rem;font-weight:800;cursor:pointer;transition:all .15s ease;}
@@ -281,6 +283,8 @@
         .todo-chip.priority-high{background:#fee2e2;color:#b91c1c;}
         .todo-chip.priority-medium{background:#fef3c7;color:#b45309;}
         .todo-chip.priority-low{background:#dcfce7;color:#15803d;}
+        .todo-chip.announcement{background:#ffedd5;color:#c2410c;border:1px solid #fdba74;}
+        .todo-chip.private{background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;}
         .todo-side-card{height:100%;overflow:auto;border:1px solid #e5e7eb;border-radius:22px 0 0 22px;background:linear-gradient(180deg,#ffffff,#f8fafc);padding:1rem;}
         .todo-composer-head{display:flex;justify-content:space-between;align-items:center;gap:0.7rem;margin-bottom:0.8rem;}
         .todo-composer-head-actions{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;justify-content:flex-end;}
@@ -296,6 +300,10 @@
         .todo-status-option.processing input:checked + span{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;}
         .todo-status-option.info-needed input:checked + span{background:#fef3c7;color:#b45309;border-color:#fcd34d;}
         .todo-status-option.completed input:checked + span{background:#dcfce7;color:#15803d;border-color:#86efac;}
+        .todo-announcement-option{display:flex;align-items:center;gap:.5rem;padding:.7rem .78rem;border:1px solid #fdba74;border-radius:12px;background:#fff7ed;color:#9a3412;font-size:.82rem;font-weight:800;cursor:pointer;}
+        .todo-announcement-option input{width:1rem;height:1rem;accent-color:#ea580c;}
+        .todo-private-option{display:flex;align-items:center;gap:.5rem;padding:.7rem .78rem;border:1px solid #c4b5fd;border-radius:12px;background:#f5f3ff;color:#5b21b6;font-size:.82rem;font-weight:800;cursor:pointer;}
+        .todo-private-option input{width:1rem;height:1rem;accent-color:#7c3aed;}
         .todo-empty{padding:2rem 1rem;border:1px dashed #cbd5e1;border-radius:18px;text-align:center;color:#64748b;background:#f8fafc;}
         .todo-filter-empty{display:none;padding:1rem 1.1rem;border:1px dashed #cbd5e1;border-radius:18px;text-align:center;color:#64748b;background:rgba(248,250,252,.76);font-size:.84rem;font-weight:700;}
         .todo-filter-empty.is-visible{display:block;}
@@ -396,6 +404,12 @@
         html[data-theme="dark"] .nav-notify-sub,
         html[data-theme="dark"] .nav-notify-time,
         html[data-theme="dark"] .todo-detail{color:#94a3b8;}
+        html[data-theme="dark"] .todo-message-bubble.is-announcement{background:linear-gradient(135deg,#3a2608,#2b2110);border-color:#a16207;}
+        html[data-theme="dark"] .todo-message-bubble.is-private{background:linear-gradient(135deg,#281d47,#1c1834);border-color:#7c3aed;}
+        html[data-theme="dark"] .todo-chip.announcement{background:#422006;color:#fcd34d;border-color:#a16207;}
+        html[data-theme="dark"] .todo-announcement-option{background:#38240a;color:#fde68a;border-color:#a16207;}
+        html[data-theme="dark"] .todo-chip.private{background:#2e1d54;color:#ddd6fe;border-color:#7c3aed;}
+        html[data-theme="dark"] .todo-private-option{background:#281d47;color:#ddd6fe;border-color:#7c3aed;}
         html[data-theme="dark"] .todo-stat{
             position:relative;
             overflow:hidden;
@@ -819,6 +833,10 @@
             </div>
         </div>
         <div class="todo-quick-stats">
+            <button type="button" class="todo-stat todo-filter-stat all active" data-filter="all" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#1d4ed8,#0ea5e9);">
+                <div class="todo-stat-label">전체</div>
+                <div class="todo-stat-help">모든 업무 보기</div>
+            </button>
             <button type="button" class="todo-stat todo-filter-stat processing" data-filter="processing" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#2563eb,#0ea5e9);">
                 <div class="todo-stat-label">처리중</div>
                 <div class="todo-stat-help">처리중 목록만 보기</div>
@@ -827,23 +845,22 @@
                 <div class="todo-stat-label">정보 보강 필요</div>
                 <div class="todo-stat-help">보강 필요한 항목만 보기</div>
             </button>
-            <button type="button" class="todo-stat todo-filter-stat due-soon" data-filter="due_soon" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#ea580c,#f59e0b);">
-                <div class="todo-stat-label">마감 3일 전</div>
-                <div class="todo-stat-help">임박한 업무만 보기</div>
+            <button type="button" class="todo-stat todo-filter-stat announcement" data-filter="announcement" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#c2410c,#f59e0b);">
+                <div class="todo-stat-label">전체 공지</div>
+                <div class="todo-stat-help">공지 항목만 보기</div>
             </button>
-            <button type="button" class="todo-stat todo-filter-stat overdue" data-filter="overdue" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#dc2626,#fb7185);">
-                <div class="todo-stat-label">기한 경과</div>
-                <div class="todo-stat-help">지연된 업무만 보기</div>
+            <button type="button" class="todo-stat todo-filter-stat private" data-filter="private" onclick="toggleTodoListFilter(this)" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6);">
+                <div class="todo-stat-label">나만보기</div>
+                <div class="todo-stat-help">내 메모만 따로 보기</div>
             </button>
         </div>
         <div class="todo-messenger-shell">
             <div class="todo-messenger-list" id="todoMessengerList">
                 {% if nav_dashboard_todos %}
-                    {% set current_todo_username = ((user.username if user else '') or '') %}
                     {% for todo in nav_dashboard_todos %}
-                    {% set can_manage_todo = todo.created_by == current_todo_username %}
-                    <div class="todo-message-row {% if loop.index0 % 2 == 0 %}is-left{% else %}is-right{% endif %}" data-todo-row="1" data-status="{{ todo.todo_status or 'processing' }}" data-due-soon="{{ '1' if todo.is_due_soon else '0' }}" data-overdue="{{ '1' if todo.is_overdue else '0' }}">
-                        <div class="todo-message-bubble status-{{ todo.todo_status }} {% if todo.is_overdue %}is-overdue{% elif todo.is_due_soon %}is-due-soon{% endif %}">
+                    {% set can_manage_todo = todo.can_manage %}
+                    <div class="todo-message-row {% if loop.index0 % 2 == 0 %}is-left{% else %}is-right{% endif %}" data-todo-row="1" data-status="{{ todo.todo_status or 'processing' }}" data-announcement="{{ '1' if todo.is_announcement else '0' }}" data-private="{{ '1' if todo.is_private else '0' }}" data-due-soon="{{ '1' if todo.is_due_soon else '0' }}" data-overdue="{{ '1' if todo.is_overdue else '0' }}">
+                        <div class="todo-message-bubble status-{{ todo.todo_status }} {% if todo.is_announcement %}is-announcement{% endif %} {% if todo.is_private %}is-private{% endif %} {% if todo.is_overdue %}is-overdue{% elif todo.is_due_soon %}is-due-soon{% endif %}">
                             <div class="todo-message-tools">
                                 {% if can_manage_todo %}
                                 <div class="todo-status-bar">
@@ -873,6 +890,8 @@
                                         data-todo-due-date="{{ todo.due_date or '' }}"
                                         data-todo-importance="{{ todo.importance or '' }}"
                                         data-todo-status="{{ todo.todo_status or 'processing' }}"
+                                        data-todo-is-announcement="{{ '1' if todo.is_announcement else '0' }}"
+                                        data-todo-is-private="{{ '1' if todo.is_private else '0' }}"
                                         onclick="startTodoEditFromButton(this)">수정</button>
                                     <form method="POST" action="/dashboard/todos/{{ todo.id }}/delete" style="margin:0;" onsubmit="return confirm('이 To-Do를 삭제할까요?');">
                                         <input type="hidden" name="next" value="{{ request.path }}#todo-messenger">
@@ -891,6 +910,8 @@
                             <div class="todo-title">{{ todo.title }}</div>
                             <div class="todo-detail">{{ todo.detail or '상세 내용 없음' }}</div>
                             <div class="todo-meta">
+                                {% if todo.is_announcement %}<span class="todo-chip announcement">📢 전체 공지</span>{% endif %}
+                                {% if todo.is_private %}<span class="todo-chip private">🔒 나만보기 메모</span>{% endif %}
                                 <span class="todo-chip status-{{ todo.todo_status }}">{{ todo.status_label }}</span>
                                 <span class="todo-chip">등록 {{ (todo.created_at or '')[:10] or '-' }}</span>
                                 {% if todo.created_by or todo.created_by_name %}
@@ -936,6 +957,16 @@
                             <input type="hidden" name="next" value="{{ request.path }}#todo-messenger">
                             <input type="hidden" name="todo_status" id="dashboardTodoStatus" value="processing">
                             <div class="todo-form-grid">
+                                {% if user and user.is_admin %}
+                                <label class="todo-announcement-option">
+                                    <input id="messengerTodoAnnouncement" type="checkbox" name="is_announcement" value="1" onchange="syncTodoVisibilityOptions('announcement')">
+                                    <span>📢 전체 작업장 공지로 등록</span>
+                                </label>
+                                {% endif %}
+                                <label class="todo-private-option">
+                                    <input id="messengerTodoPrivate" type="checkbox" name="is_private" value="1" onchange="syncTodoVisibilityOptions('private')">
+                                    <span>🔒 나만보기 메모로 등록</span>
+                                </label>
                                 <div>
                                     <label for="messengerTodoTitle">제목</label>
                                     <input id="messengerTodoTitle" type="text" name="title" maxlength="120" placeholder="예: 포장재 재고 확인" required>
@@ -1020,9 +1051,8 @@
             </div>
             {% if nav_completed_dashboard_todos %}
             <div class="todo-completed-list">
-                {% set current_todo_username = ((user.username if user else '') or '') %}
                 {% for todo in nav_completed_dashboard_todos %}
-                {% set can_manage_todo = todo.created_by == current_todo_username %}
+                {% set can_manage_todo = todo.can_manage %}
                 <div class="todo-completed-card">
                     <div class="todo-completed-dates">
                         <div class="todo-completed-date-item">등록<strong>{{ (todo.created_at or '')[:10] or '-' }}</strong></div>
@@ -1039,8 +1069,9 @@
                             </div>
                         </div>
                         <div class="todo-completed-detail">{{ todo.detail or '-' }}</div>
-                        <div class="todo-completed-meta">
-                            <span class="todo-chip status-completed">완료</span>
+                            <div class="todo-completed-meta">
+                                {% if todo.is_announcement %}<span class="todo-chip announcement">📢 전체 공지</span>{% endif %}
+                                <span class="todo-chip status-completed">완료</span>
                             {% if todo.importance %}
                             <span class="todo-chip priority-{{ todo.importance }}">중요도 {% if todo.importance == 'high' %}상{% elif todo.importance == 'medium' %}중{% else %}하{% endif %}</span>
                             {% endif %}
@@ -1163,10 +1194,14 @@ function resetTodoForm(keepComposerOpen = false) {
     const submit = document.getElementById('dashboardTodoSubmit');
     const cancel = document.getElementById('todoComposerCancel');
     const importance = document.getElementById('messengerTodoImportance');
+    const announcement = document.getElementById('messengerTodoAnnouncement');
+    const privateMemo = document.getElementById('messengerTodoPrivate');
     if (title) title.textContent = '해야 할 일 등록';
     if (submit) submit.textContent = '업무 등록';
     if (cancel) cancel.style.display = 'none';
     if (importance) importance.value = '';
+    if (announcement) announcement.checked = false;
+    if (privateMemo) privateMemo.checked = false;
     const statusInput = document.getElementById('dashboardTodoStatus');
     if (statusInput) statusInput.value = 'processing';
     if (!keepComposerOpen) {
@@ -1181,10 +1216,12 @@ function startTodoEditFromButton(button) {
         button.dataset.todoDetail || '',
         button.dataset.todoDueDate || '',
         button.dataset.todoImportance || '',
-        button.dataset.todoStatus || 'processing'
+        button.dataset.todoStatus || 'processing',
+        button.dataset.todoIsAnnouncement === '1',
+        button.dataset.todoIsPrivate === '1'
     );
 }
-function startTodoEdit(todoId, title, detail, dueDate, importance, status) {
+function startTodoEdit(todoId, title, detail, dueDate, importance, status, isAnnouncement = false, isPrivate = false) {
     openTodoMessenger();
     expandTodoComposer(false);
     const form = document.getElementById('dashboardTodoForm');
@@ -1192,6 +1229,8 @@ function startTodoEdit(todoId, title, detail, dueDate, importance, status) {
     const detailEl = document.getElementById('messengerTodoDetail');
     const dueDateEl = document.getElementById('messengerTodoDueDate');
     const importanceEl = document.getElementById('messengerTodoImportance');
+    const announcementEl = document.getElementById('messengerTodoAnnouncement');
+    const privateEl = document.getElementById('messengerTodoPrivate');
     const statusInput = document.getElementById('dashboardTodoStatus');
     const composerTitle = document.getElementById('todoComposerTitle');
     const submit = document.getElementById('dashboardTodoSubmit');
@@ -1203,11 +1242,19 @@ function startTodoEdit(todoId, title, detail, dueDate, importance, status) {
     detailEl.value = detail || '';
     dueDateEl.value = dueDate || '';
     if (importanceEl) importanceEl.value = importance || '';
+    if (announcementEl) announcementEl.checked = Boolean(isAnnouncement);
+    if (privateEl) privateEl.checked = Boolean(isPrivate);
     if (statusInput) statusInput.value = status || 'processing';
     if (composerTitle) composerTitle.textContent = '등록된 업무 수정';
     if (submit) submit.textContent = '업무 수정';
     if (cancel) cancel.style.display = 'inline-flex';
     titleEl.focus();
+}
+function syncTodoVisibilityOptions(changed) {
+    const announcement = document.getElementById('messengerTodoAnnouncement');
+    const privateMemo = document.getElementById('messengerTodoPrivate');
+    if (changed === 'announcement' && announcement?.checked && privateMemo) privateMemo.checked = false;
+    if (changed === 'private' && privateMemo?.checked && announcement) announcement.checked = false;
 }
 let currentTodoListFilter = 'all';
 function applyTodoListFilter() {
@@ -1219,14 +1266,16 @@ function applyTodoListFilter() {
         const status = row.dataset.status || '';
         const isDueSoon = row.dataset.dueSoon === '1';
         const isOverdue = row.dataset.overdue === '1';
+        const isAnnouncement = row.dataset.announcement === '1';
+        const isPrivate = row.dataset.private === '1';
         let visible = true;
 
         if (currentTodoListFilter === 'processing' || currentTodoListFilter === 'info_needed' || currentTodoListFilter === 'completed') {
             visible = status === currentTodoListFilter;
-        } else if (currentTodoListFilter === 'due_soon') {
-            visible = isDueSoon && !isOverdue;
-        } else if (currentTodoListFilter === 'overdue') {
-            visible = isOverdue;
+        } else if (currentTodoListFilter === 'announcement') {
+            visible = isAnnouncement;
+        } else if (currentTodoListFilter === 'private') {
+            visible = isPrivate;
         }
 
         row.style.display = visible ? '' : 'none';
@@ -1239,9 +1288,9 @@ function applyTodoListFilter() {
 }
 function toggleTodoListFilter(button) {
     const nextFilter = button?.dataset?.filter || 'all';
-    currentTodoListFilter = currentTodoListFilter === nextFilter ? 'all' : nextFilter;
+    currentTodoListFilter = nextFilter === 'all' || currentTodoListFilter === nextFilter ? 'all' : nextFilter;
     document.querySelectorAll('.todo-filter-stat').forEach((el) => {
-        el.classList.toggle('active', currentTodoListFilter !== 'all' && (el.dataset.filter || '') === currentTodoListFilter);
+        el.classList.toggle('active', (el.dataset.filter || '') === currentTodoListFilter);
     });
     applyTodoListFilter();
 }

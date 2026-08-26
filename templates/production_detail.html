@@ -1152,7 +1152,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div><div class="ml">사용량</div><div class="mv">{{ rm.actual_quantity|round(1) if (rm.actual_quantity is defined and rm.actual_quantity is not none) else '-' }}속</div></div>
             <div><div class="ml">수율</div><div class="mv">{{ (rm.yield_rate|round(1) ~ '%') if (rm.yield_rate is defined and rm.yield_rate is not none) else '-' }}</div></div>
             {% else %}
-            <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
+            <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.entry_mode == 'register' %}재고 연동 안 함{% elif production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
             {% endif %}
         </div>
         {% if can_edit %}
@@ -1160,7 +1160,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                 <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
                 <input type="number" name="raw_actual_{{ loop.index0 }}"
-                       id="ri_{{ rm.rm_id }}" step="1" min="0" max="{{ rm.current_stock|int }}"
+                       id="ri_{{ rm.rm_id }}" step="1" min="0"{% if production.entry_mode != 'register' %} max="{{ rm.current_stock|int }}"{% endif %}
                        value="{{ saved_raw_qty if saved_raw_qty is not none else '' }}" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;"
                        oninput="checkRawOver({{ rm.rm_id }}, {{ rm.current_stock|int }}); updateTotal()">
                 <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}" class="js-raw-id-input">
@@ -1574,6 +1574,7 @@ let currentRawSokMode = {{ production.raw_sok_mode or 1 }};
 const PLANNED = {{ production.planned_boxes }};
 const DEFAULT_BOXES = {{ production.actual_boxes or 0 }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
+const IS_REGISTER_MODE = {{ (production.entry_mode == 'register')|tojson }};
 const INITIAL_TOTAL_RAW_SELECTED = {{ total_raw_selected_qty or 0 }};
 const INITIAL_TOTAL_RAW_NEED = {{ total_raw_need_qty or 0 }};
 const RAW_CHANGE_OPTIONS = {{ raw_change_options_json|default('[]')|safe }};
@@ -1861,7 +1862,9 @@ function syncRawSokUi(){
         const id = card.dataset.id;
         const target = document.getElementById(`rawMaxBoxes_${id}`);
         if(target){
-            target.textContent = perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-';
+            target.textContent = IS_REGISTER_MODE
+                ? '재고 연동 안 함'
+                : (perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-');
         }
     });
     syncFirstRawAutoNote();
@@ -2153,7 +2156,9 @@ function buildTempRawCard(option){
     const entryIndex = nextRawEntryIndex++;
     const stock = Math.floor(Number(option.current_stock || 0));
     const perBox = getCurrentPerBox();
-    const maxBoxes = perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-';
+    const maxBoxes = IS_REGISTER_MODE
+        ? '재고 연동 안 함'
+        : (perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-');
     const wrap = document.getElementById('rawCardsWrap');
     if(!wrap) return null;
     const card = document.createElement('div');
@@ -2185,7 +2190,7 @@ function buildTempRawCard(option){
         <div id="iw_${rawId}" class="raw-input-row" style="display:none;flex-direction:column;align-items:stretch;" onclick="event.stopPropagation()">
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                 <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
-                <input type="number" name="raw_actual_${entryIndex}" id="ri_${rawId}" step="1" min="0" max="${stock}" value="" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;">
+                <input type="number" name="raw_actual_${entryIndex}" id="ri_${rawId}" step="1" min="0" ${IS_REGISTER_MODE ? '' : `max="${stock}"`} value="" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;">
                 <input type="hidden" name="raw_rm_id_${entryIndex}" value="${rawId}" class="js-raw-id-input">
                 <span id="rw_${rawId}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
                 <button type="button" id="raw_note_btn_${rawId}" class="raw-note-toggle" onclick="toggleRawNote(${rawId}); event.stopPropagation();">비고 입력</button>
@@ -2315,7 +2320,7 @@ async function hideSelectedPersonnelNoteSuggestion(){
 function checkRawOver(id, maxStock){
     const val = parseFloat(document.getElementById(`ri_${id}`).value) || 0;
     const warnEl = document.getElementById(`rw_${id}`);
-    warnEl.style.display = val > maxStock ? 'inline' : 'none';
+    warnEl.style.display = !IS_REGISTER_MODE && val > maxStock ? 'inline' : 'none';
 }
 
 function updateTotal(){

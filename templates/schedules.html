@@ -2736,6 +2736,9 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 /* 필요 원,부자재 체크 뷰 */
 #requirementsView {
     padding: 1.2rem 1.4rem 1.6rem;
+    border: 1px solid #d9e5f3;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 18rem);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
 }
 #capacityView {
     padding: 1.2rem 1.4rem 1.6rem;
@@ -2745,7 +2748,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     justify-content: space-between;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.1rem;
     flex-wrap: wrap;
 }
 .req-actions {
@@ -2795,30 +2798,60 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 }
 .req-tabs {
     display: flex;
-    gap: 0.45rem;
-    margin-bottom: 1rem;
+    gap: 0.35rem;
+    margin-bottom: 1.1rem;
+    padding: 0.3rem;
+    width: fit-content;
+    border: 1px solid #d9e5f3;
+    border-radius: 13px;
+    background: #eef4fb;
 }
 .req-tab-btn {
-    border: 1px solid #dbe3f0;
-    background: #f8fafc;
-    color: #0f172a;
-    border-radius: 8px;
-    padding: 0.35rem 0.75rem;
-    font-size: 0.82rem;
-    font-weight: 700;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #475569;
+    border-radius: 9px;
+    padding: 0.48rem 0.95rem;
+    font-size: 0.84rem;
+    font-weight: 800;
     cursor: pointer;
+    transition: background .18s ease, color .18s ease, box-shadow .18s ease;
 }
 .req-tab-btn.active {
-    background: #0f172a;
+    background: #1d4ed8;
     color: #fff;
-    border-color: #0f172a;
+    border-color: #2563eb;
+    box-shadow: 0 5px 13px rgba(37, 99, 235, 0.24);
 }
+.req-summary-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(145px, 1fr));
+    gap: 0.65rem;
+    margin: 0 0 1rem;
+}
+.req-summary-metric {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 70px;
+    padding: 0.72rem 0.85rem;
+    border: 1px solid #dbe7f3;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.045);
+}
+.req-summary-metric-icon { font-size: 1.2rem; }
+.req-summary-metric-label { color: #64748b; font-size: .76rem; font-weight: 800; }
+.req-summary-metric-value { color: #0f172a; font-size: 1.15rem; font-weight: 900; margin-top: .12rem; }
+.req-summary-metric.danger { border-color: #fecaca; background: #fff7f7; }
+.req-summary-metric.danger .req-summary-metric-value { color: #b91c1c; }
 .req-section {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    margin-bottom: 0.85rem;
+    border: 1px solid #dbe7f3;
+    border-radius: 13px;
+    margin-bottom: 0.95rem;
     overflow: hidden;
     background: #fff;
+    box-shadow: 0 7px 18px rgba(15, 23, 42, 0.035);
 }
 .req-section h3 {
     margin: 0;
@@ -2826,6 +2859,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
     font-size: 0.95rem;
+    font-weight: 850;
 }
 .req-title {
     color: #0f172a;
@@ -2882,21 +2916,21 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     color: #334155;
 }
 .req-table {
-    width: fit-content;
-    min-width: 760px;
+    width: 100%;
+    min-width: 700px;
     border-collapse: collapse;
     table-layout: fixed;
 }
 .req-table th, .req-table td {
     border-bottom: 1px solid #edf2f7;
-    padding: 0.5rem 0.55rem;
-    font-size: 0.83rem;
+    padding: 0.66rem 0.7rem;
+    font-size: 0.84rem;
     vertical-align: middle;
 }
 .req-table th {
-    background: #fcfdff;
+    background: #f8fafc;
     color: #334155;
-    font-weight: 700;
+    font-weight: 800;
     text-align: left;
 }
 .req-table th.num-head {
@@ -2914,32 +2948,65 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     font-family: Consolas, "Courier New", monospace;
     font-size: 0.79rem;
 }
+.req-table tbody tr { transition: background .16s ease; }
+.req-table tbody tr:hover { background: #f8fbff; }
+.req-code-chip {
+    display: inline-flex;
+    max-width: 112px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: .2rem .42rem;
+    border-radius: 7px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: .76rem;
+    font-weight: 800;
+}
+.req-item-name { color: #172033; font-weight: 800; line-height: 1.35; }
+.req-qty {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: .2rem;
+    min-width: 84px;
+    color: #0f172a;
+    font-size: .95rem;
+    font-weight: 850;
+}
+.req-qty-unit { color: #64748b; font-size: .73rem; font-weight: 700; }
+.req-qty.need { color: #1e40af; }
+.req-qty.shortage-ok { color: #15803d; }
+.req-qty.shortage-bad { color: #dc2626; background: #fff1f2; padding: .2rem .42rem; border-radius: 8px; }
 .req-shortage {
     color: #dc2626;
     font-weight: 700;
 }
 .req-product-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    border: 1px solid #dbe7f3;
+    border-radius: 13px;
     margin-bottom: 0.9rem;
     background: #fff;
     overflow-x: auto;
 }
 .req-product-tabs {
     display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.8rem;
+    gap: 0.45rem;
+    overflow-x: auto;
+    padding: 0.2rem 0.1rem 0.55rem;
+    margin-bottom: 0.25rem;
+    scrollbar-color: #94a3b8 transparent;
 }
 .req-product-tab-btn {
     border: 1px solid #dbe3f0;
     background: #f8fafc;
     color: #0f172a;
-    border-radius: 8px;
-    padding: 0.32rem 0.7rem;
+    border-radius: 999px;
+    padding: 0.42rem 0.78rem;
     font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
+    white-space: nowrap;
 }
 .req-product-tab-btn.active {
     background: #1d4ed8;
@@ -2951,8 +3018,8 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     justify-content: space-between;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.65rem 0.85rem;
-    background: #f8fafc;
+    padding: 0.8rem 0.95rem;
+    background: linear-gradient(90deg, #eff6ff, #f8fafc);
     border-bottom: 1px solid #e2e8f0;
 }
 .req-muted {
@@ -3414,6 +3481,24 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     cursor:pointer;
     box-shadow:0 12px 26px rgba(37,99,235,0.14), inset 0 1px 0 rgba(255,255,255,0.9);
     transition:all 0.18s ease;
+}
+.req-product-select-wrap { display: none; margin: 0 0 .65rem; }
+.req-product-select-wrap label { display:block; margin: 0 0 .3rem; color:#475569; font-size:.77rem; font-weight:800; }
+.req-product-select { width:100%; padding:.62rem .7rem; border:1px solid #bfdbfe; border-radius:10px; background:#fff; color:#0f172a; font-weight:750; }
+@media (max-width: 768px) {
+    #requirementsView { padding: .9rem; }
+    .req-topbar { align-items: stretch; }
+    .req-actions { width: 100%; }
+    .req-actions button { flex: 1 1 0; min-height: 42px; }
+    .req-tabs { width: 100%; }
+    .req-tab-btn { flex: 1 1 0; padding-inline: .45rem; }
+    .req-summary-metrics { grid-template-columns: 1fr; gap: .45rem; }
+    .req-summary-metric { min-height: 58px; }
+    .req-product-tabs { display: none; }
+    .req-product-select-wrap { display: block; }
+    .req-section { overflow-x: auto; }
+    .req-table { min-width: 660px; }
+    .req-table th, .req-table td { padding: .58rem .55rem; }
 }
 .export-tab-btn:hover {
     border-color:#60a5fa;
@@ -5483,6 +5568,13 @@ html[data-theme="dark"] .calendar-copy-btn{
 }
 html[data-theme="dark"] .req-tab-btn,
 html[data-theme="dark"] .req-product-tab-btn{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] #requirementsView{background:linear-gradient(180deg,#101a2a 0%,#0d1522 21rem);border-color:#263244;box-shadow:0 18px 42px rgba(2,6,23,.34);}
+html[data-theme="dark"] .req-tabs{background:#101a29;border-color:#2b3b51;}
+html[data-theme="dark"] .req-summary-metric{background:linear-gradient(145deg,#172337,#111b2b);border-color:#2b3b51;box-shadow:0 8px 18px rgba(2,6,23,.2);}
+html[data-theme="dark"] .req-summary-metric-label{color:#8ea3bd;}
+html[data-theme="dark"] .req-summary-metric-value{color:#f1f5f9;}
+html[data-theme="dark"] .req-summary-metric.danger{background:linear-gradient(145deg,rgba(127,29,29,.45),#211624);border-color:rgba(248,113,113,.38);}
+html[data-theme="dark"] .req-summary-metric.danger .req-summary-metric-value{color:#fca5a5;}
 html[data-theme="dark"] .req-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;}
 html[data-theme="dark"] .req-product-tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;}
 html[data-theme="dark"] .req-section,
@@ -5503,6 +5595,14 @@ html[data-theme="dark"] .req-subgroup[data-sub="tray"] h4{background:rgba(34,197
 html[data-theme="dark"] .req-subgroup[data-sub="etc"] h4{background:#162133;color:#c7d3e3;}
 html[data-theme="dark"] .req-table th,
 html[data-theme="dark"] .req-table td{border-bottom-color:#223046;color:#dbe7f5;}
+html[data-theme="dark"] .req-table tbody tr:hover{background:rgba(37,99,235,.1);}
+html[data-theme="dark"] .req-code-chip{background:rgba(14,165,233,.16);color:#7dd3fc;}
+html[data-theme="dark"] .req-item-name{color:#e7effb;}
+html[data-theme="dark"] .req-qty{color:#f1f5f9;}
+html[data-theme="dark"] .req-qty.need{color:#93c5fd;}
+html[data-theme="dark"] .req-qty.shortage-ok{color:#86efac;}
+html[data-theme="dark"] .req-qty.shortage-bad{color:#fca5a5;background:rgba(127,29,29,.28);}
+html[data-theme="dark"] .req-product-select{background:#121d2d;color:#e7effb;border-color:#33465e;}
 html[data-theme="dark"] .req-table th:first-child,
 html[data-theme="dark"] .req-table td:first-child,
 html[data-theme="dark"] .req-muted{color:#8ea3bd;}
@@ -6232,6 +6332,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         <button type="button" class="req-tab-btn" data-req-tab="products" onclick="switchRequirementsTab('products')">상품별 리스트</button>
     </div>
     <div id="reqSummaryPanel">
+        <div id="reqSummaryMetrics" class="req-summary-metrics" aria-live="polite"></div>
         <div class="req-section">
             <h3 class="req-title req-title-raw">■ 원초 항목</h3>
             <div id="reqRawWrap"></div>
@@ -6246,6 +6347,10 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         </div>
     </div>
     <div id="reqProductsPanel" style="display:none;">
+        <div class="req-product-select-wrap">
+            <label for="reqProductSelect">상품 선택</label>
+            <select id="reqProductSelect" class="req-product-select" onchange="selectReqProductTab(this.value)"></select>
+        </div>
         <div id="reqProductTabs" class="req-product-tabs"></div>
         <div id="reqProductsWrap"></div>
     </div>
@@ -10618,6 +10723,40 @@ function formatReqNumberWithUnit(value, unit, asInteger = false, maximumFraction
     return unitText ? `${text} ${escapeHtml(unitText)}` : text;
 }
 
+function renderReqQty(value, unit, options = {}) {
+    const number = options.integer
+        ? formatReqDisplayNumber(Math.round(Number(value || 0)), 0)
+        : formatReqDisplayNumber(value, 1);
+    const unitText = escapeHtml(normalizeReqUnit(unit));
+    const tone = options.tone ? ` ${options.tone}` : '';
+    return `<span class="req-qty${tone}"><span>${number}</span>${unitText ? `<span class="req-qty-unit">${unitText}</span>` : ''}</span>`;
+}
+
+function renderReqSummaryMetrics(summary) {
+    const target = document.getElementById('reqSummaryMetrics');
+    if (!target) return;
+    const raw = summary.raw || [];
+    const base = summary.base || [];
+    const subGroups = summary.sub_groups || {};
+    const sub = Object.values(subGroups).flat();
+    const allItems = [...raw, ...base, ...sub];
+    const shortageItems = allItems.filter((item) => Number(item.shortage || 0) > 0);
+    target.innerHTML = `
+        <div class="req-summary-metric">
+            <span class="req-summary-metric-icon">▦</span>
+            <div><div class="req-summary-metric-label">확인 품목</div><div class="req-summary-metric-value">${allItems.length}개</div></div>
+        </div>
+        <div class="req-summary-metric">
+            <span class="req-summary-metric-icon">◈</span>
+            <div><div class="req-summary-metric-label">예정 생산 상품</div><div class="req-summary-metric-value">${requirementsProductsCache.length}개</div></div>
+        </div>
+        <div class="req-summary-metric ${shortageItems.length ? 'danger' : ''}">
+            <span class="req-summary-metric-icon">${shortageItems.length ? '!' : '✓'}</span>
+            <div><div class="req-summary-metric-label">부족 품목</div><div class="req-summary-metric-value">${shortageItems.length ? `${shortageItems.length}개` : '없음'}</div></div>
+        </div>
+    `;
+}
+
 function getReqCapacityDomKey(key) {
     return String(key || '').replace(/[^a-zA-Z0-9_-]/g, '_');
 }
@@ -11127,11 +11266,11 @@ function renderReqTableRows(rows, options = {}) {
         <tbody>
             ${rows.map((r) => `
                 <tr>
-                    <td>${escapeHtml(r.code || '-')}</td>
-                    <td>${escapeHtml(r.name)}</td>
-                    <td class="num">${formatReqNumberWithUnit(r.stock, r.unit, rawInteger)}</td>
-                    <td class="num">${formatReqNumberWithUnit(r.required, r.unit, rawInteger)}</td>
-                    <td class="num ${Number(r.shortage || 0) > 0 ? 'req-shortage' : ''}">${formatReqNumberWithUnit(r.shortage, r.unit, rawInteger)}</td>
+                    <td><span class="req-code-chip" title="${escapeHtml(r.code || '-')}">${escapeHtml(r.code || '-')}</span></td>
+                    <td><div class="req-item-name">${escapeHtml(r.name)}</div></td>
+                    <td class="num">${renderReqQty(r.stock, r.unit, { integer: rawInteger })}</td>
+                    <td class="num">${renderReqQty(r.required, r.unit, { integer: rawInteger, tone: 'need' })}</td>
+                    <td class="num ${Number(r.shortage || 0) > 0 ? 'req-shortage' : ''}">${renderReqQty(r.shortage, r.unit, { integer: rawInteger, tone: Number(r.shortage || 0) > 0 ? 'shortage-bad' : 'shortage-ok' })}</td>
                 </tr>
             `).join('')}
         </tbody>
@@ -11190,6 +11329,8 @@ function selectReqProductTab(productId) {
     tabsEl.querySelectorAll('.req-product-tab-btn').forEach((btn) => {
         btn.classList.toggle('active', Number(btn.dataset.productId) === currentReqProductId);
     });
+    const selectEl = document.getElementById('reqProductSelect');
+    if (selectEl) selectEl.value = String(currentReqProductId);
 
     const target = requirementsProductsCache.find((p) => Number(p.product_id) === currentReqProductId);
     wrap.innerHTML = renderReqProductDetail(target || null);
@@ -11198,10 +11339,12 @@ function selectReqProductTab(productId) {
 function renderReqProductTabs(products) {
     const tabsEl = document.getElementById('reqProductTabs');
     const wrap = document.getElementById('reqProductsWrap');
-    if (!tabsEl || !wrap) return;
+    const selectEl = document.getElementById('reqProductSelect');
+    if (!tabsEl || !wrap || !selectEl) return;
 
     if (!products || products.length === 0) {
         tabsEl.innerHTML = '';
+        selectEl.innerHTML = '<option value="">예정 생산 상품이 없습니다.</option>';
         wrap.innerHTML = '<div class="req-muted" style="padding:0.75rem 0.9rem;">예정 생산건이 없습니다.</div>';
         currentReqProductId = null;
         return;
@@ -11218,6 +11361,9 @@ function renderReqProductTabs(products) {
                 onclick="selectReqProductTab(${Number(p.product_id)})">
             ${escapeHtml(p.product_name)}
         </button>
+    `).join('');
+    selectEl.innerHTML = products.map((p) => `
+        <option value="${Number(p.product_id)}">${escapeHtml(p.product_name)} · ${formatReqDisplayNumber(p.planned_boxes || 0, 2)} BOX</option>
     `).join('');
 
     selectReqProductTab(currentReqProductId);
@@ -11251,6 +11397,7 @@ async function loadRequirementsData(forceReload = false) {
         baseWrap.innerHTML = renderReqTableRows(summary.base || []);
         subWrap.innerHTML = renderSubGroupTables(summary.sub_groups || {});
         requirementsProductsCache = payload.products || [];
+        renderReqSummaryMetrics(summary);
         renderReqProductTabs(requirementsProductsCache);
         requirementsLoadedKey = key;
     } catch (err) {
@@ -11260,6 +11407,8 @@ async function loadRequirementsData(forceReload = false) {
         subWrap.innerHTML = msg;
         const tabsEl = document.getElementById('reqProductTabs');
         if (tabsEl) tabsEl.innerHTML = '';
+        const metricEl = document.getElementById('reqSummaryMetrics');
+        if (metricEl) metricEl.innerHTML = '';
         productsWrap.innerHTML = msg;
         requirementsProductsCache = [];
         currentReqProductId = null;

@@ -561,6 +561,8 @@ def _ensure_dashboard_todo_schema(conn):
                 due_date TEXT,
                 todo_status TEXT NOT NULL DEFAULT 'processing',
                 is_done INTEGER NOT NULL DEFAULT 0,
+                is_announcement INTEGER NOT NULL DEFAULT 0,
+                is_private INTEGER NOT NULL DEFAULT 0,
                 created_by TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 done_by TEXT,
@@ -579,6 +581,10 @@ def _ensure_dashboard_todo_schema(conn):
             conn.execute("ALTER TABLE dashboard_todos ADD COLUMN todo_status TEXT NOT NULL DEFAULT 'processing'")
         if 'is_done' not in todo_cols:
             conn.execute("ALTER TABLE dashboard_todos ADD COLUMN is_done INTEGER NOT NULL DEFAULT 0")
+        if 'is_announcement' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN is_announcement INTEGER NOT NULL DEFAULT 0")
+        if 'is_private' not in todo_cols:
+            conn.execute("ALTER TABLE dashboard_todos ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0")
         if 'created_by' not in todo_cols:
             conn.execute("ALTER TABLE dashboard_todos ADD COLUMN created_by TEXT")
         if 'created_at' not in todo_cols:
@@ -608,6 +614,12 @@ def _ensure_dashboard_todo_schema(conn):
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_workplace_done_at ON dashboard_todos(workplace, done_at DESC, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_announcement_status ON dashboard_todos(is_announcement, todo_status, due_date, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_dashboard_todos_private_owner_status ON dashboard_todos(is_private, created_by, todo_status, due_date, created_at DESC)"
         )
     except Exception:
         pass

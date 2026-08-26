@@ -470,6 +470,8 @@ def create_app():
 
     def _load_nav_todos(cursor, workplace):
         today = today_local()
+        current_username = (session.get('user') or {}).get('username') or ''
+        is_todo_admin = bool((session.get('user') or {}).get('is_admin'))
         completed_date_from = (request.args.get('todo_completed_from') or today.isoformat()).strip() or today.isoformat()
         completed_date_to = (request.args.get('todo_completed_to') or today.isoformat()).strip() or today.isoformat()
         completed_keyword = (request.args.get('todo_completed_keyword') or '').strip()
@@ -492,6 +494,8 @@ def create_app():
                 t.due_date,
                 t.todo_status,
                 t.is_done,
+                COALESCE(t.is_announcement, 0) AS is_announcement,
+                COALESCE(t.is_private, 0) AS is_private,
                 t.created_by,
                 t.created_at,
                 t.done_by,
@@ -501,14 +505,19 @@ def create_app():
             FROM dashboard_todos t
             LEFT JOIN users uc ON uc.username = t.created_by
             LEFT JOIN users ud ON ud.username = t.done_by
-            WHERE workplace = ?
+            WHERE (t.workplace = ? OR COALESCE(t.is_announcement, 0) = 1)
+              AND (COALESCE(t.is_private, 0) = 0 OR t.created_by = ?)
               AND COALESCE(t.todo_status, CASE WHEN COALESCE(t.is_done, 0) = 1 THEN 'completed' ELSE 'processing' END) != 'completed'
             ORDER BY COALESCE(t.due_date, '') ASC, t.id DESC
             """,
-            (workplace,),
+            (workplace, current_username),
         )
         for row in cursor.fetchall():
             item = dict(row)
+            item['can_manage'] = bool(
+                item.get('created_by') == current_username
+                or (int(item.get('is_announcement') or 0) and is_todo_admin)
+            )
             item['importance'] = _normalize_todo_importance(item.get('importance'))
             item['todo_status'] = _normalize_todo_status(item.get('todo_status'), 'completed' if int(item.get('is_done') or 0) else 'processing')
             item['status_label'] = {
@@ -539,6 +548,8 @@ def create_app():
                 t.due_date,
                 t.todo_status,
                 t.is_done,
+                COALESCE(t.is_announcement, 0) AS is_announcement,
+                COALESCE(t.is_private, 0) AS is_private,
                 t.created_by,
                 t.created_at,
                 t.done_by,
@@ -548,11 +559,12 @@ def create_app():
             FROM dashboard_todos t
             LEFT JOIN users uc ON uc.username = t.created_by
             LEFT JOIN users ud ON ud.username = t.done_by
-            WHERE workplace = ?
+            WHERE (t.workplace = ? OR COALESCE(t.is_announcement, 0) = 1)
+              AND (COALESCE(t.is_private, 0) = 0 OR t.created_by = ?)
               AND COALESCE(t.todo_status, CASE WHEN COALESCE(t.is_done, 0) = 1 THEN 'completed' ELSE 'processing' END) = 'completed'
               AND substr(COALESCE(t.done_at, ''), 1, 10) BETWEEN ? AND ?
         """
-        completed_params = [workplace, completed_date_from, completed_date_to]
+        completed_params = [workplace, current_username, completed_date_from, completed_date_to]
         if completed_keyword:
             completed_query += " AND (COALESCE(t.title, '') LIKE ? OR COALESCE(t.detail, '') LIKE ?)"
             keyword_like = f'%{completed_keyword}%'
@@ -568,6 +580,10 @@ def create_app():
         cursor.execute(completed_query, completed_params)
         for row in cursor.fetchall():
             item = dict(row)
+            item['can_manage'] = bool(
+                item.get('created_by') == current_username
+                or (int(item.get('is_announcement') or 0) and is_todo_admin)
+            )
             item['importance'] = _normalize_todo_importance(item.get('importance'))
             item['todo_status'] = _normalize_todo_status(item.get('todo_status'), 'completed')
             item['status_label'] = '완료'
@@ -651,7 +667,8 @@ def create_app():
                 """
                 SELECT id, title, detail, due_date
                 FROM dashboard_todos
-                WHERE workplace = ?
+                WHERE (workplace = ? OR COALESCE(is_announcement, 0) = 1)
+                  AND (COALESCE(is_private, 0) = 0 OR created_by = ?)
                   AND COALESCE(todo_status, CASE WHEN COALESCE(is_done, 0) = 1 THEN 'completed' ELSE 'processing' END) != 'completed'
                   AND due_date IS NOT NULL
                   AND TRIM(due_date) <> ''
@@ -659,7 +676,7 @@ def create_app():
                 ORDER BY due_date ASC, id DESC
                 LIMIT 3
                 """,
-                (workplace, today.isoformat(), deadline_limit.isoformat()),
+                (workplace, username, today.isoformat(), deadline_limit.isoformat()),
             )
             for todo_row in cursor.fetchall():
                 due_date = str(todo_row['due_date'] or '').strip()
