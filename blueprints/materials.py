@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, abort
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, abort, flash
 import sqlite3
 from datetime import datetime
 import json
+import logging
 
 from core import (
     add_user_notification,
@@ -27,6 +28,7 @@ from core import (
 )
 
 bp = Blueprint('materials', __name__)
+logger = logging.getLogger(__name__)
 
 
 def _local_timestamp_str():
@@ -3535,6 +3537,7 @@ def raw_materials():
             export_done AS (
                 SELECT
                     rml.raw_material_id as raw_material_id,
+                    MAX(rml.id) as export_log_id,
                     substr(MAX(COALESCE(rml.created_at, '')), 1, 10) as done_date,
                     ABS(SUM(COALESCE(rml.quantity, 0))) as moved_quantity,
                     MIN(COALESCE(NULLIF(TRIM(rml.note), ''), '')) as export_note
@@ -3542,6 +3545,7 @@ def raw_materials():
                 WHERE rml.raw_material_id IN ({row_placeholders})
                   AND COALESCE(rml.type, '') = 'export'
                   AND COALESCE(rml.quantity, 0) < 0
+                  AND COALESCE(rml.note, '') NOT LIKE '%[반출 취소]%'
                 GROUP BY rml.raw_material_id, substr(COALESCE(rml.created_at, ''), 1, 10), COALESCE(NULLIF(TRIM(rml.note), ''), '')
             ),
             export_done_latest AS (
@@ -3565,6 +3569,7 @@ def raw_materials():
                 COALESCE(pd.done_date, '') as production_done_date,
                 COALESCE(pd.product_names, '') as product_names,
                 COALESCE(ed.done_date, '') as export_done_date,
+                COALESCE(ed.export_log_id, 0) as export_log_id,
                 COALESCE(ed.moved_quantity, 0) as moved_quantity,
                 COALESCE(ed.export_note, '') as export_note
             FROM raw_materials rm
@@ -3593,6 +3598,7 @@ def raw_materials():
                 'done_kind': done_kind,
                 'done_date': done_date,
                 'done_note': done_note,
+                'export_log_id': int(item.get('export_log_id') or 0),
             }
 
         for row in rows:
@@ -3600,6 +3606,7 @@ def raw_materials():
             row['done_kind'] = meta.get('done_kind', 'production')
             row['done_date'] = meta.get('done_date', '')
             row['done_note'] = meta.get('done_note', '')
+            row['export_log_id'] = int(meta.get('export_log_id') or 0)
             row['_done_kind_match'] = True if selected_done_kind == 'all' else row.get('done_kind') == selected_done_kind
         return rows
 
@@ -4769,6 +4776,13 @@ def update_raw_material_basic():
             if not before:
                 return redirect(url_for('materials.raw_materials'))
 
+            previous_code = (before['code'] or '').strip()
+            # A blank code has always been converted into the row's generated
+            # representative code by _ensure_raw_code_and_lot().  Resolve it
+            # before updating so the same final code is used by the lot and
+            # its historical production records.
+            final_code = code or f"RM{raw_id:05d}"
+
             cursor.execute(
                 '''
                 UPDATE raw_materials
@@ -4778,7 +4792,7 @@ def update_raw_material_basic():
                   AND workplace = ?
                 ''',
                 (
-                    code,
+                    final_code,
                     name,
                     sheets_per_sok,
                     receiving_date,
@@ -4791,7 +4805,84 @@ def update_raw_material_basic():
                     workplace,
                 ),
             )
-            final_code, lot = _ensure_raw_code_and_lot(cursor, raw_id, code, receiving_date, ja_ho)
+            migrated_raw_ids = []
+            migrated_usage_count = 0
+            if previous_code and previous_code != final_code:
+                # A raw code is a representative-code group, not a value that
+                # belongs to one receiving lot only.  Rename every lot in the
+                # same workplace so the guide does not leave earlier lots (and
+                # their product history) under the former code.
+                _ensure_raw_code_and_lot(
+                    cursor, raw_id, final_code, receiving_date, ja_ho
+                )
+                cursor.execute(
+                    '''
+                    SELECT id, receiving_date,
+                           COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') AS ja_ho
+                    FROM raw_materials
+                    WHERE workplace = ?
+                      AND TRIM(COALESCE(code, '')) = ?
+                    ORDER BY id
+                    ''',
+                    (workplace, previous_code),
+                )
+                migrated_lots = cursor.fetchall()
+                migrated_raw_ids = [raw_id] + [int(row['id']) for row in migrated_lots]
+                cursor.execute(
+                    '''
+                    UPDATE raw_materials
+                    SET code = ?
+                    WHERE workplace = ?
+                      AND TRIM(COALESCE(code, '')) = ?
+                    ''',
+                    (final_code, workplace, previous_code),
+                )
+                for raw_lot in migrated_lots:
+                    _ensure_raw_code_and_lot(
+                        cursor,
+                        int(raw_lot['id']),
+                        final_code,
+                        raw_lot['receiving_date'],
+                        raw_lot['ja_ho'],
+                    )
+
+                # Register-mode production rows retain a code snapshot.  Move
+                # both rows directly linked to the renamed lots and legacy
+                # rows that only have the former code snapshot.  A
+                # representative code is shared across workplaces, so a
+                # snapshot-only historical row must move even when its
+                # production workplace differs from the edited lot.
+                cursor.execute(
+                    '''
+                    UPDATE production_material_usage
+                    SET raw_material_code_snapshot = ?
+                    WHERE raw_material_id IN (
+                        SELECT id
+                        FROM raw_materials
+                        WHERE workplace = ? AND TRIM(COALESCE(code, '')) = ?
+                    )
+                      AND (
+                        NULLIF(TRIM(COALESCE(raw_material_code_snapshot, '')), '') IS NULL
+                        OR TRIM(raw_material_code_snapshot) = ?
+                      )
+                    ''',
+                    (final_code, workplace, final_code, previous_code),
+                )
+                migrated_usage_count += cursor.rowcount
+                cursor.execute(
+                    '''
+                    UPDATE production_material_usage
+                    SET raw_material_code_snapshot = ?
+                    WHERE TRIM(COALESCE(raw_material_code_snapshot, '')) = ?
+                    ''',
+                    (final_code, previous_code),
+                )
+                migrated_usage_count += cursor.rowcount
+                lot = _build_raw_material_lot(final_code, receiving_date, ja_ho)
+            else:
+                final_code, lot = _ensure_raw_code_and_lot(
+                    cursor, raw_id, final_code, receiving_date, ja_ho
+                )
             audit_log(
                 conn,
                 'update',
@@ -4809,6 +4900,12 @@ def update_raw_material_basic():
                         'total_stock': total_stock,
                         'current_stock': current_stock,
                         'used_quantity': used_quantity,
+                        'code_migration': {
+                            'from': previous_code,
+                            'to': final_code,
+                            'raw_lot_ids': migrated_raw_ids,
+                            'production_usage_count': migrated_usage_count,
+                        } if previous_code and previous_code != final_code else None,
                     },
                 },
             )
@@ -4985,6 +5082,7 @@ def raw_material_logs_data(raw_material_id):
         'production': '생산 차감',
         'receive': '입고',
         'export': '반출',
+        'export_cancel': '반출 취소',
         'adjustment': '재고 조정',
     }
 
@@ -5007,6 +5105,7 @@ def raw_material_logs_data(raw_material_id):
             fallback_map = {
                 'receive': '입고',
                 'export': '반출',
+                'export_cancel': '반출 취소',
                 'adjustment': '재고 조정',
             }
             log_dict['note'] = fallback_map.get(log['type'], '-')
@@ -5016,6 +5115,84 @@ def raw_material_logs_data(raw_material_id):
         logs_data.append(log_dict)
 
     return {'logs': logs_data}
+
+
+@bp.route('/raw-materials/<int:raw_material_id>/export-cancel/<int:export_log_id>', methods=['POST'])
+@role_required('rawmat')
+def cancel_raw_material_export(raw_material_id, export_log_id):
+    """Cancel a completed raw-material export and restore its stock."""
+    workplace = get_workplace()
+    try:
+        with db_transaction() as conn:
+            cursor = conn.cursor()
+            export_row = cursor.execute(
+                '''
+                SELECT
+                    rml.id,
+                    rml.quantity,
+                    COALESCE(rml.note, '') AS note,
+                    rm.id AS raw_material_id,
+                    COALESCE(rm.current_stock, 0) AS current_stock,
+                    COALESCE(rm.name, '') AS raw_material_name
+                FROM raw_material_logs rml
+                JOIN raw_materials rm ON rm.id = rml.raw_material_id
+                WHERE rml.id = ?
+                  AND rml.raw_material_id = ?
+                  AND rml.type = 'export'
+                  AND rm.workplace = ?
+                ''',
+                (export_log_id, raw_material_id, workplace),
+            ).fetchone()
+            if not export_row:
+                raise ValueError('취소할 반출 완료 기록을 찾을 수 없습니다.')
+
+            export_data = dict(export_row)
+            if '[반출 취소]' in str(export_data.get('note') or ''):
+                raise ValueError('이미 취소된 반출 기록입니다.')
+            exported_quantity = abs(float(export_data.get('quantity') or 0))
+            if exported_quantity <= 0:
+                raise ValueError('원복할 반출 수량이 없습니다.')
+
+            restored_stock = float(export_data.get('current_stock') or 0) + exported_quantity
+            cursor.execute(
+                'UPDATE raw_materials SET current_stock = ? WHERE id = ? AND workplace = ?',
+                (restored_stock, raw_material_id, workplace),
+            )
+            cursor.execute(
+                "UPDATE raw_material_logs SET note = TRIM(COALESCE(note, '')) || ' [반출 취소]' WHERE id = ?",
+                (export_log_id,),
+            )
+            cursor.execute(
+                '''
+                INSERT INTO raw_material_logs (raw_material_id, type, quantity, note, created_by)
+                VALUES (?, 'export_cancel', ?, ?, ?)
+                ''',
+                (
+                    raw_material_id,
+                    exported_quantity,
+                    f'반출 취소: 반출 기록 #{export_log_id} 재고 원복',
+                    (session.get('user') or {}).get('username'),
+                ),
+            )
+            audit_log(
+                conn,
+                'raw_export_cancel',
+                'raw_material',
+                raw_material_id,
+                {
+                    'export_log_id': export_log_id,
+                    'restored_quantity': exported_quantity,
+                    'previous_stock': float(export_data.get('current_stock') or 0),
+                    'restored_stock': restored_stock,
+                },
+            )
+        flash(f"원초 반출 {exported_quantity:,.0f}속을 취소하고 재고를 원복했습니다.", 'success')
+    except ValueError as exc:
+        flash(str(exc), 'warning')
+    except Exception:
+        logger.exception('Failed to cancel raw material export | raw_material_id=%s | export_log_id=%s', raw_material_id, export_log_id)
+        flash('원초 반출 취소 중 오류가 발생했습니다.', 'danger')
+    return redirect(request.form.get('next') or url_for('materials.raw_materials', tab='done'))
 
 
 @bp.route('/raw-materials/<int:raw_material_id>/logs')

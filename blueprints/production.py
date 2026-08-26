@@ -1431,6 +1431,55 @@ def _calculate_set_assembly_available_quantity(cursor, finished_product_id, comp
     return max(int(min(quantities)), 0) if quantities else 0
 
 
+def _get_set_schedule_completed_assembly_component_usage(
+    cursor,
+    set_schedule_id,
+    exclude_assembly_production_id=0,
+):
+    """Return BOM-based semi-finished usage for completed set assemblies.
+
+    The set inventory panel must follow the completed finished-product quantity.
+    ``production_material_usage.actual_quantity`` can retain a previously saved
+    value when the finished-product quantity is later edited, so using that
+    value here makes the displayed assembly usage and remaining stock diverge.
+    """
+    rows = cursor.execute(
+        '''
+        SELECT
+            b.component_product_id,
+            b.quantity_per_box,
+            pr.actual_boxes,
+            pr.planned_boxes,
+            pr.status
+        FROM productions pr
+        JOIN bom b ON b.product_id = pr.product_id
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        WHERE COALESCE(pr.set_schedule_id, 0) = ?
+          AND COALESCE(pr.set_schedule_item_id, 0) = 0
+          AND COALESCE(ps.schedule_source, '') = 'set_assembly'
+          AND b.component_product_id IS NOT NULL
+          AND COALESCE(b.quantity_per_box, 0) > 0
+          AND (? <= 0 OR pr.id <> ?)
+        ''',
+        (
+            int(set_schedule_id or 0),
+            int(exclude_assembly_production_id or 0),
+            int(exclude_assembly_production_id or 0),
+        ),
+    ).fetchall()
+    done_status = _normalize_production_status('완료')
+    usage_map = defaultdict(float)
+    for row in rows:
+        if _normalize_production_status(row['status']) != done_status:
+            continue
+        component_product_id = int(row['component_product_id'] or 0)
+        if component_product_id <= 0:
+            continue
+        finished_quantity = float(row['actual_boxes'] or row['planned_boxes'] or 0)
+        usage_map[component_product_id] += finished_quantity * float(row['quantity_per_box'] or 0)
+    return usage_map
+
+
 def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id, exclude_assembly_production_id=0):
     """Return set-produced component stock, optionally before one assembly's usage.
 
@@ -1452,27 +1501,6 @@ def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id, exclude
         ''',
         (int(set_schedule_id or 0),),
     ).fetchall()
-    consumed_rows = cursor.execute(
-        '''
-        SELECT
-            pmu.component_product_id,
-            pmu.actual_quantity,
-            pr.status
-        FROM production_material_usage pmu
-        JOIN productions pr ON pr.id = pmu.production_id
-        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
-        WHERE COALESCE(pr.set_schedule_id, 0) = ?
-          AND pmu.component_product_id IS NOT NULL
-          AND COALESCE(pr.set_schedule_item_id, 0) = 0
-          AND COALESCE(ps.schedule_source, '') = 'set_assembly'
-          AND (? <= 0 OR pr.id <> ?)
-        ''',
-        (
-            int(set_schedule_id or 0),
-            int(exclude_assembly_production_id or 0),
-            int(exclude_assembly_production_id or 0),
-        ),
-    ).fetchall()
     done_status = _normalize_production_status('완료')
     produced_map = defaultdict(float)
     for row in produced_rows:
@@ -1481,12 +1509,11 @@ def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id, exclude
             continue
         produced_map[component_product_id] += float(row['actual_boxes'] or row['planned_boxes'] or 0)
 
-    consumed_map = defaultdict(float)
-    for row in consumed_rows:
-        component_product_id = int(row['component_product_id'] or 0)
-        if component_product_id <= 0 or _normalize_production_status(row['status']) != done_status:
-            continue
-        consumed_map[component_product_id] += float(row['actual_quantity'] or 0)
+    consumed_map = _get_set_schedule_completed_assembly_component_usage(
+        cursor,
+        set_schedule_id,
+        exclude_assembly_production_id,
+    )
 
     # 완제품 특이사항으로 반영한 수량은 출고가 아니라 세트 완제품 재고의
     # 추가분이다. 따라서 해당 완제품 BOM만큼의 반제품이 조립에 사용된 것으로
@@ -1540,27 +1567,7 @@ def _get_set_schedule_component_remaining_stock(cursor, set_schedule_id, exclude
 
 
 def _get_set_schedule_component_assembly_usage(cursor, set_schedule_id):
-    rows = cursor.execute(
-        '''
-        SELECT pmu.component_product_id, pmu.actual_quantity, pr.status
-        FROM production_material_usage pmu
-        JOIN productions pr ON pr.id = pmu.production_id
-        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
-        WHERE COALESCE(pr.set_schedule_id, 0) = ?
-          AND pmu.component_product_id IS NOT NULL
-          AND COALESCE(pr.set_schedule_item_id, 0) = 0
-          AND COALESCE(ps.schedule_source, '') = 'set_assembly'
-        ''',
-        (int(set_schedule_id or 0),),
-    ).fetchall()
-    done_status = _normalize_production_status('완료')
-    usage_map = defaultdict(float)
-    for row in rows:
-        if _normalize_production_status(row['status']) != done_status:
-            continue
-        component_product_id = int(row['component_product_id'] or 0)
-        if component_product_id > 0:
-            usage_map[component_product_id] += float(row['actual_quantity'] or 0)
+    usage_map = _get_set_schedule_completed_assembly_component_usage(cursor, set_schedule_id)
     # See _get_set_schedule_component_remaining_stock: completed finished-goods
     # additions consume the same BOM components as a normal assembly.
     set_schedule_row = cursor.execute(
@@ -4085,6 +4092,55 @@ def _consume_raw_by_code_fifo(cursor, source_raw_material_id, required_qty, prod
 
 
 def _rollback_raw_usage_for_production(cursor, production_id, created_by=None, note_prefix='production_resave'):
+    # Revert the quantity that was actually applied to inventory, rather than
+    # trusting production_material_usage.  The usage row can have been edited
+    # after an earlier save, while the existing inventory log still records the
+    # prior quantity.  Restoring the usage-row value in that situation leaves a
+    # permanent stock difference (for example 1,483 used in the production
+    # record but only 1,360 restored from inventory).
+    cursor.execute(
+        '''
+        SELECT
+            raw_material_id,
+            SUM(COALESCE(quantity, 0)) AS inventory_delta
+        FROM raw_material_logs
+        WHERE production_id = ?
+          AND raw_material_id IS NOT NULL
+          -- RETURN rows are the audit trail of a previous edit rollback.
+          -- They must not offset the latest production deduction here.
+          AND COALESCE(type, '') = 'production'
+        GROUP BY raw_material_id
+        ''',
+        (production_id,),
+    )
+    log_rows = cursor.fetchall()
+
+    # Older records may not have an inventory log.  Retain the former usage
+    # based fallback for those records only.
+    if log_rows:
+        rows = [
+            {
+                'raw_material_id': row['raw_material_id'],
+                # A production log is negative.  This is the amount to put
+                # back before saving the new usage.
+                'qty': -round(float(row['inventory_delta'] or 0), 4),
+            }
+            for row in log_rows
+        ]
+    else:
+        cursor.execute(
+            '''
+            SELECT raw_material_id, SUM(COALESCE(actual_quantity, 0)) as qty
+            FROM production_material_usage
+            WHERE production_id = ?
+              AND raw_material_id IS NOT NULL
+              AND COALESCE(actual_quantity, 0) > 0
+            GROUP BY raw_material_id
+            ''',
+            (production_id,),
+        )
+        rows = cursor.fetchall()
+
     cursor.execute(
         '''
         DELETE FROM raw_material_logs
@@ -4093,18 +4149,6 @@ def _rollback_raw_usage_for_production(cursor, production_id, created_by=None, n
         ''',
         (production_id,),
     )
-    cursor.execute(
-        '''
-        SELECT raw_material_id, SUM(COALESCE(actual_quantity, 0)) as qty
-        FROM production_material_usage
-        WHERE production_id = ?
-          AND raw_material_id IS NOT NULL
-          AND COALESCE(actual_quantity, 0) > 0
-        GROUP BY raw_material_id
-        ''',
-        (production_id,),
-    )
-    rows = cursor.fetchall()
     rolled_back = 0
     for row in rows:
         rm_id = int(row['raw_material_id'])
@@ -4646,6 +4690,15 @@ def schedules():
                     deducted_quantity = float(
                         deduction_by_product.get(component_product_id, {}).get('quantity') or 0
                     )
+                    # 반제품 재고 차감은 완제품 조립에 사용할 수 있는 생산완료분이
+                    # 줄어든 것이므로, 일정표의 생산 잔량에서도 완료 수량으로
+                    # 계산하지 않는다. (예: 완료 19,985 / 계획 23,806 / 차감 88
+                    # 이면 생산 잔량은 3,909)
+                    completed_quantity = int(progress.get('completed_quantity') or 0)
+                    usable_completed_quantity = max(
+                        completed_quantity - int(round(deducted_quantity)),
+                        0,
+                    )
                     item_summaries.append({
                         'id': int(item.get('id') or 0),
                         'component_product_id': int(item.get('component_product_id') or 0),
@@ -4657,13 +4710,13 @@ def schedules():
                         'workplace': str(item.get('workplace') or set_row.get('workplace') or '').strip(),
                         'current_stock': _get_product_stock(cursor, int(item.get('component_product_id') or 0), str(item.get('workplace') or set_row.get('workplace') or '').strip()),
                         'planned_quantity': int(progress.get('planned_quantity') or 0),
-                        'completed_quantity': int(progress.get('completed_quantity') or 0),
+                        'completed_quantity': completed_quantity,
                         'remaining_quantity': max(
-                            int(item.get('required_quantity') or 0) - int(progress.get('completed_quantity') or 0),
+                            int(item.get('required_quantity') or 0) - usable_completed_quantity,
                             0,
                         ),
                         'overproduced_quantity': max(
-                            int(progress.get('completed_quantity') or 0) - int(item.get('required_quantity') or 0),
+                            usable_completed_quantity - int(item.get('required_quantity') or 0),
                             0,
                         ),
                         'completed_count': int(progress.get('completed_count') or 0),

@@ -388,6 +388,12 @@
             {% if can_raw %}
             <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">수정</button>
             <button class="btn btn-small" type="button" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">점검표</button>
+            {% if rm.done_kind == 'export' and rm.export_log_id %}
+            <form method="POST" action="/raw-materials/{{ rm.id }}/export-cancel/{{ rm.export_log_id }}" style="display:inline;" onsubmit="return confirm('이 반출 완료 건을 취소할까요?\n반출 수량은 원초 재고로 원복됩니다.');">
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <button class="btn btn-small" type="submit" style="background:#f59e0b;">반출 취소</button>
+            </form>
+            {% endif %}
             <button class="btn btn-small btn-secondary" type="button" disabled style="opacity:0.6;cursor:not-allowed;">삭제</button>
             {% endif %}
         </td>

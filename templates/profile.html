@@ -2,6 +2,14 @@
 {% block title %}내 정보 - 예맛 생산관리{% endblock %}
 
 {% block content %}
+<style>
+.profile-readonly-input { background:#f5f5f5; }
+html[data-theme="dark"] .profile-readonly-input {
+    background:#0f172a;
+    border-color:#334155;
+    color:#e2e8f0;
+}
+</style>
 <h1 style="margin-bottom:1.5rem;">👤 내 정보</h1>
 
 <div class="grid grid-2" style="gap:1.5rem;">
@@ -11,7 +19,7 @@
         <form method="POST">
             <div class="form-group">
                 <label>아이디</label>
-                <input type="text" value="{{ user.username }}" readonly style="background:#f5f5f5;">
+                <input type="text" value="{{ user.username }}" readonly class="profile-readonly-input">
             </div>
             <div class="form-group">
                 <label>이름</label>

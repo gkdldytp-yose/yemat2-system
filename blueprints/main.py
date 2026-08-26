@@ -136,6 +136,19 @@ def _is_todo_owner(username, created_by):
     return bool((username or '').strip()) and (username or '').strip() == (created_by or '').strip()
 
 
+def _is_todo_admin():
+    return bool((session.get('user') or {}).get('is_admin'))
+
+
+def _can_manage_dashboard_todo(username, todo_row):
+    """Announcements are managed by administrators; regular To-Dos by their author."""
+    if int(todo_row.get('is_private') or 0):
+        return _is_todo_owner(username, todo_row.get('created_by'))
+    if int(todo_row.get('is_announcement') or 0):
+        return _is_todo_admin()
+    return _is_todo_owner(username, todo_row.get('created_by'))
+
+
 @bp.route('/dashboard/prefill-shortage-issues', methods=['POST'])
 @login_required
 def prefill_shortage_issues():
@@ -177,6 +190,8 @@ def create_dashboard_todo():
     detail = (request.form.get('detail') or '').strip()
     importance = _normalize_todo_importance(request.form.get('importance'))
     todo_status = _normalize_todo_status(request.form.get('todo_status'))
+    is_announcement = (request.form.get('is_announcement') or '').strip() in ('1', 'true', 'on', 'yes')
+    is_private = (request.form.get('is_private') or '').strip() in ('1', 'true', 'on', 'yes')
     due_date_raw = (request.form.get('due_date') or '').strip()
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
@@ -186,13 +201,19 @@ def create_dashboard_todo():
     if due_date_raw and due_date is None:
         flash('???? ?? ??? ???? ????.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if is_announcement and not _is_todo_admin():
+        flash('공지는 관리자만 등록할 수 있습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if is_announcement and is_private:
+        flash('공지는 나만보기 메모로 등록할 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
     with db_transaction() as conn:
         cursor = conn.cursor()
         cursor.execute(
             '''
-            INSERT INTO dashboard_todos (workplace, title, detail, importance, due_date, todo_status, is_done, created_by, done_by, done_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'completed' THEN CURRENT_TIMESTAMP ELSE NULL END)
+            INSERT INTO dashboard_todos (workplace, title, detail, importance, due_date, todo_status, is_done, is_announcement, is_private, created_by, done_by, done_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'completed' THEN CURRENT_TIMESTAMP ELSE NULL END)
             ''',
             (
                 workplace,
@@ -202,6 +223,8 @@ def create_dashboard_todo():
                 due_date.isoformat() if due_date else None,
                 todo_status,
                 1 if todo_status == 'completed' else 0,
+                1 if is_announcement else 0,
+                1 if is_private else 0,
                 username,
                 username if todo_status == 'completed' else None,
                 todo_status,
@@ -225,16 +248,16 @@ def toggle_dashboard_todo(todo_id):
         cursor = conn.cursor()
         todo_row = cursor.execute(
             '''
-            SELECT id, workplace, is_done, todo_status, created_by
+            SELECT id, workplace, is_done, todo_status, is_announcement, is_private, created_by
             FROM dashboard_todos
-            WHERE id = ? AND workplace = ?
+            WHERE id = ? AND (workplace = ? OR COALESCE(is_announcement, 0) = 1)
             ''',
             (todo_id, workplace),
         ).fetchone()
         if not todo_row:
             flash('?? ??? ?? ? ????.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-        if not _is_todo_owner(username, todo_row['created_by']):
+        if not _can_manage_dashboard_todo(username, dict(todo_row)):
             flash('To-Do? ??? ???? ?? ?? ?? ??? ??? ? ? ????.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
@@ -249,7 +272,7 @@ def toggle_dashboard_todo(todo_id):
                     WHEN ? = 'completed' THEN done_at
                     ELSE NULL
                 END
-            WHERE id = ? AND workplace = ?
+            WHERE id = ? AND (workplace = ? OR COALESCE(is_announcement, 0) = 1)
             ''',
             (todo_status, todo_status, todo_status, username, todo_status, todo_status, todo_id, workplace),
         )
@@ -264,6 +287,8 @@ def update_dashboard_todo(todo_id):
     detail = (request.form.get('detail') or '').strip()
     importance = _normalize_todo_importance(request.form.get('importance'))
     todo_status = _normalize_todo_status(request.form.get('todo_status'))
+    is_announcement = (request.form.get('is_announcement') or '').strip() in ('1', 'true', 'on', 'yes')
+    is_private = (request.form.get('is_private') or '').strip() in ('1', 'true', 'on', 'yes')
     due_date_raw = (request.form.get('due_date') or '').strip()
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
@@ -273,21 +298,27 @@ def update_dashboard_todo(todo_id):
     if due_date_raw and due_date is None:
         flash('???? ?? ??? ???? ????.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if is_announcement and not _is_todo_admin():
+        flash('공지는 관리자만 등록할 수 있습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
+    if is_announcement and is_private:
+        flash('공지는 나만보기 메모로 등록할 수 없습니다.', 'warning')
+        return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
     with db_transaction() as conn:
         cursor = conn.cursor()
         existing = cursor.execute(
             '''
-            SELECT id, created_by
+            SELECT id, created_by, is_announcement, is_private
             FROM dashboard_todos
-            WHERE id = ? AND workplace = ?
+            WHERE id = ? AND (workplace = ? OR COALESCE(is_announcement, 0) = 1)
             ''',
             (todo_id, workplace),
         ).fetchone()
         if not existing:
             flash('??? ?? ??? ?? ? ????.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-        if not _is_todo_owner(username, existing['created_by']):
+        if not _can_manage_dashboard_todo(username, dict(existing)):
             flash('To-Do? ??? ???? ??? ? ????.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
@@ -298,6 +329,8 @@ def update_dashboard_todo(todo_id):
                 detail = ?,
                 importance = ?,
                 due_date = ?,
+                is_announcement = ?,
+                is_private = ?,
                 todo_status = ?,
                 is_done = CASE WHEN ? = 'completed' THEN 1 ELSE 0 END,
                 done_by = CASE WHEN ? = 'completed' THEN ? ELSE NULL END,
@@ -306,13 +339,15 @@ def update_dashboard_todo(todo_id):
                     WHEN ? = 'completed' THEN done_at
                     ELSE NULL
                 END
-            WHERE id = ? AND workplace = ?
+            WHERE id = ? AND (workplace = ? OR COALESCE(is_announcement, 0) = 1)
             ''',
             (
                 title[:120],
                 detail[:2000],
                 importance or None,
                 due_date.isoformat() if due_date else None,
+                1 if is_announcement else 0,
+                1 if is_private else 0,
                 todo_status,
                 todo_status,
                 todo_status,
@@ -334,22 +369,22 @@ def delete_dashboard_todo(todo_id):
         cursor = conn.cursor()
         existing = cursor.execute(
             '''
-            SELECT id, created_by
+            SELECT id, created_by, is_announcement, is_private
             FROM dashboard_todos
-            WHERE id = ? AND workplace = ?
+            WHERE id = ? AND (workplace = ? OR COALESCE(is_announcement, 0) = 1)
             ''',
             (todo_id, workplace),
         ).fetchone()
         if not existing:
             flash('??? ?? ??? ?? ? ????.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
-        if not _is_todo_owner(username, existing['created_by']):
+        if not _can_manage_dashboard_todo(username, dict(existing)):
             flash('To-Do? ??? ???? ??? ? ????.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
         cursor.execute(
             '''
             DELETE FROM dashboard_todos
-            WHERE id = ? AND workplace = ?
+            WHERE id = ? AND (workplace = ? OR COALESCE(is_announcement, 0) = 1)
             ''',
             (todo_id, workplace),
         )
@@ -361,6 +396,7 @@ def delete_dashboard_todo(todo_id):
 def index():
     """대시보드"""
     workplace = get_workplace()
+    todo_username = (session.get('user') or {}).get('username') or ''
     conn = get_db()
     cursor = conn.cursor()
 
@@ -668,14 +704,17 @@ def index():
             importance,
             todo_status,
             is_done,
+            is_announcement,
+            is_private,
             created_by,
             created_at,
             done_by,
             done_at
         FROM dashboard_todos
-        WHERE workplace = ?
+        WHERE (workplace = ? OR COALESCE(is_announcement, 0) = 1)
+          AND (COALESCE(is_private, 0) = 0 OR created_by = ?)
         ''',
-        (workplace,),
+        (workplace, todo_username),
     )
     todo_rows = cursor.fetchall()
     dashboard_todos = []
