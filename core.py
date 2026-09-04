@@ -1207,6 +1207,15 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE productions ADD COLUMN raw_sok_mode INTEGER DEFAULT 1")
         if 'entry_mode' not in cols:
             conn.execute("ALTER TABLE productions ADD COLUMN entry_mode TEXT NOT NULL DEFAULT 'standard'")
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS production_workplace_settings (
+                workplace TEXT PRIMARY KEY,
+                material_management_disabled INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
         conn.execute("UPDATE productions SET raw_sok_mode = 1 WHERE raw_sok_mode IS NULL OR raw_sok_mode < 1")
         conn.execute(
             "UPDATE productions SET entry_mode = 'standard' "
@@ -1244,6 +1253,8 @@ def _ensure_production_schema(conn):
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN override_car_number TEXT")
         if 'raw_material_code_snapshot' not in usage_cols:
             conn.execute("ALTER TABLE production_material_usage ADD COLUMN raw_material_code_snapshot TEXT")
+        if 'register_lot_deferred' not in usage_cols:
+            conn.execute("ALTER TABLE production_material_usage ADD COLUMN register_lot_deferred INTEGER NOT NULL DEFAULT 0")
         # 등록 모드는 재고 원초를 실제로 소비한 기록이 아니라 과거 생산 내역을
         # 수기로 남기는 용도다. 기존 등록 모드 이력에 남은 원초 FK도 스냅샷으로
         # 보존한 뒤 분리해 원초 재고 삭제/사용량에 영향을 주지 않게 한다.

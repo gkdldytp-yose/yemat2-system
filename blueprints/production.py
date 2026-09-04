@@ -654,6 +654,29 @@ def _parse_line_usage_form(form):
     return _is_line_usage_disabled(form.get('line_usage_disabled'))
 
 
+def _is_material_management_disabled(cursor, workplace):
+    if not workplace:
+        return False
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS production_workplace_settings (
+            workplace TEXT PRIMARY KEY,
+            material_management_disabled INTEGER NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        '''
+    )
+    row = cursor.execute(
+        '''
+        SELECT COALESCE(material_management_disabled, 0) AS material_management_disabled
+        FROM production_workplace_settings
+        WHERE workplace = ?
+        ''',
+        (workplace,),
+    ).fetchone()
+    return bool(row and int(row['material_management_disabled'] or 0))
+
+
 def _normalize_po_values(raw_values):
     return [str(raw or '').strip() for raw in (raw_values or [])]
 
@@ -4107,8 +4130,18 @@ def _rollback_raw_usage_for_production(cursor, production_id, created_by=None, n
         WHERE production_id = ?
           AND raw_material_id IS NOT NULL
           -- RETURN rows are the audit trail of a previous edit rollback.
-          -- They must not offset the latest production deduction here.
+          -- Only production deductions made after the latest rollback remain
+          -- applied to inventory.  Older production logs may be historical
+          -- duplicates from repeated saves; restoring all of them revives
+          -- stock on a completed raw lot.
           AND COALESCE(type, '') = 'production'
+          AND id > COALESCE((
+              SELECT MAX(previous_log.id)
+              FROM raw_material_logs previous_log
+              WHERE previous_log.production_id = raw_material_logs.production_id
+                AND previous_log.raw_material_id = raw_material_logs.raw_material_id
+                AND COALESCE(previous_log.type, '') = 'RETURN'
+          ), 0)
         GROUP BY raw_material_id
         ''',
         (production_id,),
@@ -8680,13 +8713,61 @@ def production_detail(production_id):
         (production['product_id'], production['active_sok_per_box']),
     )
     bom_raw_seed = cursor.fetchone()
-    if bom_raw_seed and not bom_raw_items:
+    # 일반 생산은 현재 작업장 재고만 선택할 수 있다. BOM 원초를 작업장 확인
+    # 없이 보조 카드로 추가하면 다른 작업장의 재고가 있는 것처럼 보이므로,
+    # 이 fallback은 재고 비연동 등록모드에서만 허용한다.
+    if bom_raw_seed and not bom_raw_items and _is_register_entry_mode(production.get('entry_mode')):
         seed_row = dict(bom_raw_seed)
         seed_raw_id = int(seed_row.get('rm_id') or 0)
         existing_raw_ids = {int(row.get('rm_id') or 0) for row in bom_raw_items if int(row.get('rm_id') or 0) > 0}
         if seed_raw_id > 0 and seed_raw_id not in existing_raw_ids:
             seed_row['is_temp_raw'] = 0
             bom_raw_items.insert(0, seed_row)
+
+    # 등록모드의 시작점은 재고 lot 목록이 아니라 상품 BOM의 기준 원초다.
+    # 사용자가 직접 추가하기 전에는 한 장의 기준 원초 카드만 보여 준다.
+    if _is_register_entry_mode(production.get('entry_mode')) and bom_raw_seed:
+        seed_row = dict(bom_raw_seed)
+        seed_row['is_temp_raw'] = 0
+        bom_raw_items = [seed_row]
+
+    # 등록모드는 재고 lot 대신 이전에 수기로 등록한 이력의 자호/입고일을
+    # 다음 생산 입력의 기본값으로 쓴다. 이력이 없을 때는 위 BOM 원초 정보를
+    # 그대로 보여 준다.
+    if _is_register_entry_mode(production.get('entry_mode')):
+        for item in bom_raw_items:
+            raw_id = int(item.get('rm_id') or 0)
+            if raw_id <= 0:
+                continue
+            cursor.execute(
+                '''
+                SELECT
+                    COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') AS car_number,
+                    COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date, '') AS receiving_date
+                FROM production_material_usage pmu
+                JOIN productions history ON history.id = pmu.production_id
+                LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                WHERE history.id <> ?
+                  AND COALESCE(history.workplace, '') = ?
+                  AND LOWER(COALESCE(history.entry_mode, '')) = 'register'
+                  AND pmu.material_id IS NULL
+                  AND pmu.component_product_id IS NULL
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                  AND (
+                      pmu.raw_material_id = ?
+                      OR COALESCE(NULLIF(TRIM(pmu.raw_material_code_snapshot), ''), '') = (
+                          SELECT COALESCE(NULLIF(TRIM(code), ''), '') FROM raw_materials WHERE id = ?
+                      )
+                  )
+                ORDER BY history.production_date DESC, history.id DESC, pmu.id DESC
+                LIMIT 1
+                ''',
+                (production_id, production.get('workplace') or current_workplace, raw_id, raw_id),
+            )
+            last_register_raw = cursor.fetchone()
+            if last_register_raw:
+                item['register_default_car_number'] = (last_register_raw['car_number'] or '').strip()
+                item['register_default_receiving_date'] = (last_register_raw['receiving_date'] or '').strip()
 
     if production['status'] != '\uC644\uB8CC' or edit_completed:
         existing_raw_ids = {int(row['rm_id'] or 0) for row in bom_raw_items if row.get('rm_id')}
@@ -8906,6 +8987,7 @@ def production_detail(production_id):
                cp.code as component_product_code,
                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as override_receiving_date,
                COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), '') as override_expiry_date,
+               COALESCE(NULLIF(TRIM(pmu.override_manufacture_date), ''), '') as override_manufacture_date,
                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') as override_car_number
         FROM production_material_usage pmu
         LEFT JOIN materials m ON pmu.material_id = m.id
@@ -8917,6 +8999,9 @@ def production_detail(production_id):
     )
     material_usage = [dict(row) for row in cursor.fetchall()]
     current_workplace = production_workplace or viewer_workplace
+    # 라이트 생산 모드는 기능을 다시 공개할 때까지 일시적으로 숨긴다.
+    # 이전에 저장된 작업장 설정이 있어도 상세 화면은 일반 관리 방식으로 연다.
+    material_management_disabled = False
     workplace_stock_map = {}
     material_ids = [int(row.get('material_id') or 0) for row in material_usage if int(row.get('material_id') or 0) > 0]
     component_product_ids = [
@@ -8999,6 +9084,39 @@ def production_detail(production_id):
         row['display_receiving_date'] = row.get('override_receiving_date') or ''
         row['display_expiry_date'] = row.get('override_expiry_date') or ''
 
+    # 동일 부자재/포장재의 최근 등록모드 lot 정보를 다음 등록 입력의 기본값으로
+    # 제안한다. 현재 생산건에 이미 입력한 값이 있으면 그 값을 우선한다.
+    if _is_register_entry_mode(production.get('entry_mode')):
+        for row in material_usage:
+            material_id = int(row.get('material_id') or 0)
+            if material_id <= 0:
+                continue
+            cursor.execute(
+                '''
+                SELECT
+                    COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') AS receiving_date,
+                    COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), '') AS expiry_date,
+                    COALESCE(NULLIF(TRIM(pmu.override_manufacture_date), ''), '') AS manufacture_date,
+                    COALESCE(pmu.register_lot_deferred, 0) AS lot_deferred
+                FROM production_material_usage pmu
+                JOIN productions history ON history.id = pmu.production_id
+                WHERE history.id <> ?
+                  AND COALESCE(history.workplace, '') = ?
+                  AND LOWER(COALESCE(history.entry_mode, '')) = 'register'
+                  AND pmu.material_id = ?
+                  AND COALESCE(pmu.actual_quantity, 0) > 0
+                ORDER BY history.production_date DESC, history.id DESC, pmu.id DESC
+                LIMIT 1
+                ''',
+                (production_id, current_workplace, material_id),
+            )
+            last_register_lot = cursor.fetchone()
+            if last_register_lot:
+                row['register_default_receiving_date'] = (last_register_lot['receiving_date'] or '').strip()
+                row['register_default_expiry_date'] = (last_register_lot['expiry_date'] or '').strip()
+                row['register_default_manufacture_date'] = (last_register_lot['manufacture_date'] or '').strip()
+                row['register_default_lot_deferred'] = bool(last_register_lot['lot_deferred'])
+
     detail_material_usage = material_usage
     if _is_register_entry_mode(production.get('entry_mode')):
         grouped_material_usage = {}
@@ -9062,10 +9180,14 @@ def production_detail(production_id):
         )
         if is_raw_usage and row['actual_quantity'] is not None:
             raw_key = int(row['raw_material_id'] or 0) or -int(row['id'])
-            entry = raw_saved_map.setdefault(raw_key, {'qty': 0, 'note': ''})
+            entry = raw_saved_map.setdefault(raw_key, {'qty': 0, 'note': '', 'car_number': '', 'receiving_date': ''})
             entry['qty'] = float(entry.get('qty') or 0) + float(row['actual_quantity'] or 0)
             if row.get('usage_note'):
                 entry['note'] = row.get('usage_note') or ''
+            if row.get('override_car_number'):
+                entry['car_number'] = row.get('override_car_number') or ''
+            if row.get('override_receiving_date'):
+                entry['receiving_date'] = row.get('override_receiving_date') or ''
 
     total_raw_selected_qty = round(
         sum(float(item.get('qty') or 0) for item in raw_saved_map.values()),
@@ -9253,6 +9375,8 @@ def production_detail(production_id):
         has_workplace_access=has_workplace_access,
         material_usage=material_usage,
         detail_material_usage=detail_material_usage,
+        material_management_disabled=material_management_disabled,
+        material_management_mode_feature_enabled=False,
         bom_raw_items=bom_raw_items,
         calculated_expiry_date=calculated_expiry_date,
         raw_saved_map=raw_saved_map,
@@ -9478,6 +9602,140 @@ def edit_production_plan(production_id):
     return render_template('production_edit.html', user=session['user'], production=production)
 
 
+@bp.route('/production/<int:production_id>/enable-register-mode', methods=['POST'])
+@role_required('production')
+def enable_production_register_mode(production_id):
+    """Switch a planned production to history-only entry mode before completion."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        begin_db_transaction(conn, mode='IMMEDIATE')
+        cursor.execute('SELECT * FROM productions WHERE id = ?', (production_id,))
+        production = cursor.fetchone()
+        if not production:
+            rollback_db(conn)
+            return redirect(url_for('production.production_list'))
+
+        production = dict(production)
+        current_workplace = (get_workplace() or session.get('workplace') or '').strip()
+        production_workplace = _get_effective_production_workplace(cursor, production)
+        if not _has_production_workplace_access(current_workplace, production_workplace):
+            rollback_db(conn)
+            return redirect(url_for('production.production_detail', production_id=production_id))
+        if _normalize_production_status(production.get('status')) == _normalize_production_status('완료'):
+            rollback_db(conn)
+            return "<script>alert('완료된 생산건은 등록모드로 전환할 수 없습니다.'); window.history.back();</script>", 400
+
+        if not _is_register_entry_mode(production.get('entry_mode')):
+            cursor.execute('UPDATE productions SET entry_mode = ? WHERE id = ?', ('register', production_id))
+            audit_log(
+                conn, 'update', 'production', production_id,
+                {
+                    'action': 'enable_register_mode_from_detail',
+                    'before_entry_mode': _normalize_production_entry_mode(production.get('entry_mode')),
+                    'after_entry_mode': 'register',
+                    'stock_impact': 'none',
+                },
+            )
+        commit_db(conn)
+    except Exception:
+        rollback_db(conn)
+        raise
+    finally:
+        conn.close()
+    return redirect(url_for('production.production_detail', production_id=production_id))
+
+
+@bp.route('/production/<int:production_id>/cancel-register-mode', methods=['POST'])
+@role_required('production')
+def cancel_production_register_mode(production_id):
+    """Return one planned production detail from register mode to normal stock mode."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        begin_db_transaction(conn, mode='IMMEDIATE')
+        cursor.execute('SELECT * FROM productions WHERE id = ?', (production_id,))
+        production = cursor.fetchone()
+        if not production:
+            rollback_db(conn)
+            return redirect(url_for('production.production_list'))
+
+        production = dict(production)
+        current_workplace = (get_workplace() or session.get('workplace') or '').strip()
+        production_workplace = _get_effective_production_workplace(cursor, production)
+        if not _has_production_workplace_access(current_workplace, production_workplace):
+            rollback_db(conn)
+            return redirect(url_for('production.production_detail', production_id=production_id))
+        if _normalize_production_status(production.get('status')) == _normalize_production_status('완료'):
+            rollback_db(conn)
+            return "<script>alert('완료된 등록모드 생산건은 취소할 수 없습니다.'); window.history.back();</script>", 400
+
+        if _is_register_entry_mode(production.get('entry_mode')):
+            cursor.execute('UPDATE productions SET entry_mode = ? WHERE id = ?', ('standard', production_id))
+            audit_log(
+                conn, 'update', 'production', production_id,
+                {
+                    'action': 'cancel_register_mode_from_detail',
+                    'before_entry_mode': 'register',
+                    'after_entry_mode': 'standard',
+                    'stock_impact': 'normal_on_next_save',
+                },
+            )
+        commit_db(conn)
+    except Exception:
+        rollback_db(conn)
+        raise
+    finally:
+        conn.close()
+    return redirect(url_for('production.production_detail', production_id=production_id))
+
+
+@bp.route('/production/material-management-mode', methods=['POST'])
+@role_required('production')
+def set_material_management_mode():
+    """Set the workplace-wide light-production preference for material handling."""
+    workplace = (get_workplace() or session.get('workplace') or '').strip()
+    disabled = (request.form.get('material_management_disabled') or '').strip() == '1'
+    production_id = int(request.form.get('production_id') or 0)
+    next_url = url_for('production.production_detail', production_id=production_id) if production_id else url_for('production.production_list')
+    if not workplace:
+        return redirect(next_url)
+
+    conn = get_db()
+    try:
+        begin_db_transaction(conn, mode='IMMEDIATE')
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS production_workplace_settings (
+                workplace TEXT PRIMARY KEY,
+                material_management_disabled INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            INSERT INTO production_workplace_settings (workplace, material_management_disabled, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(workplace) DO UPDATE SET
+                material_management_disabled = excluded.material_management_disabled,
+                updated_at = CURRENT_TIMESTAMP
+            ''',
+            (workplace, 1 if disabled else 0),
+        )
+        audit_log(
+            conn, 'update', 'production_workplace_settings', 0,
+            {'workplace': workplace, 'material_management_disabled': disabled},
+        )
+        commit_db(conn)
+    except Exception:
+        rollback_db(conn)
+        raise
+    finally:
+        conn.close()
+    return redirect(next_url)
+
+
 @bp.route('/production/<int:production_id>/update-usage', methods=['POST'])
 @role_required('production')
 def update_production_usage(production_id):
@@ -9487,6 +9745,19 @@ def update_production_usage(production_id):
         conn = get_db()
         cursor = conn.cursor()
         begin_db_transaction(conn, mode='IMMEDIATE')
+
+        # 장시간 실행 중인 서버는 코드 갱신 뒤에도 기존 스키마 검사 캐시를
+        # 가지고 있을 수 있다. 등록모드 lot 보류 저장 전에 컬럼을 한 번 더
+        # 보장해 첫 저장이 실패하지 않게 한다.
+        usage_columns = {
+            row['name']
+            for row in cursor.execute('PRAGMA table_info(production_material_usage)').fetchall()
+        }
+        if 'register_lot_deferred' not in usage_columns:
+            cursor.execute(
+                'ALTER TABLE production_material_usage '
+                'ADD COLUMN register_lot_deferred INTEGER NOT NULL DEFAULT 0'
+            )
 
         def _detail_redirect():
             kwargs = {'production_id': production_id}
@@ -9522,6 +9793,9 @@ def update_production_usage(production_id):
         touched_material_ids = set()
         current_workplace = (get_workplace() or session.get('workplace') or '').strip()
         production_workplace = _get_effective_production_workplace(cursor, prod_row) or current_workplace
+        # 라이트 생산 모드는 기능을 다시 공개할 때까지 저장 처리에서도 비활성화한다.
+        # 과거 작업장 설정이 남아 있어도 일반 원부자재 관리 흐름을 적용한다.
+        material_management_disabled = False
         if not _has_production_workplace_access(current_workplace, production_workplace):
             rollback_db(conn)
             return (
@@ -9847,6 +10121,8 @@ def update_production_usage(production_id):
                 raw_entries[idx] = {
                     'rm_id': rm_id,
                     'qty': qty,
+                    'override_receiving_date': (request.form.get(f'raw_override_receiving_date_{idx}') or '').strip(),
+                    'override_car_number': (request.form.get(f'raw_override_car_number_{idx}') or '').strip(),
                     'note': _compose_raw_usage_note(
                         (request.form.get(f'raw_note_{idx}') or '').strip(),
                         raw_sok_mode,
@@ -9924,9 +10200,11 @@ def update_production_usage(production_id):
             if not rm:
                 continue
             rm_workplace = (rm['workplace'] or '').strip()
-            if production_workplace and rm_workplace != production_workplace:
+            # 등록모드는 재고를 소비하지 않는 생산 이력 입력이다. BOM에 연결된
+            # 원초가 다른 작업장에 등록돼 있어도 자호/입고일 이력을 남길 수 있다.
+            if not skip_stock_impact and production_workplace and rm_workplace != production_workplace:
                 rollback_db(conn)
-                return "<script>alert('?ㅻⅨ ?묒뾽??원초???좏깮?????놁뒿?덈떎.'); window.history.back();</script>"
+                return "<script>alert('다른 작업장 원초는 선택할 수 없습니다.'); window.history.back();</script>"
             raw_requests.append(
                 {
                     'source_rm_id': int(rm['id']),
@@ -9935,6 +10213,8 @@ def update_production_usage(production_id):
                     'name': rm['name'],
                     'workplace': rm['workplace'],
                     'actual_qty': float(entry['qty'] or 0),
+                    'override_receiving_date': entry.get('override_receiving_date', ''),
+                    'override_car_number': entry.get('override_car_number', ''),
                     'note': entry.get('note', ''),
                 }
             )
@@ -10046,7 +10326,7 @@ def update_production_usage(production_id):
         boxes_for_need = actual_boxes if actual_boxes > 0 else planned_boxes
         total_need = per_box * boxes_for_need
 
-        if save_action != 'temp' and not skip_stock_impact:
+        if save_action != 'temp' and not skip_stock_impact and not material_management_disabled:
             cursor.execute(
                 '''
                 SELECT id, material_id, component_product_id
@@ -10238,8 +10518,9 @@ def update_production_usage(production_id):
                 cursor.execute(
                     '''
                     INSERT INTO production_material_usage
-                    (production_id, material_id, raw_material_id, raw_material_name, expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note)
-                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
+                    (production_id, material_id, raw_material_id, raw_material_name, expected_quantity, actual_quantity, loss_quantity, yield_rate, usage_note,
+                     override_receiving_date, override_car_number, raw_material_code_snapshot)
+                    VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''',
                     (
                         production_id,
@@ -10250,6 +10531,9 @@ def update_production_usage(production_id):
                         seg_loss,
                         seg_yield,
                         req.get('note', ''),
+                        req.get('override_receiving_date', ''),
+                        req.get('override_car_number', ''),
+                        req.get('code') or None,
                     ),
                 )
             else:
@@ -10297,6 +10581,8 @@ def update_production_usage(production_id):
         # 3. ??곗뺘 ??癒?삺 ??쇨텢??몄쎗 筌ｌ꼶??
         for key in request.form:
             if key.startswith('actual_mat_'):
+                if material_management_disabled:
+                    continue
                 usage_id = key.replace('actual_mat_', '')
                 actual_str = request.form.get(key, '').strip()
                 if not actual_str:
@@ -10319,13 +10605,37 @@ def update_production_usage(production_id):
                 expected = float(row['expected_quantity']) if row['expected_quantity'] else 0
                 loss = round(actual - expected, 4)
                 yield_rate = round(expected / actual * 100, 2) if actual > 0 and expected > 0 else None
+                register_lot_deferred = (
+                    skip_stock_impact
+                    and (request.form.get(f'mat_lot_deferred_{usage_id}') or '').strip() == '1'
+                )
+                override_receiving_date = '' if register_lot_deferred else (request.form.get(f'mat_override_receiving_{usage_id}') or '').strip()
+                override_expiry_date = '' if register_lot_deferred else (request.form.get(f'mat_override_expiry_{usage_id}') or '').strip()
+                override_manufacture_date = '' if register_lot_deferred else (request.form.get(f'mat_override_manufacture_{usage_id}') or '').strip()
                 cursor.execute(
                     '''
                     UPDATE production_material_usage
-                    SET actual_quantity = ?, loss_quantity = ?, yield_rate = ?
+                    SET actual_quantity = ?, loss_quantity = ?, yield_rate = ?,
+                        override_receiving_date = CASE WHEN ? THEN ? ELSE override_receiving_date END,
+                        override_expiry_date = CASE WHEN ? THEN ? ELSE override_expiry_date END,
+                        override_manufacture_date = CASE WHEN ? THEN ? ELSE override_manufacture_date END,
+                        register_lot_deferred = CASE WHEN ? THEN ? ELSE register_lot_deferred END
                     WHERE id = ?
                 ''',
-                    (actual, loss, yield_rate, usage_id),
+                    (
+                        actual,
+                        loss,
+                        yield_rate,
+                        1 if skip_stock_impact else 0,
+                        override_receiving_date,
+                        1 if skip_stock_impact else 0,
+                        override_expiry_date,
+                        1 if skip_stock_impact else 0,
+                        override_manufacture_date,
+                        1 if skip_stock_impact else 0,
+                        1 if register_lot_deferred else 0,
+                        usage_id,
+                    ),
                 )
 
                 # ??癒?삺 ????筌△몿而?
@@ -10707,10 +11017,11 @@ def _delete_production_record_response(production_id, success_redirect):
 @bp.route('/production/search')
 @login_required
 def production_search():
-    """Auto-generated docstring."""
+    """Search completed productions across product and used-material history."""
     start = request.args.get('start', '')
     end = request.args.get('end', '')
     keyword = (request.args.get('keyword', '') or '').strip()
+    apply_date = (request.args.get('apply_date', '') or '').strip() == '1'
     workplace = get_workplace()
 
     conn_context = db_connection()
@@ -10718,32 +11029,69 @@ def production_search():
     cursor = conn.cursor()
 
     query = """
-        SELECT pr.*, p.name as product_name
+        SELECT
+            pr.*,
+            COALESCE(p.name, '') AS product_name,
+            COALESCE(p.code, '') AS product_code,
+            COALESCE((
+                SELECT GROUP_CONCAT(DISTINCT TRIM(COALESCE(rm.name, pmu.raw_material_name, m.name, '')))
+                FROM production_material_usage pmu
+                LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                LEFT JOIN materials m ON m.id = pmu.material_id
+                WHERE pmu.production_id = pr.id
+                  AND TRIM(COALESCE(rm.name, pmu.raw_material_name, m.name, '')) <> ''
+            ), '') AS used_material_names
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
-        WHERE (pr.status = '?꾨즺' OR pr.status LIKE '%袁⑥┷%')
-        AND pr.workplace = ?
+        WHERE pr.workplace = ?
     """
     params = [workplace]
 
-    if keyword.isdigit():
-        query += ' AND pr.id = ?'
-        params.append(int(keyword))
-    else:
+    # A keyword is an all-history lookup by default.  Dates remain useful for
+    # browsing without a keyword, or when the user explicitly limits a search.
+    if not keyword or apply_date:
         if start:
             query += ' AND pr.production_date >= ?'
             params.append(start)
         if end:
             query += ' AND pr.production_date <= ?'
             params.append(end)
-    if keyword and not keyword.isdigit():
-        query += ' AND p.name LIKE ?'
-        params.append(f'%{keyword}%')
+    if keyword:
+        like_keyword = f'%{keyword}%'
+        query += """
+            AND (
+                CAST(pr.id AS TEXT) LIKE ?
+                OR COALESCE(p.name, '') LIKE ?
+                OR COALESCE(p.code, '') LIKE ?
+                OR COALESCE(pr.note, '') LIKE ?
+                OR EXISTS (
+                    SELECT 1
+                    FROM production_material_usage pmu
+                    LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                    LEFT JOIN materials m ON m.id = pmu.material_id
+                    WHERE pmu.production_id = pr.id
+                      AND (
+                        COALESCE(rm.name, '') LIKE ?
+                        OR COALESCE(rm.code, '') LIKE ?
+                        OR COALESCE(pmu.raw_material_name, '') LIKE ?
+                        OR COALESCE(pmu.raw_material_code_snapshot, '') LIKE ?
+                        OR COALESCE(m.name, '') LIKE ?
+                        OR COALESCE(m.code, '') LIKE ?
+                        OR COALESCE(pmu.usage_note, '') LIKE ?
+                      )
+                )
+            )
+        """
+        params.extend([like_keyword] * 11)
 
-    query += ' ORDER BY pr.production_date DESC LIMIT 100'
+    query += ' ORDER BY pr.production_date DESC, pr.id DESC LIMIT 500'
 
     cursor.execute(query, params)
-    results = cursor.fetchall()
+    done_status = _normalize_production_status('\uC644\uB8CC')
+    results = [
+        row for row in cursor.fetchall()
+        if _normalize_production_status(row['status']) == done_status
+    ][:100]
     conn_context.__exit__(None, None, None)
 
     # JSON 癰??
@@ -10752,13 +11100,15 @@ def production_search():
             'id': r['id'],
             'production_date': r['production_date'],
             'product_name': r['product_name'],
+            'product_code': r['product_code'],
+            'used_material_names': r['used_material_names'],
             'planned_boxes': r['planned_boxes'],
             'actual_boxes': r['actual_boxes'],
         }
         for r in results
     ]
 
-    return json.dumps({'results': data}, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
+    return jsonify({'results': data, 'keyword': keyword, 'date_limited': bool(keyword and apply_date)})
 
 
 
