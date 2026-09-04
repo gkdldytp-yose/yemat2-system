@@ -2950,6 +2950,23 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 }
 .req-table tbody tr { transition: background .16s ease; }
 .req-table tbody tr:hover { background: #f8fbff; }
+.req-table tbody tr.req-group-row:hover { background: transparent; }
+.req-group-row td {
+    padding: .46rem .72rem !important;
+    border-bottom-color: transparent !important;
+    background: #f8fafc;
+    color: #475569;
+    font-family: inherit !important;
+    font-size: .78rem !important;
+    font-weight: 850;
+}
+.req-group-row td span { margin-right: .45rem; }
+.req-group-row td small { color: #94a3b8; font-size: .71rem; font-weight: 700; }
+.req-group-row[data-sub="box"] td { background:#fff7ed; color:#9a3412; }
+.req-group-row[data-sub="inner"] td { background:#eff6ff; color:#1e3a8a; }
+.req-group-row[data-sub="outer"] td { background:#ecfeff; color:#155e75; }
+.req-group-row[data-sub="silica"] td { background:#f5f3ff; color:#5b21b6; }
+.req-group-row[data-sub="tray"] td { background:#f0fdf4; color:#166534; }
 .req-code-chip {
     display: inline-flex;
     max-width: 112px;
@@ -5596,6 +5613,13 @@ html[data-theme="dark"] .req-subgroup[data-sub="etc"] h4{background:#162133;colo
 html[data-theme="dark"] .req-table th,
 html[data-theme="dark"] .req-table td{border-bottom-color:#223046;color:#dbe7f5;}
 html[data-theme="dark"] .req-table tbody tr:hover{background:rgba(37,99,235,.1);}
+html[data-theme="dark"] .req-group-row td{background:#162133;color:#c7d3e3;border-bottom-color:transparent !important;}
+html[data-theme="dark"] .req-group-row td small{color:#8ea3bd;}
+html[data-theme="dark"] .req-group-row[data-sub="box"] td{background:rgba(249,115,22,.16);color:#fdba74;}
+html[data-theme="dark"] .req-group-row[data-sub="inner"] td{background:rgba(37,99,235,.16);color:#bfdbfe;}
+html[data-theme="dark"] .req-group-row[data-sub="outer"] td{background:rgba(6,182,212,.16);color:#a5f3fc;}
+html[data-theme="dark"] .req-group-row[data-sub="silica"] td{background:rgba(139,92,246,.16);color:#ddd6fe;}
+html[data-theme="dark"] .req-group-row[data-sub="tray"] td{background:rgba(34,197,94,.16);color:#bbf7d0;}
 html[data-theme="dark"] .req-code-chip{background:rgba(14,165,233,.16);color:#7dd3fc;}
 html[data-theme="dark"] .req-item-name{color:#e7effb;}
 html[data-theme="dark"] .req-qty{color:#f1f5f9;}
@@ -11277,7 +11301,7 @@ function renderReqTableRows(rows, options = {}) {
     </table>`;
 }
 
-function renderSubGroupTables(groups) {
+function renderSubGroupTablesLegacy(groups) {
     const keyOrder = [
         ['box', '박스'],
         ['inner', '내포'],
@@ -11292,6 +11316,49 @@ function renderSubGroupTables(groups) {
             ${renderReqTableRows((groups && groups[key]) || [], { rawInteger: key === 'box' })}
         </div>
     `).join('');
+}
+
+function renderSubGroupTables(groups) {
+    const keyOrder = [
+        ['box', '\uBC15\uC2A4'],
+        ['inner', '\uB0B4\uD3EC'],
+        ['outer', '\uC678\uD3EC'],
+        ['silica', '\uC2E4\uB9AC\uCE74'],
+        ['tray', '\uD2B8\uB808\uC774'],
+        ['etc', '\uAE30\uD0C0'],
+    ];
+    const sections = keyOrder
+        .map(([key, label]) => ({ key, label, rows: (groups && groups[key]) || [] }))
+        .filter((section) => section.rows.length > 0);
+    if (!sections.length) {
+        return '<div class="req-muted" style="padding:0.75rem 0.9rem;">데이터가 없습니다.</div>';
+    }
+    const rowsHtml = sections.map((section) => `
+        <tr class="req-group-row" data-sub="${section.key}">
+            <td colspan="5"><span>${section.label}</span><small>${section.rows.length}개 품목</small></td>
+        </tr>
+        ${section.rows.map((r) => {
+            const rawInteger = section.key === 'box';
+            const isShortage = Number(r.shortage || 0) > 0;
+            return `
+                <tr>
+                    <td><span class="req-code-chip" title="${escapeHtml(r.code || '-')}">${escapeHtml(r.code || '-')}</span></td>
+                    <td><div class="req-item-name">${escapeHtml(r.name)}</div></td>
+                    <td class="num">${renderReqQty(r.stock, r.unit, { integer: rawInteger })}</td>
+                    <td class="num">${renderReqQty(r.required, r.unit, { integer: rawInteger, tone: 'need' })}</td>
+                    <td class="num ${isShortage ? 'req-shortage' : ''}">${renderReqQty(r.shortage, r.unit, { integer: rawInteger, tone: isShortage ? 'shortage-bad' : 'shortage-ok' })}</td>
+                </tr>`;
+        }).join('')}
+    `).join('');
+    return `
+        <table class="req-table req-sub-summary-table">
+            <colgroup>
+                <col style="width:110px;" /><col style="width:360px;" />
+                <col style="width:110px;" /><col style="width:110px;" /><col style="width:110px;" />
+            </colgroup>
+            <thead><tr><th>코드</th><th>품목명</th><th class="num-head">보유량</th><th class="num-head">필요량</th><th class="num-head">부족량</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+        </table>`;
 }
 
 function renderReqProductDetail(product) {

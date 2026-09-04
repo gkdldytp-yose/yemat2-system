@@ -413,15 +413,26 @@
 .status-tab.active{background:linear-gradient(135deg,#0f172a,#2563eb);color:white;border-color:#1e3a8a;box-shadow:0 10px 24px rgba(30,64,175,0.25);}
 .status-tab .count{display:block;font-size:1.4rem;margin-bottom:0.2rem;font-weight:800;}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:1rem;}
-.modal-box{background:white;border-radius:16px;padding:1.5rem;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;box-shadow:0 16px 40px rgba(0,0,0,0.25);}
-.search-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
+.modal-box{background:white;border-radius:16px;padding:1.5rem;width:100%;max-width:960px;max-height:90vh;overflow-y:auto;box-shadow:0 16px 40px rgba(0,0,0,0.25);}
+.search-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;}
+.search-head-copy p{margin:.3rem 0 0;color:#64748b;font-size:.83rem;line-height:1.45;}
 .search-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;}
+.search-keyword-field{grid-column:span 3;}
+.search-keyword-field input{font-size:1rem;font-weight:700;}
+.search-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;padding:.65rem .75rem;border:1px solid #dbe7f5;border-radius:12px;background:#f8fbff;}
+.search-period-toggle{display:inline-flex;align-items:center;gap:.45rem;color:#334155;font-size:.82rem;font-weight:750;cursor:pointer;}
+.search-period-toggle input{width:16px;height:16px;accent-color:#2563eb;}
+.search-hint{color:#64748b;font-size:.78rem;}
 .search-actions{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem;}
 .search-results{margin-top:1rem;border-top:1px solid #e5e7eb;padding-top:1rem;}
 .search-empty{color:#9ca3af;text-align:center;padding:2rem;font-size:0.85rem;}
 .search-status{font-size:0.85rem;color:#64748b;}
 .search-table thead th{font-size:0.8rem;}
 .search-table tbody td{font-size:0.85rem;}
+.search-result-product{color:#0f172a;font-weight:850;}
+.search-result-code{margin-top:.16rem;color:#64748b;font-size:.74rem;font-family:Consolas,"Courier New",monospace;}
+.search-result-materials{max-width:300px;color:#475569;font-size:.76rem;line-height:1.4;}
+.search-result-count{display:inline-flex;align-items:center;padding:.24rem .5rem;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:800;}
 html[data-theme="dark"] .month-nav-shell,
 html[data-theme="dark"] .production-month-calendar,
 html[data-theme="dark"] .modal-box{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 18px 40px rgba(2,6,23,.34);}
@@ -492,6 +503,13 @@ html[data-theme="dark"] .status-tab{background:#152033;border-color:#2b3648;colo
 html[data-theme="dark"] .status-tab:hover{background:#1a2436;border-color:#3b82f6;}
 html[data-theme="dark"] .search-results{border-top-color:#263244;}
 html[data-theme="dark"] .search-empty{color:#8ea3bd;}
+html[data-theme="dark"] .search-head-copy p,
+html[data-theme="dark"] .search-hint{color:#8ea3bd;}
+html[data-theme="dark"] .search-filter-bar{background:#152033;border-color:#2b3b51;}
+html[data-theme="dark"] .search-period-toggle{color:#dbe7f5;}
+html[data-theme="dark"] .search-result-product{color:#eff6ff;}
+html[data-theme="dark"] .search-result-code,html[data-theme="dark"] .search-result-materials{color:#8ea3bd;}
+html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);color:#bfdbfe;}
 @media (max-width: 768px) {
     .month-nav-shell{
         width:100%;
@@ -512,6 +530,8 @@ html[data-theme="dark"] .search-empty{color:#8ea3bd;}
     .status-tab .count{font-size:1.25rem;}
     .modal-box{padding:1rem;border-radius:12px;}
     .search-grid{grid-template-columns:1fr;}
+    .search-keyword-field{grid-column:auto;}
+    .search-filter-bar{align-items:flex-start;flex-direction:column;}
     .production-day-head{
         flex-direction:column;
         align-items:flex-start;
@@ -694,7 +714,10 @@ html[data-theme="dark"] .search-empty{color:#8ea3bd;}
 <div id="searchModal" class="modal-bg">
     <div class="modal-box">
         <div class="search-head">
-            <h3 style="margin:0;">🔍 완료건 전체 검색</h3>
+            <div class="search-head-copy">
+                <h3 style="margin:0;">🔍 완료 생산 통합 검색</h3>
+                <p>상품명·상품코드·생산번호·원초·부자재·생산 메모를 한 번에 찾습니다.</p>
+            </div>
             <button onclick="closeSearchModal()" class="btn btn-ghost btn-small">닫기</button>
         </div>
         
@@ -707,10 +730,17 @@ html[data-theme="dark"] .search-empty{color:#8ea3bd;}
                 <label>종료일</label>
                 <input type="date" id="searchEndDate" value="{{ search_end }}">
             </div>
-            <div class="form-group">
-                <label>상품명 / 생산번호</label>
-                <input type="text" id="searchKeyword" placeholder="상품명 또는 생산번호 숫자 검색">
+            <div class="form-group search-keyword-field">
+                <label>통합 키워드</label>
+                <input type="search" id="searchKeyword" placeholder="예: 유기, 김밥김, A11, PROD-360, 원초명 또는 부자재명">
             </div>
+        </div>
+        <div class="search-filter-bar">
+            <label class="search-period-toggle">
+                <input type="checkbox" id="searchApplyDate">
+                입력한 기간 안에서만 검색
+            </label>
+            <span class="search-hint">키워드 검색은 기본적으로 전체 기간을 조회합니다.</span>
         </div>
         <div class="search-actions">
             <button class="btn btn-secondary btn-small" onclick="resetSearch()">초기화</button>
@@ -889,18 +919,26 @@ document.getElementById('searchModal').addEventListener('keydown', function(e) {
     }
 });
 
+function escapeSearchHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 async function doSearch() {
     const keyword = document.getElementById('searchKeyword').value.trim();
     const start = document.getElementById('searchStartDate').value;
     const end = document.getElementById('searchEndDate').value;
+    const applyDate = document.getElementById('searchApplyDate').checked;
     
     const params = new URLSearchParams();
-    if (keyword) {
-        params.append('keyword', keyword);
-    } else {
-        if (start) params.append('start', start);
-        if (end) params.append('end', end);
-    }
+    if (keyword) params.append('keyword', keyword);
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    if (applyDate) params.append('apply_date', '1');
     
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = '<p class="search-status">검색 중...</p>';
@@ -912,13 +950,18 @@ async function doSearch() {
             resultsDiv.innerHTML = '<p class="search-empty">검색 결과 없음</p>';
             return;
         }
-        let html = '<div class="table-container"><table class="search-table"><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>박스</th><th>관리</th></tr></thead><tbody>';
+        let html = '<div class="table-container"><table class="search-table"><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>연결 원·부자재</th><th>박스</th><th>관리</th></tr></thead><tbody>';
         data.results.forEach(p => {
+            const productName = escapeSearchHtml(p.product_name || '-');
+            const productCode = escapeSearchHtml(p.product_code || '');
+            const materialNames = escapeSearchHtml(p.used_material_names || '-');
+            const boxCount = p.actual_boxes || p.planned_boxes || 0;
             html += `<tr>
-                <td>PROD-${p.id}</td>
-                <td>${p.production_date}</td>
-                <td><strong>${p.product_name}</strong></td>
-                <td>${p.actual_boxes || p.planned_boxes}</td>
+                <td><span class="search-result-count">PROD-${p.id}</span></td>
+                <td>${escapeSearchHtml(p.production_date || '-')}</td>
+                <td><div class="search-result-product">${productName}</div>${productCode ? `<div class="search-result-code">${productCode}</div>` : ''}</td>
+                <td><div class="search-result-materials">${materialNames}</div></td>
+                <td>${escapeSearchHtml(boxCount)} BOX</td>
                 <td style="white-space:nowrap;">
                     <a href="/production/${p.id}" class="btn btn-small btn-secondary">조회</a>
                     {% if can_prod %}
@@ -930,7 +973,8 @@ async function doSearch() {
             </tr>`;
         });
         html += '</tbody></table></div>';
-        html += `<p class="search-status" style="text-align:center;margin-top:0.75rem;">총 ${data.results.length}건</p>`;
+        const scope = data.date_limited ? '기간 필터 적용' : (data.keyword ? '전체 기간 검색' : '기간 검색');
+        html += `<p class="search-status" style="text-align:center;margin-top:0.75rem;">${scope} · 총 ${data.results.length}건</p>`;
         resultsDiv.innerHTML = html;
     } catch (e) {
         resultsDiv.innerHTML = '<p class="search-empty">검색 중 오류가 발생했습니다.</p>';
@@ -939,6 +983,7 @@ async function doSearch() {
 
 function resetSearch() {
     document.getElementById('searchKeyword').value = '';
+    document.getElementById('searchApplyDate').checked = false;
     document.getElementById('searchStartDate').value = '';
     document.getElementById('searchEndDate').value = '';
     document.getElementById('searchResults').innerHTML = '<p class="search-empty">검색 조건을 입력하고 검색 버튼을 눌러주세요</p>';

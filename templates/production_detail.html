@@ -188,6 +188,20 @@
 .raw-card{border:2px solid #e1e8ed;border-radius:8px;padding:1rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.2s;}
 .raw-card:hover{border-color:#667eea;background:#f8f9ff;}
 .raw-card.active{border-color:#27ae60;background:#f0fff4;}
+.register-material-info-row td{padding:.55rem .8rem .75rem !important;background:linear-gradient(90deg,rgba(124,58,237,.07),rgba(99,102,241,.025)) !important;}
+.register-lot-panel{display:flex;align-items:flex-end;gap:.65rem;flex-wrap:wrap;max-width:100%;}
+.register-lot-title{display:inline-flex;align-items:center;min-height:38px;padding:0 .65rem;border-radius:9px;background:rgba(124,58,237,.1);color:#6d28d9;font-size:.76rem;font-weight:900;white-space:nowrap;}
+.register-lot-defer{display:inline-flex;align-items:center;gap:.42rem;min-height:38px;padding:0 .68rem;border:1px solid #c4b5fd;border-radius:9px;background:#f5f3ff;color:#6d28d9;font-size:.78rem;font-weight:850;cursor:pointer;user-select:none;transition:.16s ease;white-space:nowrap;}
+.register-lot-defer:hover{border-color:#8b5cf6;background:#ede9fe;}
+.register-lot-defer input{appearance:none;width:16px;height:16px;margin:0;border:2px solid #8b5cf6;border-radius:5px;background:#fff;display:grid;place-content:center;cursor:pointer;}
+.register-lot-defer input::before{content:"";width:7px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) scale(0);margin-top:-2px;transition:transform .12s ease;}
+.register-lot-defer input:checked{background:#7c3aed;border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.14);}
+.register-lot-defer input:checked::before{transform:rotate(-45deg) scale(1);}
+.register-lot-field{display:flex;flex-direction:column;gap:.28rem;color:#475569;font-size:.73rem;font-weight:800;white-space:nowrap;}
+.register-lot-field input[type="date"]{width:150px;height:38px;padding:.35rem .55rem;border:1px solid #c4b5fd;border-radius:8px;background:#fff;color:#1e293b;font:inherit;font-size:.82rem;font-weight:700;box-sizing:border-box;}
+.register-lot-field input[type="date"]:focus{outline:none;border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(124,58,237,.14);}
+.register-lot-field input[type="date"]:disabled{background:#e2e8f0;border-color:#cbd5e1;color:#94a3b8;cursor:not-allowed;}
+.register-lot-hint{flex:1 1 100%;margin-left:0;padding:.05rem 0 0 .15rem;color:#7c3aed;font-size:.75rem;font-weight:650;line-height:1.45;}
 .raw-card.active::after{content:"◑";float:right;color:#27ae60;font-weight:bold;}
 .raw-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.5rem;margin-top:0.5rem;font-size:0.85rem;}
 .raw-meta .ml{color:#999;font-size:0.75rem;}
@@ -395,6 +409,22 @@
 .plan-line-chip{display:flex;align-items:center;gap:.45rem;padding:.58rem .65rem;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc;font-size:.84rem;font-weight:700;color:#334155;}
 .plan-line-chip input{width:16px;height:16px;accent-color:#2563eb;}
 .plan-edit-actions{display:flex;justify-content:flex-end;gap:.55rem;padding-top:.25rem;}
+html[data-theme="dark"] .register-material-info-row td{background:linear-gradient(90deg,rgba(91,33,182,.18),rgba(30,41,59,.22)) !important;border-bottom-color:#263244 !important;}
+html[data-theme="dark"] .register-lot-title{background:rgba(124,58,237,.18);color:#ddd6fe;}
+html[data-theme="dark"] .register-lot-defer{background:#18213a;border-color:#4c3b82;color:#ddd6fe;}
+html[data-theme="dark"] .register-lot-defer:hover{background:#24204a;border-color:#8b5cf6;}
+html[data-theme="dark"] .register-lot-defer input{background:#0f1726;border-color:#a78bfa;}
+html[data-theme="dark"] .register-lot-defer input:checked{background:#7c3aed;border-color:#a78bfa;}
+html[data-theme="dark"] .register-lot-field{color:#aebfd3;}
+html[data-theme="dark"] .register-lot-field input[type="date"]{background:#0d1626;border-color:#4b3b74;color:#eff6ff;color-scheme:dark;}
+html[data-theme="dark"] .register-lot-field input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) brightness(1.45);opacity:.9;cursor:pointer;}
+html[data-theme="dark"] .register-lot-field input[type="date"]:focus{border-color:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,.18);}
+html[data-theme="dark"] .register-lot-field input[type="date"]:disabled{background:#162033;border-color:#2e3c52;color:#718096;}
+html[data-theme="dark"] .register-lot-hint{color:#c4b5fd;}
+html[data-theme="dark"] .material-management-mode-card{background:linear-gradient(90deg,rgba(30,41,59,.96),rgba(15,23,42,.96)) !important;border-color:#334155 !important;}
+html[data-theme="dark"] .material-management-mode-card [style*="color:#334155"],
+html[data-theme="dark"] .material-management-mode-card [style*="color:#9a3412"]{color:#e2e8f0 !important;}
+html[data-theme="dark"] .material-management-mode-card [style*="color:#64748b"]{color:#94a3b8 !important;}
 html[data-theme="dark"] .sec{background:linear-gradient(180deg,#121a2a,#101827);box-shadow:0 16px 36px rgba(2,6,23,.3);}
 html[data-theme="dark"] .sec h3{color:#eff6ff;border-bottom-color:#3b82f6;}
 html[data-theme="dark"] .info-item .lbl,
@@ -741,6 +771,41 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {%- set can_edit = can_prod and has_workplace_access and (production.status != '완료' or edit_completed) -%}
 {% set is_finished_set = (production.product_category == '세트' and production.product_set_item_type == 'finished') %}
 {% set is_semi_set = (production.product_category == '세트' and production.product_set_item_type == 'semi') %}
+{% macro register_material_info_row(u) %}
+{% if can_edit and production.entry_mode == 'register' and (u.aggregate_count|default(1)) == 1 %}
+{% set material_text = ((u.category or '') ~ ' ' ~ (u.material_name or '')) %}
+{% set is_base_material = ('기름' in material_text) or ('오일' in material_text) or ('소금' in material_text) or ('천일염' in material_text) or ('정제염' in material_text) %}
+{% set is_salt_material = ('소금' in material_text) or ('천일염' in material_text) or ('정제염' in material_text) %}
+{% set lot_deferred = (u.register_lot_deferred|default(0)|int == 1) or ((not u.override_receiving_date) and (u.register_default_lot_deferred|default(false))) %}
+{% set receiving_date_value = u.override_receiving_date or u.register_default_receiving_date or '' %}
+{% set expiry_date_value = u.override_expiry_date or u.register_default_expiry_date or '' %}
+{% set manufacture_date_value = u.override_manufacture_date or u.register_default_manufacture_date or '' %}
+<tr class="register-material-info-row">
+    <td colspan="6">
+        <div class="register-lot-panel">
+            <span class="register-lot-title">등록 이력 정보</span>
+            <input type="hidden" id="mat_lot_deferred_{{ u.id }}" name="mat_lot_deferred_{{ u.id }}" value="{{ '1' if lot_deferred else '0' }}">
+            <label class="register-lot-defer">
+                <input type="checkbox" id="mat_lot_deferred_toggle_{{ u.id }}" {% if lot_deferred %}checked{% endif %} onchange="toggleRegisterLotDeferred({{ u.id }}, this.checked)"> lot 입력 안함
+            </label>
+            <label class="register-lot-field">입고일
+                <input type="date" id="mat_override_receiving_{{ u.id }}" name="mat_override_receiving_{{ u.id }}" value="{{ receiving_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}>
+            </label>
+            {% if is_base_material and is_salt_material %}
+            <label class="register-lot-field">제조일
+                <input type="date" id="mat_override_manufacture_{{ u.id }}" name="mat_override_manufacture_{{ u.id }}" value="{{ manufacture_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}>
+            </label>
+            {% elif is_base_material %}
+            <label class="register-lot-field">소비기한
+                <input type="date" id="mat_override_expiry_{{ u.id }}" name="mat_override_expiry_{{ u.id }}" value="{{ expiry_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}>
+            </label>
+            {% endif %}
+            <span class="register-lot-hint">{% if lot_deferred %}lot 정보는 나중에 완료건 수정에서 입력할 수 있습니다.{% else %}재고 lot에는 저장하지 않고 이번 등록 이력에만 반영됩니다.{% endif %}</span>
+        </div>
+    </td>
+</tr>
+{% endif %}
+{% endmacro %}
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
@@ -752,6 +817,15 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     <div style="display:flex;gap:0.5rem;align-items:center;">
         {% if production.status != '완료' and can_edit %}
         <button type="button" class="btn btn-small" style="background:#2563eb;" onclick="openPlanEditModal()">생산계획 수정</button>
+        {% if production.entry_mode != 'register' %}
+        <form method="POST" action="/production/{{ production.id }}/enable-register-mode" style="display:inline;margin:0;" onsubmit="return confirm('등록모드로 전환할까요?\n저장 완료 시 원초·부자재 재고는 차감되지 않고 생산 이력만 등록됩니다.');">
+            <button type="submit" class="btn btn-small" style="background:#7c3aed;">📝 등록모드 사용</button>
+        </form>
+        {% else %}
+        <form method="POST" action="/production/{{ production.id }}/cancel-register-mode" style="display:inline;margin:0;" onsubmit="return confirm('이 생산건의 등록모드를 취소할까요?\n일반 모드로 돌아가며, 다음 저장부터 재고가 반영됩니다.');">
+            <button type="submit" class="btn btn-small" style="background:#64748b;">↩ 등록모드 취소</button>
+        </form>
+        {% endif %}
         {% endif %}
         {% if production.status == '완료' and can_manage_production and not edit_completed %}
         <a href="/production/{{ production.id }}?edit=1" class="btn btn-small" style="background:#f59e0b;">✏️ 완료건 수정</a>
@@ -1126,6 +1200,8 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     {% set raw_saved = raw_saved_map.get(rm.rm_id, {}) %}
     {% set saved_raw_qty = raw_saved.get('qty') %}
     {% set saved_raw_note = raw_saved.get('note', '') %}
+    {% set saved_raw_car = raw_saved.get('car_number', '') or rm.register_default_car_number or rm.car_number or '' %}
+    {% set saved_raw_receiving_date = raw_saved.get('receiving_date', '') or rm.register_default_receiving_date or rm.receiving_date or '' %}
     <div class="raw-card{% if saved_raw_qty is not none and saved_raw_qty > 0 %} active{% endif %}" id="rc_{{ rm.rm_id }}"
          data-id="{{ rm.rm_id }}" data-stock="{{ rm.current_stock }}"
          data-pbox="{{ rm.quantity_per_box }}" data-entry-index="{{ loop.index0 }}" data-is-temp="{{ 1 if rm.is_temp_raw else 0 }}"
@@ -1145,13 +1221,13 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             </div>
         </div>
         <div class="raw-meta">
-            <div><div class="ml">자호</div><div class="mv js-raw-car">{{ rm.car_number or '-' }}</div></div>
-            <div><div class="ml">입고일</div><div class="mv js-raw-date">{{ rm.receiving_date or '-' }}</div></div>
+            <div><div class="ml">자호</div><div class="mv js-raw-car">{{ saved_raw_car or '-' }}</div></div>
+            <div><div class="ml">입고일</div><div class="mv js-raw-date">{{ saved_raw_receiving_date or '-' }}</div></div>
             <div><div class="ml">현재 재고</div><div class="mv js-raw-stock {% if rm.current_stock < 5 %}warn{% else %}ok{% endif %}">{{ rm.current_stock|int }}속</div></div>
             {% if not can_edit %}
             <div><div class="ml">사용량</div><div class="mv">{{ rm.actual_quantity|round(1) if (rm.actual_quantity is defined and rm.actual_quantity is not none) else '-' }}속</div></div>
             <div><div class="ml">수율</div><div class="mv">{{ (rm.yield_rate|round(1) ~ '%') if (rm.yield_rate is defined and rm.yield_rate is not none) else '-' }}</div></div>
-            {% else %}
+            {% elif production.entry_mode == 'register' %}
             <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.entry_mode == 'register' %}재고 연동 안 함{% elif production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
             {% endif %}
         </div>
@@ -1167,6 +1243,17 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 <span id="rw_{{ rm.rm_id }}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
                 <button type="button" id="raw_note_btn_{{ rm.rm_id }}" class="raw-note-toggle {% if saved_raw_note %}active{% endif %}" onclick="toggleRawNote({{ rm.rm_id }}); event.stopPropagation();">비고 입력</button>
             </div>
+            {% if production.entry_mode == 'register' %}
+            <div style="display:flex;gap:0.65rem;align-items:end;flex-wrap:wrap;margin-top:0.55rem;padding-top:0.55rem;border-top:1px dashed #c4b5fd;">
+                <label style="font-size:0.8rem;font-weight:700;color:#5b21b6;">자호
+                <input type="text" name="raw_override_car_number_{{ loop.index0 }}" value="{{ saved_raw_car }}" placeholder="자호 입력" style="display:block;margin-top:0.22rem;width:130px;padding:0.38rem;border:1px solid #c4b5fd;border-radius:6px;">
+                </label>
+                <label style="font-size:0.8rem;font-weight:700;color:#5b21b6;">입고일
+                <input type="date" name="raw_override_receiving_date_{{ loop.index0 }}" value="{{ saved_raw_receiving_date }}" style="display:block;margin-top:0.22rem;padding:0.38rem;border:1px solid #c4b5fd;border-radius:6px;">
+                </label>
+                <span style="font-size:0.75rem;color:#7c3aed;">재고와 별개로 생산 이력에 기록됩니다.</span>
+            </div>
+            {% endif %}
             <div id="raw_note_wrap_{{ rm.rm_id }}" class="raw-note-wrap {% if saved_raw_note %}open{% endif %}">
                 <label for="raw_note_{{ rm.rm_id }}" style="font-size:0.83rem;color:#555;font-weight:600;">비고</label>
                 <textarea id="raw_note_{{ rm.rm_id }}" name="raw_note_{{ loop.index0 }}" rows="3" class="note-textarea {% if loop.first %}js-first-raw-note{% endif %}" placeholder="원초 사용 비고 입력">{{ saved_raw_note }}</textarea>
@@ -1220,6 +1307,24 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% endfor %}
 {% set mat_list = mat_source | selectattr('material_id') | list %}
 {% set component_list = ns_usage.components %}
+{% if material_management_mode_feature_enabled|default(false) %}
+<div class="sec material-management-mode-card" style="padding:0.9rem 1rem;margin-top:0.75rem;margin-bottom:1rem;background:{% if material_management_disabled %}#f1f5f9{% else %}#fff7ed{% endif %};border:1px solid {% if material_management_disabled %}#cbd5e1{% else %}#fed7aa{% endif %};">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+        <div>
+            <div style="font-weight:850;color:{% if material_management_disabled %}#334155{% else %}#9a3412{% endif %};">{% if material_management_disabled %}🌿 라이트 생산 모드: 원부자재 관리 안함{% else %}📦 원부자재 관리{% endif %}</div>
+            <div style="margin-top:0.22rem;font-size:0.78rem;color:{% if material_management_disabled %}#64748b{% else %}#9a3412{% endif %};">{% if material_management_disabled %}생산량과 원초만 기록합니다. 이 작업장의 이후 생산 상세에도 동일하게 적용됩니다.{% else %}부자재·포장재 사용량과 재고를 함께 관리합니다. 원초와 생산량만 기록하려면 라이트 생산 모드로 전환하세요.{% endif %}</div>
+        </div>
+        {% if can_edit %}
+        <form method="POST" action="/production/material-management-mode" style="margin:0;">
+            <input type="hidden" name="production_id" value="{{ production.id }}">
+            <input type="hidden" name="material_management_disabled" value="{{ '0' if material_management_disabled else '1' }}">
+            <button type="submit" class="btn btn-small" style="background:{% if material_management_disabled %}#2563eb{% else %}#64748b{% endif %};" onclick="return confirm('{% if material_management_disabled %}이 작업장의 원부자재 관리를 다시 시작할까요?{% else %}이 작업장의 원부자재·포장재 관리를 중지할까요? 이후 생산 상세에서는 생산량과 원초만 관리합니다.{% endif %}')">{% if material_management_disabled %}📦 원부자재 관리 시작{% else %}🌿 원부자재 관리 안함{% endif %}</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% if not material_management_disabled %}
 {% if component_list %}
 <div class="sec">
     <div class="section-head">
@@ -1316,7 +1421,8 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
             <td id="yld_{{ u.id }}">{% if u.yield_rate %}<strong>{{ u.yield_rate|round(1) }}%</strong>{% else %}-{% endif %}</td>
         </tr>
-        {% if can_edit and (u.aggregate_count|default(1)) == 1 and u.has_lot_info_gap and u.lot_info_gap %}
+        {{ register_material_info_row(u) }}
+        {% if can_edit and production.entry_mode != 'register' and (u.aggregate_count|default(1)) == 1 and u.has_lot_info_gap and u.lot_info_gap %}
         <tr class="lot-gap-row">
             <td colspan="6">
                 <div class="lot-gap-panel">
@@ -1411,7 +1517,8 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
             <td id="yld_{{ u.id }}">{% if u.yield_rate %}<strong>{{ u.yield_rate|round(1) }}%</strong>{% else %}-{% endif %}</td>
         </tr>
-        {% if can_edit and (u.aggregate_count|default(1)) == 1 and u.has_lot_info_gap and u.lot_info_gap %}
+        {{ register_material_info_row(u) }}
+        {% if can_edit and production.entry_mode != 'register' and (u.aggregate_count|default(1)) == 1 and u.has_lot_info_gap and u.lot_info_gap %}
         <tr class="lot-gap-row">
             <td colspan="6">
                 <div class="lot-gap-panel">
@@ -1469,18 +1576,19 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 </div>
 {% endif %}
 {% endif %}
+{% endif %}
 
 {% if can_edit %}
 <div class="sec">
-    <div style="background:#fff3e0;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;">
-        ⚠️ 저장 시 선택한 원초 및 부자재 재고가 차감됩니다.
+    <div style="background:{% if production.entry_mode == 'register' %}#f5f3ff{% else %}#fff3e0{% endif %};border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:{% if production.entry_mode == 'register' %}#5b21b6{% else %}inherit{% endif %};">
+        {% if material_management_disabled %}🌿 라이트 생산 모드: 원초만 관리하며 부자재·포장재 재고는 반영하지 않습니다.{% elif production.entry_mode == 'register' %}📝 등록모드 저장: 원초·부자재 재고는 차감하지 않으며, 입력한 사용량과 lot 정보는 생산 이력으로만 등록됩니다.{% else %}⚠️ 저장 시 선택한 원초 및 부자재 재고가 차감됩니다.{% endif %}
     </div>
     <div style="text-align:right;display:flex;gap:1rem;justify-content:flex-end;">
         <a href="/production" class="btn btn-secondary">취소</a>
         {% if not edit_completed %}
         <button type="submit" class="btn btn-secondary" name="save_action" value="temp">임시저장</button>
         {% endif %}
-        <button type="submit" class="btn" name="save_action" value="complete" onclick="return confirm('{{ '완료건을 수정 저장하시겠습니까?' if edit_completed else '저장하고 생산을 완료 처리하시겠습니까?' }}')">{{ '💾 수정 저장' if edit_completed else '💾 저장 및 완료' }}</button>
+        <button type="submit" class="btn" name="save_action" value="complete" onclick="return confirm('{{ '완료건을 수정 저장하시겠습니까?' if edit_completed else ('등록모드로 저장할까요? 재고는 차감되지 않습니다.' if production.entry_mode == 'register' else '저장하고 생산을 완료 처리하시겠습니까?') }}')">{{ '💾 수정 저장' if edit_completed else ('💾 등록 저장' if production.entry_mode == 'register' else '💾 저장 및 완료') }}</button>
     </div>
 </div>
 {% elif production.status != '완료' %}
@@ -1787,7 +1895,34 @@ function validateProductionUsageForm(){
         firstDateInput?.focus();
         return false;
     }
+    if(IS_REGISTER_MODE){
+        const selectedRawCards = Array.from(document.querySelectorAll('.raw-card.active'))
+            .filter(card => (parseFloat(card.querySelector('input[name^="raw_actual_"]')?.value || '0') || 0) > 0);
+        for(const card of selectedRawCards){
+            const carInput = card.querySelector('input[name^="raw_override_car_number_"]');
+            const receivingInput = card.querySelector('input[name^="raw_override_receiving_date_"]');
+            if(!(carInput?.value || '').trim()){
+                alert('등록모드 원초의 자호를 입력해주세요.');
+                carInput?.focus();
+                return false;
+            }
+            if(!(receivingInput?.value || '').trim()){
+                alert('등록모드 원초의 입고일을 입력해주세요.');
+                receivingInput?.focus();
+                return false;
+            }
+        }
+    }
     return true;
+}
+
+function toggleRegisterLotDeferred(usageId, deferred){
+    const hidden = document.getElementById(`mat_lot_deferred_${usageId}`);
+    if(hidden) hidden.value = deferred ? '1' : '0';
+    document.querySelectorAll(`.js-register-lot-input-${usageId}`).forEach((input) => {
+        input.disabled = deferred;
+        input.required = !deferred;
+    });
 }
 
 function getCurrentPerBox(){
@@ -2185,7 +2320,7 @@ function buildTempRawCard(option){
             <div><div class="ml">자호</div><div class="mv js-raw-car">${escapeHtml(option.car_number || '-')}</div></div>
             <div><div class="ml">입고일</div><div class="mv js-raw-date">${escapeHtml(option.receiving_date || '-')}</div></div>
             <div><div class="ml">현재 재고</div><div class="mv js-raw-stock ${stock < 5 ? 'warn' : 'ok'}">${escapeHtml(formatRawNumber(stock))}속</div></div>
-            <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_${rawId}">${escapeHtml(maxBoxes)}</div></div>
+            ${IS_REGISTER_MODE ? `<div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_${rawId}">${escapeHtml(maxBoxes)}</div></div>` : ''}
         </div>
         <div id="iw_${rawId}" class="raw-input-row" style="display:none;flex-direction:column;align-items:stretch;" onclick="event.stopPropagation()">
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
@@ -2195,6 +2330,10 @@ function buildTempRawCard(option){
                 <span id="rw_${rawId}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
                 <button type="button" id="raw_note_btn_${rawId}" class="raw-note-toggle" onclick="toggleRawNote(${rawId}); event.stopPropagation();">비고 입력</button>
             </div>
+            ${IS_REGISTER_MODE ? `<div style="display:flex;gap:0.65rem;align-items:end;flex-wrap:wrap;margin-top:0.55rem;padding-top:0.55rem;border-top:1px dashed #c4b5fd;">
+                <label style="font-size:0.8rem;font-weight:700;color:#5b21b6;">자호<input type="text" name="raw_override_car_number_${entryIndex}" value="${escapeHtml(option.car_number || '')}" placeholder="자호 입력" style="display:block;margin-top:0.22rem;width:130px;padding:0.38rem;border:1px solid #c4b5fd;border-radius:6px;"></label>
+                <label style="font-size:0.8rem;font-weight:700;color:#5b21b6;">입고일<input type="date" name="raw_override_receiving_date_${entryIndex}" value="${escapeHtml(option.receiving_date || '')}" style="display:block;margin-top:0.22rem;padding:0.38rem;border:1px solid #c4b5fd;border-radius:6px;"></label>
+            </div>` : ''}
             <div id="raw_note_wrap_${rawId}" class="raw-note-wrap">
                 <label for="raw_note_${rawId}" style="font-size:0.83rem;color:#555;font-weight:600;">비고</label>
                 <textarea id="raw_note_${rawId}" name="raw_note_${entryIndex}" rows="3" class="note-textarea" placeholder="원초 사용 비고 입력"></textarea>
@@ -2397,8 +2536,8 @@ function autoSelect(){
         if(remaining <= 0) return;
         const id = c.dataset.id;
         const stock = parseInt(c.dataset.stock) || 0;
-        if(stock <= 0) return;
-        const use = Math.min(Math.ceil(remaining), stock);
+        if(!IS_REGISTER_MODE && stock <= 0) return;
+        const use = IS_REGISTER_MODE ? Math.ceil(remaining) : Math.min(Math.ceil(remaining), stock);
         remaining -= use;
         c.classList.add('active');
         const iw = document.getElementById(`iw_${id}`);

@@ -3524,11 +3524,12 @@ def raw_materials():
                 SELECT
                     pmu.raw_material_id as raw_material_id,
                     substr(MAX(COALESCE(p.production_date, '')), 1, 10) as done_date,
+                    SUM(COALESCE(pmu.actual_quantity, 0)) as production_used_quantity,
                     GROUP_CONCAT(DISTINCT pr.name) as product_names
                 FROM production_material_usage pmu
                 JOIN productions p
                   ON p.id = pmu.production_id
-                 AND COALESCE(p.status, '') = '완료'
+                 AND {_completed_production_status_sql('p.status')}
                 LEFT JOIN products pr ON pr.id = p.product_id
                 WHERE pmu.raw_material_id IN ({row_placeholders})
                   AND COALESCE(pmu.actual_quantity, 0) > 0
@@ -3567,6 +3568,7 @@ def raw_materials():
             SELECT
                 rm.id as raw_material_id,
                 COALESCE(pd.done_date, '') as production_done_date,
+                COALESCE(pd.production_used_quantity, 0) as production_used_quantity,
                 COALESCE(pd.product_names, '') as product_names,
                 COALESCE(ed.done_date, '') as export_done_date,
                 COALESCE(ed.export_log_id, 0) as export_log_id,
@@ -3598,6 +3600,7 @@ def raw_materials():
                 'done_kind': done_kind,
                 'done_date': done_date,
                 'done_note': done_note,
+                'production_used_quantity': float(item.get('production_used_quantity') or 0),
                 'export_log_id': int(item.get('export_log_id') or 0),
             }
 
@@ -3606,6 +3609,11 @@ def raw_materials():
             row['done_kind'] = meta.get('done_kind', 'production')
             row['done_date'] = meta.get('done_date', '')
             row['done_note'] = meta.get('done_note', '')
+            completed_production_usage = float(meta.get('production_used_quantity') or 0)
+            total_stock = float(row.get('total_stock') or 0)
+            row['_production_usage_depleted'] = (
+                total_stock > 0 and completed_production_usage >= total_stock - 0.0001
+            )
             row['export_log_id'] = int(meta.get('export_log_id') or 0)
             row['_done_kind_match'] = True if selected_done_kind == 'all' else row.get('done_kind') == selected_done_kind
         return rows
@@ -3648,7 +3656,6 @@ def raw_materials():
             '''
             done_params.extend([like_q, like_q, like_q, like_q])
     done_query += '''
-        AND COALESCE(current_stock, 0) <= 0
         ORDER BY
             name COLLATE NOCASE ASC,
             CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
@@ -3683,7 +3690,7 @@ def raw_materials():
 
     if is_logistics:
         cursor.execute(
-            '''
+            f'''
             WITH normalized AS (
                 SELECT
                     id,
@@ -3704,7 +3711,7 @@ def raw_materials():
                 JOIN productions p ON p.id = pmu.production_id
                 LEFT JOIN products pr ON pr.id = p.product_id
                 WHERE TRIM(COALESCE(rm.code, '')) <> ''
-                  AND COALESCE(p.status, '') = '완료'
+                  AND {_completed_production_status_sql('p.status')}
                   AND COALESCE(pmu.actual_quantity, 0) > 0
                 GROUP BY COALESCE(NULLIF(TRIM(rm.code), ''), '')
             )
@@ -3732,7 +3739,7 @@ def raw_materials():
         )
     else:
         cursor.execute(
-            '''
+            f'''
             WITH normalized AS (
                 SELECT
                     id,
@@ -3756,7 +3763,7 @@ def raw_materials():
                 WHERE COALESCE(rm.workplace, '') = ?
                   AND COALESCE(p.workplace, '') = ?
                   AND TRIM(COALESCE(rm.code, '')) <> ''
-                  AND COALESCE(p.status, '') = '완료'
+                  AND {_completed_production_status_sql('p.status')}
                   AND COALESCE(pmu.actual_quantity, 0) > 0
                 GROUP BY COALESCE(NULLIF(TRIM(rm.code), ''), '')
             )
@@ -3797,12 +3804,18 @@ def raw_materials():
         except (TypeError, ValueError):
             return 0.0
 
+    def is_done_raw_row(row):
+        return (
+            _safe_float(row.get('current_stock')) <= 0
+            or bool(row.get('_production_usage_depleted'))
+        )
+
     done_dates = sorted(
         {
             str(row.get('done_date') or '').strip()
             for row in raw_materials
             if (
-                _safe_float(row.get('current_stock')) <= 0
+                is_done_raw_row(row)
                 and str(row.get('done_date') or '').strip()
                 and bool(row.get('_done_kind_match'))
             )
@@ -3859,25 +3872,28 @@ def raw_materials():
             grouped_rows.append(group)
         return grouped_rows
 
-    active_raw_groups = build_raw_groups([row for row in raw_materials if _safe_float(row.get('current_stock')) > 0])
+    active_raw_groups = build_raw_groups([
+        row for row in raw_materials
+        if _safe_float(row.get('current_stock')) > 0 and not bool(row.get('_production_usage_depleted'))
+    ])
     if selected_done_date:
         done_source_rows = [
             row for row in done_rows_raw
-            if _safe_float(row.get('current_stock')) <= 0
+            if is_done_raw_row(row)
             and bool(row.get('_done_kind_match'))
             and str(row.get('done_date') or '').strip() == selected_done_date
         ]
     elif selected_done_scope == 'month':
         done_source_rows = [
             row for row in done_rows_raw
-            if _safe_float(row.get('current_stock')) <= 0
+            if is_done_raw_row(row)
             and bool(row.get('_done_kind_match'))
             and str(row.get('done_date') or '').strip().startswith(selected_done_month)
         ]
     else:
         done_source_rows = [
             row for row in done_rows_raw
-            if _safe_float(row.get('current_stock')) <= 0
+            if is_done_raw_row(row)
             and bool(row.get('_done_kind_match'))
         ]
     done_raw_groups = build_raw_groups(done_source_rows)
@@ -3963,7 +3979,7 @@ def raw_materials_activity():
                 LEFT JOIN productions p ON p.id = pmu.production_id
                 LEFT JOIN products prd ON prd.id = p.product_id
                 WHERE p.production_date BETWEEN ? AND ?
-                  AND COALESCE(p.status, '') = '완료'
+                  AND {_completed_production_status_sql('p.status')}
                   AND COALESCE(pmu.actual_quantity, 0) > 0
                   AND pmu.raw_material_id IS NOT NULL
                 GROUP BY pmu.raw_material_id
