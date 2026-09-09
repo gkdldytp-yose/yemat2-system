@@ -756,7 +756,7 @@ body.modal-open {
 .stats-detail-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 760px;
+    min-width: 880px;
 }
 .stats-detail-table th,
 .stats-detail-table td {
@@ -766,14 +766,26 @@ body.modal-open {
     vertical-align: middle;
 }
 .stats-detail-table .stats-detail-car-number-col {
-    min-width: 190px;
+    width: 130px;
+    min-width: 130px;
 }
 .stats-detail-table .stats-detail-car-number-cell {
-    min-width: 190px;
-    white-space: normal;
+    width: 130px;
+    min-width: 130px;
+    white-space: nowrap;
     word-break: keep-all;
     overflow-wrap: normal;
     line-height: 1.5;
+}
+.stats-detail-table .stats-detail-raw-material-col,
+.stats-detail-table .stats-detail-raw-material-cell {
+    width: 130px;
+    min-width: 130px;
+}
+.stats-detail-table .stats-detail-raw-material-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .stats-detail-table th {
     position: sticky;
@@ -1200,10 +1212,17 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     .stats-detail-table td:nth-child(2) .stats-detail-production-link {
         font-size: 1rem;
     }
-    .stats-detail-table td:nth-child(3),
-    .stats-detail-table td:nth-child(6) {
+    .stats-detail-table td:nth-child(4),
+    .stats-detail-table td:nth-child(7) {
         word-break: keep-all;
         overflow-wrap: anywhere;
+    }
+    .stats-detail-table .stats-detail-raw-material-cell {
+        width: auto;
+        min-width: 0;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
     }
     .stats-detail-journal-btn {
         width: 100%;
@@ -11609,8 +11628,9 @@ function renderStatsDetailRows(rows) {
                     <tr>
                         <th style="width:130px;">생산일</th>
                         <th style="width:170px;">생산번호</th>
-                        <th style="min-width:180px;">원초명</th>
-                        <th class="stats-detail-car-number-col" style="width:190px;">자호</th>
+                        <th style="width:120px;">작업시간</th>
+                        <th class="stats-detail-raw-material-col" style="width:130px;">원초명</th>
+                        <th class="stats-detail-car-number-col" style="width:130px;">자호</th>
                         <th style="width:110px;">수율</th>
                         <th style="min-width:150px;">소비기한</th>
                         <th style="width:140px;">생산량 (BOX)</th>
@@ -11622,7 +11642,8 @@ function renderStatsDetailRows(rows) {
                         <tr>
                             <td data-label="생산일" style="white-space:nowrap;">${escapeHtml(formatStatsShortDate(row.production_date || '-'))}</td>
                             <td data-label="생산번호"><a class="stats-detail-production-link" href="/production/${row.production_id}">${escapeHtml(row.production_no || '-')}</a></td>
-                            <td data-label="원초명">${escapeHtml(row.raw_material_name || '-')}</td>
+                            <td data-label="작업시간">${escapeHtml(row.work_time || '-')}</td>
+                            <td data-label="원초명" class="stats-detail-raw-material-cell" title="${escapeHtml(row.raw_material_name || '-')}">${escapeHtml(row.raw_material_name || '-')}</td>
                             <td data-label="자호" class="stats-detail-car-number-cell">${escapeHtml(row.car_number || '-')}</td>
                             <td data-label="수율"><span class="stats-detail-yield">${row.yield_rate == null ? '-' : `${formatStatsNumber(row.yield_rate)}%`}</span></td>
                             <td data-label="소비기한">${escapeHtml(row.expiry_date || '-')}</td>

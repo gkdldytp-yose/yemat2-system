@@ -201,6 +201,11 @@
 .register-lot-field input[type="date"]{width:150px;height:38px;padding:.35rem .55rem;border:1px solid #c4b5fd;border-radius:8px;background:#fff;color:#1e293b;font:inherit;font-size:.82rem;font-weight:700;box-sizing:border-box;}
 .register-lot-field input[type="date"]:focus{outline:none;border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(124,58,237,.14);}
 .register-lot-field input[type="date"]:disabled{background:#e2e8f0;border-color:#cbd5e1;color:#94a3b8;cursor:not-allowed;}
+.register-lot-field input[type="number"]{width:92px;height:38px;padding:.35rem .55rem;border:1px solid #c4b5fd;border-radius:8px;background:#fff;color:#1e293b;font:inherit;font-size:.82rem;font-weight:700;box-sizing:border-box;}
+.register-lot-rows{flex:1 1 100%;display:grid;gap:.5rem;}
+.register-lot-entry{display:flex;align-items:flex-end;gap:.55rem;flex-wrap:wrap;padding:.55rem .65rem;border:1px dashed #c4b5fd;border-radius:9px;background:rgba(255,255,255,.54);}
+.lot-row-remove{min-height:32px;border:1px solid #fca5a5;border-radius:7px;background:#fff1f2;color:#be123c;padding:.32rem .58rem;font-size:.75rem;font-weight:800;cursor:pointer;}
+.lot-row-remove:disabled{opacity:.45;cursor:not-allowed;}
 .register-lot-hint{flex:1 1 100%;margin-left:0;padding:.05rem 0 0 .15rem;color:#7c3aed;font-size:.75rem;font-weight:650;line-height:1.45;}
 .raw-card.active::after{content:"◑";float:right;color:#27ae60;font-weight:bold;}
 .raw-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.5rem;margin-top:0.5rem;font-size:0.85rem;}
@@ -420,6 +425,8 @@ html[data-theme="dark"] .register-lot-field input[type="date"]{background:#0d162
 html[data-theme="dark"] .register-lot-field input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) brightness(1.45);opacity:.9;cursor:pointer;}
 html[data-theme="dark"] .register-lot-field input[type="date"]:focus{border-color:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,.18);}
 html[data-theme="dark"] .register-lot-field input[type="date"]:disabled{background:#162033;border-color:#2e3c52;color:#718096;}
+html[data-theme="dark"] .register-lot-field input[type="number"]{background:#0d1626;border-color:#4b3b74;color:#eff6ff;}
+html[data-theme="dark"] .register-lot-entry{background:rgba(15,23,42,.5);border-color:#4b3b74;}
 html[data-theme="dark"] .register-lot-hint{color:#c4b5fd;}
 html[data-theme="dark"] .material-management-mode-card{background:linear-gradient(90deg,rgba(30,41,59,.96),rgba(15,23,42,.96)) !important;border-color:#334155 !important;}
 html[data-theme="dark"] .material-management-mode-card [style*="color:#334155"],
@@ -788,19 +795,28 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <label class="register-lot-defer">
                 <input type="checkbox" id="mat_lot_deferred_toggle_{{ u.id }}" {% if lot_deferred %}checked{% endif %} onchange="toggleRegisterLotDeferred({{ u.id }}, this.checked)"> lot 입력 안함
             </label>
-            <label class="register-lot-field">입고일
-                <input type="date" id="mat_override_receiving_{{ u.id }}" name="mat_override_receiving_{{ u.id }}" value="{{ receiving_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}>
-            </label>
-            {% if is_base_material and is_salt_material %}
-            <label class="register-lot-field">제조일
-                <input type="date" id="mat_override_manufacture_{{ u.id }}" name="mat_override_manufacture_{{ u.id }}" value="{{ manufacture_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}>
-            </label>
-            {% elif is_base_material %}
-            <label class="register-lot-field">소비기한
-                <input type="date" id="mat_override_expiry_{{ u.id }}" name="mat_override_expiry_{{ u.id }}" value="{{ expiry_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}>
-            </label>
-            {% endif %}
-            <span class="register-lot-hint">{% if lot_deferred %}lot 정보는 나중에 완료건 수정에서 입력할 수 있습니다.{% else %}재고 lot에는 저장하지 않고 이번 등록 이력에만 반영됩니다.{% endif %}</span>
+            <button type="button" class="raw-note-toggle" onclick="addRegisterMaterialLot({{ u.id }}, '{{ 'manufacture' if is_base_material and is_salt_material else ('expiry' if is_base_material else 'none') }}')">+ 로트 추가</button>
+            <div id="registerLotRows_{{ u.id }}" class="register-lot-rows" data-lot-kind="{{ 'manufacture' if is_base_material and is_salt_material else ('expiry' if is_base_material else 'none') }}">
+                {% set saved_lots = u.register_lots|default([]) %}
+                {% if saved_lots %}
+                    {% for lot in saved_lots %}
+                    <div class="register-lot-entry">
+                        <label class="register-lot-field">사용량<input type="number" step="0.1" min="0" name="register_lot_quantity_{{ u.id }}[]" value="{{ lot.quantity if lot.quantity is not none else '' }}" class="js-register-lot-input-{{ u.id }}" oninput="syncRegisterLotTotal({{ u.id }})" {% if lot_deferred %}disabled{% endif %}></label>
+                        <label class="register-lot-field">입고일<input type="date" name="register_lot_receiving_{{ u.id }}[]" value="{{ lot.receiving_date or '' }}" class="js-register-lot-input-{{ u.id }}" {% if lot_deferred %}disabled{% endif %}></label>
+                        {% if is_base_material and is_salt_material %}<label class="register-lot-field">제조일<input type="date" name="register_lot_manufacture_{{ u.id }}[]" value="{{ lot.manufacture_date or '' }}" class="js-register-lot-input-{{ u.id }}" {% if lot_deferred %}disabled{% endif %}></label>{% elif is_base_material %}<label class="register-lot-field">소비기한<input type="date" name="register_lot_expiry_{{ u.id }}[]" value="{{ lot.expiry_date or '' }}" class="js-register-lot-input-{{ u.id }}" {% if lot_deferred %}disabled{% endif %}></label>{% endif %}
+                        <button type="button" class="lot-row-remove" onclick="removeRegisterMaterialLot(this, {{ u.id }})" {% if loop.first and saved_lots|length == 1 %}disabled{% endif %}>삭제</button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="register-lot-entry">
+                    <label class="register-lot-field">사용량<input type="number" step="0.1" min="0" name="register_lot_quantity_{{ u.id }}[]" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" class="js-register-lot-input-{{ u.id }}" oninput="syncRegisterLotTotal({{ u.id }})" {% if lot_deferred %}disabled{% endif %}></label>
+                    <label class="register-lot-field">입고일<input type="date" name="register_lot_receiving_{{ u.id }}[]" value="{{ receiving_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}></label>
+                    {% if is_base_material and is_salt_material %}<label class="register-lot-field">제조일<input type="date" name="register_lot_manufacture_{{ u.id }}[]" value="{{ manufacture_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}></label>{% elif is_base_material %}<label class="register-lot-field">소비기한<input type="date" name="register_lot_expiry_{{ u.id }}[]" value="{{ expiry_date_value }}" class="js-register-lot-input-{{ u.id }}" {% if not lot_deferred %}required{% else %}disabled{% endif %}></label>{% endif %}
+                    <button type="button" class="lot-row-remove" onclick="removeRegisterMaterialLot(this, {{ u.id }})" disabled>삭제</button>
+                </div>
+                {% endif %}
+            </div>
+            <span class="register-lot-hint">{% if lot_deferred %}lot 정보는 나중에 완료건 수정에서 입력할 수 있습니다.{% else %}로트별 사용량 합계가 실제 사용량과 일치해야 하며, 재고 lot에는 저장하지 않고 이번 등록 이력에만 반영됩니다.{% endif %}</span>
         </div>
     </td>
 </tr>
@@ -836,7 +852,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
         <a href="/production/{{ production.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ production.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">🖨️ 생산일지 미리보기</a>
         {% endif %}
         {% if can_manage_production %}
-        <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}{% if production.entry_mode == 'register' %}등록모드 생산건을 삭제할까요?\n재고는 변경되지 않습니다.{% else %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% endif %}{% else %}생산건을 삭제할까요?{% endif %}')">
+        <form method="POST" action="/production/{{ production.id }}/delete" style="display:inline;margin:0;" onsubmit="return confirm('{% if production.status == '완료' %}{% if production.entry_mode == 'register' and production.register_raw_stock_enabled %}등록모드 생산건을 삭제할까요?\n차감된 원초 재고가 복원됩니다.{% elif production.entry_mode == 'register' %}등록모드 생산건을 삭제할까요?\n재고는 변경되지 않습니다.{% else %}완료된 생산건을 삭제할까요?\n원초/부자재 사용분이 함께 롤백됩니다.{% endif %}{% else %}생산건을 삭제할까요?{% endif %}')">
             <input type="hidden" name="next" value="/production{% if production.status == '완료' %}?tab=done{% endif %}">
             <button type="submit" class="btn btn-small btn-danger">삭제</button>
         </form>
@@ -856,7 +872,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% endif %}
 {% if production.entry_mode == 'register' %}
 <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:0.9rem 1rem;margin-bottom:1.25rem;color:#5b21b6;font-weight:700;">
-    등록 모드로 입력된 생산건입니다. 재고 차감 없이 사용 내역만 기록되며, 캘린더·통계·생산일지에는 일반 생산건과 동일하게 반영됩니다.
+    {% if production.register_raw_stock_enabled %}등록모드 원초 재고 사용이 켜져 있습니다. 선택한 등록 원초 로트만 재고가 차감되며, 부자재·포장재는 차감되지 않습니다.{% else %}등록 모드로 입력된 생산건입니다. 재고 차감 없이 사용 내역만 기록되며, 캘린더·통계·생산일지에는 일반 생산건과 동일하게 반영됩니다.{% endif %}
 </div>
 {% endif %}
 
@@ -1155,6 +1171,9 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <button type="button" class="section-journal-btn" onclick="openRawChecksheetChooser()" {% if not raw_checksheet_options %}disabled{% endif %}>원재료 점검표</button>
             {% endif %}
             {% if can_edit %}
+            {% if production.entry_mode == 'register' %}
+            <button type="button" id="registerRawStockToggleBtn" onclick="toggleRegisterRawStockMode()" style="background:{{ '#64748b' if production.register_raw_stock_enabled else '#0f766e' }};border:1px solid {{ '#94a3b8' if production.register_raw_stock_enabled else '#14b8a6' }};color:#fff;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.85rem;font-weight:700;">{{ '↩ 재고차감 사용안함' if production.register_raw_stock_enabled else '🌿 등록된 원초 사용' }}</button>
+            {% endif %}
             <button type="button" onclick="autoSelect()" style="background:#e8f5e9;border:1px solid #27ae60;color:#27ae60;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.85rem;">⚡ 자동 선택</button>
             {% endif %}
         </div>
@@ -1163,6 +1182,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     <div class="raw-summary-bar">
         <div class="raw-summary-metrics">
         <input type="hidden" name="raw_sok_mode" id="rawSokMode" value="{{ production.raw_sok_mode or 1 }}">
+        <input type="hidden" name="register_raw_stock_enabled" id="registerRawStockEnabled" value="{{ '1' if production.register_raw_stock_enabled else '0' }}">
         <span>매수 <strong id="rawSheetsLabel">{{ production.active_sheets_per_pack or 0 }}매</strong></span>
         <span>1박스당 <strong id="rawPerBoxLabel">{{ production.active_sok_per_box or 0 }}속</strong></span>
         {% if production.raw_sok_values and (production.raw_sok_values|length) > 1 and can_edit %}
@@ -1228,7 +1248,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div><div class="ml">사용량</div><div class="mv">{{ rm.actual_quantity|round(1) if (rm.actual_quantity is defined and rm.actual_quantity is not none) else '-' }}속</div></div>
             <div><div class="ml">수율</div><div class="mv">{{ (rm.yield_rate|round(1) ~ '%') if (rm.yield_rate is defined and rm.yield_rate is not none) else '-' }}</div></div>
             {% elif production.entry_mode == 'register' %}
-            <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.entry_mode == 'register' %}재고 연동 안 함{% elif production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
+            <div><div class="ml">최대 생산</div><div class="mv js-raw-max" id="rawMaxBoxes_{{ rm.rm_id }}">{% if production.entry_mode == 'register' and not production.register_raw_stock_enabled %}재고 연동 안 함{% elif production.active_sok_per_box > 0 %}{{ (rm.current_stock / production.active_sok_per_box)|int }}박스{% else %}-{% endif %}</div></div>
             {% endif %}
         </div>
         {% if can_edit %}
@@ -1236,14 +1256,14 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                 <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
                 <input type="number" name="raw_actual_{{ loop.index0 }}"
-                       id="ri_{{ rm.rm_id }}" step="1" min="0"{% if production.entry_mode != 'register' %} max="{{ rm.current_stock|int }}"{% endif %}
+                       id="ri_{{ rm.rm_id }}" step="1" min="0"{% if production.entry_mode != 'register' or production.register_raw_stock_enabled %} max="{{ rm.current_stock|int }}"{% endif %}
                        value="{{ saved_raw_qty if saved_raw_qty is not none else '' }}" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;"
                        oninput="checkRawOver({{ rm.rm_id }}, {{ rm.current_stock|int }}); updateTotal()">
                 <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}" class="js-raw-id-input">
                 <span id="rw_{{ rm.rm_id }}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
                 <button type="button" id="raw_note_btn_{{ rm.rm_id }}" class="raw-note-toggle {% if saved_raw_note %}active{% endif %}" onclick="toggleRawNote({{ rm.rm_id }}); event.stopPropagation();">비고 입력</button>
             </div>
-            {% if production.entry_mode == 'register' %}
+            {% if production.entry_mode == 'register' and not production.register_raw_stock_enabled %}
             <div style="display:flex;gap:0.65rem;align-items:end;flex-wrap:wrap;margin-top:0.55rem;padding-top:0.55rem;border-top:1px dashed #c4b5fd;">
                 <label style="font-size:0.8rem;font-weight:700;color:#5b21b6;">자호
                 <input type="text" name="raw_override_car_number_{{ loop.index0 }}" value="{{ saved_raw_car }}" placeholder="자호 입력" style="display:block;margin-top:0.22rem;width:130px;padding:0.38rem;border:1px solid #c4b5fd;border-radius:6px;">
@@ -1347,7 +1367,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 {% if not can_edit %}
                 {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
                 {% else %}
-                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
+                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value); syncRegisterLotFromActual({{ u.id }})">
                 {% endif %}
             </td>
             <td id="loss_{{ u.id }}">{% if u.loss_quantity is defined and u.loss_quantity is not none %}<span class="{% if u.loss_quantity > 0 %}lp{% else %}lm{% endif %}">{% if u.loss_quantity > 0 %}+{% endif %}{{ u.loss_quantity|round(1) }}</span>{% else %}-{% endif %}</td>
@@ -1413,7 +1433,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
                 <div style="font-size:0.72rem;color:#8fb3d9;margin-top:0.2rem;">{{ u.aggregate_count }}개 로트 합산</div>
                 {% elif can_edit %}
-                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
+                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value); syncRegisterLotFromActual({{ u.id }})">
                 {% else %}
                 {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
                 {% endif %}
@@ -1509,7 +1529,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
                 <div style="font-size:0.72rem;color:#8fb3d9;margin-top:0.2rem;">{{ u.aggregate_count }}개 로트 합산</div>
                 {% elif can_edit %}
-                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value)">
+                <input type="number" name="actual_mat_{{ u.id }}" class="ainput" step="0.1" value="{{ u.actual_quantity|round(1) if u.actual_quantity else '' }}" placeholder="0.0" oninput="calcLoss({{ u.id }}, this.value); syncRegisterLotFromActual({{ u.id }})">
                 {% else %}
                 {{ u.actual_quantity|round(1) if u.actual_quantity else '-' }}
                 {% endif %}
@@ -1581,7 +1601,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% if can_edit %}
 <div class="sec">
     <div style="background:{% if production.entry_mode == 'register' %}#f5f3ff{% else %}#fff3e0{% endif %};border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:{% if production.entry_mode == 'register' %}#5b21b6{% else %}inherit{% endif %};">
-        {% if material_management_disabled %}🌿 라이트 생산 모드: 원초만 관리하며 부자재·포장재 재고는 반영하지 않습니다.{% elif production.entry_mode == 'register' %}📝 등록모드 저장: 원초·부자재 재고는 차감하지 않으며, 입력한 사용량과 lot 정보는 생산 이력으로만 등록됩니다.{% else %}⚠️ 저장 시 선택한 원초 및 부자재 재고가 차감됩니다.{% endif %}
+        {% if material_management_disabled %}🌿 라이트 생산 모드: 원초만 관리하며 부자재·포장재 재고는 반영하지 않습니다.{% elif production.entry_mode == 'register' and production.register_raw_stock_enabled %}🌿 등록모드 원초 재고 사용: 선택한 등록 원초 로트만 차감되고, 부자재·포장재는 생산 이력으로만 기록됩니다.{% elif production.entry_mode == 'register' %}📝 등록모드 저장: 원초·부자재 재고는 차감하지 않으며, 입력한 사용량과 lot 정보는 생산 이력으로만 등록됩니다.{% else %}⚠️ 저장 시 선택한 원초 및 부자재 재고가 차감됩니다.{% endif %}
     </div>
     <div style="text-align:right;display:flex;gap:1rem;justify-content:flex-end;">
         <a href="/production" class="btn btn-secondary">취소</a>
@@ -1683,6 +1703,9 @@ const PLANNED = {{ production.planned_boxes }};
 const DEFAULT_BOXES = {{ production.actual_boxes or 0 }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
 const IS_REGISTER_MODE = {{ (production.entry_mode == 'register')|tojson }};
+let REGISTER_RAW_STOCK_ENABLED = {{ production.register_raw_stock_enabled|tojson }};
+const REGISTER_STOCK_RAW_ITEMS = {{ register_stock_raw_items|default([])|tojson }};
+const REGISTER_DEFAULT_RAW_ITEMS = {{ bom_raw_items|default([])|tojson }};
 const INITIAL_TOTAL_RAW_SELECTED = {{ total_raw_selected_qty or 0 }};
 const INITIAL_TOTAL_RAW_NEED = {{ total_raw_need_qty or 0 }};
 const RAW_CHANGE_OPTIONS = {{ raw_change_options_json|default('[]')|safe }};
@@ -1700,6 +1723,9 @@ window.onload = () => {
     recalcAll();
     initLotGapNoneButtons();
     initAutoGrowNotes();
+    if(IS_REGISTER_MODE && REGISTER_RAW_STOCK_ENABLED){
+        showRegisterStockRawItems();
+    }
     if (AUTO_OPEN_PLAN_EDIT) {
         openPlanEditModal();
     }
@@ -1895,7 +1921,7 @@ function validateProductionUsageForm(){
         firstDateInput?.focus();
         return false;
     }
-    if(IS_REGISTER_MODE){
+    if(IS_REGISTER_MODE && !REGISTER_RAW_STOCK_ENABLED){
         const selectedRawCards = Array.from(document.querySelectorAll('.raw-card.active'))
             .filter(card => (parseFloat(card.querySelector('input[name^="raw_actual_"]')?.value || '0') || 0) > 0);
         for(const card of selectedRawCards){
@@ -1921,8 +1947,65 @@ function toggleRegisterLotDeferred(usageId, deferred){
     if(hidden) hidden.value = deferred ? '1' : '0';
     document.querySelectorAll(`.js-register-lot-input-${usageId}`).forEach((input) => {
         input.disabled = deferred;
-        input.required = !deferred;
+        input.required = !deferred && input.type === 'date';
     });
+}
+
+function syncRegisterLotTotal(usageId){
+    const total = Array.from(document.querySelectorAll(`input[name="register_lot_quantity_${usageId}[]"]`))
+        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    const actualInput = document.querySelector(`input[name="actual_mat_${usageId}"]`);
+    if(actualInput){
+        actualInput.value = total ? String(Math.round(total * 10000) / 10000) : '';
+        calcLoss(usageId, actualInput.value);
+    }
+}
+
+function syncRegisterLotFromActual(usageId){
+    const lotInputs = Array.from(document.querySelectorAll(`input[name="register_lot_quantity_${usageId}[]"]`));
+    // 로트가 하나일 때만 자동 동기화한다. 여러 로트는 사용자가 배분한 값을 보존한다.
+    if(lotInputs.length !== 1 || lotInputs[0].disabled) return;
+    const actualInput = document.querySelector(`input[name="actual_mat_${usageId}"]`);
+    if(!actualInput) return;
+    lotInputs[0].value = actualInput.value;
+}
+
+function refreshRegisterLotRemoveButtons(usageId){
+    const rows = Array.from(document.querySelectorAll(`#registerLotRows_${usageId} .register-lot-entry`));
+    rows.forEach((row) => {
+        const button = row.querySelector('.lot-row-remove');
+        if(button) button.disabled = rows.length <= 1;
+    });
+}
+
+function removeRegisterMaterialLot(button, usageId){
+    const rows = document.querySelectorAll(`#registerLotRows_${usageId} .register-lot-entry`);
+    if(rows.length <= 1) return;
+    button.closest('.register-lot-entry')?.remove();
+    refreshRegisterLotRemoveButtons(usageId);
+    syncRegisterLotTotal(usageId);
+}
+
+function addRegisterMaterialLot(usageId, lotKind){
+    const wrap = document.getElementById(`registerLotRows_${usageId}`);
+    if(!wrap) return;
+    const deferred = document.getElementById(`mat_lot_deferred_${usageId}`)?.value === '1';
+    const dateField = (label, name) => `<label class="register-lot-field">${label}<input type="date" name="${name}" class="js-register-lot-input-${usageId}" ${deferred ? 'disabled' : 'required'}></label>`;
+    const extraField = lotKind === 'manufacture'
+        ? dateField('제조일', `register_lot_manufacture_${usageId}[]`)
+        : (lotKind === 'expiry' ? dateField('소비기한', `register_lot_expiry_${usageId}[]`) : '');
+    const row = document.createElement('div');
+    row.className = 'register-lot-entry';
+    row.innerHTML = `
+        <label class="register-lot-field">사용량<input type="number" step="0.1" min="0" name="register_lot_quantity_${usageId}[]" class="js-register-lot-input-${usageId}" ${deferred ? 'disabled' : ''}></label>
+        ${dateField('입고일', `register_lot_receiving_${usageId}[]`)}
+        ${extraField}
+        <button type="button" class="lot-row-remove" onclick="removeRegisterMaterialLot(this, ${usageId})">삭제</button>
+    `;
+    wrap.appendChild(row);
+    row.querySelector(`input[name="register_lot_quantity_${usageId}[]"]`)?.addEventListener('input', () => syncRegisterLotTotal(usageId));
+    refreshRegisterLotRemoveButtons(usageId);
+    row.querySelector('input')?.focus();
 }
 
 function getCurrentPerBox(){
@@ -1997,7 +2080,7 @@ function syncRawSokUi(){
         const id = card.dataset.id;
         const target = document.getElementById(`rawMaxBoxes_${id}`);
         if(target){
-            target.textContent = IS_REGISTER_MODE
+            target.textContent = IS_REGISTER_MODE && !REGISTER_RAW_STOCK_ENABLED
                 ? '재고 연동 안 함'
                 : (perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-');
         }
@@ -2286,12 +2369,66 @@ function appendTempMixNote(rawId, targetSummary){
     openNoteEditorById(rawId);
 }
 
-function buildTempRawCard(option){
-    const rawId = Number(option.id);
+async function toggleRegisterRawStockMode(){
+    if(!IS_REGISTER_MODE) return;
+    if(REGISTER_RAW_STOCK_ENABLED && !confirm('재고차감 사용을 중지할까요? 입력 중인 원초 사용량은 유지되지 않습니다.')) return;
+    if(!REGISTER_RAW_STOCK_ENABLED && !REGISTER_STOCK_RAW_ITEMS.length){
+        alert('현재 작업장에 사용 가능한 등록 원초 재고가 없습니다.');
+        return;
+    }
+    const button = document.getElementById('registerRawStockToggleBtn');
+    if(button) button.disabled = true;
+    try{
+        const response = await fetch('/production/{{ production.id }}/toggle-register-raw-stock', {method: 'POST'});
+        const payload = await response.json();
+        if(!response.ok || !payload.ok) throw new Error(payload.message || '설정 변경에 실패했습니다.');
+        REGISTER_RAW_STOCK_ENABLED = !!payload.enabled;
+        document.getElementById('registerRawStockEnabled').value = REGISTER_RAW_STOCK_ENABLED ? '1' : '0';
+        if(REGISTER_RAW_STOCK_ENABLED){
+            if(button){
+                button.textContent = '↩ 재고차감 사용안함';
+                button.style.background = '#64748b';
+                button.style.borderColor = '#94a3b8';
+            }
+            showRegisterStockRawItems();
+            return;
+        }
+        const wrap = document.getElementById('rawCardsWrap');
+        if(wrap){
+            wrap.innerHTML = '';
+            nextRawEntryIndex = 0;
+            REGISTER_DEFAULT_RAW_ITEMS.forEach((item) => buildTempRawCard(item, false));
+        }
+        if(button){
+            button.textContent = '🌿 등록된 원초 사용';
+            button.style.background = '#0f766e';
+            button.style.borderColor = '#14b8a6';
+        }
+        syncRawSokUi();
+        updateTotal();
+    }catch(error){
+        alert(error.message || '설정 변경에 실패했습니다.');
+    }finally{
+        if(button) button.disabled = false;
+    }
+}
+
+function showRegisterStockRawItems(){
+    const wrap = document.getElementById('rawCardsWrap');
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    nextRawEntryIndex = 0;
+    REGISTER_STOCK_RAW_ITEMS.forEach((item) => buildTempRawCard(item, false));
+    syncRawSokUi();
+    updateTotal();
+}
+
+function buildTempRawCard(option, isTemp = true){
+    const rawId = Number(option.id || option.rm_id || option.raw_material_id);
     const entryIndex = nextRawEntryIndex++;
     const stock = Math.floor(Number(option.current_stock || 0));
     const perBox = getCurrentPerBox();
-    const maxBoxes = IS_REGISTER_MODE
+    const maxBoxes = IS_REGISTER_MODE && !REGISTER_RAW_STOCK_ENABLED
         ? '재고 연동 안 함'
         : (perBox > 0 ? `${Math.floor(stock / perBox)}박스` : '-');
     const wrap = document.getElementById('rawCardsWrap');
@@ -2303,17 +2440,17 @@ function buildTempRawCard(option){
     card.dataset.stock = String(stock);
     card.dataset.pbox = '0';
     card.dataset.entryIndex = String(entryIndex);
-    card.dataset.isTemp = '1';
+    card.dataset.isTemp = isTemp ? '1' : '0';
     card.onclick = () => toggleCard(rawId);
     card.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
                 <strong class="js-raw-name">🌿 ${escapeHtml(option.name || '원초')}</strong>
-                <span style="font-size:0.72rem;font-weight:800;padding:0.16rem 0.5rem;border-radius:999px;background:#eef2ff;color:#3730a3;">임시 추가</span>
+                ${isTemp ? '<span style="font-size:0.72rem;font-weight:800;padding:0.16rem 0.5rem;border-radius:999px;background:#eef2ff;color:#3730a3;">임시 추가</span>' : '<span style="font-size:0.72rem;font-weight:800;padding:0.16rem 0.5rem;border-radius:999px;background:#ecfdf5;color:#047857;">등록 원초</span>'}
             </div>
             <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
                 <span class="js-raw-stock-badge" style="font-size:0.85rem;padding:0.2rem 0.6rem;border-radius:20px;">재고 ${escapeHtml(formatRawNumber(stock))}속</span>
-                <button type="button" onclick="removeTempRawCard(${rawId}); event.stopPropagation();" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:0.22rem 0.6rem;font-size:0.75rem;font-weight:700;cursor:pointer;">제거</button>
+                ${isTemp ? `<button type="button" onclick="removeTempRawCard(${rawId}); event.stopPropagation();" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:0.22rem 0.6rem;font-size:0.75rem;font-weight:700;cursor:pointer;">제거</button>` : ''}
             </div>
         </div>
         <div class="raw-meta">
@@ -2325,12 +2462,12 @@ function buildTempRawCard(option){
         <div id="iw_${rawId}" class="raw-input-row" style="display:none;flex-direction:column;align-items:stretch;" onclick="event.stopPropagation()">
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                 <label style="font-size:0.85rem;color:#555;white-space:nowrap;">사용량(속):</label>
-                <input type="number" name="raw_actual_${entryIndex}" id="ri_${rawId}" step="1" min="0" ${IS_REGISTER_MODE ? '' : `max="${stock}"`} value="" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;">
+                <input type="number" name="raw_actual_${entryIndex}" id="ri_${rawId}" step="1" min="0" ${IS_REGISTER_MODE && !REGISTER_RAW_STOCK_ENABLED ? '' : `max="${stock}"`} value="" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;">
                 <input type="hidden" name="raw_rm_id_${entryIndex}" value="${rawId}" class="js-raw-id-input">
                 <span id="rw_${rawId}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
                 <button type="button" id="raw_note_btn_${rawId}" class="raw-note-toggle" onclick="toggleRawNote(${rawId}); event.stopPropagation();">비고 입력</button>
             </div>
-            ${IS_REGISTER_MODE ? `<div style="display:flex;gap:0.65rem;align-items:end;flex-wrap:wrap;margin-top:0.55rem;padding-top:0.55rem;border-top:1px dashed #c4b5fd;">
+            ${IS_REGISTER_MODE && !REGISTER_RAW_STOCK_ENABLED ? `<div style="display:flex;gap:0.65rem;align-items:end;flex-wrap:wrap;margin-top:0.55rem;padding-top:0.55rem;border-top:1px dashed #c4b5fd;">
                 <label style="font-size:0.8rem;font-weight:700;color:#5b21b6;">자호<input type="text" name="raw_override_car_number_${entryIndex}" value="${escapeHtml(option.car_number || '')}" placeholder="자호 입력" style="display:block;margin-top:0.22rem;width:130px;padding:0.38rem;border:1px solid #c4b5fd;border-radius:6px;"></label>
                 <label style="font-size:0.8rem;font-weight:700;color:#5b21b6;">입고일<input type="date" name="raw_override_receiving_date_${entryIndex}" value="${escapeHtml(option.receiving_date || '')}" style="display:block;margin-top:0.22rem;padding:0.38rem;border:1px solid #c4b5fd;border-radius:6px;"></label>
             </div>` : ''}
@@ -2459,7 +2596,7 @@ async function hideSelectedPersonnelNoteSuggestion(){
 function checkRawOver(id, maxStock){
     const val = parseFloat(document.getElementById(`ri_${id}`).value) || 0;
     const warnEl = document.getElementById(`rw_${id}`);
-    warnEl.style.display = !IS_REGISTER_MODE && val > maxStock ? 'inline' : 'none';
+    warnEl.style.display = (!IS_REGISTER_MODE || REGISTER_RAW_STOCK_ENABLED) && val > maxStock ? 'inline' : 'none';
 }
 
 function updateTotal(){
@@ -2536,8 +2673,8 @@ function autoSelect(){
         if(remaining <= 0) return;
         const id = c.dataset.id;
         const stock = parseInt(c.dataset.stock) || 0;
-        if(!IS_REGISTER_MODE && stock <= 0) return;
-        const use = IS_REGISTER_MODE ? Math.ceil(remaining) : Math.min(Math.ceil(remaining), stock);
+        if((!IS_REGISTER_MODE || REGISTER_RAW_STOCK_ENABLED) && stock <= 0) return;
+        const use = IS_REGISTER_MODE && !REGISTER_RAW_STOCK_ENABLED ? Math.ceil(remaining) : Math.min(Math.ceil(remaining), stock);
         remaining -= use;
         c.classList.add('active');
         const iw = document.getElementById(`iw_${id}`);
