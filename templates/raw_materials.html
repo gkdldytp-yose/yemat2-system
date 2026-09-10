@@ -22,6 +22,73 @@
 .done-calendar-day.has-history:hover{background:#dbeafe;}
 .done-calendar-day.active{background:#2563eb;color:#fff;border-color:#1d4ed8;box-shadow:0 10px 20px rgba(37,99,235,0.22);}
 .done-calendar-day.empty{background:transparent;border:none;min-height:42px;}
+.raw-integrated-search-controls{display:grid;grid-template-columns:140px minmax(220px,1fr) 175px auto;gap:.65rem;align-items:end;margin:.9rem 0;}
+.raw-integrated-search-controls label{display:block;margin:0 0 .3rem;font-size:.8rem;font-weight:700;color:#475569;}
+.raw-integrated-search-controls select,.raw-integrated-search-controls input{width:100%;box-sizing:border-box;padding:.55rem .6rem;border:1px solid #cbd5e1;border-radius:9px;background:#fff;}
+.raw-integrated-actions{flex-wrap:nowrap!important;}
+.raw-integrated-workplace-field{display:flex;flex-direction:column;gap:.3rem;}
+.raw-integrated-workplace-field > label{margin:0!important;}
+.raw-integrated-workplace-control{position:relative;display:flex;align-items:center;gap:.5rem;flex:0 0 auto;}
+.raw-integrated-workplace-check{position:relative;display:inline-flex;align-items:center;justify-content:flex-start;gap:0;width:100%;height:38px;box-sizing:border-box;padding:0 .75rem;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#334155;font-size:.82rem;font-weight:850;line-height:1;white-space:nowrap;cursor:pointer;user-select:none;flex:0 0 auto;}
+.raw-integrated-workplace-check input{position:absolute!important;inline-size:1px!important;block-size:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important;opacity:0!important;pointer-events:none;}
+.raw-integrated-workplace-switch{position:relative;display:inline-block;flex:0 0 32px;width:32px;height:18px;border-radius:999px;background:#94a3b8;box-shadow:inset 0 1px 2px rgba(15,23,42,.18);transform:translateY(8px)!important;transition:.18s ease;}
+.raw-integrated-workplace-text{display:inline-block;margin-left:8px;transform:translateY(4px);}
+.raw-integrated-workplace-switch::after{content:'';position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.28);transition:.18s ease;}
+.raw-integrated-workplace-check input:checked + .raw-integrated-workplace-switch{background:#2563eb;}
+.raw-integrated-workplace-check input:checked + .raw-integrated-workplace-switch::after{transform:translateX(14px);}
+.raw-integrated-workplace-select{display:none!important;width:100%!important;min-height:38px;padding:.45rem .55rem!important;border:1px solid #93c5fd!important;border-radius:10px!important;background:#eff6ff!important;color:#1e3a5f!important;font-size:.82rem;font-weight:800;}
+.raw-integrated-workplace-select.visible{display:block!important;position:absolute;top:43px;left:0;z-index:10;box-shadow:0 10px 22px rgba(15,23,42,.18);}
+.raw-integrated-search-summary{font-size:.88rem;color:#64748b;margin:.2rem 0 .7rem;}
+.raw-integrated-status{display:inline-block;padding:.2rem .5rem;border-radius:999px;font-size:.76rem;font-weight:800;white-space:nowrap;}
+.raw-integrated-status.active{background:#dcfce7;color:#166534;}
+.raw-integrated-status.done{background:#e2e8f0;color:#475569;}
+.raw-integrated-modal{background:linear-gradient(180deg,#f8fbff 0%,#fff 42%)!important;border:1px solid #dbeafe;box-shadow:0 26px 65px rgba(15,23,42,.24);}
+.raw-integrated-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding-bottom:1rem;border-bottom:1px solid #e2e8f0;}
+.raw-integrated-heading h2{font-size:1.3rem;letter-spacing:-.04em;}
+.raw-integrated-status-tabs{display:flex;gap:.45rem;padding:.38rem;background:#eef2f7;border-radius:12px;margin-top:1rem;}
+.raw-integrated-status-tab{flex:1;border:0;border-radius:9px;background:transparent;color:#64748b;padding:.58rem .8rem;font-weight:800;cursor:pointer;transition:.16s ease;}
+.raw-integrated-status-tab:hover{color:#1d4ed8;background:rgba(255,255,255,.7);}
+.raw-integrated-status-tab.active{background:#fff;color:#1d4ed8;box-shadow:0 3px 10px rgba(15,23,42,.12);}
+.raw-integrated-result-wrap{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;}
+.raw-integrated-result-wrap .table-container{margin:0;}
+.raw-integrated-result-wrap table th{background:#f1f5f9;color:#334155;white-space:nowrap;}
+.raw-integrated-result-wrap tbody tr{transition:background .15s ease;}
+.raw-integrated-result-wrap tbody tr:hover{background:#eff6ff;}
+.raw-integrated-checksheet-btn{background:linear-gradient(135deg,#0f766e,#059669)!important;border:1px solid #34d399!important;color:#fff!important;font-weight:800!important;white-space:nowrap;box-shadow:0 4px 10px rgba(5,150,105,.18);}
+.raw-integrated-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;min-height:220px;color:#64748b;text-align:center;}
+.raw-integrated-empty-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:#dbeafe;color:#2563eb;font-size:1.25rem;font-weight:800;}
+.raw-lot-back-btn{display:none;align-items:center;gap:.35rem;background:#eff6ff!important;color:#1d4ed8!important;border-color:#bfdbfe!important;}
+.raw-lot-back-btn.visible{display:inline-flex;}
+.raw-lot-title-block{display:flex;align-items:center;gap:.65rem;}
+.raw-lot-title-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#2563eb;}
+.raw-list-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.5rem;}
+.raw-list-header h2{margin:0;}
+.raw-list-primary{display:flex;align-items:center;gap:.8rem;min-width:0;}
+.raw-list-actions{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.raw-integrated-search-btn{display:inline-flex !important;align-items:center;gap:.48rem;min-height:38px;padding:.52rem .82rem !important;border:1px solid #38bdf8 !important;border-radius:10px !important;background:linear-gradient(135deg,#0284c7 0%,#2563eb 52%,#4f46e5 100%) !important;color:#fff !important;font-weight:800 !important;letter-spacing:-.02em;box-shadow:0 8px 18px rgba(37,99,235,.28);transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;}
+.raw-integrated-search-btn:hover{transform:translateY(-1px);filter:brightness(1.06);box-shadow:0 12px 24px rgba(37,99,235,.36);}
+.raw-integrated-search-btn:focus-visible{outline:3px solid rgba(56,189,248,.42);outline-offset:2px;}
+.raw-integrated-search-btn-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:7px;background:rgba(255,255,255,.18);font-size:.85rem;}
+.raw-integrated-search-btn-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;}
+.raw-integrated-search-btn-title{font-size:.84rem;}
+.raw-integrated-search-btn-desc{font-size:.66rem;font-weight:600;opacity:.82;margin-top:2px;}
+.raw-add-primary-btn{display:inline-flex !important;align-items:center;gap:.48rem;min-height:38px;padding:.52rem .82rem !important;border:1px solid #34d399 !important;border-radius:10px !important;background:linear-gradient(135deg,#059669 0%,#16a34a 52%,#65a30d 100%) !important;color:#fff !important;font-weight:800 !important;letter-spacing:-.02em;box-shadow:0 8px 18px rgba(5,150,105,.25);transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;}
+.raw-add-primary-btn:hover{transform:translateY(-1px);filter:brightness(1.06);box-shadow:0 12px 24px rgba(5,150,105,.34);}
+.raw-add-primary-btn:focus-visible{outline:3px solid rgba(52,211,153,.42);outline-offset:2px;}
+.raw-add-primary-btn-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:7px;background:rgba(255,255,255,.18);font-size:1rem;line-height:1;}
+.raw-add-primary-btn-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;}
+.raw-add-primary-btn-title{font-size:.84rem;}
+.raw-add-primary-btn-desc{font-size:.66rem;font-weight:600;opacity:.82;margin-top:2px;}
+.raw-name-filter-bar{display:flex;align-items:center;gap:.85rem;padding:.8rem 1rem;border:1px solid #c7d9f3;border-radius:16px;background:linear-gradient(135deg,#f8fbff,#eef5ff);margin:0 0 1rem;overflow-x:auto;box-shadow:0 8px 20px rgba(37,99,235,.06);}
+.raw-name-filter-label{flex:0 0 auto;font-size:.82rem;font-weight:900;color:#1e3a5f;padding:.48rem .75rem;border-radius:10px;background:#dbeafe;}
+.raw-name-filter-tabs{display:flex;gap:.55rem;align-items:center;min-width:max-content;padding-left:.15rem;}
+.raw-name-filter-tab{display:inline-flex;align-items:center;gap:.42rem;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;padding:.55rem .78rem;font-size:.84rem;font-weight:850;cursor:pointer;white-space:nowrap;transition:.16s ease;box-shadow:0 2px 5px rgba(15,23,42,.04);}
+.raw-name-filter-tab:hover{transform:translateY(-1px);border-color:#60a5fa;background:#eff6ff;color:#1d4ed8;box-shadow:0 6px 14px rgba(37,99,235,.14);}
+.raw-name-filter-tab.active{border-color:#2563eb;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;box-shadow:0 7px 16px rgba(37,99,235,.26);}
+.raw-name-tab-dot{width:8px;height:8px;border-radius:999px;background:#64748b;box-shadow:0 0 0 3px rgba(100,116,139,.12);}
+.raw-name-filter-tab.tone-0 .raw-name-tab-dot{background:#2563eb;}.raw-name-filter-tab.tone-1 .raw-name-tab-dot{background:#059669;}.raw-name-filter-tab.tone-2 .raw-name-tab-dot{background:#d97706;}.raw-name-filter-tab.tone-3 .raw-name-tab-dot{background:#7c3aed;}.raw-name-filter-tab.tone-4 .raw-name-tab-dot{background:#db2777;}.raw-name-filter-tab.tone-5 .raw-name-tab-dot{background:#0891b2;}
+.raw-name-filter-tab.active .raw-name-tab-dot{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.18);}
+@media (max-width:760px){.raw-integrated-search-controls{grid-template-columns:1fr 1fr;}.raw-integrated-search-controls .raw-integrated-keyword{grid-column:1 / -1;}.raw-integrated-search-controls .raw-integrated-actions{grid-column:1 / -1;justify-content:flex-end;}}
 .raw-add-wizard{display:flex;flex-direction:column;gap:1rem;}
 .raw-add-steps{display:flex;gap:0.65rem;flex-wrap:wrap;}
 .raw-add-step{display:flex;align-items:center;gap:0.45rem;padding:0.55rem 0.8rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#475569;font-weight:800;}
@@ -75,6 +142,17 @@
     .raw-add-next-btn,.raw-add-back-btn{flex:1 1 0;min-height:44px;}
     .raw-add-header{align-items:stretch;}
     .raw-code-guide-btn{width:100%;min-height:44px;}
+    .raw-list-header{align-items:stretch;flex-direction:column;}
+    .raw-list-primary{justify-content:space-between;}
+    .raw-list-actions{justify-content:stretch;}
+    .raw-list-actions > .btn{flex:1 1 auto;justify-content:center;}
+    .raw-integrated-search-btn{min-height:46px;}
+    .raw-integrated-search-btn-desc{display:none;}
+    .raw-add-primary-btn{min-height:46px;}
+    .raw-add-primary-btn-desc{display:none;}
+    .raw-name-filter-bar{padding:.75rem .8rem;}
+    .raw-integrated-heading{align-items:stretch;}
+    .raw-integrated-status-tabs{margin-top:.8rem;}
     .raw-add-fields-grid{grid-template-columns:1fr;}
     .raw-add-fields-grid .form-group input,
     .raw-add-fields-grid .form-group select{min-height:46px;font-size:16px;}
@@ -164,15 +242,20 @@
     data-selected-done-scope="{{ selected_done_scope or '' }}"
 >
 <div class="card">
-    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
-        <h2>원초 목록</h2>
-        <div style="display:flex;gap:0.5rem;align-items:center;">
-            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="openRawActivityModal()">금일 원초 사용/입고</button>
-            {% if can_raw %}<button class="btn btn-small" type="button" onclick="openRawAddWizard()">+ 원초 추가</button>{% endif %}
+    <div class="raw-list-header">
+        <div class="raw-list-primary">
+            <h2>원초 목록</h2>
+        </div>
+        <div class="raw-list-actions">
+            <button type="button" class="btn btn-small raw-integrated-search-btn" onclick="openRawIntegratedSearchModal()" title="사용 중·사용완료 원초를 전체 기간으로 검색합니다.">
+                <span class="raw-integrated-search-btn-icon" aria-hidden="true">⌕</span>
+                <span class="raw-integrated-search-btn-text"><span class="raw-integrated-search-btn-title">원초 통합 검색</span><span class="raw-integrated-search-btn-desc">사용 중 · 사용완료 전체 조회</span></span>
+            </button>
+            {% if can_raw %}<button class="btn btn-small raw-add-primary-btn" type="button" onclick="openRawAddWizard()"><span class="raw-add-primary-btn-icon" aria-hidden="true">+</span><span class="raw-add-primary-btn-text"><span class="raw-add-primary-btn-title">원초 추가</span><span class="raw-add-primary-btn-desc">새 원초 로트 등록</span></span></button>{% endif %}
         </div>
     </div>
 
-    <div style="padding:1rem 1.1rem 1.15rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);margin-bottom:1rem;">
+    <div id="rawLegacySearchArea" style="display:none;">
         <form method="GET" action="/raw-materials" id="rawListFilterForm" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0.75rem;align-items:end;">
             <input type="hidden" name="tab" id="rawListFilterTab" value="{{ selected_tab }}">
             <input type="hidden" name="done_scope" id="rawListDoneScope" value="{{ selected_done_scope or 'all' }}" {% if selected_tab != 'done' %}disabled{% endif %}>
@@ -225,6 +308,15 @@
 
     <!-- ?ъ슜以???-->
     <div id="pane_active" {% if selected_tab == 'done' %}style="display:none;"{% endif %}>
+    <div class="raw-name-filter-bar">
+        <span class="raw-name-filter-label">보유 원초</span>
+        <div class="raw-name-filter-tabs">
+            <button type="button" class="raw-name-filter-tab {% if not selected_raw_name %}active{% endif %}" onclick="filterActiveRawName('')">전체</button>
+            {% for raw_name in active_raw_name_tabs %}
+            <button type="button" class="raw-name-filter-tab tone-{{ loop.index0 % 6 }} {% if selected_raw_name == raw_name %}active{% endif %}" onclick="filterActiveRawName({{ raw_name|tojson|forceescape }})"><span class="raw-name-tab-dot" aria-hidden="true"></span>{{ raw_name }}</button>
+            {% endfor %}
+        </div>
+    </div>
     {% if active_raw_groups %}
     <div class="raw-code-groups">
         {% for group in active_raw_groups %}
@@ -404,16 +496,77 @@
 </div>
 </div>
 
+<!-- 캘린더와 분리된 전체 원초 통합 검색 모달 -->
+<div id="rawIntegratedSearchModal" class="modal" style="display:none;">
+    <div class="modal-content raw-integrated-modal" style="width:min(96vw,1280px);margin:4vh auto;padding:1.25rem;border-radius:16px;max-height:88vh;overflow-y:auto;">
+        <div class="raw-integrated-heading">
+            <div>
+                <h2 style="margin:0;">원초 통합 검색</h2>
+                <p style="margin:.35rem 0 0;color:#64748b;font-size:.9rem;">캘린더 기간과 관계없이 사용 중 및 사용완료 원초를 전체 조회합니다.</p>
+            </div>
+            <button type="button" class="btn btn-small btn-secondary" onclick="closeRawIntegratedSearchModal()">닫기</button>
+        </div>
+        <div class="raw-integrated-status-tabs" role="tablist" aria-label="원초 사용 상태">
+            <button type="button" class="raw-integrated-status-tab active" data-status="all" onclick="selectRawIntegratedStatus('all')">전체</button>
+            <button type="button" class="raw-integrated-status-tab" data-status="active" onclick="selectRawIntegratedStatus('active')">사용 중</button>
+            <button type="button" class="raw-integrated-status-tab" data-status="done" onclick="selectRawIntegratedStatus('done')">사용완료</button>
+        </div>
+        <form class="raw-integrated-search-controls" onsubmit="runRawIntegratedSearch(); return false;">
+            <div>
+                <label for="rawIntegratedSearchField">검색 기준</label>
+                <select id="rawIntegratedSearchField">
+                    <option value="all">전체</option>
+                    <option value="code">코드</option>
+                    <option value="name">원초명</option>
+                    <option value="ja_ho">자호</option>
+                    <option value="receiving_date">입고일</option>
+                </select>
+            </div>
+            <div class="raw-integrated-keyword">
+                <label for="rawIntegratedSearchKeyword">키워드</label>
+                <input id="rawIntegratedSearchKeyword" type="search" placeholder="예: RM00001 / 곱창돌김 / 12가3456 / 2026-04" autocomplete="off">
+            </div>
+            <input id="rawIntegratedSearchStatus" type="hidden" value="all">
+            <div class="raw-integrated-workplace-field">
+                <label for="rawIntegratedAllWorkplaces">검색 범위</label>
+                <div class="raw-integrated-workplace-control">
+                    <label class="raw-integrated-workplace-check" title="켜면 모든 작업장의 원초를 검색하고, 원하는 작업장만 다시 고를 수 있습니다.">
+                        <input id="rawIntegratedAllWorkplaces" type="checkbox" onchange="toggleRawIntegratedWorkplaceFilter(this.checked)">
+                        <span class="raw-integrated-workplace-switch" aria-hidden="true"></span><span class="raw-integrated-workplace-text">전체 작업장</span>
+                    </label>
+                    <select id="rawIntegratedWorkplaceSelect" class="raw-integrated-workplace-select" aria-label="작업장 선택">
+                        <option value="all">전체 작업장</option>
+                        {% for workplace_name in integrated_search_workplaces %}<option value="{{ workplace_name }}">{{ workplace_name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="raw-integrated-actions" style="display:flex;gap:.45rem;align-items:end;">
+                <button type="submit" class="btn btn-small">검색</button>
+                <button type="button" class="btn btn-small btn-secondary" onclick="resetRawIntegratedSearch()">초기화</button>
+            </div>
+        </form>
+        <div id="rawIntegratedSearchSummary" class="raw-integrated-search-summary">검색 조건을 설정한 뒤 검색 버튼을 눌러주세요.</div>
+        <div class="raw-integrated-result-wrap">
+        <div class="table-container">
+            <table>
+                <thead><tr><th>상태</th><th>작업장</th><th>원초명</th><th>코드</th><th>입고일</th><th>자호</th><th>총재고</th><th>현재고</th><th>사용량</th><th>완료일</th><th>점검표</th></tr></thead>
+                <tbody id="rawIntegratedSearchBody"><tr><td colspan="11"><div class="raw-integrated-empty"><div class="raw-integrated-empty-icon">⌕</div><strong>원초를 통합 검색해보세요</strong><span>코드, 원초명, 자호 또는 입고일로 검색할 수 있습니다.</span></div></td></tr></tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
 <!-- 원초 사용/입고/반출 이력 모달 -->
 <div id="rawLotDetailModal" class="modal" style="display:none;">
     <div class="modal-content raw-lot-modal">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
-            <h2 style="margin:0;">원초 상세</h2>
-            <button type="button" class="btn btn-secondary btn-small" onclick="closeRawLotModal()">닫기</button>
+            <div class="raw-lot-title-block"><span class="raw-lot-title-icon" aria-hidden="true">▦</span><h2 style="margin:0;">원초 상세</h2></div>
+            <div style="display:flex;gap:.45rem;align-items:center;"><button type="button" class="btn btn-secondary btn-small raw-lot-back-btn" id="rawLotBackToSearchBtn" onclick="returnToRawIntegratedSearch()">← 검색 결과</button><button type="button" class="btn btn-secondary btn-small" onclick="closeRawLotModal()">닫기</button></div>
         </div>
         <div class="raw-lot-header-grid">
             <div class="raw-lot-header-item"><span class="label">원초명</span><span class="value" id="rd_name">-</span></div>
-            <div class="raw-lot-header-item"><span class="label">肄붾뱶</span><span class="value" id="rd_code">-</span></div>
+            <div class="raw-lot-header-item"><span class="label">&#xB300;&#xD45C; &#xCF54;&#xB4DC;</span><span class="value" id="rd_code">-</span></div>
             <div class="raw-lot-header-item"><span class="label">작업장</span><span class="value" id="rd_workplace">-</span></div>
             <div class="raw-lot-header-item"><span class="label">총재고 합계</span><span class="value" id="rd_total_stock">0</span></div>
             <div class="raw-lot-header-item"><span class="label">현재고 합계</span><span class="value" id="rd_current_stock">0</span></div>
@@ -424,6 +577,9 @@
             <button type="button" class="material-detail-tab" id="rawTabReceiveBtn" onclick="switchRawDetailPanel('receive')">입고 로그</button>
         </div>
         <div id="rawLotsPanel" class="material-panel active">
+        <div class="raw-lot-section-heading">
+            <div><strong>로트별 재고 현황</strong><span>로트별 입고·자호·재고를 확인하고 필요한 항목만 수정할 수 있습니다.</span></div>
+        </div>
         <div class="table-container">
             <table>
                 <thead>
@@ -955,6 +1111,130 @@ function closeRawCodeGuideModal(){
     if(modal) modal.style.display = 'none';
 }
 
+function formatRawIntegratedNumber(value){
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? number.toLocaleString('ko-KR', {maximumFractionDigits: 2}) : '-';
+}
+
+function renderRawIntegratedSearchRows(rows){
+    const body = document.getElementById('rawIntegratedSearchBody');
+    const summary = document.getElementById('rawIntegratedSearchSummary');
+    if(!body || !summary) return;
+    summary.textContent = `전체 ${Number(rows?.length || 0).toLocaleString('ko-KR')}건`;
+    if(!rows || !rows.length){
+        body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:1.5rem;">조건에 맞는 원초가 없습니다.</td></tr>';
+        return;
+    }
+    body.innerHTML = rows.map((row) => {
+        const isDone = row.usage_status === 'done';
+        const statusText = isDone ? '사용완료' : '사용 중';
+        const doneDate = isDone ? escapeHtml(row.done_date || '-') : '-';
+        const name = escapeHtml(row.name || '-');
+        return `
+            <tr style="cursor:pointer;" onclick="openRawIntegratedDetail(${Number(row.id) || 0})" title="클릭하여 원초 상세 보기">
+                <td><span class="raw-integrated-status ${isDone ? 'done' : 'active'}">${statusText}</span></td>
+                <td>${escapeHtml(row.workplace || '-')}</td>
+                <td><strong>${name}</strong></td>
+                <td>${escapeHtml(row.code || '-')}</td>
+                <td>${escapeHtml(row.receiving_date || '-')}</td>
+                <td>${escapeHtml(row.ja_ho || '-')}</td>
+                <td>${formatRawIntegratedNumber(row.total_stock)}</td>
+                <td><strong>${formatRawIntegratedNumber(row.current_stock)}</strong></td>
+                <td>${formatRawIntegratedNumber(row.used_quantity)}</td>
+                <td>${doneDate}</td>
+                <td><button type="button" class="btn btn-small raw-integrated-checksheet-btn" onclick="event.stopPropagation(); openRawChecksheet(${Number(row.id) || 0});">점검표</button></td>
+            </tr>`;
+    }).join('');
+}
+
+function selectRawIntegratedStatus(status){
+    const statusInput = document.getElementById('rawIntegratedSearchStatus');
+    if(statusInput) statusInput.value = status;
+    document.querySelectorAll('.raw-integrated-status-tab').forEach((button) => {
+        button.classList.toggle('active', button.dataset.status === status);
+    });
+    runRawIntegratedSearch();
+}
+
+function toggleRawIntegratedWorkplaceFilter(enabled){
+    const select = document.getElementById('rawIntegratedWorkplaceSelect');
+    if(!select) return;
+    select.classList.toggle('visible', enabled);
+    if(!enabled) select.value = 'all';
+}
+
+async function runRawIntegratedSearch(){
+    const field = document.getElementById('rawIntegratedSearchField')?.value || 'all';
+    const keyword = document.getElementById('rawIntegratedSearchKeyword')?.value.trim() || '';
+    const status = document.getElementById('rawIntegratedSearchStatus')?.value || 'all';
+    const allWorkplaces = Boolean(document.getElementById('rawIntegratedAllWorkplaces')?.checked);
+    const searchWorkplace = allWorkplaces ? (document.getElementById('rawIntegratedWorkplaceSelect')?.value || 'all') : 'all';
+    const summary = document.getElementById('rawIntegratedSearchSummary');
+    if(summary) summary.textContent = '통합 원초를 조회하고 있습니다...';
+    try {
+        const params = new URLSearchParams({field, keyword, status, all_workplaces: allWorkplaces ? '1' : '0', search_workplace: searchWorkplace});
+        const response = await fetch(`/raw-materials/integrated-search?${params.toString()}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+        });
+        if(!response.ok) throw new Error('통합 검색 요청에 실패했습니다.');
+        const payload = await response.json();
+        if(!payload.ok) throw new Error(payload.message || '통합 검색에 실패했습니다.');
+        renderRawIntegratedSearchRows(payload.rows || []);
+    } catch (error) {
+        console.error(error);
+        if(summary) summary.textContent = '통합 검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+    }
+}
+
+function clearRawIntegratedSearchView(){
+    const field = document.getElementById('rawIntegratedSearchField');
+    const keyword = document.getElementById('rawIntegratedSearchKeyword');
+    const status = document.getElementById('rawIntegratedSearchStatus');
+    const summary = document.getElementById('rawIntegratedSearchSummary');
+    const body = document.getElementById('rawIntegratedSearchBody');
+    if(field) field.value = 'all';
+    if(keyword) keyword.value = '';
+    if(status) status.value = 'all';
+    document.querySelectorAll('.raw-integrated-status-tab').forEach((button) => button.classList.toggle('active', button.dataset.status === 'all'));
+    if(summary) summary.textContent = '검색 조건을 설정한 뒤 검색 버튼을 눌러주세요.';
+    const allWorkplaces = document.getElementById('rawIntegratedAllWorkplaces');
+    if(allWorkplaces) allWorkplaces.checked = false;
+    toggleRawIntegratedWorkplaceFilter(false);
+    if(body) body.innerHTML = '<tr><td colspan="11"><div class="raw-integrated-empty"><div class="raw-integrated-empty-icon">⌕</div><strong>원초를 통합 검색해보세요</strong><span>코드, 원초명, 자호 또는 입고일로 검색할 수 있습니다.</span></div></td></tr>';
+}
+
+function openRawIntegratedSearchModal(preserveResults = false){
+    const modal = document.getElementById('rawIntegratedSearchModal');
+    if(!modal) return;
+    if(!preserveResults) clearRawIntegratedSearchView();
+    modal.style.display = 'block';
+    setTimeout(() => document.getElementById('rawIntegratedSearchKeyword')?.focus(), 0);
+}
+
+function closeRawIntegratedSearchModal(){
+    const modal = document.getElementById('rawIntegratedSearchModal');
+    if(modal) modal.style.display = 'none';
+}
+
+function openRawIntegratedDetail(rawMaterialId){
+    if(!rawMaterialId) return;
+    closeRawIntegratedSearchModal();
+    openRawLotModal(rawMaterialId, true);
+}
+
+function resetRawIntegratedSearch(){
+    const field = document.getElementById('rawIntegratedSearchField');
+    const keyword = document.getElementById('rawIntegratedSearchKeyword');
+    const status = document.getElementById('rawIntegratedSearchStatus');
+    if(field) field.value = 'all';
+    if(keyword) keyword.value = '';
+    if(status) status.value = 'all';
+    document.querySelectorAll('.raw-integrated-status-tab').forEach((button) => {
+        button.classList.toggle('active', button.dataset.status === 'all');
+    });
+    runRawIntegratedSearch();
+}
+
 const CURRENT_WORKPLACE = '{{ current_workplace or "all" }}';
 let rawDoneDates = [];
 let rawSelectedDoneDate = '';
@@ -1054,6 +1334,11 @@ function switchTab(tab){
     const params = new URLSearchParams(window.location.search);
     params.set('tab', nextTab);
     if(nextTab === 'done'){
+        params.delete('raw_name');
+        params.delete('raw_search_keyword');
+        params.delete('raw_search_field');
+    }
+    if(nextTab === 'done'){
         if(!params.get('done_scope')){
             params.set('done_scope', rawSelectedDoneScope || 'month');
         }
@@ -1061,11 +1346,21 @@ function switchTab(tab){
             params.set('done_month', getDoneMonthKey());
         }
     }
-    replaceRawMaterialsUrl(params);
-    syncTabUi(nextTab);
-    if(nextTab === 'done'){
-        renderDoneCalendar();
+    window.location.href = `/raw-materials?${params.toString()}`;
+}
+
+function filterActiveRawName(rawName){
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'active');
+    params.delete('done_date');
+    params.delete('raw_search_keyword');
+    params.delete('raw_search_field');
+    if(rawName){
+        params.set('raw_name', rawName);
+    } else {
+        params.delete('raw_name');
     }
+    window.location.href = `/raw-materials?${params.toString()}`;
 }
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -1390,10 +1685,23 @@ function escapeHtml(v){
 }
 
 let currentRawLotId = null;
+let rawLotReturnToIntegratedSearch = false;
 
 function closeRawLotModal(){
     const modal = document.getElementById('rawLotDetailModal');
     if(modal) modal.style.display = 'none';
+    rawLotReturnToIntegratedSearch = false;
+    const backButton = document.getElementById('rawLotBackToSearchBtn');
+    if(backButton) backButton.classList.remove('visible');
+}
+
+function returnToRawIntegratedSearch(){
+    const modal = document.getElementById('rawLotDetailModal');
+    if(modal) modal.style.display = 'none';
+    rawLotReturnToIntegratedSearch = false;
+    const backButton = document.getElementById('rawLotBackToSearchBtn');
+    if(backButton) backButton.classList.remove('visible');
+    openRawIntegratedSearchModal(true);
 }
 
 function switchRawDetailPanel(type){
@@ -1443,15 +1751,15 @@ function renderRawLotRows(lots){
     tbody.innerHTML = lots.map((lot) => {
         const usedQty = Number(lot.used_quantity || 0);
         return `
-        <tr>
+        <tr class="raw-lot-row">
             <td><span class="lot-code">${escapeHtml(lot.lot || '-')}</span></td>
-            <td><input type="date" id="raw_lot_receiving_${lot.id}" value="${lot.receiving_date || ''}" style="width:100%;" disabled></td>
-            <td><input type="text" id="raw_lot_car_number_${lot.id}" value="${escapeHtml(lot.car_number || '')}" style="width:100%;" disabled></td>
-            <td><input type="number" step="0.01" id="raw_lot_sheets_${lot.id}" value="${Number(lot.sheets_per_sok || 0)}" style="width:100%;" disabled></td>
-            <td><input type="number" step="0.01" id="raw_lot_total_${lot.id}" value="${Number(lot.total_stock || 0)}" style="width:100%;" disabled></td>
-            <td><input type="number" step="0.01" id="raw_lot_current_${lot.id}" value="${Number(lot.current_stock || 0)}" style="width:100%;" disabled></td>
-            <td>${usedQty.toFixed(1)}</td>
-            <td><button type="button" class="btn btn-small" id="raw_lot_edit_btn_${lot.id}" data-mode="view" style="background:#4f46e5;" onclick="toggleRawLotEdit(${lot.id})">수정</button></td>
+            <td><input class="raw-lot-field raw-lot-field-date" type="date" id="raw_lot_receiving_${lot.id}" value="${lot.receiving_date || ''}" disabled></td>
+            <td><input class="raw-lot-field" type="text" id="raw_lot_car_number_${lot.id}" value="${escapeHtml(lot.car_number || '')}" disabled></td>
+            <td><input class="raw-lot-field raw-lot-field-number" type="number" step="0.01" id="raw_lot_sheets_${lot.id}" value="${Number(lot.sheets_per_sok || 0)}" disabled></td>
+            <td><input class="raw-lot-field raw-lot-field-number" type="number" step="0.01" id="raw_lot_total_${lot.id}" value="${Number(lot.total_stock || 0)}" disabled></td>
+            <td><input class="raw-lot-field raw-lot-field-number raw-lot-field-current" type="number" step="0.01" id="raw_lot_current_${lot.id}" value="${Number(lot.current_stock || 0)}" disabled></td>
+            <td class="raw-lot-used-qty">${usedQty.toFixed(1)}</td>
+            <td><button type="button" class="btn btn-small raw-lot-edit-btn" id="raw_lot_edit_btn_${lot.id}" data-mode="view" onclick="toggleRawLotEdit(${lot.id})">수정</button></td>
         </tr>`;
     }).join('');
 }
@@ -1520,8 +1828,11 @@ async function loadRawLotDetail(rawMaterialId){
     renderRawReceiveLogs(payload.receive_logs || []);
 }
 
-async function openRawLotModal(rawMaterialId){
+async function openRawLotModal(rawMaterialId, returnToIntegratedSearch = false){
     currentRawLotId = rawMaterialId;
+    rawLotReturnToIntegratedSearch = returnToIntegratedSearch;
+    const backButton = document.getElementById('rawLotBackToSearchBtn');
+    if(backButton) backButton.classList.toggle('visible', returnToIntegratedSearch);
     const modal = document.getElementById('rawLotDetailModal');
     if(modal) modal.style.display = 'block';
     switchRawDetailPanel('lots');
@@ -1536,7 +1847,7 @@ async function toggleRawLotEdit(lotId){
         setRawLotInputsEditable(lotId, true);
         btn.dataset.mode = 'edit';
         btn.textContent = '저장';
-        btn.style.background = '#16a34a';
+        btn.classList.add('is-saving');
         return;
     }
     await submitRawLotUpdate(lotId);
@@ -1559,7 +1870,7 @@ async function submitRawLotUpdate(lotId){
     if(btn){
         btn.dataset.mode = 'view';
         btn.textContent = '수정';
-        btn.style.background = '#4f46e5';
+        btn.classList.remove('is-saving');
     }
     if(currentRawLotId){
         await loadRawLotDetail(currentRawLotId);
@@ -1742,6 +2053,23 @@ tr[onclick]:hover{background:#f8f9fa;}
 .lot-code{display:inline-block;font-family:Consolas,Monaco,monospace;font-size:0.78rem;background:#eef3f9;border:1px solid #d6e0ec;border-radius:6px;padding:0.2rem 0.35rem;color:#0f172a;}
 .raw-lot-modal .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .raw-lot-modal .table-container table{width:100%;min-width:720px;}
+.raw-lot-modal .table-container th{background:#eaf2ff;color:#1e3a5f;white-space:nowrap;}
+.raw-lot-modal .table-container tbody tr:hover{background:#f8fbff;}
+.raw-lot-modal .table-container td{vertical-align:middle;}
+.raw-lot-modal .table-container input:disabled{border-color:transparent;background:transparent;color:#334155;font-weight:700;opacity:1;padding:.35rem .15rem;cursor:default;}
+.raw-lot-modal .table-container input:not(:disabled){border-color:#60a5fa;background:#fff;box-shadow:0 0 0 3px rgba(96,165,250,.13);}
+.raw-lot-section-heading{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin:.25rem 0 .7rem;padding:.75rem .85rem;border:1px solid #dbe5f0;border-radius:12px;background:linear-gradient(135deg,#f8fbff,#eef6ff);}
+.raw-lot-section-heading strong{display:block;color:#0f172a;font-size:.92rem;}
+.raw-lot-section-heading span{display:block;color:#64748b;font-size:.8rem;margin-top:.2rem;}
+.raw-lot-field{width:100%;min-width:82px;box-sizing:border-box;border:1px solid #d7e1ee!important;border-radius:8px!important;background:#f8fafc!important;color:#334155!important;padding:.46rem .5rem!important;font-size:.84rem!important;font-weight:750!important;line-height:1.2;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;}
+.raw-lot-field-number{text-align:right;}
+.raw-lot-field-current{color:#166534!important;background:#f0fdf4!important;border-color:#bbf7d0!important;}
+.raw-lot-field:disabled{cursor:default;opacity:1;}
+.raw-lot-field:not(:disabled){background:#fff!important;border-color:#60a5fa!important;box-shadow:0 0 0 3px rgba(59,130,246,.15)!important;}
+.raw-lot-row:has(.raw-lot-field:not(:disabled)){background:#eff6ff!important;}
+.raw-lot-used-qty{font-weight:800;color:#475569;text-align:right;}
+.raw-lot-edit-btn{background:linear-gradient(135deg,#4f46e5,#2563eb)!important;border:1px solid #6366f1!important;min-width:48px;font-weight:800!important;box-shadow:0 5px 12px rgba(79,70,229,.2);}
+.raw-lot-edit-btn.is-saving{background:linear-gradient(135deg,#16a34a,#059669)!important;border-color:#22c55e!important;}
 html[data-theme="dark"] .material-detail-tab{background:rgba(15,23,42,0.72);border-color:rgba(148,163,184,0.24);color:var(--text-secondary);}
 html[data-theme="dark"] .material-detail-tab.active{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:0 8px 20px rgba(37,99,235,0.24);}
 html[data-theme="dark"] .done-calendar,
@@ -1785,6 +2113,11 @@ html[data-theme="dark"] .raw-progress-row span,
 html[data-theme="dark"] .raw-done-note,
 html[data-theme="dark"] .raw-lot-header-item .label{color:var(--text-muted);}
 html[data-theme="dark"] .raw-add-existing-picker{background:rgba(37,99,235,0.14);border-color:rgba(96,165,250,0.28);}
+html[data-theme="dark"] .raw-name-filter-bar{background:linear-gradient(135deg,rgba(30,64,175,.16),rgba(15,23,42,.82));border-color:#30435e;}
+html[data-theme="dark"] .raw-name-filter-label{background:#1b2a40;color:#bfdbfe;border:1px solid #38506d;box-shadow:inset 0 1px 0 rgba(148,163,184,.08);}
+html[data-theme="dark"] .raw-name-filter-tab{background:#101c2f;color:#aebfd4;border-color:#334965;}
+html[data-theme="dark"] .raw-name-filter-tab:hover{background:#172b49;border-color:#60a5fa;color:#dbeafe;}
+html[data-theme="dark"] .raw-name-filter-tab.active{background:linear-gradient(135deg,#1d4ed8,#4338ca);border-color:#60a5fa;color:#fff;}
 html[data-theme="dark"] .raw-add-badge{background:rgba(14,165,233,0.18);color:#7dd3fc;}
 html[data-theme="dark"] .raw-add-back-btn{background:rgba(154,52,18,0.18) !important;border-color:rgba(251,146,60,0.28) !important;color:#fdba74 !important;}
 html[data-theme="dark"] .raw-code-guide-btn{background:linear-gradient(135deg,rgba(30,64,175,.28) 0%,rgba(15,23,42,.96) 100%) !important;border-color:rgba(96,165,250,0.4) !important;color:#bfdbfe !important;box-shadow:0 10px 22px rgba(2,6,23,.3);}
@@ -1819,6 +2152,23 @@ html[data-theme="dark"] .lot-code{background:rgba(15,23,42,0.88);border-color:rg
 html[data-theme="dark"] #rawLotTableBody tr,
 html[data-theme="dark"] #rawUsageLogTableBody tr,
 html[data-theme="dark"] #rawReceiveLogTableBody tr{background:var(--panel-bg);border-color:rgba(148,163,184,0.18);box-shadow:0 10px 24px rgba(2,6,23,0.24);}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-title-icon{background:rgba(37,99,235,.22);color:#93c5fd;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-section-heading{background:linear-gradient(135deg,rgba(30,64,175,.18),rgba(15,23,42,.5));border-color:#30435e;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-section-heading strong{color:#e5eefc;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-section-heading span{color:#94a9c4;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-modal .table-container{border:1px solid #2d405b;border-radius:12px;background:#0b1423;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-modal .table-container th{background:#1b2a40;color:#dce8f8;border-color:#3a4e69;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-modal .table-container td{background:#0f1a2b;color:#d5e2f2;border-color:#263a54;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-modal .table-container tbody tr:hover td{background:#172842;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-field,
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-modal .table-container input:disabled{background:#111f33!important;border-color:#314763!important;color:#dce8f8!important;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-field-current{background:rgba(20,83,45,.32)!important;border-color:rgba(74,222,128,.3)!important;color:#bbf7d0!important;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-field:not(:disabled){background:#0b1423!important;border-color:#60a5fa!important;color:#f8fbff!important;box-shadow:0 0 0 3px rgba(59,130,246,.2)!important;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-row:has(.raw-lot-field:not(:disabled)) td{background:#17345a!important;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-row:has(.raw-lot-field:not(:disabled)) .raw-lot-used-qty{background:#1d426f!important;color:#f8fbff!important;text-shadow:0 1px 1px rgba(2,6,23,.5);}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-used-qty{color:#dce8f8!important;font-weight:900;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-edit-btn{background:linear-gradient(135deg,#4338ca,#2563eb)!important;border-color:#6366f1!important;color:#fff!important;}
+html[data-theme="dark"] #rawLotDetailModal .raw-lot-edit-btn.is-saving{background:linear-gradient(135deg,#15803d,#059669)!important;border-color:#4ade80!important;}
 html[data-theme="dark"] .card > div[style*="border:1px solid #dbeafe"]{
     background:linear-gradient(180deg,#121a2a,#101827) !important;
     border-color:#263244 !important;
@@ -1842,6 +2192,7 @@ html[data-theme="dark"] .raw-code-summary .is-current{background:linear-gradient
 html[data-theme="dark"] .raw-code-summary .is-current span{color:#93c5fd !important;}
 html[data-theme="dark"] .raw-code-summary .is-current strong{color:#eff6ff !important;}
 html[data-theme="dark"] #rawActivityModal .modal-content,
+html[data-theme="dark"] #rawIntegratedSearchModal .modal-content,
 html[data-theme="dark"] #rawBasicEditModal .modal-content,
 html[data-theme="dark"] #rawCodeGuideModal .modal-content,
 html[data-theme="dark"] #receiveModal .modal-content,
@@ -1855,6 +2206,7 @@ html[data-theme="dark"] #logsModal .modal-content{
     box-shadow:0 28px 70px rgba(2,6,23,.52);
 }
 html[data-theme="dark"] #rawActivityModal h2,
+html[data-theme="dark"] #rawIntegratedSearchModal h2,
 html[data-theme="dark"] #rawBasicEditModal h2,
 html[data-theme="dark"] #rawCodeGuideModal h2,
 html[data-theme="dark"] #receiveModal h2,
@@ -1863,6 +2215,7 @@ html[data-theme="dark"] #adjustModal h2,
 html[data-theme="dark"] #rawChecksheetModal h2,
 html[data-theme="dark"] #logsModal h2{color:#eff6ff;}
 html[data-theme="dark"] #rawActivityModal p,
+html[data-theme="dark"] #rawIntegratedSearchModal p,
 html[data-theme="dark"] #logsModal p,
 html[data-theme="dark"] #rawCodeGuideModal .raw-code-guide-note,
 html[data-theme="dark"] #rawActivityPeriodText{color:#8ea3bd !important;}
@@ -1873,6 +2226,7 @@ html[data-theme="dark"] #rawCodeGuideModal tbody tr:hover td{background:rgba(30,
 html[data-theme="dark"] #rawCodeGuideModal .raw-code-guide-code{background:rgba(14,165,233,.18);color:#7dd3fc;}
 html[data-theme="dark"] #rawCodeGuideModal .raw-code-guide-empty{color:#94a3b8;}
 html[data-theme="dark"] #rawActivityModal input,
+html[data-theme="dark"] #rawIntegratedSearchModal input,
 html[data-theme="dark"] #rawBasicEditModal input,
 html[data-theme="dark"] #receiveModal input,
 html[data-theme="dark"] #exportModal input,
@@ -1892,6 +2246,36 @@ html[data-theme="dark"] #rawBasicEditModal input[readonly]{
     background:#162133 !important;
     color:#c7d3e3 !important;
 }
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-modal{
+    background:linear-gradient(180deg,#121d31 0%,#0e1728 48%,#0b1423 100%) !important;
+    border-color:#30435e;
+    color:#dce8f8;
+}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-heading{border-bottom-color:#334155;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-heading p,
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-search-summary{color:#94a9c4 !important;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-status-tabs{background:#0a1220;border:1px solid #2c3d56;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-status-tab{color:#91a4bd;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-status-tab:hover{background:#17243a;color:#bfdbfe;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-status-tab.active{background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;box-shadow:0 5px 14px rgba(2,6,23,.42);}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-search-controls label{color:#aebfd4;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-search-controls select,
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-search-controls input{background:#0b1423 !important;color:#e5eefc !important;border-color:#38506d !important;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-workplace-check{background:#101d30;color:#c7d5e6;border-color:#38506d;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-workplace-switch{background:#475569;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-workplace-check input:checked + .raw-integrated-workplace-switch{background:#3b82f6;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-workplace-select{background:#101d30!important;color:#dce8f8!important;border-color:#3b82f6!important;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-search-controls input::placeholder{color:#7186a1;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-result-wrap{background:#0b1423;border-color:#30435e;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-result-wrap table th{background:#1b2a40;color:#dce8f8;border-color:#3a4e69;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-result-wrap table td{background:#0f1a2b;color:#d5e2f2;border-color:#263a54;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-result-wrap tbody tr:hover td{background:#172842;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-status.active{background:rgba(22,163,74,.2);color:#86efac;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-status.done{background:#28384d;color:#c7d5e6;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-empty{color:#94a9c4;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-empty strong{color:#e5eefc;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-empty-icon{background:rgba(37,99,235,.22);color:#93c5fd;}
+html[data-theme="dark"] #rawIntegratedSearchModal .raw-integrated-checksheet-btn{background:linear-gradient(135deg,#047857,#059669)!important;border-color:#34d399!important;color:#ecfdf5!important;}
 html[data-theme="dark"] #receiveModal input[style*="#e8f5e9"]{background:rgba(22,163,74,.12) !important;color:#86efac !important;border-color:rgba(74,222,128,.28) !important;}
 html[data-theme="dark"] #exportModal input[style*="#fff3e0"]{background:rgba(249,115,22,.12) !important;color:#fdba74 !important;border-color:rgba(251,146,60,.28) !important;}
 @media (max-width: 1180px){

@@ -3440,6 +3440,14 @@ def raw_materials():
     selected_done_scope = (request.args.get('done_scope') or '').strip().lower()
     if selected_done_scope not in ('all', 'month'):
         selected_done_scope = ''
+    current_user = session.get('user') or {}
+    user_workplaces = current_user.get('workplaces') or []
+    if not user_workplaces:
+        user_workplaces = [wp for wp in (current_user.get('workplace1'), current_user.get('workplace2')) if wp]
+    is_admin_user = bool(current_user.get('is_admin')) or (current_user.get('role') or '').strip() == 'admin'
+    integrated_search_workplaces = list(WORKPLACES) if is_admin_user else [wp for wp in WORKPLACES if wp in user_workplaces]
+    if not integrated_search_workplaces and workplace:
+        integrated_search_workplaces = [workplace]
     conn_context = db_connection()
     conn = conn_context.__enter__()
     cursor = conn.cursor()
@@ -3690,6 +3698,30 @@ def raw_materials():
 
     if is_logistics:
         cursor.execute(
+            '''
+            SELECT DISTINCT TRIM(COALESCE(name, '')) AS name
+            FROM raw_materials
+            WHERE COALESCE(current_stock, 0) > 0
+              AND TRIM(COALESCE(name, '')) <> ''
+            ORDER BY name COLLATE NOCASE ASC
+            '''
+        )
+    else:
+        cursor.execute(
+            '''
+            SELECT DISTINCT TRIM(COALESCE(name, '')) AS name
+            FROM raw_materials
+            WHERE workplace = ?
+              AND COALESCE(current_stock, 0) > 0
+              AND TRIM(COALESCE(name, '')) <> ''
+            ORDER BY name COLLATE NOCASE ASC
+            ''',
+            (workplace,),
+        )
+    active_raw_name_tabs = [row['name'] for row in cursor.fetchall()]
+
+    if is_logistics:
+        cursor.execute(
             f'''
             WITH normalized AS (
                 SELECT
@@ -3916,15 +3948,151 @@ def raw_materials():
         raw_search_keyword=raw_search_keyword,
         selected_raw_name=selected_raw_name,
         raw_name_options=raw_name_options,
+        active_raw_name_tabs=active_raw_name_tabs,
         logistics_workplace_filter=logistics_workplace_filter,
         logistics_workplace_tabs=logistics_workplace_tabs,
         workplaces=WORKPLACES,
+        integrated_search_workplaces=integrated_search_workplaces,
         current_workplace=workplace,
         server_today=today_local().isoformat(),
         active_raw_groups=active_raw_groups,
         done_raw_groups=done_raw_groups,
         done_raw_rows=done_source_rows,
     )
+
+
+@bp.route('/raw-materials/integrated-search')
+@login_required
+def raw_materials_integrated_search():
+    """캘린더 범위와 무관하게 원초 로트를 통합 조회한다."""
+    workplace = get_workplace()
+    is_logistics = workplace == LOGISTICS_WORKPLACE
+    search_field = (request.args.get('field') or 'all').strip()
+    if search_field not in ('all', 'code', 'name', 'ja_ho', 'receiving_date'):
+        search_field = 'all'
+    keyword = (request.args.get('keyword') or '').strip()
+    status = (request.args.get('status') or 'all').strip()
+    all_workplaces = (request.args.get('all_workplaces') or '').strip().lower() in ('1', 'true', 'yes', 'on')
+    search_workplace = (request.args.get('search_workplace') or 'all').strip()
+    current_user = session.get('user') or {}
+    user_workplaces = current_user.get('workplaces') or []
+    if not user_workplaces:
+        user_workplaces = [wp for wp in (current_user.get('workplace1'), current_user.get('workplace2')) if wp]
+    is_admin_user = bool(current_user.get('is_admin')) or (current_user.get('role') or '').strip() == 'admin'
+    allowed_workplaces = list(WORKPLACES) if is_admin_user else [wp for wp in WORKPLACES if wp in user_workplaces]
+    if not allowed_workplaces and workplace:
+        allowed_workplaces = [workplace]
+    if search_workplace not in allowed_workplaces:
+        search_workplace = 'all'
+    if status not in ('all', 'active', 'done'):
+        status = 'all'
+
+    where_clauses = []
+    params = []
+    if not is_logistics and not all_workplaces:
+        where_clauses.append("COALESCE(result.workplace, '') = ?")
+        params.append(workplace)
+    elif all_workplaces and search_workplace != 'all':
+        where_clauses.append("COALESCE(result.workplace, '') = ?")
+        params.append(search_workplace)
+    elif all_workplaces:
+        allowed_placeholders = ','.join(['?'] * len(allowed_workplaces))
+        where_clauses.append(f"COALESCE(result.workplace, '') IN ({allowed_placeholders})")
+        params.extend(allowed_workplaces)
+
+    if keyword:
+        like_keyword = f'%{keyword}%'
+        fields = {
+            'code': "COALESCE(result.code, '') LIKE ?",
+            'name': "COALESCE(result.name, '') LIKE ?",
+            'ja_ho': "COALESCE(result.ja_ho, '') LIKE ?",
+            'receiving_date': "COALESCE(result.receiving_date, '') LIKE ?",
+        }
+        if search_field == 'all':
+            where_clauses.append(
+                "(COALESCE(result.code, '') LIKE ? OR COALESCE(result.name, '') LIKE ? "
+                "OR COALESCE(result.ja_ho, '') LIKE ? OR COALESCE(result.receiving_date, '') LIKE ?)"
+            )
+            params.extend([like_keyword] * 4)
+        else:
+            where_clauses.append(fields[search_field])
+            params.append(like_keyword)
+
+    if status == 'active':
+        where_clauses.append("result.usage_status = 'active'")
+    elif status == 'done':
+        where_clauses.append("result.usage_status = 'done'")
+
+    filters = (' WHERE ' + ' AND '.join(where_clauses)) if where_clauses else ''
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f'''
+            WITH production_done AS (
+                SELECT
+                    pmu.raw_material_id,
+                    SUM(COALESCE(pmu.actual_quantity, 0)) AS production_used_quantity,
+                    SUBSTR(MAX(COALESCE(p.production_date, '')), 1, 10) AS production_done_date,
+                    GROUP_CONCAT(DISTINCT pr.name) AS product_names
+                FROM production_material_usage pmu
+                JOIN productions p
+                  ON p.id = pmu.production_id
+                 AND {_completed_production_status_sql('p.status')}
+                LEFT JOIN products pr ON pr.id = p.product_id
+                WHERE COALESCE(pmu.actual_quantity, 0) > 0
+                GROUP BY pmu.raw_material_id
+            ),
+            export_done AS (
+                SELECT
+                    rml.raw_material_id,
+                    SUBSTR(MAX(COALESCE(rml.created_at, '')), 1, 10) AS export_done_date,
+                    MIN(COALESCE(NULLIF(TRIM(rml.note), ''), '')) AS export_note
+                FROM raw_material_logs rml
+                WHERE COALESCE(rml.type, '') = 'export'
+                  AND COALESCE(rml.quantity, 0) < 0
+                  AND COALESCE(rml.note, '') NOT LIKE '%[반출 취소]%'
+                GROUP BY rml.raw_material_id
+            ),
+            result AS (
+                SELECT
+                    rm.id,
+                    COALESCE(rm.code, '') AS code,
+                    COALESCE(rm.name, '') AS name,
+                    COALESCE(rm.workplace, '') AS workplace,
+                    COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') AS ja_ho,
+                    COALESCE(rm.receiving_date, '') AS receiving_date,
+                    COALESCE(rm.sheets_per_sok, 0) AS sheets_per_sok,
+                    COALESCE(rm.total_stock, 0) AS total_stock,
+                    COALESCE(rm.current_stock, 0) AS current_stock,
+                    COALESCE(rm.used_quantity, 0) AS used_quantity,
+                    CASE
+                        WHEN COALESCE(rm.current_stock, 0) <= 0
+                          OR (COALESCE(rm.total_stock, 0) > 0
+                              AND COALESCE(pd.production_used_quantity, 0) >= COALESCE(rm.total_stock, 0) - 0.0001)
+                        THEN 'done' ELSE 'active'
+                    END AS usage_status,
+                    CASE WHEN COALESCE(ed.export_done_date, '') <> '' THEN 'export' ELSE 'production' END AS done_kind,
+                    COALESCE(ed.export_done_date, pd.production_done_date, '') AS done_date,
+                    COALESCE(NULLIF(ed.export_note, ''), NULLIF(pd.product_names, ''), '') AS done_note
+                FROM raw_materials rm
+                LEFT JOIN production_done pd ON pd.raw_material_id = rm.id
+                LEFT JOIN export_done ed ON ed.raw_material_id = rm.id
+            )
+            SELECT * FROM result
+            {filters}
+            ORDER BY name COLLATE NOCASE ASC,
+                     CASE WHEN receiving_date = '' THEN 1 ELSE 0 END ASC,
+                     receiving_date ASC, id ASC
+            ''',
+            params,
+        )
+        rows = [dict(row) for row in cursor.fetchall()]
+    finally:
+        conn_context.__exit__(None, None, None)
+
+    return jsonify({'ok': True, 'rows': rows, 'count': len(rows)})
 
 
 @bp.route('/raw-materials/activity')
@@ -4041,7 +4209,9 @@ def raw_material_detail(raw_material_id):
         if is_logistics:
             cursor.execute(
                 '''
-                SELECT id, workplace, name, code, sheets_per_sok, total_stock, current_stock, used_quantity
+                SELECT id, workplace, name, code, receiving_date,
+                       COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') AS car_number,
+                       sheets_per_sok, total_stock, current_stock, used_quantity
                 FROM raw_materials
                 WHERE id = ?
                 ''',
@@ -4050,7 +4220,9 @@ def raw_material_detail(raw_material_id):
         else:
             cursor.execute(
                 '''
-                SELECT id, workplace, name, code, sheets_per_sok, total_stock, current_stock, used_quantity
+                SELECT id, workplace, name, code, receiving_date,
+                       COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') AS car_number,
+                       sheets_per_sok, total_stock, current_stock, used_quantity
                 FROM raw_materials
                 WHERE id = ?
                   AND workplace = ?
@@ -4059,7 +4231,33 @@ def raw_material_detail(raw_material_id):
             )
         base = cursor.fetchone()
         if not base:
+            current_user = session.get('user') or {}
+            allowed_workplaces = current_user.get('workplaces') or [
+                wp for wp in (current_user.get('workplace1'), current_user.get('workplace2')) if wp
+            ]
+            is_admin_user = bool(current_user.get('is_admin')) or (current_user.get('role') or '').strip() == 'admin'
+            if is_admin_user:
+                allowed_workplaces = list(WORKPLACES)
+            if allowed_workplaces:
+                placeholders = ','.join(['?'] * len(allowed_workplaces))
+                cursor.execute(
+                    f'''
+                    SELECT id, workplace, name, code, receiving_date,
+                           COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') AS car_number,
+                           sheets_per_sok, total_stock, current_stock, used_quantity
+                    FROM raw_materials
+                    WHERE id = ? AND workplace IN ({placeholders})
+                    ''',
+                    [raw_material_id, *allowed_workplaces],
+                )
+                base = cursor.fetchone()
+        if not base:
             return jsonify({'ok': False, 'message': 'Raw material not found.'}), 404
+
+        # 통합 검색에서 권한이 있는 다른 작업장 로트를 연 경우에도
+        # 해당 로트의 상세 묶음을 조회할 수 있게 한다.
+        if str(base['workplace'] or '') != str(workplace or ''):
+            is_logistics = True
 
         code = (base['code'] or '').strip()
         if code:
@@ -4075,13 +4273,14 @@ def raw_material_detail(raw_material_id):
                         COALESCE(used_quantity, 0) as used_quantity
                     FROM raw_materials
                     WHERE TRIM(COALESCE(code, '')) = TRIM(COALESCE(?, ''))
-                      AND COALESCE(current_stock, 0) > 0
+                      AND COALESCE(receiving_date, '') = COALESCE(?, '')
+                      AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = COALESCE(?, '')
                     ORDER BY
                         CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                         receiving_date ASC,
                         id ASC
                     ''',
-                    (code,),
+                    (code, base['receiving_date'], base['car_number']),
                 )
             else:
                 cursor.execute(
@@ -4096,13 +4295,14 @@ def raw_material_detail(raw_material_id):
                     FROM raw_materials
                     WHERE workplace = ?
                       AND TRIM(COALESCE(code, '')) = TRIM(COALESCE(?, ''))
-                      AND COALESCE(current_stock, 0) > 0
+                      AND COALESCE(receiving_date, '') = COALESCE(?, '')
+                      AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = COALESCE(?, '')
                     ORDER BY
                         CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                         receiving_date ASC,
                         id ASC
                     ''',
-                    (workplace, code),
+                    (workplace, code, base['receiving_date'], base['car_number']),
                 )
         else:
             cursor.execute(
@@ -4117,13 +4317,14 @@ def raw_material_detail(raw_material_id):
                 FROM raw_materials
                 WHERE workplace = ?
                   AND TRIM(COALESCE(name, '')) = TRIM(COALESCE(?, ''))
-                  AND COALESCE(current_stock, 0) > 0
+                  AND COALESCE(receiving_date, '') = COALESCE(?, '')
+                  AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = COALESCE(?, '')
                 ORDER BY
                     CASE WHEN receiving_date IS NULL OR TRIM(receiving_date) = '' THEN 1 ELSE 0 END ASC,
                     receiving_date ASC,
                     id ASC
                 ''',
-                (workplace, base['name']),
+                (workplace, base['name'], base['receiving_date'], base['car_number']),
             )
         lots = [dict(row) for row in cursor.fetchall()]
         raw_ids = [int(row['id']) for row in lots if row.get('id')]
@@ -4203,6 +4404,17 @@ def raw_material_detail(raw_material_id):
                 raw_ids,
             )
             receive_logs = [dict(row) for row in cursor.fetchall()]
+            # 원초 최초 등록은 별도 receive 로그가 없을 수 있으므로, 선택한 로트의
+            # 실제 입고일을 입고 이력으로 항상 제공한다.
+            receive_logs = [
+                {
+                    'receive_date': row.get('receiving_date') or '-',
+                    'car_number': row.get('car_number') or '-',
+                    'quantity': float(row.get('total_stock') or 0),
+                    'note': '원초 입고 등록',
+                }
+                for row in lots
+            ]
         payload = dict(base)
         payload['lot_count'] = len(lots)
         payload['total_stock_sum'] = sum(float(row.get('total_stock') or 0) for row in lots)
@@ -4251,6 +4463,29 @@ def raw_material_checksheet_preview(raw_material_id):
         '''
         cursor.execute(raw_sql, (raw_material_id, workplace, production_id, production_id, workplace))
         raw = cursor.fetchone()
+        if not raw:
+            current_user = session.get('user') or {}
+            allowed_workplaces = current_user.get('workplaces') or [
+                wp for wp in (current_user.get('workplace1'), current_user.get('workplace2')) if wp
+            ]
+            if bool(current_user.get('is_admin')) or (current_user.get('role') or '').strip() == 'admin':
+                allowed_workplaces = list(WORKPLACES)
+            if allowed_workplaces:
+                placeholders = ','.join(['?'] * len(allowed_workplaces))
+                cursor.execute(
+                    f'''
+                    SELECT rm.id, rm.workplace, rm.name, rm.code, rm.lot, rm.receiving_date,
+                           COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), '')) as car_number,
+                           COALESCE(rm.sheets_per_sok, 0) as sheets_per_sok,
+                           COALESCE(rm.total_stock, 0) as total_stock,
+                           COALESCE(rm.current_stock, 0) as current_stock,
+                           COALESCE(rm.used_quantity, 0) as used_quantity
+                    FROM raw_materials rm
+                    WHERE rm.id = ? AND COALESCE(rm.workplace, '') IN ({placeholders})
+                    ''',
+                    [raw_material_id, *allowed_workplaces],
+                )
+                raw = cursor.fetchone()
         if not raw:
             abort(404)
 
