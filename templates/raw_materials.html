@@ -2131,6 +2131,33 @@ html[data-theme="dark"] .raw-code-card.tone-4,
 html[data-theme="dark"] .raw-code-card.tone-5,
 html[data-theme="dark"] .raw-code-item,
 html[data-theme="dark"] .raw-lot-header-item{background:var(--panel-bg);border-color:rgba(148,163,184,0.18);box-shadow:0 10px 24px rgba(2,6,23,0.2);}
+/* Keep raw-material groups visually distinct in dark mode.  The shared dark-card
+   rule above resets all border colors, so each tone is restored here with a
+   visible accent rail and a subtle, non-intrusive surface tint. */
+html[data-theme="dark"] .raw-code-card.tone-0{--raw-group-tone:#38bdf8;--raw-group-tone-rgb:56,189,248;}
+html[data-theme="dark"] .raw-code-card.tone-1{--raw-group-tone:#4ade80;--raw-group-tone-rgb:74,222,128;}
+html[data-theme="dark"] .raw-code-card.tone-2{--raw-group-tone:#fb923c;--raw-group-tone-rgb:251,146,60;}
+html[data-theme="dark"] .raw-code-card.tone-3{--raw-group-tone:#f472b6;--raw-group-tone-rgb:244,114,182;}
+html[data-theme="dark"] .raw-code-card.tone-4{--raw-group-tone:#a78bfa;--raw-group-tone-rgb:167,139,250;}
+html[data-theme="dark"] .raw-code-card.tone-5{--raw-group-tone:#22d3ee;--raw-group-tone-rgb:34,211,238;}
+html[data-theme="dark"] .raw-code-card.tone-0,
+html[data-theme="dark"] .raw-code-card.tone-1,
+html[data-theme="dark"] .raw-code-card.tone-2,
+html[data-theme="dark"] .raw-code-card.tone-3,
+html[data-theme="dark"] .raw-code-card.tone-4,
+html[data-theme="dark"] .raw-code-card.tone-5{
+    border-left:5px solid var(--raw-group-tone) !important;
+    background:linear-gradient(105deg,rgba(var(--raw-group-tone-rgb),.14),var(--panel-bg) 40%) !important;
+}
+html[data-theme="dark"] .raw-code-card.tone-0 .raw-code-card-head,
+html[data-theme="dark"] .raw-code-card.tone-1 .raw-code-card-head,
+html[data-theme="dark"] .raw-code-card.tone-2 .raw-code-card-head,
+html[data-theme="dark"] .raw-code-card.tone-3 .raw-code-card-head,
+html[data-theme="dark"] .raw-code-card.tone-4 .raw-code-card-head,
+html[data-theme="dark"] .raw-code-card.tone-5 .raw-code-card-head{
+    background:linear-gradient(90deg,rgba(var(--raw-group-tone-rgb),.16),rgba(30,41,59,.82) 42%) !important;
+    box-shadow:inset 0 1px 0 rgba(var(--raw-group-tone-rgb),.22);
+}
 html[data-theme="dark"] .raw-code-card-head{background:rgba(30,41,59,0.82);border-bottom-color:rgba(148,163,184,0.16);}
 html[data-theme="dark"] .raw-code-summary div,
 html[data-theme="dark"] .raw-inline-meta,
