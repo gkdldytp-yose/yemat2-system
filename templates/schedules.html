@@ -15,6 +15,12 @@
     color: #6b7280;
     font-size: 0.95rem;
 }
+.schedule-toolbar{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+.schedule-toolbar-actions{margin-left:auto;display:flex;align-items:center;gap:.65rem;flex-wrap:wrap}
+.schedule-production-link{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:48px;padding:.75rem 1.1rem;border-radius:14px;text-decoration:none;color:#fff;background:linear-gradient(135deg,#0f766e,#14b8a6);border:1px solid rgba(94,234,212,.6);font-size:.95rem;font-weight:900;box-shadow:0 12px 24px rgba(13,148,136,.22);white-space:nowrap;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease}
+.schedule-production-link:hover{color:#fff;filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 16px 28px rgba(13,148,136,.32)}
+html[data-theme="dark"] .schedule-production-link{background:linear-gradient(135deg,#0f766e,#0ea5a3);border-color:#2dd4bf;box-shadow:0 14px 28px rgba(20,184,166,.2)}
+@media(max-width:768px){.schedule-toolbar-actions{width:100%;margin-left:0}.schedule-production-link{flex:1}.schedule-toolbar-actions .btn{flex:1}}
 
 /* 모달 */
 .modal {
@@ -202,6 +208,16 @@ body.modal-open {
 }
 .calendar-header-actions .calendar-special-btn {
     min-width: 196px;
+}
+.calendar-header-actions .calendar-schedule-add-btn{
+    background:linear-gradient(135deg,#0f766e 0%,#14b8a6 52%,#0d9488 100%) !important;
+    border-color:rgba(94,234,212,.72) !important;
+    box-shadow:0 16px 36px rgba(13,148,136,.30),0 0 0 1px rgba(255,255,255,.16) inset;
+}
+.calendar-header-actions .calendar-schedule-add-btn:hover{
+    background:linear-gradient(135deg,#0f8f82 0%,#20cbbd 52%,#0f9f92 100%) !important;
+    border-color:rgba(153,246,228,.9) !important;
+    box-shadow:0 22px 40px rgba(13,148,136,.36),0 0 0 1px rgba(255,255,255,.2) inset;
 }
 .schedule-special-cta-wrap {
     display: flex;
@@ -1390,7 +1406,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     .calendar-header-actions {
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 0.5rem;
     }
     .calendar-action-btn {
@@ -1398,6 +1414,32 @@ html[data-theme="dark"] .stats-detail-journal-btn {
         padding: 0.7rem 0.5rem !important;
         font-size: 0.84rem !important;
         min-height: 42px;
+    }
+    .calendar-header-actions .calendar-special-btn {
+        min-width: 0;
+        gap: 0.4rem;
+        padding: 0.65rem 0.45rem !important;
+    }
+    .calendar-header-actions .calendar-special-btn .special-btn-icon {
+        width: 1.75rem;
+        height: 1.75rem;
+        flex: 0 0 1.75rem;
+    }
+    .calendar-header-actions .calendar-special-btn .special-btn-copy {
+        min-width: 0;
+        overflow: hidden;
+    }
+    .calendar-header-actions .calendar-special-btn .special-btn-title {
+        font-size: 0.86rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .calendar-header-actions .calendar-special-btn .special-btn-sub {
+        font-size: 0.64rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .calendar-weekdays,
     .calendar-days {
@@ -5272,6 +5314,16 @@ html[data-theme="dark"] .calendar-special-btn .special-btn-icon{
 }
 html[data-theme="dark"] .calendar-special-btn .special-btn-title{color:#f8fbff;}
 html[data-theme="dark"] .calendar-special-btn .special-btn-sub{color:rgba(239,246,255,.86);}
+html[data-theme="dark"] .calendar-action-btn.calendar-special-btn.calendar-schedule-add-btn{
+    background:linear-gradient(135deg,#0f766e 0%,#14b8a6 52%,#0d9488 100%) !important;
+    border-color:rgba(94,234,212,.78) !important;
+    box-shadow:0 16px 36px rgba(13,148,136,.32),0 0 0 1px rgba(255,255,255,.16) inset !important;
+}
+html[data-theme="dark"] .calendar-action-btn.calendar-special-btn.calendar-schedule-add-btn:hover{
+    background:linear-gradient(135deg,#0f8f82 0%,#20cbbd 52%,#0f9f92 100%) !important;
+    border-color:rgba(153,246,228,.92) !important;
+    box-shadow:0 22px 40px rgba(13,148,136,.4),0 0 0 1px rgba(255,255,255,.2) inset !important;
+}
 html[data-theme="dark"] .export-tab-btn{background:linear-gradient(180deg,#152033 0%,#101827 100%);border-color:#2b3648;color:#dbe7f5;box-shadow:none;}
 html[data-theme="dark"] .export-tab-btn{
     background:
@@ -6303,9 +6355,9 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
         <button data-view="capacity" onclick="switchView('capacity')">📦 생산 가능량 계산기</button>
         <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
     </div>
-    {% if can_prod %}
-    <button class="btn" onclick="openAddModal()">+ 스케줄 추가</button>
-    {% endif %}
+    <div class="schedule-toolbar-actions">
+        <a href="/production" class="schedule-production-link">생산 관리</a>
+    </div>
 </div>
 
 <!-- 캘린더 뷰 -->
@@ -6324,6 +6376,15 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     <span class="special-btn-sub">점검, 공지, 변경사항 빠른 등록</span>
                 </span>
             </button>
+            {% if can_prod %}
+            <button type="button" onclick="openAddModal()" class="calendar-action-btn calendar-special-btn calendar-schedule-add-btn">
+                <span class="special-btn-icon">＋</span>
+                <span class="special-btn-copy">
+                    <span class="special-btn-title">스케줄 추가</span>
+                    <span class="special-btn-sub">생산 계획 빠른 등록</span>
+                </span>
+            </button>
+            {% endif %}
             <!--
                 🖨️ 인쇄
             </button>

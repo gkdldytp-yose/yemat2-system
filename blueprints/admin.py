@@ -4602,8 +4602,8 @@ def integrated_raw_material_activity():
     date_from_s = target_date.isoformat()
     date_to_s = target_date.isoformat()
 
-    conn = get_db()
-    begin_db_transaction(conn)
+    conn_context = db_connection()
+    conn = conn_context.__enter__()
     cursor = conn.cursor()
     try:
         where_clause = ''
@@ -4612,7 +4612,11 @@ def integrated_raw_material_activity():
             where_clause = 'WHERE rm.workplace = ?'
             where_params.append(wp_filter)
 
-        params = [*where_params, date_from_s, date_to_s, date_from_s, date_to_s, date_from_s, date_to_s]
+        params = [
+            *where_params,
+            date_from_s, date_to_s, '\uC644\uB8CC',
+            date_from_s, date_to_s, date_from_s, date_to_s,
+        ]
         cursor.execute(
             f'''
             WITH base_rm AS (
@@ -4637,7 +4641,7 @@ def integrated_raw_material_activity():
                 LEFT JOIN productions p ON p.id = pmu.production_id
                 LEFT JOIN products prd ON prd.id = p.product_id
                 WHERE p.production_date BETWEEN ? AND ?
-                  AND COALESCE(p.status, '') = '완료'
+                  AND COALESCE(p.status, '') = ?
                   AND COALESCE(pmu.actual_quantity, 0) > 0
                   AND pmu.raw_material_id IS NOT NULL
                 GROUP BY pmu.raw_material_id
