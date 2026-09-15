@@ -67,16 +67,26 @@
         
         /* 네비게이션 */
         nav{background:linear-gradient(135deg,#0f172a 0%,#1e293b 55%,#0ea5e9 140%);box-shadow:0 8px 24px rgba(2,6,23,0.25);position:sticky;top:0;z-index:100;}
-        .nav-container{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1.25rem;padding:0.95rem 1.2rem;}
+        .nav-container{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1.25rem;padding:0.95rem 1.2rem;position:relative;}
         .nav-brand{color:white;font-size:1.3rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:0.6rem;}
         .nav-logo{height:28px;width:28px;display:block;}
         .menu-toggle{display:none;background:none;border:none;color:white;font-size:1.5rem;cursor:pointer;padding:0.5rem;}
-        .nav-menu{display:flex;gap:0.45rem;list-style:none;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0;}
+        .nav-menu{display:flex;gap:0.25rem;list-style:none;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0;}
+        /* Align the primary menu group with the gap before the right-side
+           controls without using absolute positioning (which can overlap). */
+        @media (min-width: 1200px) {
+            .nav-menu{transform:translateX(96px);}
+        }
         .nav-menu a{color:white;text-decoration:none;font-weight:800;padding:0.72rem 1.08rem;border-radius:12px;transition:all 0.2s;font-size:0.98rem;white-space:nowrap;line-height:1;}
         .nav-menu a:hover{background:rgba(255,255,255,0.16);transform:translateY(-1px);}
         .nav-menu .admin-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);}
         .nav-user{color:white;display:flex;align-items:center;gap:0.7rem;font-size:0.95rem;}
         .nav-todo-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.72rem 1.08rem;border:none;border-radius:14px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;font-weight:900;font-size:0.98rem;cursor:pointer;box-shadow:0 10px 22px rgba(20,184,166,0.22);white-space:nowrap;line-height:1;}
+        .nav-today-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.72rem 1.08rem;border:none;border-radius:14px;background:linear-gradient(135deg,#c2410c,#f59e0b);color:#fff;font-weight:900;font-size:0.98rem;cursor:pointer;box-shadow:0 10px 22px rgba(245,158,11,0.24);white-space:nowrap;line-height:1;text-decoration:none;}
+        .nav-today-btn:hover{filter:brightness(1.06);transform:translateY(-1px);color:#fff;}
+        /* Keep all text navigation controls on one visual baseline.  The bell
+           stays intentionally independent because it is an icon-only control. */
+        .nav-today-btn,.nav-todo-btn,.nav-workplace-badge,.nav-profile-btn,.theme-toggle-btn{height:48px;min-height:48px;padding:0 1.08rem;}
         .nav-todo-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.55rem;height:1.55rem;padding:0 0.4rem;border-radius:999px;background:rgba(255,255,255,0.2);font-size:0.8rem;font-weight:900;}
         .nav-workplace-badge{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0.75rem 1.12rem;border-radius:14px;background:linear-gradient(135deg,#7488ff,#6277f7);color:#fff;font-size:1rem;font-weight:900;white-space:nowrap;line-height:1;text-decoration:none;box-shadow:0 10px 24px rgba(99,102,241,.22);}
         .nav-profile-btn{display:inline-flex;align-items:center;gap:0.5rem;min-height:46px;padding:0.75rem 1.02rem;border-radius:14px;font-size:0.95rem;font-weight:900;line-height:1;}
@@ -94,7 +104,7 @@
             .nav-menu.active{display:flex;}
             .nav-menu a{display:block;width:100%;text-align:left;padding:0.9rem 1.05rem;font-size:0.98rem;}
             .nav-user{font-size:0.82rem;gap:0.35rem;}
-            .nav-todo-btn,.nav-workplace-badge,.nav-profile-btn,.theme-toggle-btn{min-height:40px;padding:0.62rem 0.82rem;font-size:0.84rem;border-radius:12px;}
+            .nav-todo-btn,.nav-today-btn,.nav-workplace-badge,.nav-profile-btn,.theme-toggle-btn{height:40px;min-height:40px;padding:0 .82rem;font-size:0.84rem;border-radius:12px;}
             .nav-brand{font-size:1.05rem;}
         }
         
@@ -254,6 +264,8 @@
         .todo-message-row{display:flex;justify-content:flex-start;}
         .todo-message-row.is-left{justify-content:flex-start;}
         .todo-message-row.is-right{justify-content:flex-start;}
+        .todo-message-row.is-focused .todo-message-bubble{animation:todo-focused-pulse 1.1s ease-in-out 2;border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.2),0 16px 30px rgba(37,99,235,.18);}
+        @keyframes todo-focused-pulse{50%{transform:scale(1.012);}}
         .todo-message-bubble{width:min(100%,860px);border-radius:22px;padding:1rem 1rem 0.9rem;background:#ffffff;border:1px solid #dbe5f0;box-shadow:0 12px 24px rgba(15,23,42,0.06);}
         .todo-message-bubble.is-due-soon{background:#fff7ed;border-color:#fdba74;}
         .todo-message-bubble.is-overdue{background:#fff1f2;border-color:#fda4af;}
@@ -514,6 +526,9 @@
         html[data-theme="dark"] .nav-brand,
         html[data-theme="dark"] .nav-menu a,
         html[data-theme="dark"] .nav-user{color:#fff;}
+        html[data-theme="dark"] .nav-today-btn,
+        html[data-theme="dark"] .nav-today-btn:hover,
+        html[data-theme="dark"] .nav-today-btn:focus-visible{color:#fff7ed;}
         html[data-theme="dark"] ::placeholder{color:#6f839c;}
         @keyframes notifyPulse{
             0%,100%{transform:translateY(0);box-shadow:0 12px 26px rgba(37,99,235,.18);}
@@ -674,7 +689,6 @@
         <ul class="nav-menu" id="navMenu">
             <li><a href="/" onclick="closeMenu()">대시보드</a></li>
             <li><a href="/schedules" onclick="closeMenu()">생산 스케줄</a></li>
-            <li><a href="/production" onclick="closeMenu()">생산 관리</a></li>
             <li><a href="/products" onclick="closeMenu()">상품 관리</a></li>
             <li><a href="/raw-materials" onclick="closeMenu()">원초 관리</a></li>
             <li><a href="/materials" onclick="closeMenu()">부자재 관리</a></li>
@@ -685,12 +699,15 @@
             <li><a href="/integrated-management" onclick="closeMenu()" style="color:#f39c12;font-weight:600;">통합 관리</a></li>
             {% endif %}
             {% if _sa %}
-            <li><a href="/users" class="admin-btn" onclick="closeMenu()">👥 사용자</a></li>
+            <li><a href="/users" class="admin-btn" onclick="closeMenu()">사용자</a></li>
             {% endif %}
         </ul>
         <div class="nav-user">
             <!-- 현재 작업장 표시 -->
             {% if session.get('workplace') %}
+            <a href="/today-work" class="nav-today-btn" title="오늘 작업">
+                오늘 작업
+            </a>
             <button type="button" class="nav-todo-btn" onclick="openTodoMessenger()">
                 To-Do
                 <span class="nav-todo-count">{{ nav_dashboard_todos|length }}</span>
@@ -859,7 +876,7 @@
                 {% if nav_dashboard_todos %}
                     {% for todo in nav_dashboard_todos %}
                     {% set can_manage_todo = todo.can_manage %}
-                    <div class="todo-message-row {% if loop.index0 % 2 == 0 %}is-left{% else %}is-right{% endif %}" data-todo-row="1" data-status="{{ todo.todo_status or 'processing' }}" data-announcement="{{ '1' if todo.is_announcement else '0' }}" data-private="{{ '1' if todo.is_private else '0' }}" data-due-soon="{{ '1' if todo.is_due_soon else '0' }}" data-overdue="{{ '1' if todo.is_overdue else '0' }}">
+                    <div class="todo-message-row {% if loop.index0 % 2 == 0 %}is-left{% else %}is-right{% endif %}" data-todo-row="1" data-todo-id="{{ todo.id }}" data-status="{{ todo.todo_status or 'processing' }}" data-announcement="{{ '1' if todo.is_announcement else '0' }}" data-private="{{ '1' if todo.is_private else '0' }}" data-due-soon="{{ '1' if todo.is_due_soon else '0' }}" data-overdue="{{ '1' if todo.is_overdue else '0' }}">
                         <div class="todo-message-bubble status-{{ todo.todo_status }} {% if todo.is_announcement %}is-announcement{% endif %} {% if todo.is_private %}is-private{% endif %} {% if todo.is_overdue %}is-overdue{% elif todo.is_due_soon %}is-due-soon{% endif %}">
                             <div class="todo-message-tools">
                                 {% if can_manage_todo %}
@@ -1143,6 +1160,21 @@ function openTodoMessenger() {
     if (window.location.hash !== '#todo-messenger') {
         history.replaceState(null, '', `${window.location.pathname}${window.location.search}#todo-messenger`);
     }
+}
+function openTodoMessengerForItem(todoId) {
+    openTodoMessenger();
+    currentTodoListFilter = 'all';
+    document.querySelectorAll('.todo-filter-stat').forEach((el) => {
+        el.classList.toggle('active', (el.dataset.filter || '') === 'all');
+    });
+    applyTodoListFilter();
+    const row = Array.from(document.querySelectorAll('#todoMessengerList [data-todo-row="1"]'))
+        .find((item) => String(item.dataset.todoId || '') === String(todoId || ''));
+    if (!row) return;
+    document.querySelectorAll('#todoMessengerList .todo-message-row.is-focused').forEach((item) => item.classList.remove('is-focused'));
+    row.classList.add('is-focused');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => row.classList.remove('is-focused'), 3200);
 }
 function closeTodoMessenger(event) {
     if (event && event.target && event.target.id !== 'todoMessengerBg') return;

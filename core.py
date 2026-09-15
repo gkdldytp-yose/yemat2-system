@@ -17,6 +17,9 @@ WORKPLACES = ['\u0031\ub3d9 \uc870\ubbf8', '\u0031\ub3d9 \uc790\ubc18', '\u0032\
 LOGISTICS_WORKPLACE = '\ubb3c\ub958'
 SHARED_WORKPLACE = '공통'
 SHARED_MATERIAL_CATEGORIES = {'기름', '소금', '실리카', '트레이'}
+PRODUCTION_STATUS_PLANNED = '\uC608\uC815'
+PRODUCTION_STATUS_IN_PROGRESS = '\uC9C4\uD589\uC911'
+PRODUCTION_STATUS_COMPLETED = '\uC644\uB8CC'
 WORKPLACE_ALIASES = {
     '1동 조미 작업장': '1동 조미',
     '1동 자반 작업장': '1동 자반',
@@ -1337,9 +1340,39 @@ def _ensure_production_schema(conn):
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_pclu_component_output ON production_component_lot_usage(component_production_id, expiry_date)"
         )
+        ensure_production_status_triggers(conn)
     except Exception:
         pass
     _production_schema_checked = True
+
+
+def ensure_production_status_triggers(conn):
+    """Prevent legacy mojibake statuses from being persisted again."""
+    completed = "CAST(X'EC9984EBA38C' AS TEXT)"
+    planned = "CAST(X'EC9888ECA095' AS TEXT)"
+    for table in ('productions', 'production_schedules'):
+        if not conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)
+        ).fetchone():
+            continue
+        for event, suffix in (('INSERT', 'insert'), ('UPDATE OF status', 'update')):
+            conn.execute(
+                f'''
+                CREATE TRIGGER IF NOT EXISTS trg_{table}_canonical_status_{suffix}
+                AFTER {event} ON {table}
+                FOR EACH ROW
+                WHEN HEX(NEW.status) IN ('3FEABEA8ECA6BA', '3FEB8D89ECA099')
+                BEGIN
+                    UPDATE {table}
+                    SET status = CASE
+                        WHEN HEX(NEW.status) = '3FEABEA8ECA6BA' THEN {completed}
+                        WHEN HEX(NEW.status) = '3FEB8D89ECA099' THEN {planned}
+                        ELSE NEW.status
+                    END
+                    WHERE id = NEW.id;
+                END
+                '''
+            )
 
 
 def _ensure_products_schema(conn):

@@ -12,6 +12,8 @@ from core import (
     hash_password,
     login_required,
     normalize_workplace_name,
+    audit_log,
+    role_required,
     today_local,
     verify_password,
 )
@@ -773,8 +775,293 @@ def index():
                           processing_dashboard_todos=processing_dashboard_todos,
                           info_needed_dashboard_todos=info_needed_dashboard_todos,
                           due_soon_dashboard_todos=due_soon_dashboard_todos,
-                          overdue_dashboard_todos=overdue_dashboard_todos,
+                         overdue_dashboard_todos=overdue_dashboard_todos,
                           today=today)
+
+
+@bp.route('/today-work')
+@login_required
+def today_work():
+    """A compact, mobile-first operating board for the selected workplace."""
+    workplace = get_workplace()
+    today = today_local()
+    todo_username = (session.get('user') or {}).get('username') or ''
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT
+                ps.id AS schedule_id, ps.product_id, ps.scheduled_date, ps.planned_boxes,
+                ps.status AS schedule_status, ps.note, ps.line, ps.production_id,
+                p.name AS product_name, p.code AS product_code,
+                pr.id AS production_id_joined, pr.status AS production_status,
+                pr.actual_boxes, pr.entry_mode
+            FROM production_schedules ps
+            LEFT JOIN products p ON p.id = ps.product_id
+            LEFT JOIN productions pr ON pr.id = ps.production_id
+            WHERE ps.scheduled_date = ? AND ps.workplace = ?
+            ORDER BY COALESCE(ps.line, ''), ps.id
+            ''',
+            (today.isoformat(), workplace),
+        )
+        productions = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            item['production_id'] = int(item.get('production_id_joined') or item.get('production_id') or 0)
+            item['status'] = _normalize_dashboard_schedule_status(
+                item.get('production_status') or item.get('schedule_status')
+            )
+            productions.append(item)
+
+        # Material needs on this page are based exclusively on today's open
+        # production schedules. Future schedules must not appear as a current
+        # shortage for the operator.
+        today_plan_by_product = {}
+        for item in productions:
+            if item['status'] == '완료':
+                continue
+            product_id = int(item.get('product_id') or 0)
+            planned_boxes = float(item.get('planned_boxes') or 0)
+            if product_id > 0 and planned_boxes > 0:
+                today_plan_by_product[product_id] = today_plan_by_product.get(product_id, 0.0) + planned_boxes
+
+        low_stock_materials = []
+        if today_plan_by_product:
+            product_ids = list(today_plan_by_product)
+            placeholders = ','.join(['?'] * len(product_ids))
+            bom_rows = _filter_dashboard_selected_variant_bom_rows(cursor.execute(
+                f'''
+                SELECT b.product_id, b.material_id, COALESCE(b.quantity_per_box, 0) AS quantity_per_box,
+                       m.name AS material_name, COALESCE(m.code, printf('M%05d', m.id)) AS material_code,
+                       COALESCE(m.unit, '') AS unit, COALESCE(m.category, '') AS material_category,
+                       COALESCE(p.selected_silica_material_id, 0) AS selected_silica_material_id,
+                       COALESCE(p.selected_pouch_material_id, 0) AS selected_pouch_material_id
+                FROM bom b
+                JOIN products p ON p.id = b.product_id
+                JOIN materials m ON m.id = b.material_id
+                WHERE b.product_id IN ({placeholders}) AND b.material_id IS NOT NULL
+                ''',
+                product_ids,
+            ).fetchall())
+            material_ids = sorted({int(row['material_id'] or 0) for row in bom_rows if int(row['material_id'] or 0) > 0})
+            stock_by_material = {}
+            location = cursor.execute(
+                '''SELECT id FROM inv_locations WHERE name = ? OR workplace_code = ?
+                   ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id LIMIT 1''',
+                (workplace, workplace, workplace),
+            ).fetchone()
+            if location and material_ids:
+                material_placeholders = ','.join(['?'] * len(material_ids))
+                stock_rows = cursor.execute(
+                    f'''
+                    SELECT ml.material_id, COALESCE(SUM(b.qty), 0) AS qty
+                    FROM inv_material_lot_balances b
+                    JOIN material_lots ml ON ml.id = b.material_lot_id
+                    WHERE b.location_id = ? AND ml.material_id IN ({material_placeholders})
+                      AND COALESCE(ml.is_disposed, 0) = 0
+                    GROUP BY ml.material_id
+                    ''',
+                    [int(location['id']), *material_ids],
+                ).fetchall()
+                stock_by_material = {int(row['material_id']): float(row['qty'] or 0) for row in stock_rows}
+            needs = {}
+            for row in bom_rows:
+                material_id = int(row['material_id'] or 0)
+                if material_id <= 0:
+                    continue
+                item = needs.setdefault(material_id, {
+                    'id': material_id, 'name': row['material_name'], 'code': row['material_code'],
+                    'unit': row['unit'], 'current_stock': float(stock_by_material.get(material_id, 0)), 'required_qty': 0.0,
+                })
+                item['required_qty'] += float(row['quantity_per_box'] or 0) * today_plan_by_product[int(row['product_id'])]
+            for item in needs.values():
+                item['current_stock'] = round(item['current_stock'], 1)
+                item['required_qty'] = round(item['required_qty'], 1)
+                item['shortage_qty'] = round(item['required_qty'] - item['current_stock'], 1)
+                if item['shortage_qty'] > 0:
+                    low_stock_materials.append(item)
+            low_stock_materials.sort(key=lambda item: (-item['shortage_qty'], item['name'] or ''))
+
+        # Today's planned work is also used to surface raw-material shortages,
+        # not only materials that happen to have a configured minimum stock.
+        planned_by_product = today_plan_by_product
+        raw_shortages = []
+        if planned_by_product:
+            product_ids = list(planned_by_product)
+            placeholders = ','.join(['?'] * len(product_ids))
+            cursor.execute(
+                '''
+                SELECT COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id)) AS code,
+                       COALESCE(SUM(COALESCE(current_stock, 0)), 0) AS current_stock
+                FROM raw_materials
+                WHERE workplace = ?
+                GROUP BY COALESCE(NULLIF(TRIM(code), ''), printf('RM%05d', id))
+                ''',
+                (workplace,),
+            )
+            raw_stock_by_code = {row['code']: float(row['current_stock'] or 0) for row in cursor.fetchall()}
+            raw_needs = {}
+            for row in cursor.execute(
+                f'''
+                SELECT b.product_id, b.raw_material_id, b.quantity_per_box,
+                       COALESCE(p.sok_per_box, b.quantity_per_box, 0) AS qty_per_box,
+                       COALESCE(NULLIF(TRIM(rm.code), ''), printf('RM%05d', rm.id)) AS code,
+                       rm.name
+                FROM bom b
+                JOIN products p ON p.id = b.product_id
+                JOIN raw_materials rm ON rm.id = b.raw_material_id
+                WHERE b.product_id IN ({placeholders}) AND b.raw_material_id IS NOT NULL
+                ''',
+                product_ids,
+            ).fetchall():
+                code = row['code']
+                raw_needs.setdefault(code, {'name': row['name'] or code, 'required_qty': 0.0})
+                raw_needs[code]['required_qty'] += float(row['qty_per_box'] or 0) * planned_by_product[int(row['product_id'])]
+            for code, item in raw_needs.items():
+                current_stock = round(raw_stock_by_code.get(code, 0.0), 1)
+                required_qty = round(item['required_qty'], 1)
+                if required_qty > current_stock:
+                    raw_shortages.append({
+                        'name': item['name'], 'code': code, 'unit': '속', 'current_stock': current_stock,
+                        'min_stock': required_qty, 'shortage_qty': round(required_qty - current_stock, 1),
+                    })
+            raw_shortages.sort(key=lambda item: (-item['shortage_qty'], item['name']))
+
+        cursor.execute(
+            '''
+            SELECT lir.id, lir.material_name, lir.unit, lir.requested_quantity,
+                   lir.requested_at, lir.note, lir.request_type
+            FROM logistics_issue_requests lir
+            WHERE lir.requester_workplace = ?
+              AND lir.status = '요청'
+            ORDER BY lir.requested_at DESC, lir.id DESC
+            LIMIT 12
+            ''',
+            (workplace,),
+        )
+        pending_issues = [dict(row) for row in cursor.fetchall()]
+        request_type_labels = {
+            'ISSUE': '불출',
+            'EXPORT': '반출',
+            'RETURN': '반출',
+            'TRANSFER': '이동',
+        }
+        request_type_classes = {
+            'ISSUE': 'issue',
+            'EXPORT': 'export',
+            'RETURN': 'export',
+            'TRANSFER': 'transfer',
+        }
+        for item in pending_issues:
+            request_type = str(item.get('request_type') or '').strip().upper()
+            item['request_type'] = request_type_labels.get(request_type, '요청')
+            item['request_type_class'] = request_type_classes.get(request_type, 'other')
+
+        cursor.execute(
+            '''
+            SELECT id, title, content, note_color, updated_at
+            FROM schedule_special_notes
+            WHERE workplace = ? AND note_date = ?
+            ORDER BY id DESC
+            ''',
+            (workplace, today.isoformat()),
+        )
+        special_notes = [dict(row) for row in cursor.fetchall()]
+
+        # Surface open To-Do items due today through the next three days in
+        # the operational exceptions panel. Keep announcement/private access
+        # rules identical to the main To-Do list.
+        cursor.execute(
+            '''
+            SELECT id, title, detail, due_date, importance, todo_status, is_done
+            FROM dashboard_todos
+            WHERE (workplace = ? OR COALESCE(is_announcement, 0) = 1)
+              AND (COALESCE(is_private, 0) = 0 OR created_by = ?)
+              AND due_date BETWEEN ? AND ?
+            ORDER BY due_date ASC, id DESC
+            ''',
+            (workplace, todo_username, today.isoformat(), (today + timedelta(days=3)).isoformat()),
+        )
+        urgent_todos = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            status = _normalize_todo_status(
+                item.get('todo_status'), 'completed' if int(item.get('is_done') or 0) else 'processing'
+            )
+            if status == 'completed' or int(item.get('is_done') or 0):
+                continue
+            due_date = _parse_dashboard_todo_due_date(item.get('due_date'))
+            if due_date is None:
+                continue
+            item['days_remaining'] = (due_date - today).days
+            urgent_todos.append(item)
+
+    can_start = (session.get('user') or {}).get('role') in {'production', 'admin'} or bool(
+        (session.get('user') or {}).get('is_admin')
+    )
+    journal_date = today.isoformat()
+    # Production entry is handled by the work cards above. Keep the three
+    # supporting daily journals together for a fast end-of-shift handoff.
+    today_journals = [
+        {
+            'title': '원재료 일지',
+            'description': '원재료 입고·점검 내역 입력',
+            'href': f'/journals?tab=raw&raw_date={journal_date}',
+            'icon': '🥬',
+        },
+        {
+            'title': '부재료 일지',
+            'description': '부재료 사용·점검 내역 입력',
+            'href': f'/journals?tab=material&material_scope=yemat&material_date={journal_date}',
+            'icon': '📦',
+        },
+        {
+            'title': '포장재 일지',
+            'description': '포장재 사용·점검 내역 입력',
+            'href': f'/journals?tab=packaging&packaging_date={journal_date}',
+            'icon': '🧰',
+        },
+    ]
+    return render_template(
+        'today_work.html',
+        user=session['user'],
+        workplace=workplace,
+        today=today,
+        productions=productions,
+        low_stock_materials=low_stock_materials,
+        raw_shortages=raw_shortages,
+        pending_issues=pending_issues,
+        special_notes=special_notes,
+        urgent_todos=urgent_todos,
+        can_start=can_start,
+        today_journals=today_journals,
+    )
+
+
+@bp.route('/today-work/<int:production_id>/start', methods=['POST'])
+@role_required('production')
+def start_today_production(production_id):
+    """Mark a planned production as in progress without affecting inventory."""
+    workplace = get_workplace()
+    with db_transaction(mode='IMMEDIATE') as conn:
+        production = conn.execute(
+            'SELECT id, status, schedule_id, workplace FROM productions WHERE id = ?', (production_id,)
+        ).fetchone()
+        if not production or (production['workplace'] or '').strip() != workplace:
+            return '생산 기록을 찾을 수 없거나 작업장 권한이 없습니다.', 404
+        normalized = _normalize_dashboard_schedule_status(production['status'])
+        if normalized != '완료':
+            conn.execute('UPDATE productions SET status = ? WHERE id = ?', ('\uC9C4\uD589\uC911', production_id))
+            if production['schedule_id']:
+                conn.execute(
+                    'UPDATE production_schedules SET status = ? WHERE id = ?',
+                    ('\uC9C4\uD589\uC911', production['schedule_id']),
+                )
+            audit_log(
+                conn, 'update', 'production', production_id,
+                {'action': 'start_today_production', 'workplace': workplace},
+            )
+    return redirect(url_for('main.today_work'))
 
 
 @bp.route('/select-workplace')
