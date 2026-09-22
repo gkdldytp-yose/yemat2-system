@@ -72,15 +72,10 @@
         .nav-logo{height:28px;width:28px;display:block;}
         .menu-toggle{display:none;background:none;border:none;color:white;font-size:1.5rem;cursor:pointer;padding:0.5rem;}
         .nav-menu{display:flex;gap:0.25rem;list-style:none;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0;}
-        /* Align the primary menu group with the gap before the right-side
-           controls without using absolute positioning (which can overlap). */
-        @media (min-width: 1200px) {
-            .nav-menu{transform:translateX(96px);}
-        }
         .nav-menu a{color:white;text-decoration:none;font-weight:800;padding:0.72rem 1.08rem;border-radius:12px;transition:all 0.2s;font-size:0.98rem;white-space:nowrap;line-height:1;}
         .nav-menu a:hover{background:rgba(255,255,255,0.16);transform:translateY(-1px);}
         .nav-menu .admin-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);}
-        .nav-user{color:white;display:flex;align-items:center;gap:0.7rem;font-size:0.95rem;}
+        .nav-user{color:white;display:flex;align-items:center;gap:0.7rem;font-size:0.95rem;position:relative;z-index:1;}
         .nav-todo-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.72rem 1.08rem;border:none;border-radius:14px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;font-weight:900;font-size:0.98rem;cursor:pointer;box-shadow:0 10px 22px rgba(20,184,166,0.22);white-space:nowrap;line-height:1;}
         .nav-today-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.72rem 1.08rem;border:none;border-radius:14px;background:linear-gradient(135deg,#c2410c,#f59e0b);color:#fff;font-weight:900;font-size:0.98rem;cursor:pointer;box-shadow:0 10px 22px rgba(245,158,11,0.24);white-space:nowrap;line-height:1;text-decoration:none;}
         .nav-today-btn:hover{filter:brightness(1.06);transform:translateY(-1px);color:#fff;}

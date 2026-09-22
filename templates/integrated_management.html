@@ -2533,9 +2533,9 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
             <thead>
                 <tr>
                     {% if tab == 'audit_logs' %}
-                    <th class="code-col">액션</th>
+                    <th class="code-col">행위</th>
                     <th class="wp-col">작업장</th>
-                    <th>대상</th>
+                    <th>작업 내용</th>
                     <th>대상ID</th>
                     <th>작업자</th>
                     <th>IP</th>
@@ -2616,7 +2616,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                 {% for item in data %}
                 <tr>
                     {% if tab == 'audit_logs' %}
-                    <td class="code-col"><span class="audit-action-pill {{ item.action or '' }}">{{ item.action or '-' }}</span></td>
+                    <td class="code-col"><span class="audit-action-pill {{ item.action or '' }}">{{ item.action_label or item.action or '-' }}</span></td>
                     <td class="wp-col">
                         <span class="workplace-badge 
                             {% if item.workplace == '1동 조미' %}wp-1jomi

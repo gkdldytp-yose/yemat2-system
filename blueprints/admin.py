@@ -245,6 +245,97 @@ def _format_audit_created_at_local(value):
     return raw
 
 
+_AUDIT_ACTION_LABELS = {
+    'get': '\uc870\ud68c',
+    'post': '\ub4f1\ub85d',
+    'put': '\uc218\uc815',
+    'patch': '\uc218\uc815',
+    'delete': '\uc0ad\uc81c',
+    'create': '\ub4f1\ub85d',
+    'update': '\uc218\uc815',
+    'apply': '\uc801\uc6a9',
+    'approve': '\uc2b9\uc778',
+    'reject': '\ubc18\ub824',
+    'cancel': '\ucde8\uc18c',
+    'validate': '\uac80\uc99d',
+    'download': '\ub2e4\uc6b4\ub85c\ub4dc',
+    'upload': '\uc5c5\ub85c\ub4dc',
+    'export': '\ub0b4\ubcf4\ub0b4\uae30',
+    'import': '\uac00\uc838\uc624\uae30',
+    'login': '\ub85c\uadf8\uc778',
+    'logout': '\ub85c\uadf8\uc544\uc6c3',
+}
+
+_REQUEST_AUDIT_LABELS = {
+    'main.index': '\uba54\uc778 \ub300\uc2dc\ubcf4\ub4dc',
+    'main.today_work': '\uc624\ub298 \uc791\uc5c5',
+    'main.select_workplace': '\uc791\uc5c5\uc7a5 \uc120\ud0dd \ud654\uba74',
+    'main.set_workplace': '\uc791\uc5c5\uc7a5 \ubcc0\uacbd',
+    'main.switch_workplace': '\uc791\uc5c5\uc7a5 \uc804\ud658',
+    'main.profile': '\ub0b4 \uc815\ubcf4',
+    'main.start_today_production': '\uc624\ub298 \uc0dd\uc0b0 \uc2dc\uc791',
+    'products.products': '\uc0c1\ud488 \uad00\ub9ac',
+    'products.product_bom': '\uc0c1\ud488 BOM \uad00\ub9ac',
+    'products.manage_product_spec_sheet': '\uc0c1\ud488 \uc2a4\ud399\uc11c \uad00\ub9ac',
+    'products.view_product_spec_sheet': '\uc0c1\ud488 \uc2a4\ud399\uc11c \uc870\ud68c',
+    'products.upload_product_spec_sheet': '\uc0c1\ud488 \uc2a4\ud399\uc11c \uc5c5\ub85c\ub4dc',
+    'production.schedules': '\uc0dd\uc0b0 \uc77c\uc815',
+    'production.production_list': '\uc0dd\uc0b0 \ubaa9\ub85d',
+    'production.production_detail': '\uc0dd\uc0b0 \uae30\ub85d \uc0c1\uc138',
+    'production.production_register_mode': '\uc0dd\uc0b0 \ub4f1\ub85d \ubaa8\ub4dc',
+    'production.work_days': '\uc791\uc5c5\uc77c \uad00\ub9ac',
+    'production.schedule_detail': '\uc0dd\uc0b0 \uc77c\uc815 \uc0c1\uc138',
+    'materials.raw_materials': '\uc6d0\ucd08 \uad00\ub9ac',
+    'materials.materials': '\ubd80\uc790\uc7ac \uad00\ub9ac',
+    'materials.purchase_orders': '\ubc1c\uc8fc \uad00\ub9ac',
+    'materials.material_detail': '\ubd80\uc790\uc7ac \uc0c1\uc138',
+    'materials.raw_material_detail': '\uc6d0\ucd08 \uc0c1\uc138',
+    'users.user_management': '\uc0ac\uc6a9\uc790 \uad00\ub9ac',
+    'admin.integrated_management': '\ud1b5\ud569 \uad00\ub9ac',
+    'admin.integrated_audit_logs_export': '\uc0ac\uc6a9\uc790 \ud589\uc704 \ub85c\uadf8 \uc5d1\uc140 \ub2e4\uc6b4\ub85c\ub4dc',
+    'admin.integrated_inventory_audit_export': '\uc7ac\uace0 \uc2e4\uc0ac \uc870\uc0ac \uc5d1\uc140 \ub2e4\uc6b4\ub85c\ub4dc',
+    'printouts.journals': '\uc77c\uc9c0 \ucd9c\ub825',
+    'printouts.production_print': '\uc0dd\uc0b0 \ucd9c\ub825',
+    'imports.upload_import': '\uc5d1\uc140 \ud30c\uc77c \uac00\uc838\uc624\uae30',
+    'imports.batch_preview': '\uac00\uc838\uc624\uae30 \ubbf8\ub9ac\ubcf4\uae30',
+    'imports.apply_batch': '\uac00\uc838\uc628 \ub370\uc774\ud130 \uc801\uc6a9',
+}
+
+
+def _request_audit_label(entity, payload):
+    """Turn internal Flask endpoint names into descriptions usable by administrators."""
+    entity = (entity or '').strip()
+    label = _REQUEST_AUDIT_LABELS.get(entity)
+    if label:
+        # The schedule page has multiple functions selected by its view parameter.
+        if entity == 'production.schedules':
+            view = ((payload.get('args') or {}).get('view') or '').strip()
+            return {
+                'requirements': '\uc0dd\uc0b0 \uc77c\uc815 - \uc18c\uc694\ub7c9 \uacc4\uc0b0',
+                'stats': '\uc0dd\uc0b0 \uc77c\uc815 - \ud1b5\uacc4',
+                'calendar': '\uc0dd\uc0b0 \uc77c\uc815 - \ub2ec\ub825',
+                'set': '\uc0dd\uc0b0 \uc77c\uc815 - \uc138\ud2b8 \uc0dd\uc0b0',
+            }.get(view, label)
+        return label
+
+    # A concise Korean fallback still avoids exposing implementation names for
+    # newly added routes that have not yet received an explicit label.
+    prefixes = (
+        ('production.', '\uc0dd\uc0b0 \uad00\ub9ac'),
+        ('materials.', '\uc790\uc7ac \uad00\ub9ac'),
+        ('products.', '\uc0c1\ud488 \uad00\ub9ac'),
+        ('users.', '\uc0ac\uc6a9\uc790 \uad00\ub9ac'),
+        ('admin.', '\ud1b5\ud569 \uad00\ub9ac'),
+        ('main.', '\uba54\uc778 \ud654\uba74'),
+        ('printouts.', '\ucd9c\ub825 \uad00\ub9ac'),
+        ('imports.', '\ub370\uc774\ud130 \uac00\uc838\uc624\uae30'),
+    )
+    for prefix, fallback in prefixes:
+        if entity.startswith(prefix):
+            return fallback
+    return None
+
+
 def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', entity='', action='', date_from='', date_to='', limit=500):
     entity_labels = {
         'product': '상품',
@@ -303,7 +394,12 @@ def _query_integrated_audit_logs(cursor, wp_filter='all', q='', username='', ent
     for row in cursor.fetchall():
         item = dict(row)
         entity_key = (item.get('entity') or '').strip()
-        item['entity_label'] = entity_labels.get(entity_key, entity_key or '-')
+        try:
+            payload = json.loads(item.get('data') or '{}')
+        except (TypeError, ValueError):
+            payload = {}
+        item['entity_label'] = _request_audit_label(entity_key, payload) or entity_labels.get(entity_key, entity_key or '-')
+        item['action_label'] = _AUDIT_ACTION_LABELS.get((item.get('action') or '').lower(), item.get('action') or '-')
         item['display_created_at'] = _format_audit_created_at_local(item.get('created_at'))
         rows.append(item)
     return rows
@@ -6744,7 +6840,7 @@ def integrated_audit_logs_export():
         headers = ['??', '??', '??ID', '???ID', '????', '???', 'IP', '??', '?????']
         rows = [
             [
-                item.get('action') or '',
+                item.get('action_label') or item.get('action') or '',
                 item.get('entity_label') or item.get('entity') or '',
                 item.get('entity_id') or '',
                 item.get('username') or '',
