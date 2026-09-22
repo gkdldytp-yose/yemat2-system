@@ -1770,18 +1770,30 @@ def audit_log(conn, action, entity, entity_id=None, data=None):
 
 def get_workplace():
     """Return the currently selected workplace from the session."""
-    workplace = normalize_workplace_name(session.get('workplace', '1??議곕?'))
+    workplace = normalize_workplace_name(session.get('workplace'))
+    user = session.get('user') or {}
+    allowed_workplaces = [
+        normalize_workplace_name(value)
+        for value in (user.get('workplaces') or [])
+        if normalize_workplace_name(value)
+    ]
+    # Never manufacture a default workplace.  Apart from showing an invalid
+    # label, doing so lets a multi-workplace user bypass the selection step.
+    if workplace and allowed_workplaces and workplace not in allowed_workplaces:
+        session.pop('workplace', None)
+        return ''
     if workplace and session.get('workplace') != workplace:
         session['workplace'] = workplace
     return workplace
 
 
 def require_workplace(f):
-    """Persist the selected workplace in the session."""
+    """Require a valid workplace selected from the signed-in user's list."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'workplace' not in session:
-            return redirect(url_for('main.select_workplace'))
+        if not get_workplace():
+            flash('\uc791\uc5c5\uc7a5\uc744 \uba3c\uc800 \uc120\ud0dd\ud574\uc8fc\uc138\uc694.', 'warning')
+            return redirect(url_for('main.select_workplace', required='1'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -1837,13 +1849,33 @@ def login_required(f):
             user = dict(user)
             user['role'] = effective_role
             session['user'] = user
+        normalized_workplaces = [
+            normalize_workplace_name(value)
+            for value in user_workplaces
+            if normalize_workplace_name(value)
+        ]
+        selected_workplace = normalize_workplace_name(session.get('workplace'))
+        if selected_workplace and selected_workplace not in normalized_workplaces:
+            # Clear stale and malformed session values instead of rendering
+            # them as a workplace or treating them as a valid selection.
+            session.pop('workplace', None)
+            selected_workplace = ''
+        elif selected_workplace and session.get('workplace') != selected_workplace:
+            session['workplace'] = selected_workplace
+
+        # Users assigned to exactly one workplace can safely be restored to
+        # it. Users assigned to multiple workplaces must always choose.
+        if len(normalized_workplaces) == 1 and not selected_workplace:
+            selected_workplace = normalized_workplaces[0]
+            session['workplace'] = selected_workplace
+
         if (
-            len(user_workplaces) > 1
-            and not session.get('workplace')
+            len(normalized_workplaces) > 1
+            and not selected_workplace
             and request.endpoint not in {'main.select_workplace', 'main.set_workplace', 'auth.logout'}
         ):
             flash('\uc791\uc5c5\uc7a5\uc744 \uba3c\uc800 \uc120\ud0dd\ud574\uc8fc\uc138\uc694. \uc791\uc5c5\uc7a5 \uc120\ud0dd \ud6c4 \uc815\uc0c1\uc801\uc73c\ub85c \uc0ac\uc6a9\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.', 'warning')
-            return redirect(url_for('main.select_workplace'))
+            return redirect(url_for('main.select_workplace', required='1'))
         return f(*args, **kwargs)
     return decorated_function
 

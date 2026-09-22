@@ -51,6 +51,8 @@
 .register-textarea{min-height:86px;resize:vertical;}
 .ko-first-input{ime-mode:active;}
 .register-input:focus,.register-select:focus,.register-textarea:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.14);}
+.register-input.input-error-highlight{border-color:#fb7185!important;box-shadow:0 0 0 3px rgba(251,113,133,.32),0 0 22px rgba(251,113,133,.28)!important;animation:register-input-error-pulse 1s ease-in-out 3;}
+@keyframes register-input-error-pulse{50%{box-shadow:0 0 0 6px rgba(251,113,133,.12),0 0 28px rgba(251,113,133,.4)!important;}}
 .date-field-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:18px;}
 .date-field-head label{min-width:0;}
 .date-field-label{display:inline-flex;align-items:center;gap:.35rem;min-width:0;}
@@ -1409,6 +1411,29 @@ function setRegisterDateInputValue(input, value) {
     input.value = value || '';
     syncDatePickerProxy(input);
 }
+function describeRegisterDateInputLocation(input) {
+    const card = input ? input.closest('.usage-card') : null;
+    if (!card) return '';
+    const isRawMaterial = String(input.name || '').startsWith('raw_');
+    const section = isRawMaterial
+        ? '\uc6d0\uc790\uc7ac'
+        : (card.classList.contains('pack') ? '\ubd80\uc790\uc7ac' : '\uae30\ucd08 \uc790\uc7ac');
+    const name = String(card.querySelector('.usage-name strong')?.childNodes[0]?.textContent || '').trim()
+        || '\ubbf8\uc9c0\uc815 \ud56d\ubaa9';
+    const code = String(card.querySelector('.usage-name > span')?.textContent || '').trim();
+    const lot = String(card.querySelector('.js-lot-label')?.textContent || '').trim();
+    return [section, `${name}${code ? ` (${code})` : ''}`, lot].filter(Boolean).join(' > ');
+}
+function revealRegisterDateInput(input) {
+    const panel = input ? input.closest('[data-step-panel]') : null;
+    if (panel) goStep(Number(panel.dataset.stepPanel));
+    input.classList.add('input-error-highlight');
+    setTimeout(() => {
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        input.focus();
+    }, 80);
+    setTimeout(() => input.classList.remove('input-error-highlight'), 3200);
+}
 function normalizeRegisterDateInput(input, strict = false) {
     if (!input || input.readOnly) return true;
     const rawValue = String(input.value || '').trim();
@@ -1419,9 +1444,11 @@ function normalizeRegisterDateInput(input, strict = false) {
     const normalized = parseRegisterDateValue(rawValue);
     if (!normalized) {
         if (strict) {
-            const label = input.dataset.dateLabel || '날짜';
-            alert(`${label}은 YY-MM-DD 또는 YYYY-MM-DD 형식으로 입력해 주세요.`);
-            input.focus();
+            const label = input.dataset.dateLabel || '\ub0a0\uc9dc';
+            const location = describeRegisterDateInputLocation(input);
+            const rawValue = String(input.value || '').trim();
+            alert(`${label} \uc785\ub825 \uc624\ub958\uc785\ub2c8\ub2e4.\n${location ? `\uc704\uce58: ${location}\n` : ''}\uc785\ub825\uac12: ${rawValue}\nYY-MM-DD \ub610\ub294 YYYY-MM-DD \ud615\uc2dd\uc73c\ub85c \uc785\ub825\ud574 \uc8fc\uc138\uc694.`);
+            revealRegisterDateInput(input);
         }
         return false;
     }

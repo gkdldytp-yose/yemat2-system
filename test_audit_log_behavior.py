@@ -52,6 +52,21 @@ class AuditLogBehaviorTestCase(unittest.TestCase):
         self.assertTrue(any((row.get('entity') or '') == 'main.index' for row in rows))
         self.assertFalse(any((row.get('entity') or '') == 'auth_session' for row in rows))
 
+    def test_request_endpoints_are_shown_as_korean_action_descriptions(self):
+        username = f'audit_filter_{uuid4().hex[:10]}'
+        with db_transaction() as conn:
+            conn.execute(
+                '''
+                INSERT INTO audit_logs (action, entity, entity_id, data, username, name, workplace, ip, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ''',
+                ('get', 'main.set_workplace', None, '{"path":"/select-workplace/test"}', username, username, '2\ub3d9 \uc2e0\uad00 2\uce35', '127.0.0.1'),
+            )
+            row = _query_integrated_audit_logs(conn.cursor(), username=username, limit=1)[0]
+
+        self.assertEqual(row['action_label'], '\uc870\ud68c')
+        self.assertEqual(row['entity_label'], '\uc791\uc5c5\uc7a5 \ubcc0\uacbd')
+
     def test_authenticated_request_creates_auto_audit_log(self):
         username = f'audit_auto_{uuid4().hex[:10]}'
         self._login_as(username)

@@ -2941,9 +2941,9 @@ def _normalize_pack_material_category(raw_category):
     if not text:
         return 'etc'
     compact = text.replace(' ', '')
-    if compact in ('박스', '諛뺤뒪') or '박스' in text:
+    if compact in ('박스', '박스') or '박스' in text:
         return 'box'
-    if compact in ('내포', '?댄룷') or '내포' in text:
+    if compact in ('내포', '내포') or '내포' in text:
         return 'inner'
     if compact == '외포' or '외포' in text:
         return 'outer'

@@ -2161,7 +2161,13 @@ def materials():
         )
         export_requests = [dict(r) for r in cursor.fetchall()]
 
-    issue_requests_pending = [row for row in all_issue_requests if (row['status'] or '') == ISSUE_STATUS_REQUESTED]
+    # Pending requests are handled FIFO.  ``requested_at`` is stored to the
+    # second, so use the auto-incrementing id as a deterministic tie-breaker
+    # when several requests are registered in the same second.
+    issue_requests_pending = sorted(
+        (row for row in all_issue_requests if (row['status'] or '') == ISSUE_STATUS_REQUESTED),
+        key=lambda row: (row.get('requested_at') or '', int(row.get('id') or 0)),
+    )
     issue_requests_completed = [row for row in all_issue_requests if (row['status'] or '') == ISSUE_STATUS_COMPLETED]
     issue_requests_rejected = [row for row in all_issue_requests if (row['status'] or '') == ISSUE_STATUS_REJECTED]
     export_requests_pending = [row for row in export_requests if (row['status'] or '') == ISSUE_STATUS_REQUESTED]
