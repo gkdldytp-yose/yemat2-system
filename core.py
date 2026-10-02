@@ -1404,11 +1404,19 @@ def _ensure_products_schema(conn):
             conn.execute("ALTER TABLE products ADD COLUMN selected_pouch_material_id INTEGER")
         if 'set_item_type' not in cols:
             conn.execute("ALTER TABLE products ADD COLUMN set_item_type TEXT DEFAULT ''")
+        if 'pallet_boxes_per_unit' not in cols:
+            conn.execute(
+                "ALTER TABLE products ADD COLUMN pallet_boxes_per_unit INTEGER NOT NULL DEFAULT 0"
+            )
         conn.execute(
             "UPDATE products SET set_item_type = '' "
             "WHERE set_item_type IS NULL"
         )
         conn.execute("UPDATE products SET expiry_months = 12 WHERE expiry_months IS NULL")
+        conn.execute(
+            "UPDATE products SET pallet_boxes_per_unit = 0 "
+            "WHERE pallet_boxes_per_unit IS NULL OR pallet_boxes_per_unit < 0"
+        )
         bom_cols = [row['name'] for row in conn.execute("PRAGMA table_info(bom)").fetchall()]
         if bom_cols and 'quantity_per_box_expr' not in bom_cols:
             conn.execute("ALTER TABLE bom ADD COLUMN quantity_per_box_expr TEXT")

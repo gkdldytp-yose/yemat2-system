@@ -259,7 +259,7 @@ def create_app():
         cursor.execute(query, params)
         product_box_map = {}
         for row in cursor.fetchall():
-            if _normalize_schedule_status(row['status']) != '예정':
+            if _normalize_schedule_status(row['status']) not in {'예정', '진행중'}:
                 continue
             product_id = int(row['product_id'] or 0)
             planned_boxes = float(row['planned_boxes'] or 0)

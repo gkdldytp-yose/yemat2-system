@@ -464,7 +464,7 @@ def index():
     product_box_map = {}
     for row in cursor.fetchall():
         status = _normalize_dashboard_schedule_status(row['status'])
-        if status != '예정':
+        if status not in {'예정', '진행중'}:
             continue
         product_id = int(row['product_id'] or 0)
         planned_boxes = float(row['planned_boxes'] or 0)
@@ -901,6 +901,10 @@ def today_work():
             )
             raw_stock_by_code = {row['code']: float(row['current_stock'] or 0) for row in cursor.fetchall()}
             raw_needs = {}
+            # A raw material can have multiple lots/master records with the same
+            # code. BOM rows for those records represent the same raw-material
+            # requirement, so count that product/code combination only once.
+            seen_product_raw_codes = set()
             for row in cursor.execute(
                 f'''
                 SELECT b.product_id, b.raw_material_id, b.quantity_per_box,
@@ -915,8 +919,13 @@ def today_work():
                 product_ids,
             ).fetchall():
                 code = row['code']
+                product_id = int(row['product_id'] or 0)
+                dedupe_key = (product_id, code)
+                if not code or dedupe_key in seen_product_raw_codes:
+                    continue
+                seen_product_raw_codes.add(dedupe_key)
                 raw_needs.setdefault(code, {'name': row['name'] or code, 'required_qty': 0.0})
-                raw_needs[code]['required_qty'] += float(row['qty_per_box'] or 0) * planned_by_product[int(row['product_id'])]
+                raw_needs[code]['required_qty'] += float(row['qty_per_box'] or 0) * planned_by_product[product_id]
             for code, item in raw_needs.items():
                 current_stock = round(raw_stock_by_code.get(code, 0.0), 1)
                 required_qty = round(item['required_qty'], 1)
