@@ -3847,6 +3847,168 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     display:block;
     white-space:nowrap;
 }
+/* 수출 일정은 세트 일정표와 같은 핵심 정보 중심의 6열 구조로 표시한다. */
+.export-schedule-board {
+    border-radius:0 0 14px 14px;
+}
+.export-schedule-table {
+    min-width:980px;
+}
+.export-schedule-table th,
+.export-schedule-table td {
+    text-align:left !important;
+}
+.export-schedule-table th {
+    padding:.82rem .72rem;
+}
+.export-schedule-table td {
+    padding:.72rem .72rem;
+    vertical-align:top;
+}
+.export-schedule-table .export-schedule-product-name {
+    color:#15803d !important;
+}
+.export-schedule-table .export-schedule-period-cell strong,
+.export-schedule-table .export-schedule-total {
+    display:block;
+    color:#0f3b6d !important;
+    line-height:1.35;
+}
+.export-schedule-meta {
+    margin-top:.22rem;
+    color:#64748b;
+    font-size:.82rem;
+    font-weight:700;
+    line-height:1.35;
+}
+.export-schedule-pallet-plan {
+    display:inline-flex;
+    margin-top:.28rem;
+    padding:.2rem .5rem;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#15803d;
+    font-size:.9rem;
+    font-weight:900;
+    line-height:1.2;
+}
+.export-schedule-plan-cell .export-schedule-total {
+    font-size:1.14rem;
+    letter-spacing:-.015em;
+}
+.export-schedule-plan-cell .export-schedule-meta {
+    font-size:.92rem;
+    font-weight:800;
+}
+.export-plan-label {
+    display:inline-flex;
+    margin-bottom:.2rem;
+    padding:.12rem .42rem;
+    border-radius:999px;
+    background:#dbeafe;
+    color:#1d4ed8;
+    font-size:.74rem;
+    font-weight:900;
+}
+.export-schedule-unit-box .export-schedule-lines {
+    display:flex;
+    align-items:center;
+    gap:.28rem;
+    flex-wrap:wrap;
+    margin:0 0 .38rem;
+    min-height:24px;
+}
+.export-schedule-unit-box .export-schedule-lines::before {
+    content:'라인';
+    color:#64748b;
+    font-size:.76rem;
+    font-weight:800;
+}
+.export-schedule-unit-box .export-box-summary {
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.16rem .45rem;
+    margin-top:.08rem;
+    font-size:.84rem;
+    line-height:1.25;
+}
+.export-schedule-unit-box .export-container-box-quantity {
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.export-schedule-status-cell .export-schedule-progress {
+    min-width:145px;
+}
+#exportView {
+    font-family:"Pretendard","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo","Segoe UI",sans-serif;
+    font-synthesis:none;
+}
+#exportView .export-schedule-table th,
+#exportView .export-schedule-table td,
+#exportView .export-active-card,
+#exportView .export-active-card * {
+    text-shadow:none;
+}
+#exportView .export-schedule-table th {
+    font-weight:700;
+    letter-spacing:0;
+}
+#exportView .export-schedule-table .export-schedule-product-name,
+#exportView .export-schedule-table .export-schedule-period-cell strong,
+#exportView .export-schedule-table .export-schedule-total,
+#exportView .export-schedule-progress > div:first-child {
+    font-weight:750;
+    letter-spacing:0;
+}
+html[data-theme="dark"] #exportView .export-schedule-table th { color:#dce8f8; }
+html[data-theme="dark"] #exportView .export-schedule-meta,
+html[data-theme="dark"] #exportView .export-schedule-progress .req-muted { color:#b5c7dc; opacity:1; }
+html[data-theme="dark"] #exportView .export-schedule-unit-box .export-container-box-quantity { color:#c8dcf2; font-weight:700; }
+#setView {
+    font-family:"Pretendard","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo","Segoe UI",sans-serif;
+    font-synthesis:none;
+}
+#setView .export-table th,
+#setView .export-table td,
+#setView .export-active-card,
+#setView .export-active-card * {
+    text-shadow:none;
+}
+#setView .export-table th {
+    font-weight:700;
+    letter-spacing:0;
+}
+#setView .export-table td > strong,
+#setView .set-component-plan-detail,
+#setView .set-component-progress,
+#setView .set-component-stock-name,
+#setView .export-active-pane h4 {
+    font-weight:750;
+    letter-spacing:0;
+}
+html[data-theme="dark"] #setView .export-table th { color:#dce8f8; }
+html[data-theme="dark"] #setView .req-muted,
+html[data-theme="dark"] #setView .set-component-stock-head p,
+html[data-theme="dark"] #setView .set-component-stock-flow { color:#b5c7dc; opacity:1; }
+html[data-theme="dark"] #setView .set-component-plan-detail,
+html[data-theme="dark"] #setView .set-component-stock-name { color:#e7f0fb; }
+.export-schedule-remaining {
+    display:inline-block;
+    margin-top:.4rem;
+    padding:.28rem .5rem;
+    border-radius:8px;
+    background:#f0fdf4;
+    color:#15803d !important;
+    font-size:.82rem;
+}
+.export-schedule-actions-cell .export-actions {
+    justify-content:flex-start;
+    gap:.42rem;
+    flex-wrap:wrap;
+}
+@media (max-width:760px) {
+    .export-schedule-table { min-width:900px; }
+    .export-schedule-table th, .export-schedule-table td { padding:.72rem .55rem; }
+}
 .schedule-detail-row {
     cursor:pointer;
     transition:background .16s ease, box-shadow .16s ease, transform .16s ease;
@@ -4223,6 +4385,139 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
 .export-active-pane-head h4 {
     margin:0;
 }
+/* 수출 일정 상세: 일정 요약과 실행 현황을 한눈에 구분한다. */
+.export-active-card:not(.set-schedule-card) {
+    margin:.8rem 0;
+    padding:1rem;
+    border:1px solid #cbd5e1;
+    border-radius:16px;
+    background:linear-gradient(145deg,#ffffff 0%,#f8fbff 100%);
+    box-shadow:0 8px 22px rgba(15,23,42,.06);
+}
+.export-active-card:not(.set-schedule-card):first-of-type { border-top:1px solid #cbd5e1; }
+.export-detail-title-block { min-width:0; }
+.export-detail-title { display:block; color:#0f172a; font-size:1.08rem; line-height:1.35; }
+.export-detail-period { margin-top:.28rem; font-weight:700; }
+.export-active-card:not(.set-schedule-card) .export-active-metrics {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(118px,1fr));
+    gap:.48rem;
+    min-width:min(100%,500px);
+}
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric {
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:.14rem;
+    min-height:56px;
+    padding:.48rem .68rem;
+    border:1px solid #bfdbfe;
+    border-radius:12px;
+    background:linear-gradient(145deg,#eff6ff,#dbeafe);
+    color:#1e3a8a;
+    box-shadow:none;
+}
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric small {
+    color:#52708f;
+    font-size:.7rem;
+    font-weight:800;
+}
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric strong {
+    color:#0f3b6d;
+    font-size:.92rem;
+    font-weight:900;
+    white-space:nowrap;
+}
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.produced { background:linear-gradient(145deg,#ecfdf5,#dcfce7); border-color:#86efac; }
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.produced strong { color:#15803d; }
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.remaining { background:linear-gradient(145deg,#fff7ed,#ffedd5); border-color:#fdba74; }
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.remaining strong { color:#c2410c; }
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.note { grid-column:span 3; min-height:0; flex-direction:row; align-items:center; justify-content:flex-start; }
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.note small { color:#64748b; }
+.export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.note strong { color:#475569; font-size:.82rem; }
+.export-active-card:not(.set-schedule-card) .export-active-grid { gap:1rem; }
+.export-active-card:not(.set-schedule-card) .export-active-pane {
+    padding:1rem 1.05rem;
+    border-color:#cbd5e1;
+    border-radius:14px;
+    background:#fff;
+}
+.export-active-card:not(.set-schedule-card) .export-active-pane h4 { color:#0f3b6d; font-size:1.02rem; }
+.export-active-card:not(.set-schedule-card) .export-container-row {
+    display:grid;
+    grid-template-columns:minmax(64px,108px) minmax(0,1fr) auto;
+    align-items:center;
+    gap:.7rem;
+    padding:.72rem 0;
+}
+.export-active-card:not(.set-schedule-card) .export-container-identity {
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.28rem;
+    min-width:0;
+}
+.export-active-card:not(.set-schedule-card) .export-container-label {
+    display:inline-flex;
+    align-items:center;
+    align-self:flex-start;
+    width:max-content;
+    min-width:42px;
+    min-height:32px;
+    padding:.24rem .5rem;
+    border:1px solid #3b82f6;
+    border-radius:9px;
+    background:linear-gradient(145deg,#dbeafe,#bfdbfe);
+    color:#1d4ed8;
+    font-size:1rem;
+    font-weight:950;
+    letter-spacing:.01em;
+    text-shadow:none;
+}
+.export-active-card:not(.set-schedule-card) .export-container-row.is-completed {
+    margin:.08rem -.42rem;
+    padding:.72rem .42rem;
+    border:1px solid #86efac;
+    border-radius:12px;
+    background:linear-gradient(90deg,#f0fdf4 0%,#ecfdf5 68%,#dcfce7 100%);
+}
+.export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-label {
+    border-color:#22c55e;
+    background:linear-gradient(145deg,#dcfce7,#bbf7d0);
+    color:#15803d;
+}
+.export-container-po {
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#526b86;
+    font-size:.72rem;
+    font-weight:800;
+    line-height:1.2;
+}
+.export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-progress-copy { color:#15803d; }
+.export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-progress-track { background:#bbf7d0; }
+.export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-progress-track span { background:linear-gradient(90deg,#22c55e,#16a34a); }
+.export-active-card:not(.set-schedule-card) .export-container-progress-copy { color:#2563eb; font-weight:800; }
+.export-active-card:not(.set-schedule-card) .export-daily-record {
+    align-items:center;
+    padding:.72rem .78rem;
+    border:1px solid #dbe7f3;
+    border-radius:12px;
+    background:linear-gradient(145deg,#f8fbff,#fff);
+}
+@media (max-width:900px) {
+    .export-active-card:not(.set-schedule-card) .export-active-metrics { width:100%; min-width:0; }
+}
+@media (max-width:640px) {
+    .export-active-card:not(.set-schedule-card) { padding:.78rem; }
+    .export-active-card:not(.set-schedule-card) .export-active-metrics { grid-template-columns:1fr; }
+    .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.note { grid-column:auto; }
+    .export-active-card:not(.set-schedule-card) .export-active-grid { grid-template-columns:1fr; }
+    .export-active-card:not(.set-schedule-card) .export-container-row { grid-template-columns:minmax(64px,96px) minmax(0,1fr); }
+    .export-active-card:not(.set-schedule-card) .export-container-remaining { grid-column:2; }
+}
 .export-daily-hint {
     font-size:0.76rem;
     color:#8fb4ff;
@@ -4324,6 +4619,32 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     font-size:0.78rem;
     font-weight:900;
     white-space:nowrap;
+}
+.export-container-pallet {
+    margin-left:.3rem;
+    padding-left:.38rem;
+    border-left:1px solid rgba(22,163,74,.3);
+    color:#047857;
+    font-size:.76rem;
+    font-weight:900;
+}
+.export-container-remaining .set-remaining-quantity {
+    border-color:rgba(217,119,6,.45);
+    background:rgba(255,247,237,.96);
+    color:#c2410c;
+}
+.export-container-remaining .export-container-pallet {
+    border-left-color:rgba(217,119,6,.4);
+    color:#b45309;
+}
+.export-container-row.is-completed .set-remaining-quantity {
+    border-color:rgba(22,163,74,0.28);
+    background:rgba(240,253,244,0.9);
+    color:#15803d;
+}
+.export-container-row.is-completed .export-container-pallet {
+    border-left-color:rgba(22,163,74,.3);
+    color:#047857;
 }
 .set-overproduced-quantity {
     display:inline-flex;
@@ -4573,6 +4894,54 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     font-size:.88rem !important;
     font-weight:900;
     white-space:nowrap;
+}
+.export-daily-pallet {
+    margin-left:.32rem;
+    padding-left:.38rem;
+    border-left:1px solid rgba(22,163,74,.32);
+    color:#047857 !important;
+    font-size:.76rem !important;
+    font-weight:900;
+}
+.export-daily-work-time {
+    margin-top:.18rem;
+    color:#475569;
+    font-size:.82rem;
+    font-weight:800;
+}
+.export-daily-expiry {
+    margin-top:.18rem;
+    color:#64748b;
+    font-size:.8rem;
+    font-weight:700;
+}
+.export-daily-raw-list {
+    display:flex;
+    flex-wrap:wrap;
+    gap:.3rem .42rem;
+    margin-top:.38rem;
+}
+.export-daily-raw-item {
+    display:inline-flex;
+    align-items:center;
+    gap:.3rem;
+    padding:.22rem .42rem;
+    border:1px solid #c7dced;
+    border-radius:7px;
+    background:#edf6ff;
+    color:#1e3a5f;
+    font-size:.71rem;
+    font-weight:750;
+    line-height:1.2;
+}
+.export-daily-raw-item strong {
+    color:#0369a1 !important;
+    font-size:.71rem !important;
+}
+.export-daily-raw-item .export-daily-raw-yield {
+    padding-left:.3rem;
+    border-left:1px solid #9ec5e5;
+    color:#0f766e !important;
 }
 .export-container-remaining,
 .export-daily-row strong {
@@ -5128,6 +5497,11 @@ html[data-theme="dark"] .set-schedule-line-add-btn {
 html[data-theme="dark"] .set-component-progress {color:#93c5fd;}
 html[data-theme="dark"] .set-component-progress-track {background:#223e69;}
 html[data-theme="dark"] .set-remaining-quantity {background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.34);color:#86efac;}
+html[data-theme="dark"] .export-container-pallet {border-left-color:rgba(134,239,172,.36);color:#bbf7d0;}
+html[data-theme="dark"] .export-container-remaining .set-remaining-quantity {background:rgba(120,53,15,.36);border-color:rgba(251,146,60,.55);color:#fdba74;}
+html[data-theme="dark"] .export-container-remaining .export-container-pallet {border-left-color:rgba(251,146,60,.5);color:#fed7aa;}
+html[data-theme="dark"] .export-container-row.is-completed .set-remaining-quantity {background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.34);color:#86efac;}
+html[data-theme="dark"] .export-container-row.is-completed .export-container-pallet {border-left-color:rgba(134,239,172,.36);color:#bbf7d0;}
 html[data-theme="dark"] .set-overproduced-quantity {background:rgba(127,29,29,.3);border-color:rgba(248,113,113,.48);color:#fca5a5;}
 html[data-theme="dark"] .set-finished-progress {background:linear-gradient(135deg,rgba(20,83,45,.28),rgba(30,58,138,.2));border-color:rgba(74,222,128,.26);}
 html[data-theme="dark"] .set-stock-deduction-summary {color:#94a3b8;}
@@ -5444,9 +5818,33 @@ html[data-theme="dark"] .export-raw-item{border-top-color:#223047;}
 html[data-theme="dark"] .export-progress-track{background:#314155;}
 html[data-theme="dark"] .export-container-progress-track{background:#223e69;}
 html[data-theme="dark"] .export-daily-record{background:linear-gradient(180deg,#162133 0%,#121a2a 100%);border-color:#314155;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card){border-color:#334155;background:linear-gradient(145deg,#162133,#101827);box-shadow:0 10px 24px rgba(0,0,0,.18);}
+html[data-theme="dark"] .export-detail-title{color:#f8fafc;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-pane{border-color:#334155;background:#121a2a;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-pane h4{color:#dbeafe;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric{background:linear-gradient(145deg,#172b4b,#14243d);border-color:#285a88;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric small{color:#a9bbd2;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric strong{color:#dbeafe;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.produced{background:linear-gradient(145deg,#153b31,#123128);border-color:#27734f;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.produced strong{color:#86efac;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.remaining{background:linear-gradient(145deg,#482a18,#352014);border-color:#9a5a20;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-active-metrics .export-metric.remaining strong{color:#fdba74;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-daily-record{background:linear-gradient(145deg,#162133,#121a2a);border-color:#314155;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-container-label{border-color:#2563eb;background:linear-gradient(145deg,#17365f,#10294a);color:#7dd3fc;box-shadow:0 0 0 1px rgba(56,189,248,.08);}
+html[data-theme="dark"] .export-container-po{color:#9fb6cd;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-container-row.is-completed{border-color:#27734f;background:linear-gradient(90deg,rgba(20,83,45,.4),rgba(21,61,49,.34));}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-label{border-color:#22c55e;background:linear-gradient(145deg,#174d32,#123b28);color:#86efac;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-progress-copy{color:#86efac;}
+html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-progress-track{background:#1c5439;}
 html[data-theme="dark"] .export-daily-date-pill{background:rgba(14,165,233,.18);color:#7dd3fc;}
 html[data-theme="dark"] .export-daily-date-pill:hover{background:rgba(14,165,233,.28);color:#bae6fd;}
 html[data-theme="dark"] .export-daily-qty{background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.3);color:#86efac !important;}
+html[data-theme="dark"] .export-daily-pallet{border-left-color:rgba(134,239,172,.36);color:#bbf7d0 !important;}
+html[data-theme="dark"] .export-daily-work-time{color:#a9bbd2;}
+html[data-theme="dark"] .export-daily-expiry{color:#a9bbd2;}
+html[data-theme="dark"] .export-daily-raw-item{border-color:#285372;background:rgba(14,62,91,.42);color:#bfdbfe;}
+html[data-theme="dark"] .export-daily-raw-item strong{color:#7dd3fc !important;}
+html[data-theme="dark"] .export-daily-raw-item .export-daily-raw-yield{border-left-color:#356984;color:#5eead4 !important;}
 html[data-theme="dark"] .calendar-weekdays{background:#182234;border-bottom-color:#253246;}
 html[data-theme="dark"] .calendar-days{background:#263244;}
 html[data-theme="dark"] .calendar-day{background:#121a2a;border-color:#263244;}
@@ -5845,6 +6243,31 @@ html[data-theme="dark"] .export-schedule-quantity,
 html[data-theme="dark"] .export-schedule-date,
 html[data-theme="dark"] .export-schedule-progress > div:first-child {
     color:#dbeafe;
+}
+html[data-theme="dark"] .export-schedule-table .export-schedule-product-name {
+    color:#86efac !important;
+}
+html[data-theme="dark"] .export-schedule-table .export-schedule-period-cell strong,
+html[data-theme="dark"] .export-schedule-table .export-schedule-total {
+    color:#dbeafe !important;
+}
+html[data-theme="dark"] .export-schedule-meta {
+    color:#94a3b8;
+}
+html[data-theme="dark"] .export-schedule-pallet-plan {
+    background:rgba(22,101,52,.28);
+    color:#86efac;
+}
+html[data-theme="dark"] .export-schedule-unit-box .export-schedule-lines::before {
+    color:#94a3b8;
+}
+html[data-theme="dark"] .export-plan-label {
+    background:rgba(37,99,235,.24);
+    color:#bfdbfe;
+}
+html[data-theme="dark"] .export-schedule-remaining {
+    background:rgba(22,101,52,.25);
+    color:#86efac !important;
 }
 html[data-theme="dark"] .schedule-detail-row:hover,
 html[data-theme="dark"] .schedule-detail-row:focus-visible {
@@ -6422,7 +6845,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
     <div class="req-topbar">
         <div>
             <h2 style="margin:0;">필요 원,부자재 체크</h2>
-            <div class="req-muted">등록된 모든 예정 스케줄 기준으로 필요량을 계산합니다.</div>
+            <div class="req-muted">등록된 모든 미완료 스케줄(예정·진행중) 기준으로 필요량을 계산합니다.</div>
         </div>
         <div class="req-actions">
             {% if can_prod %}
@@ -6564,25 +6987,19 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
 
 {% macro render_export_table(rows, empty_message, item_class='') -%}
     {% if rows %}
-    <div class="table-container">
+    <div class="table-container export-schedule-board">
         <table class="export-table export-schedule-table">
             <colgroup>
-                <col style="width:16%;"><col style="width:11%;"><col style="width:5%;"><col style="width:6%;">
-                <col style="width:7%;"><col style="width:7%;"><col style="width:6%;"><col style="width:6%;">
-                <col style="width:12%;"><col style="width:9%;"><col style="width:15%;">
+                <col style="width:23%;"><col style="width:16%;"><col style="width:13%;">
+                <col style="width:19%;"><col style="width:17%;"><col style="width:12%;">
             </colgroup>
             <thead>
                 <tr>
-                    <th>제품</th>
-                    <th>단위 박스</th>
-                    <th>단위 수</th>
-                    <th>총수량</th>
-                    <th>생산 시작일</th>
-                    <th>생산 종료일</th>
-                    <th>컷오프</th>
-                    <th>라인</th>
-                    <th>진행</th>
-                    <th>남은 수량</th>
+                    <th>수출 제품</th>
+                    <th>생산 기간</th>
+                    <th>수출 계획</th>
+                    <th>컨테이너 · 라인</th>
+                    <th>진행 현황</th>
                     <th>관리</th>
                 </tr>
             </thead>
@@ -6631,24 +7048,21 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         </div>
                         {% endif %}
                     </td>
-                    <td class="export-schedule-unit-box">
-                        {% if export.has_custom_container_quantities %}
-                        <div>개별 입력</div>
-                        <div class="export-box-summary">
-                            {% for quantity in export.container_box_quantities %}
-                            <span class="export-container-box-quantity">{{ loop.index }}{{ export.unit_label_short }} {{ export_box(quantity) }} box</span>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box
+                    <td class="export-schedule-period-cell">
+                        <strong>{{ export_date(export.production_start_date) }} ~ {{ export_date(export.production_end_date) }}</strong>
+                        <div class="export-schedule-meta">컷오프 {{ export_date(export.cutoff_date) }}</div>
+                        {% if export.completed_date %}
+                        <div class="export-schedule-meta">완료 {{ export_date(export.completed_date) }}</div>
                         {% endif %}
                     </td>
-                    <td><span class="export-schedule-quantity">{{ export.container_count }}{{ export.unit_label_short }}</span></td>
-                    <td><span class="export-schedule-quantity">{{ export_box(export.export_quantity) }} box</span></td>
-                    <td><span class="export-schedule-date">{{ export_date(export.production_start_date) }}</span></td>
-                    <td><span class="export-schedule-date">{{ export_date(export.production_end_date) }}</span></td>
-                    <td><span class="export-schedule-date">{{ export_date(export.cutoff_date) }}</span></td>
-                    <td>
+                    <td class="export-schedule-plan-cell">
+                        <strong class="export-schedule-total">{{ export_box(export.export_quantity) }} box</strong>
+                        {% if export.pallet_boxes_per_unit|int > 0 %}
+                        <div class="export-schedule-pallet-plan">계획 {{ ((export.export_quantity|float) / (export.pallet_boxes_per_unit|float))|round(0)|int }}P</div>
+                        {% endif %}
+                        <div class="export-schedule-meta">총 {{ export.container_count }}{{ export.unit_label_short }}</div>
+                    </td>
+                    <td class="export-schedule-unit-box">
                         <div class="export-schedule-lines">
                         {% if export.line %}
                             {% for line_num in export.line.split(',') %}
@@ -6658,8 +7072,18 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             <span class="req-muted">-</span>
                         {% endif %}
                         </div>
+                        {% if export.has_custom_container_quantities %}
+                        <div class="export-plan-label">개별 입력</div>
+                        <div class="export-box-summary">
+                            {% for quantity in export.container_box_quantities %}
+                            <span class="export-container-box-quantity">{{ loop.index }}{{ export.unit_label_short }} {{ export_box(quantity) }} box</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        1{{ export.unit_label_short }} {{ export_box(export.boxes_per_container) }} box
+                        {% endif %}
                     </td>
-                    <td>
+                    <td class="export-schedule-status-cell">
                         <div class="export-schedule-progress">
                         <div>{{ export_box(export.produced_total) }} / {{ export_box(export.export_quantity) }} box</div>
                         <div class="export-progress-track">
@@ -6667,9 +7091,9 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         </div>
                         <div class="req-muted">{{ export.completion_rate }}%{% if export.external_completed_count %} · 기존 완료 {{ export.external_completed_count }}건 포함{% endif %}</div>
                         </div>
+                        <strong class="export-remaining-total export-schedule-remaining">남은 수량 {{ export_box(export.remaining_total) }} box</strong>
                     </td>
-                    <td><strong class="export-remaining-total export-schedule-remaining">남은 수량 {{ export_box(export.remaining_total) }} box</strong></td>
-                    <td>
+                    <td class="export-schedule-actions-cell">
                         <div class="export-actions">
                             {% if can_prod %}
                             <button type="button" class="calendar-action-btn export-mini-btn set-manage-btn set-edit-btn" onclick="openExportModal({{ export.id }})">
@@ -6706,8 +7130,8 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
             data-production-dates="{{ export.daily_actuals | map(attribute='date') | join(',') }}"
             {% if export.completed_date %}data-completed-date="{{ export.completed_date }}"{% endif %}>
             <div class="export-active-head export-schedule-card-head" role="button" tabindex="0" aria-expanded="true" onclick="toggleExportScheduleCard(this)" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); toggleExportScheduleCard(this); }" title="클릭하여 상세 일정 접기/펼치기">
-                <div>
-                    <strong>{{ export.product_name or '-' }}</strong>
+                <div class="export-detail-title-block">
+                    <strong class="export-detail-title">{{ export.product_name or '-' }}</strong>
                     {% set po_numbers = export.po_numbers | select | list %}
                     {% if po_numbers %}
                     <div class="req-muted" style="margin-top:.2rem;">
@@ -6717,7 +7141,7 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         {% endfor %}
                     </div>
                     {% endif %}
-                    <div class="req-muted">
+                    <div class="req-muted export-detail-period">
                         {{ export_date(export.production_start_date) }} 시작 / 종료 {{ export_date(export.production_end_date) }} / 컷오프 {{ export_date(export.cutoff_date) }}
                         {% if export.completed_date %} / 완료 {{ export_date(export.completed_date) }}{% endif %}
                     </div>
@@ -6730,11 +7154,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                     {% endif %}
                 </div>
                 <div class="export-active-metrics">
-                    <span>총 필요 {{ export_box(export.export_quantity) }} box</span>
-                    <span>생산 {{ export_box(export.produced_total) }} box</span>
-                    <span>남은 수량 {{ export_box(export.remaining_total) }} box</span>
+                    <span class="export-metric plan"><small>총 필요</small><strong>{{ export_box(export.export_quantity) }} box</strong></span>
+                    <span class="export-metric produced"><small>생산 완료</small><strong>{{ export_box(export.produced_total) }} box</strong></span>
+                    <span class="export-metric remaining"><small>남은 수량</small><strong>{{ export_box(export.remaining_total) }} box</strong></span>
                     {% if export.external_completed_count %}
-                    <span>기존 완료 {{ export.external_completed_count }}건 포함</span>
+                    <span class="export-metric note"><small>기존 완료</small><strong>{{ export.external_completed_count }}건 포함</strong></span>
                     {% endif %}
                 </div>
             </div>
@@ -6742,11 +7166,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                 <div class="export-active-pane">
                     <h4>{{ export.unit_label_name }}별 진행</h4>
                     {% for container in export.container_rows %}
-                    <div class="export-container-row">
-                        <div class="export-container-label">
-                            {{ container.container_label }}
+                    <div class="export-container-row{% if container.is_completed %} is-completed{% endif %}">
+                        <div class="export-container-identity">
+                            <span class="export-container-label">{{ container.container_label }}</span>
                             {% if container.po_number %}
-                            <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">PO {{ container.po_number }}</div>
+                            <span class="export-container-po">PO {{ container.po_number }}</span>
                             {% endif %}
                         </div>
                         <div class="export-container-progress">
@@ -6757,9 +7181,16 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                         </div>
                         <div class="export-container-remaining">
                             {% if container.is_completed %}
-                            <span class="set-remaining-quantity">완료</span>
+                            <span class="set-remaining-quantity">
+                                완료{% if export.pallet_boxes_per_unit|int > 0 %} {{ ((container.produced_boxes|float) / (export.pallet_boxes_per_unit|float))|round(0)|int }}P{% endif %}
+                            </span>
                             {% else %}
-                            <span class="set-remaining-quantity">남은 수량 {{ export_box(container.remaining_boxes) }} box</span>
+                            <span class="set-remaining-quantity">
+                                남은 수량 {{ export_box(container.remaining_boxes) }} box
+                                {% if export.pallet_boxes_per_unit|int > 0 %}
+                                <span class="export-container-pallet">{{ "%.1f"|format((container.remaining_boxes|float) / (export.pallet_boxes_per_unit|float)) }}P</span>
+                                {% endif %}
+                            </span>
                             {% endif %}
                         </div>
                     </div>
@@ -6802,8 +7233,11 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                 {% else %}
                                 <span class="export-daily-date-pill">{{ daily.date }}</span>
                                 {% endif %}
+                                {% if daily.work_times %}
+                                <div class="export-daily-work-time">작업 시간 {{ daily.work_times | join(' / ') }}시간</div>
+                                {% endif %}
                                 {% if daily.expiry_breakdowns %}
-                                <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
+                                <div class="export-daily-expiry">
                                     {% if daily.expiry_breakdowns|length > 1 %}
                                         {% for expiry in daily.expiry_breakdowns %}
                                         <div>소비기한 {{ expiry.date }} · {{ export_box(expiry.boxes) }} box</div>
@@ -6814,67 +7248,32 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                     {% endif %}
                                 </div>
                                 {% elif daily.expiry_dates %}
-                                <div class="req-muted" style="font-size:.72rem;margin-top:.15rem;">
+                                <div class="export-daily-expiry">
                                     소비기한 {{ daily.expiry_dates | join(', ') }}
                                 </div>
                                 {% endif %}
+                                {% if daily.raw_usages %}
+                                <div class="export-daily-raw-list" aria-label="사용 원초 정보">
+                                    {% for raw_usage in daily.raw_usages %}
+                                    <span class="export-daily-raw-item">
+                                        {{ raw_usage.raw_name }}{% if raw_usage.ja_ho %} · {{ raw_usage.ja_ho }}{% endif %}
+                                        <strong>{{ "{:,.1f}".format(raw_usage.actual_qty).rstrip('0').rstrip('.') }}속</strong>
+                                        <span class="export-daily-raw-yield">수율 {% if raw_usage.yield_rate is not none %}{{ "%.1f"|format(raw_usage.yield_rate) }}%{% else %}-{% endif %}</span>
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
-                            <strong class="export-daily-qty">완료 {{ export_box(daily.actual_boxes) }} box</strong>
+                            <strong class="export-daily-qty">
+                                완료 {{ export_box(daily.actual_boxes) }} box
+                                {% if export.pallet_boxes_per_unit|int > 0 %}
+                                <span class="export-daily-pallet">{{ "%.1f"|format((daily.actual_boxes|float) / (export.pallet_boxes_per_unit|float)) }}P</span>
+                                {% endif %}
+                            </strong>
                         </div>
                         {% endfor %}
                     {% else %}
                         <div class="req-muted">아직 실제 생산량이 없습니다.</div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="export-raw-footer">
-                <div class="export-raw-footer-head">
-                    <h4>{{ export.unit_label_name }}별 원초 사용 비율 / 생산량</h4>
-                    <div class="req-muted">실제 생산 완료된 원초 사용량을 자호 기준으로 묶고, 생산 박스 비율로 {{ export.unit_label_name }}에 배분한 값입니다.</div>
-                </div>
-                <div class="export-raw-grid">
-                    {% set raw_rows = export.container_raw_breakdowns or [] %}
-                    {% set ns = namespace(has_produced=false) %}
-                    {% for container in raw_rows %}
-                        {% if (container.produced_boxes or 0)|float > 0 %}
-                            {% set ns.has_produced = true %}
-                        <div class="export-raw-card">
-                            <div class="export-raw-card-head">
-                                <div>
-                                    <div class="export-raw-card-title">{{ container.container_label }}</div>
-                                    <div class="export-raw-card-meta">
-                                        생산 {{ stats_box(container.produced_boxes) }} box / 목표 {{ export_box(container.target_boxes) }} box
-                                        {% if container.po_number %}<br>PO {{ container.po_number }}{% endif %}
-                                    </div>
-                                </div>
-                                <div class="export-raw-card-total">원초 {{ stats_box(container.total_raw_qty) }}속</div>
-                            </div>
-                            {% if container.breakdown_items %}
-                            <div class="export-raw-list">
-                                {% for item in container.breakdown_items %}
-                                <div class="export-raw-item">
-                                    <div class="export-raw-item-main">
-                                        <div class="export-raw-item-title">{{ item.ja_ho }}</div>
-                                        {% if item.raw_names_text %}
-                                        <div class="export-raw-item-sub">{{ item.raw_names_text }}</div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="export-raw-item-metrics">
-                                        <strong>{{ stats_box(item.production_boxes) }} box</strong>
-                                        <span>{{ stats_box(item.ratio_pct) }}%</span>
-                                        <span>{{ stats_box(item.raw_qty) }}속</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="export-raw-empty">원초 사용 내역이 아직 없습니다.</div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    {% endfor %}
-                    {% if not ns.has_produced %}
-                    <div class="export-raw-empty">생산 완료된 {{ export.unit_label_name }}가 없어 자호 기준 원초 비율을 아직 계산할 수 없습니다.</div>
                     {% endif %}
                 </div>
             </div>
@@ -9058,6 +9457,37 @@ function scrollToScheduleDetail(scheduleType, scheduleId) {
     target.classList.add('schedule-detail-target');
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => target.classList.remove('schedule-detail-target'), 1700);
+}
+
+function focusScheduleFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const scheduleType = String(params.get('focus_type') || '').toLowerCase();
+    const scheduleId = Number(params.get('focus_id') || 0);
+    if (!['export', 'set'].includes(scheduleType) || !Number.isInteger(scheduleId) || scheduleId <= 0) return;
+
+    const targetId = scheduleType === 'set'
+        ? `setScheduleDetail${scheduleId}`
+        : `exportScheduleDetail${scheduleId}`;
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    const completedPaneId = scheduleType === 'set' ? 'setTabCompletedPane' : 'exportTabCompletedPane';
+    const completedPane = document.getElementById(completedPaneId);
+    const isCompletedSchedule = Boolean(completedPane && completedPane.contains(target));
+    if (scheduleType === 'set') {
+        switchSetScheduleTab(isCompletedSchedule ? 'completed' : 'active');
+    } else {
+        switchExportScheduleTab(isCompletedSchedule ? 'completed' : 'active');
+    }
+
+    // 완료 일정은 기본 월 검색에서 숨겨질 수 있으므로, 직접 이동한 카드는 표시한다.
+    target.style.display = '';
+    window.requestAnimationFrame(() => scrollToScheduleDetail(scheduleType, scheduleId));
+
+    params.delete('focus_type');
+    params.delete('focus_id');
+    const query = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
 }
 
 function toggleSetDailyActuals(setScheduleId, button) {
@@ -12014,6 +12444,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeView !== 'calendar') {
         switchView(activeView);
     }
+    focusScheduleFromQuery();
 });
 
 // 모달 외부 클릭 시 닫기

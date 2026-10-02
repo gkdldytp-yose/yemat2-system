@@ -1543,10 +1543,17 @@ function rawCard(row) {
     const carNumber = defaults.car_number || row.car_number || '';
     const actualValue = defaults.actual_quantity ? String(defaults.actual_quantity) : expected;
     const groupId = `raw-lot-${++rawLotGroupSeq}`;
+    const initialLot = rawLotCardHtml(row, {
+        receivingDate,
+        carNumber,
+        expectedValue: expected,
+        actualValue,
+        note: defaults.usage_note || '',
+    });
     return `
         <div class="raw-lot-group material-lot-group" data-lot-group="${groupId}" data-total-need="${escapeHtml(expected)}">
             <div class="material-lot-tools">
-                <span><strong>${escapeHtml(row.raw_material_name || '원초')}</strong> 필요 원초 <span class="lot-count-badge">${escapeHtml(row.raw_material_code || '-')}</span> <span class="lot-count-badge js-lot-count">0개 로트</span></span>
+                <span><strong>${escapeHtml(row.raw_material_name || '원초')}</strong> 필요 원초 <span class="lot-count-badge">${escapeHtml(row.raw_material_code || '-')}</span> <span class="lot-count-badge js-lot-count">1개 로트</span></span>
                 <button type="button" class="ghost-btn" onclick="addRawLot(this)">로트 추가</button>
             </div>
             <div class="usage-card raw" data-need="${expected}" data-unit="속">
@@ -1566,7 +1573,7 @@ function rawCard(row) {
                  data-default-receiving-date="${escapeHtml(receivingDate)}"
                  data-default-car-number="${escapeHtml(carNumber)}"
                  data-default-actual="${escapeHtml(actualValue)}"
-                 data-default-note="${escapeHtml(defaults.usage_note || '')}"></div>
+                 data-default-note="${escapeHtml(defaults.usage_note || '')}">${initialLot}</div>
         </div>
     `;
 }

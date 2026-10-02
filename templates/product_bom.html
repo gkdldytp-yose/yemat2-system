@@ -72,6 +72,7 @@
 .product-edit-grid .form-group input:focus,
 .product-edit-grid .form-group select:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,0.12);}
 .product-edit-grid .form-group label{font-size:0.76rem;font-weight:800;color:#475569;margin-bottom:0.3rem;display:block;}
+.product-edit-grid .form-hint{margin-top:.28rem;color:#64748b;font-size:.72rem;font-weight:650;line-height:1.35;}
 .product-edit-wide{grid-column:1 / -1;}
 .product-edit-actions{display:flex;justify-content:flex-end;gap:0.55rem;margin-top:0.9rem;flex-wrap:wrap;}
 .bom-list-card{overflow:hidden;}
@@ -288,7 +289,13 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
             <div class="product-info-label">소비기한</div>
             <div class="product-info-value">{{ product.expiry_months or 12 }}개월</div>
         </div>
-        <div class="product-info-item" style="grid-column:span 2;">
+        <div class="product-info-item">
+            <div class="product-info-label">파렛트 기준</div>
+            <div class="product-info-value">
+                {% if product.pallet_boxes_per_unit %}1P = {{ product.pallet_boxes_per_unit }} BOX{% else %}<span class="muted">미설정</span>{% endif %}
+            </div>
+        </div>
+        <div class="product-info-item" style="grid-column:1 / -1;">
             <div class="product-info-label">1박스당 사용 원초 / 매수</div>
             {% if is_finished_set %}
             <div class="product-info-value muted">세트 완제품은 원초를 직접 사용하지 않습니다.</div>
@@ -350,6 +357,12 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                         <option value="{{ month }}" {% if (product.expiry_months or 12) == month %}selected{% endif %}>{{ month }}개월</option>
                         {% endfor %}
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>1P(파렛트)당 박스 수</label>
+                    <input type="number" name="pallet_boxes_per_unit" min="0" step="1"
+                           value="{{ product.pallet_boxes_per_unit or '' }}" placeholder="예: 72">
+                    <div class="form-hint">미입력 또는 0은 미설정으로 저장됩니다.</div>
                 </div>
                 <div class="form-group product-edit-wide">
                     <label>1박스당 원초 / 매수</label>

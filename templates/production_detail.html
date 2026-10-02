@@ -110,6 +110,10 @@
 }
 .product-spec-btn.register{background:#ecfdf5;border:1px solid #86efac;color:#166534;}
 .product-spec-btn.register:hover{background:#dcfce7;border-color:#4ade80;color:#166534;}
+.product-spec-btn.schedule-link{gap:.38rem;background:#eef2ff;border:1px solid #a5b4fc;color:#3730a3;box-shadow:0 5px 14px rgba(79,70,229,.13);}
+.product-spec-btn.schedule-link:hover{background:#e0e7ff;border-color:#818cf8;color:#312e81;transform:translateY(-1px);}
+html[data-theme="dark"] .product-spec-btn.schedule-link{background:rgba(67,56,202,.25);border-color:rgba(129,140,248,.6);color:#c7d2fe;}
+html[data-theme="dark"] .product-spec-btn.schedule-link:hover{background:rgba(79,70,229,.38);color:#e0e7ff;}
 .note-textarea{width:100%;padding:0.55rem 0.65rem;border:2px solid #667eea;border-radius:8px;box-sizing:border-box;font-size:0.9rem;line-height:1.45;resize:vertical;min-height:74px;font-family:inherit;}
 .ainput,
 .note-textarea:not([readonly]),
@@ -944,6 +948,12 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                     {% elif can_prod %}
                     <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id) }}" target="_blank" rel="noopener" class="product-spec-btn register">사양서 등록</a>
                     {% endif %}
+                    {% if production.export_schedule_id %}
+                    <a href="{{ url_for('production.schedules', view='export', focus_type='export', focus_id=production.export_schedule_id) }}" class="product-spec-btn schedule-link">🚢 수출 일정표로 이동</a>
+                    {% endif %}
+                    {% if production.set_schedule_id %}
+                    <a href="{{ url_for('production.schedules', view='set', focus_type='set', focus_id=production.set_schedule_id) }}" class="product-spec-btn schedule-link">📦 세트 일정표로 이동</a>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -1702,6 +1712,7 @@ let currentRawSokMode = {{ production.raw_sok_mode or 1 }};
 const PLANNED = {{ production.planned_boxes }};
 const DEFAULT_BOXES = {{ production.actual_boxes or 0 }};
 const IS_DONE = {{ 'false' if can_edit else 'true' }};
+const IS_COMPLETED_PRODUCTION = {{ (production.status == '완료')|tojson }};
 const IS_REGISTER_MODE = {{ (production.entry_mode == 'register')|tojson }};
 let REGISTER_RAW_STOCK_ENABLED = {{ production.register_raw_stock_enabled|tojson }};
 const REGISTER_STOCK_RAW_ITEMS = {{ register_stock_raw_items|default([])|tojson }};
@@ -1723,7 +1734,7 @@ window.onload = () => {
     recalcAll();
     initLotGapNoneButtons();
     initAutoGrowNotes();
-    if(IS_REGISTER_MODE && REGISTER_RAW_STOCK_ENABLED){
+    if(IS_REGISTER_MODE && REGISTER_RAW_STOCK_ENABLED && !IS_COMPLETED_PRODUCTION){
         showRegisterStockRawItems();
     }
     if (AUTO_OPEN_PLAN_EDIT) {

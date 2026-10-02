@@ -2102,6 +2102,12 @@ def _is_started_export_row(row):
     return status_value in {'진행중', '완료'}
 
 
+def _is_completed_export_row(row):
+    """Only completed production records may contribute export output."""
+    status_value = _normalize_schedule_state(row.get('production_status') or row.get('schedule_status'))
+    return status_value == '완료'
+
+
 def _build_export_schedule_note(export_schedule_id, container_label, note=''):
     prefix = f'[수출일정 #{export_schedule_id}'
     if container_label:
@@ -2213,6 +2219,7 @@ def _load_export_linked_rows(cursor, export_schedule_id):
             pr.id as linked_production_id,
             pr.actual_boxes,
             pr.status as production_status,
+            pr.work_time,
             pr.expiry_date,
             pr.expiry_date_2,
             pr.expiry_date_3,
@@ -2240,6 +2247,7 @@ def _load_existing_export_completed_rows(cursor, workplace, product_id, start_da
             pr.production_date as scheduled_date,
             pr.actual_boxes,
             pr.status as production_status,
+            pr.work_time,
             pr.expiry_date,
             pr.expiry_date_2,
             pr.expiry_date_3,
@@ -2268,7 +2276,7 @@ def _load_existing_export_completed_rows(cursor, workplace, product_id, start_da
             production_end_date.isoformat(),
         ),
     ).fetchall()
-    return [dict(row) for row in rows]
+    return [dict(row) for row in rows if _is_completed_export_row(dict(row))]
 
 
 def _allocate_export_boxes_to_containers(boxes_before, produced_boxes, container_box_quantities, total_limit=0):
@@ -2347,6 +2355,46 @@ def _load_production_raw_usage_by_ja_ho(cursor, production_ids):
                 'ja_ho': str(row['ja_ho'] or '미지정').strip() or '미지정',
                 'raw_name': str(row['raw_name'] or '원초').strip() or '원초',
                 'raw_qty': float(row['raw_qty'] or 0),
+            }
+        )
+    return dict(usage_map)
+
+
+def _load_production_raw_usage_summaries(cursor, production_ids):
+    """Return each completed production's actual raw input and yield by raw lot."""
+    normalized_ids = [int(production_id) for production_id in (production_ids or []) if int(production_id or 0) > 0]
+    if not normalized_ids:
+        return {}
+    placeholders = ','.join(['?'] * len(normalized_ids))
+    rows = cursor.execute(
+        f'''
+        SELECT
+            pmu.production_id,
+            COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), NULLIF(TRIM(rm.name), ''), '원초') AS raw_name,
+            COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') AS ja_ho,
+            SUM(COALESCE(pmu.actual_quantity, 0)) AS actual_qty,
+            SUM(COALESCE(pmu.expected_quantity, 0)) AS expected_qty
+        FROM production_material_usage pmu
+        LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+        WHERE pmu.production_id IN ({placeholders})
+          AND pmu.material_id IS NULL
+          AND pmu.component_product_id IS NULL
+          AND COALESCE(pmu.actual_quantity, 0) > 0
+        GROUP BY pmu.production_id, raw_name, ja_ho
+        ORDER BY pmu.production_id, actual_qty DESC, raw_name ASC, ja_ho ASC
+        ''',
+        normalized_ids,
+    ).fetchall()
+    usage_map = defaultdict(list)
+    for row in rows:
+        actual_qty = float(row['actual_qty'] or 0)
+        expected_qty = float(row['expected_qty'] or 0)
+        usage_map[int(row['production_id'])].append(
+            {
+                'raw_name': str(row['raw_name'] or '원초').strip() or '원초',
+                'ja_ho': str(row['ja_ho'] or '').strip(),
+                'actual_qty': actual_qty,
+                'expected_qty': expected_qty,
             }
         )
     return dict(usage_map)
@@ -2560,8 +2608,9 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
         for row in linked_rows
         if not _is_started_export_row(row) and int(row.get('schedule_id') or 0) not in preserve_schedule_ids
     ]
-    completed_rows = started_rows + external_completed_rows
-    fixed_rows = completed_rows + preserved_rows
+    completed_rows = [row for row in started_rows if _is_completed_export_row(row)] + external_completed_rows
+    in_progress_rows = [row for row in started_rows if not _is_completed_export_row(row)]
+    fixed_rows = started_rows + external_completed_rows + preserved_rows
 
     if fixed_rows:
         started_dates = sorted(str(row['scheduled_date']) for row in fixed_rows if row.get('scheduled_date'))
@@ -2585,7 +2634,9 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
     ]
     available_dates = [scheduled_date for scheduled_date in business_dates if scheduled_date not in fixed_date_set]
     produced_total = int(sum(_get_production_export_box_total(row) for row in completed_rows))
-    locked_planned_total = int(sum(_get_export_row_locked_boxes(row) for row in preserved_rows))
+    locked_planned_total = int(
+        sum(_get_export_row_locked_boxes(row) for row in (in_progress_rows + preserved_rows))
+    )
     locked_total = produced_total + locked_planned_total
     if export_quantity < locked_total:
         raise ValueError('?대? ?앹궛???섎웾蹂대떎 ?곴쾶 ?섏텧 ?섎웾???섏젙?????놁뒿?덈떎.')
@@ -2671,7 +2722,7 @@ def _sync_export_schedule_rows(conn, cursor, export_row, original_product_id=Non
         )
 
     return {
-        'started_count': len(completed_rows),
+        'started_count': len(started_rows) + len(external_completed_rows),
         'started_dates': sorted(fixed_date_set),
         'produced_total': produced_total,
         'remaining_total': remaining_total,
@@ -3273,6 +3324,29 @@ def _normalize_production_status(status_value):
     return s
 
 
+def _is_material_requirement_schedule_status(status_value):
+    """Return whether the schedule still requires materials for its plan."""
+    return _normalize_production_status(status_value) in {
+        _normalize_production_status('예정'),
+        _normalize_production_status('진행중'),
+    }
+
+
+def _build_material_requirement_product_box_map(schedule_rows):
+    """Sum planned boxes by product for every unfinished production schedule."""
+    product_box_map = {}
+    for raw_row in schedule_rows:
+        row = dict(raw_row)
+        if not _is_material_requirement_schedule_status(row.get('status')):
+            continue
+        product_id = int(row.get('product_id') or 0)
+        planned_boxes = float(row.get('planned_boxes') or 0)
+        if product_id <= 0 or planned_boxes <= 0:
+            continue
+        product_box_map[product_id] = product_box_map.get(product_id, 0.0) + planned_boxes
+    return product_box_map
+
+
 def _normalize_production_entry_mode(entry_mode):
     return 'register' if str(entry_mode or '').strip().lower() == 'register' else 'standard'
 
@@ -3321,6 +3395,54 @@ def _refresh_register_usage_expected_quantity(cursor, production_id, where_sql, 
             (expected, loss, yield_rate, row['id']),
         )
     return len(rows)
+
+
+def _refresh_register_raw_usage_expected_quantities(cursor, production_id, product_id, actual_boxes):
+    """Allocate each raw-material BOM requirement once across its saved lots.
+
+    Register mode saves one usage row per selected raw lot.  Those rows can use
+    different raw-material IDs while referring to the same raw code, so refresh
+    them by code and avoid treating duplicate BOM links as additional usage.
+    """
+    if int(product_id or 0) <= 0 or float(actual_boxes or 0) <= 0:
+        return 0
+    bom_rows = cursor.execute(
+        '''
+        SELECT b.raw_material_id, COALESCE(b.quantity_per_box, 0) AS quantity_per_box,
+               COALESCE(NULLIF(TRIM(rm.code), ''), '') AS raw_code
+        FROM bom b
+        LEFT JOIN raw_materials rm ON rm.id = b.raw_material_id
+        WHERE b.product_id = ? AND b.raw_material_id IS NOT NULL
+        ORDER BY b.id
+        ''',
+        (product_id,),
+    ).fetchall()
+    refreshed_count = 0
+    seen_raw_keys = set()
+    for bom in bom_rows:
+        raw_material_id = int(bom['raw_material_id'] or 0)
+        raw_code = str(bom['raw_code'] or '').strip()
+        raw_key = raw_code or f'id:{raw_material_id}'
+        if raw_material_id <= 0 or raw_key in seen_raw_keys:
+            continue
+        seen_raw_keys.add(raw_key)
+        total_expected = round(float(bom['quantity_per_box'] or 0) * float(actual_boxes), 4)
+        if total_expected <= 0:
+            continue
+        if raw_code:
+            refreshed_count += _refresh_register_usage_expected_quantity(
+                cursor,
+                production_id,
+                '''(raw_material_code_snapshot = ?
+                    OR raw_material_id IN (SELECT id FROM raw_materials WHERE COALESCE(NULLIF(TRIM(code), ''), '') = ?))''',
+                [raw_code, raw_code],
+                total_expected,
+            )
+        else:
+            refreshed_count += _refresh_register_usage_expected_quantity(
+                cursor, production_id, 'raw_material_id = ?', [raw_material_id], total_expected
+            )
+    return refreshed_count
 
 
 def _get_production_entry_mode_meta(entry_mode):
@@ -4322,7 +4444,8 @@ def schedules():
             set_schedule_rows = cursor.fetchall()
             cursor.execute(
                 '''
-                SELECT es.*, p.name as product_name
+                SELECT es.*, p.name as product_name,
+                       COALESCE(p.pallet_boxes_per_unit, 0) AS pallet_boxes_per_unit
                 FROM export_schedules es
                 LEFT JOIN products p ON p.id = es.product_id
                 WHERE es.workplace = ?
@@ -4464,15 +4587,25 @@ def schedules():
                         production_end_date,
                         int(export_row['id']),
                     )
-                completed_rows = [row for row in linked_rows if _is_started_export_row(row)] + external_completed_rows
+                started_rows = [row for row in linked_rows if _is_started_export_row(row)]
+                completed_rows = [row for row in started_rows if _is_completed_export_row(row)] + external_completed_rows
                 produced_total = int(sum(_get_production_export_box_total(row) for row in completed_rows))
-                started_count = len(completed_rows)
+                started_count = len(started_rows) + len(external_completed_rows)
                 export_quantity = int(export_row.get('export_quantity') or 0)
                 boxes_per_container = int(export_row.get('boxes_per_container') or 0)
                 container_box_quantities = _get_export_container_box_quantities(export_row)
                 container_count = len(container_box_quantities) or int(export_row.get('container_count') or 0)
                 remaining_total = max(export_quantity - produced_total, 0)
                 daily_actual_map = {}
+                completed_production_ids = [
+                    int(row.get('linked_production_id') or row.get('production_id') or 0)
+                    for row in completed_rows
+                    if int(row.get('linked_production_id') or row.get('production_id') or 0) > 0
+                ]
+                raw_usage_by_production = _load_production_raw_usage_summaries(
+                    cursor,
+                    completed_production_ids,
+                )
                 for linked_row in completed_rows:
                     actual_boxes = int(_get_production_export_box_total(linked_row))
                     if actual_boxes <= 0:
@@ -4486,9 +4619,14 @@ def schedules():
                                 'expiry_dates': set(),
                                 'expiry_box_map': {},
                                 'production_ids': set(),
+                                'work_times': set(),
+                                'raw_usage_map': {},
                             },
                         )
                         bucket['actual_boxes'] += actual_boxes
+                        work_time = str(linked_row.get('work_time') or '').strip()
+                        if work_time:
+                            bucket['work_times'].add(work_time)
                         production_id = int(
                             linked_row.get('linked_production_id')
                             or linked_row.get('production_id')
@@ -4496,6 +4634,21 @@ def schedules():
                         )
                         if production_id > 0:
                             bucket['production_ids'].add(production_id)
+                            for raw_usage in raw_usage_by_production.get(production_id, []):
+                                raw_name = str(raw_usage.get('raw_name') or '원초').strip() or '원초'
+                                ja_ho = str(raw_usage.get('ja_ho') or '').strip()
+                                raw_key = (raw_name, ja_ho)
+                                raw_bucket = bucket['raw_usage_map'].setdefault(
+                                    raw_key,
+                                    {
+                                        'raw_name': raw_name,
+                                        'ja_ho': ja_ho,
+                                        'actual_qty': 0.0,
+                                        'expected_qty': 0.0,
+                                    },
+                                )
+                                raw_bucket['actual_qty'] += float(raw_usage.get('actual_qty') or 0)
+                                raw_bucket['expected_qty'] += float(raw_usage.get('expected_qty') or 0)
                         expiry_rows, _visible_expiry_count = _build_production_expiry_rows(
                             linked_row,
                             str(linked_row.get('expiry_date') or '').strip(),
@@ -4527,23 +4680,6 @@ def schedules():
                     po_number_map,
                     unit_mode=unit_mode,
                 )
-                try:
-                    container_raw_breakdowns = _build_export_container_raw_breakdown(
-                        cursor,
-                        completed_rows,
-                        container_box_quantities,
-                        export_quantity,
-                        po_number_map,
-                        unit_mode=unit_mode,
-                    )
-                except Exception:
-                    logger.exception(
-                        'Failed to build export raw breakdown | export_schedule_id=%s | workplace=%r | product_id=%s',
-                        export_row.get('id'),
-                        workplace,
-                        export_row.get('product_id'),
-                    )
-                    container_raw_breakdowns = []
                 export_view = {
                     **export_row,
                     'unit_mode': unit_mode,
@@ -4556,7 +4692,6 @@ def schedules():
                     'external_completed_count': len(external_completed_rows),
                     'completion_rate': round((produced_total / export_quantity) * 100, 1) if export_quantity > 0 else 0.0,
                     'container_rows': container_rows,
-                    'container_raw_breakdowns': container_raw_breakdowns,
                     'container_box_quantities': container_box_quantities,
                     'has_custom_container_quantities': bool(export_row.get('container_box_quantities') and str(export_row.get('container_box_quantities')).strip()),
                     'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
@@ -4564,6 +4699,10 @@ def schedules():
                         {
                             'date': key,
                             'actual_boxes': value['actual_boxes'],
+                            'work_times': sorted(
+                                value['work_times'],
+                                key=lambda item: (float(item) if str(item).replace('.', '', 1).isdigit() else float('inf'), item),
+                            ),
                             'expiry_dates': sorted(value['expiry_dates']),
                             'expiry_breakdowns': [
                                 {
@@ -4572,6 +4711,27 @@ def schedules():
                                 }
                                 for expiry_date, expiry_boxes in sorted(value['expiry_box_map'].items())
                                 if float(expiry_boxes or 0) > 0
+                            ],
+                            'raw_usages': [
+                                {
+                                    'raw_name': raw_usage['raw_name'],
+                                    'ja_ho': raw_usage['ja_ho'],
+                                    'actual_qty': round(float(raw_usage['actual_qty'] or 0), 1),
+                                    'yield_rate': (
+                                        round(
+                                            (float(raw_usage['expected_qty'] or 0) / float(raw_usage['actual_qty'])) * 100,
+                                            1,
+                                        )
+                                        if float(raw_usage['actual_qty'] or 0) > 0
+                                        and float(raw_usage['expected_qty'] or 0) > 0
+                                        else None
+                                    ),
+                                }
+                                for raw_usage in sorted(
+                                    value['raw_usage_map'].values(),
+                                    key=lambda item: (-float(item.get('actual_qty') or 0), item.get('raw_name') or '', item.get('ja_ho') or ''),
+                                )
+                                if float(raw_usage.get('actual_qty') or 0) > 0
                             ],
                             'production_id': sorted(value['production_ids'])[0] if value['production_ids'] else 0,
                             'detail_url': f"/production/{sorted(value['production_ids'])[0]}" if value['production_ids'] else '',
@@ -4611,7 +4771,6 @@ def schedules():
                         'is_completed': is_completed,
                         'completed_date': completed_date,
                         'container_rows': container_rows,
-                        'container_raw_breakdowns': container_raw_breakdowns,
                         'daily_actuals': export_view['daily_actuals'],
                         'excluded_dates': excluded_dates,
                         'excluded_date_count': len(excluded_dates),
@@ -5239,7 +5398,6 @@ def schedule_stats_product_data():
 @login_required
 def schedule_requirements_data():
     workplace = get_workplace()
-    planned_status = _normalize_production_status('\uC608\uC815')
 
     conn_context = db_connection()
     conn = conn_context.__enter__()
@@ -5259,18 +5417,14 @@ def schedule_requirements_data():
             (workplace,),
         )
         schedule_rows = [dict(r) for r in cursor.fetchall()]
-        planned_rows = [r for r in schedule_rows if _normalize_production_status(r.get('status')) == planned_status]
-
-        product_box_map = {}
+        product_box_map = _build_material_requirement_product_box_map(schedule_rows)
         product_name_map = {}
-        for row in planned_rows:
+        for row in schedule_rows:
+            if not _is_material_requirement_schedule_status(row.get('status')):
+                continue
             pid = int(row.get('product_id') or 0)
             if pid <= 0:
                 continue
-            planned_boxes = float(row.get('planned_boxes') or 0)
-            if planned_boxes <= 0:
-                continue
-            product_box_map[pid] = product_box_map.get(pid, 0.0) + planned_boxes
             if row.get('product_name'):
                 product_name_map[pid] = row.get('product_name')
 
@@ -5278,7 +5432,7 @@ def schedule_requirements_data():
             return jsonify(
                 {
                     'ok': True,
-                    'scope': 'all_planned',
+                    'scope': 'all_unfinished',
                     'summary': {'raw': [], 'base': [], 'sub': []},
                     'products': [],
                 }
@@ -5482,7 +5636,7 @@ def schedule_requirements_data():
         return jsonify(
             {
                 'ok': True,
-                'scope': 'all_planned',
+                'scope': 'all_unfinished',
                 'summary': {
                     'raw': _to_sorted_list(summary_raw),
                     'base': _to_sorted_list(summary_base),
@@ -5731,7 +5885,6 @@ def schedule_requirements_auto_purchase():
     """??? ?? ?? ???? ?? ?? ???? ????."""
     payload = request.get_json(silent=True) or {}
     workplace = (payload.get('workplace') or request.form.get('workplace') or get_workplace() or '').strip()
-    planned_status = _normalize_production_status('\uC608\uC815')
     try:
         with db_transaction() as conn:
             cursor = conn.cursor()
@@ -5743,21 +5896,7 @@ def schedule_requirements_auto_purchase():
             ''',
             (workplace,),
             )
-            planned_rows = []
-            for raw_row in cursor.fetchall():
-                row = dict(raw_row)
-                if _normalize_production_status(row.get('status')) == planned_status:
-                    planned_rows.append(row)
-
-        product_box_map = {}
-        for row in planned_rows:
-            pid = int(row.get('product_id') or 0)
-            if pid <= 0:
-                continue
-            planned_boxes = float(row.get('planned_boxes') or 0)
-            if planned_boxes <= 0:
-                continue
-            product_box_map[pid] = product_box_map.get(pid, 0.0) + planned_boxes
+            product_box_map = _build_material_requirement_product_box_map(cursor.fetchall())
 
         if not product_box_map:
             return jsonify({
@@ -6606,14 +6745,23 @@ def _parse_export_container_inputs(form):
     return boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities
 
 
+def _parse_export_pallet_boxes_per_unit(form, unit_mode):
+    raw_value = str(form.get('pallet_boxes_per_unit') or '').strip()
+    if not raw_value:
+        if _normalize_export_unit_mode(unit_mode) == 'pallet':
+            raise ValueError('P(파렛트)당 박스 수량을 입력해주세요.')
+        return 0
+    return _parse_positive_int(raw_value, 'P(파렛트)당 박스 수량')
+
+
 @bp.route('/schedules/export/add', methods=['POST'])
 @role_required('production')
 def add_export_schedule():
     try:
         workplace = get_workplace()
         product_id = _parse_positive_int(request.form.get('product_id'), '?섏텧 ?쒗뭹')
-        boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities = _parse_export_container_inputs(request.form)
         unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
+        boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities = _parse_export_container_inputs(request.form)
         start_date = (request.form.get('production_start_date') or '').strip()
         production_end_date = (request.form.get('production_end_date') or '').strip()
         cutoff_date = (request.form.get('cutoff_date') or '').strip()
@@ -6690,8 +6838,8 @@ def update_export_schedule(export_schedule_id):
     try:
         workplace = get_workplace()
         product_id = _parse_positive_int(request.form.get('product_id'), '?섏텧 ?쒗뭹')
-        boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities = _parse_export_container_inputs(request.form)
         unit_mode = _normalize_export_unit_mode(request.form.get('unit_mode'))
+        boxes_per_container, container_count, export_quantity, po_numbers, container_box_quantities = _parse_export_container_inputs(request.form)
         start_date = (request.form.get('production_start_date') or '').strip()
         production_end_date = (request.form.get('production_end_date') or '').strip()
         cutoff_date = (request.form.get('cutoff_date') or '').strip()
@@ -8489,6 +8637,8 @@ def production_detail(production_id):
                p.spec_sheet_file_name, p.spec_sheet_stored_name, p.spec_sheet_uploaded_at
                , COALESCE(ps.line, '') as line
                , COALESCE(ps.line_usage_disabled, pr.line_usage_disabled, 0) as schedule_line_usage_disabled
+               , COALESCE(ps.export_schedule_id, 0) as scheduled_export_schedule_id
+               , COALESCE(ps.set_schedule_id, 0) as scheduled_set_schedule_id
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
         LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
@@ -8503,6 +8653,15 @@ def production_detail(production_id):
         return redirect(url_for('production.production_list'))
 
     production = dict(production)
+    # Older generated schedules may keep their parent schedule id only on
+    # production_schedules.  Accept either location so completed records always
+    # offer a direct return link to the originating schedule.
+    production['export_schedule_id'] = int(
+        production.get('export_schedule_id') or production.get('scheduled_export_schedule_id') or 0
+    )
+    production['set_schedule_id'] = int(
+        production.get('set_schedule_id') or production.get('scheduled_set_schedule_id') or 0
+    )
     production['line_usage_disabled'] = _is_line_usage_disabled(
         production.get('line_usage_disabled') or production.get('schedule_line_usage_disabled')
     )
@@ -8518,10 +8677,18 @@ def production_detail(production_id):
     viewer_workplace = (get_workplace() or session.get('workplace') or '').strip()
     production_workplace = _get_effective_production_workplace(cursor, production)
     if _is_register_entry_mode(production.get('entry_mode')):
-        production['register_raw_stock_enabled'] = _get_register_raw_stock_enabled(
-            cursor,
-            production_workplace or viewer_workplace,
-        )
+        # 완료된 등록 생산건은 저장 당시의 개별 설정을 유지해야 한다.
+        # 작업장 현재 설정을 적용하면 과거의 비재고연동 원초 사용 이력이
+        # 화면 로드 시 빈 재고 원초 카드로 교체될 수 있다.
+        if production['status'] == _normalize_production_status('완료'):
+            production['register_raw_stock_enabled'] = bool(
+                production.get('register_raw_stock_enabled')
+            )
+        else:
+            production['register_raw_stock_enabled'] = _get_register_raw_stock_enabled(
+                cursor,
+                production_workplace or viewer_workplace,
+            )
     has_workplace_access = _has_production_workplace_access(viewer_workplace, production_workplace)
     edit_completed = request.args.get('edit') == '1'
     production['uses_actual_quantity'] = _has_entered_actual_boxes(production.get('actual_boxes'))
@@ -8757,7 +8924,15 @@ def production_detail(production_id):
 
     # 등록모드의 시작점은 재고 lot 목록이 아니라 상품 BOM의 기준 원초다.
     # 사용자가 직접 추가하기 전에는 한 장의 기준 원초 카드만 보여 준다.
-    if _is_register_entry_mode(production.get('entry_mode')) and bom_raw_seed:
+    # 완료된 등록모드 생산건은 위에서 production_material_usage에 저장된
+    # 실제 원초 이력을 불러온다. 과거 등록건은 raw_material_id 없이
+    # 코드/명칭/로트 스냅샷으로 저장된 경우가 있어, 여기서 BOM 기준 카드로
+    # 바꾸면 실제 사용량이 화면에서 사라진다.
+    if (
+        _is_register_entry_mode(production.get('entry_mode'))
+        and bom_raw_seed
+        and production['status'] != done_status
+    ):
         seed_row = dict(bom_raw_seed)
         seed_row['is_temp_raw'] = 0
         bom_raw_items = [seed_row]
@@ -10741,6 +10916,14 @@ def update_production_usage(production_id):
                             req.get('note', ''),
                         ),
                     )
+
+        # Register mode creates one raw usage row for each selected lot.  Once
+        # all rows exist, allocate the product's single BOM requirement across
+        # them so the finished-sok total is never duplicated per lot.
+        if skip_stock_impact and actual_boxes > 0:
+            _refresh_register_raw_usage_expected_quantities(
+                cursor, production_id, product_id, actual_boxes
+            )
 
         # 3. ??곗뺘 ??癒?삺 ??쇨텢??몄쎗 筌ｌ꼶??
         for key in request.form:

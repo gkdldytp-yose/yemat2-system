@@ -1956,7 +1956,10 @@ def production_print(production_id):
             COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date) as receiving_date
         FROM production_material_usage pmu
         LEFT JOIN raw_materials rm ON pmu.raw_material_id = rm.id
-        WHERE pmu.production_id = ? AND pmu.raw_material_id IS NOT NULL
+        WHERE pmu.production_id = ?
+          AND pmu.material_id IS NULL
+          AND pmu.component_product_id IS NULL
+          AND COALESCE(pmu.actual_quantity, 0) > 0
         ORDER BY COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), rm.receiving_date) ASC, rm.id ASC
         ''',
         (production_id,),

@@ -390,6 +390,20 @@ def _parse_cuts_per_sheet_field(raw_value, label='절단'):
     return value
 
 
+def _parse_optional_pallet_boxes(raw_value):
+    """Return the saved boxes-per-pallet value; an empty value clears it."""
+    text = str(raw_value or '').strip()
+    if not text:
+        return 0
+    try:
+        value = int(text)
+    except (TypeError, ValueError):
+        raise ValueError('1P당 박스 수는 0 이상의 정수로 입력해주세요.')
+    if value < 0:
+        raise ValueError('1P당 박스 수는 0 이상의 정수로 입력해주세요.')
+    return value
+
+
 def _parse_non_negative_float_field(raw_value, label):
     text = str(raw_value or '').strip()
     if not text:
@@ -831,6 +845,7 @@ def update_product_info(product_id):
     sheets_per_pack_3 = third_option['sheets']
     expiry_months = request.form.get('expiry_months', 12)
     try:
+        pallet_boxes_per_unit = _parse_optional_pallet_boxes(request.form.get('pallet_boxes_per_unit'))
         if set_item_type == 'finished':
             box_quantity = 1
             base_sheets_per_pack = 0
@@ -860,12 +875,14 @@ def update_product_info(product_id):
             UPDATE products
             SET box_quantity = ?, sheets_per_pack = ?, cuts_per_sheet = ?, category = ?,
                 sok_per_box = ?, sok_per_box_2 = ?, sok_per_box_3 = ?,
-                sheets_per_pack_2 = ?, sheets_per_pack_3 = ?, expiry_months = ?, set_item_type = ?
+                sheets_per_pack_2 = ?, sheets_per_pack_3 = ?, expiry_months = ?, set_item_type = ?,
+                pallet_boxes_per_unit = ?
             WHERE id = ?
         ''', (
             box_quantity, sheets_per_pack, cuts_per_sheet, category,
             sok_per_box, sok_per_box_2, sok_per_box_3,
-            sheets_per_pack_2, sheets_per_pack_3, expiry_months, set_item_type, product_id
+            sheets_per_pack_2, sheets_per_pack_3, expiry_months, set_item_type,
+            pallet_boxes_per_unit, product_id
         ))
 
     return redirect(_product_bom_url(product_id, request.form.get('return_to')))
