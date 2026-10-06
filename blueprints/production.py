@@ -4680,25 +4680,39 @@ def schedules():
                     po_number_map,
                     unit_mode=unit_mode,
                 )
-                export_view = {
-                    **export_row,
-                    'unit_mode': unit_mode,
-                    'unit_label_short': _get_export_unit_suffix(unit_mode),
-                    'unit_label_name': _get_export_unit_name(unit_mode),
-                    'produced_total': produced_total,
-                    'remaining_total': remaining_total,
-                    'started_count': started_count,
-                    'generated_count': len(linked_rows),
-                    'external_completed_count': len(external_completed_rows),
-                    'completion_rate': round((produced_total / export_quantity) * 100, 1) if export_quantity > 0 else 0.0,
-                    'container_rows': container_rows,
-                    'container_box_quantities': container_box_quantities,
-                    'has_custom_container_quantities': bool(export_row.get('container_box_quantities') and str(export_row.get('container_box_quantities')).strip()),
-                    'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
-                    'daily_actuals': [
+                completed_container_labels = {
+                    str(row.get('container_label') or '').strip()
+                    for row in container_rows
+                    if row.get('is_completed')
+                }
+                daily_actuals = []
+                daily_produced_cursor = 0
+                for key, value in sorted(daily_actual_map.items()):
+                    daily_actual_boxes = int(value['actual_boxes'] or 0)
+                    unit_start_no, unit_end_no = _get_export_unit_span(
+                        daily_produced_cursor,
+                        daily_actual_boxes,
+                        container_box_quantities,
+                    )
+                    container_labels = (
+                        [
+                            f'{number}{_get_export_unit_suffix(unit_mode)}'
+                            for number in range(unit_start_no, unit_end_no + 1)
+                        ]
+                        if unit_start_no is not None
+                        and unit_end_no is not None
+                        and unit_start_no <= unit_end_no
+                        else []
+                    )
+                    daily_produced_cursor += daily_actual_boxes
+                    daily_actuals.append(
                         {
                             'date': key,
-                            'actual_boxes': value['actual_boxes'],
+                            'actual_boxes': daily_actual_boxes,
+                            'container_labels': container_labels,
+                            'completed_container_labels': [
+                                label for label in container_labels if label in completed_container_labels
+                            ],
                             'work_times': sorted(
                                 value['work_times'],
                                 key=lambda item: (float(item) if str(item).replace('.', '', 1).isdigit() else float('inf'), item),
@@ -4736,8 +4750,23 @@ def schedules():
                             'production_id': sorted(value['production_ids'])[0] if value['production_ids'] else 0,
                             'detail_url': f"/production/{sorted(value['production_ids'])[0]}" if value['production_ids'] else '',
                         }
-                        for key, value in sorted(daily_actual_map.items())
-                    ],
+                    )
+                export_view = {
+                    **export_row,
+                    'unit_mode': unit_mode,
+                    'unit_label_short': _get_export_unit_suffix(unit_mode),
+                    'unit_label_name': _get_export_unit_name(unit_mode),
+                    'produced_total': produced_total,
+                    'remaining_total': remaining_total,
+                    'started_count': started_count,
+                    'generated_count': len(linked_rows),
+                    'external_completed_count': len(external_completed_rows),
+                    'completion_rate': round((produced_total / export_quantity) * 100, 1) if export_quantity > 0 else 0.0,
+                    'container_rows': container_rows,
+                    'container_box_quantities': container_box_quantities,
+                    'has_custom_container_quantities': bool(export_row.get('container_box_quantities') and str(export_row.get('container_box_quantities')).strip()),
+                    'po_numbers': [po_number_map.get(index, '') for index in range(1, container_count + 1)],
+                    'daily_actuals': daily_actuals,
                     'excluded_dates': excluded_dates,
                     'excluded_date_count': len(excluded_dates),
                     'has_started': started_count > 0 or produced_total > 0,
@@ -5833,7 +5862,7 @@ def schedule_material_capacity_bom():
                         'group_label': '원초',
                         'code': code,
                         'name': row.get('raw_name') or code,
-                        'unit': 'kg',
+                        'unit': '속',
                         'per_box_qty': 0.0,
                         'stock': round(float(raw_stock_map.get(code, 0.0) or 0.0), 2),
                     }

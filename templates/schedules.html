@@ -2042,10 +2042,14 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 
 /* 근무 상태 태그 스타일 */
 .work-status-tag {
-    font-size: 0.7rem;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-weight: bold;
+    display:inline-flex;
+    align-items:center;
+    min-height:22px;
+    font-size: 0.76rem;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-weight: 900;
+    letter-spacing:0.01em;
     color: #fff;
 }
 
@@ -2054,6 +2058,8 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 .tag-holiday { background-color: #f44336; }  /* 휴무 - 적색 */
 .tag-overtime { background-color: #ff9800; } /* 잔업 - 주황 */
 .tag-extra { background-color: #2196f3; }    /* 특근 - 파랑 */
+.calendar-day.workday-overtime { box-shadow:inset 0 4px 0 #f97316; }
+.calendar-day.workday-extra { box-shadow:inset 0 4px 0 #2563eb; }
 
 .special-note-modal .modal-content {
     max-width: 620px;
@@ -3059,6 +3065,27 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 .req-shortage {
     color: #dc2626;
     font-weight: 700;
+}
+.req-capacity-stock-status {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.18rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    line-height: 1.2;
+}
+.req-capacity-stock-status strong {
+    font-size: 0.82rem;
+}
+.req-capacity-stock-status.shortage {
+    color: #dc2626;
+    background: #fff1f2;
+}
+.req-capacity-stock-status.sufficient {
+    color: #15803d;
+    background: #f0fdf4;
 }
 .req-product-card {
     border: 1px solid #dbe7f3;
@@ -4881,6 +4908,31 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     text-decoration:none;
 }
 .export-daily-date-pill:hover {background:#bae6fd;color:#075985;text-decoration:none;}
+.export-daily-container-list {
+    display:inline-flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:.26rem;
+    margin-left:.34rem;
+    vertical-align:middle;
+}
+.export-daily-container-badge {
+    display:inline-flex;
+    align-items:center;
+    padding:.18rem .42rem;
+    border:1px solid rgba(217,119,6,.45);
+    border-radius:999px;
+    background:rgba(255,247,237,.96);
+    color:#b45309 !important;
+    font-size:.72rem;
+    font-weight:900;
+    line-height:1.1;
+}
+.export-daily-container-badge.is-completed {
+    border-color:rgba(22,163,74,.28);
+    background:rgba(240,253,244,.9);
+    color:#15803d !important;
+}
 .export-daily-qty {
     display:inline-flex;
     align-items:center;
@@ -5838,6 +5890,8 @@ html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-cont
 html[data-theme="dark"] .export-active-card:not(.set-schedule-card) .export-container-row.is-completed .export-container-progress-track{background:#1c5439;}
 html[data-theme="dark"] .export-daily-date-pill{background:rgba(14,165,233,.18);color:#7dd3fc;}
 html[data-theme="dark"] .export-daily-date-pill:hover{background:rgba(14,165,233,.28);color:#bae6fd;}
+html[data-theme="dark"] .export-daily-container-badge{border-color:rgba(251,146,60,.55);background:rgba(120,53,15,.36);color:#fed7aa !important;}
+html[data-theme="dark"] .export-daily-container-badge.is-completed{border-color:rgba(74,222,128,.34);background:rgba(22,101,52,.26);color:#86efac !important;}
 html[data-theme="dark"] .export-daily-qty{background:rgba(22,101,52,.26);border-color:rgba(74,222,128,.3);color:#86efac !important;}
 html[data-theme="dark"] .export-daily-pallet{border-left-color:rgba(134,239,172,.36);color:#bbf7d0 !important;}
 html[data-theme="dark"] .export-daily-work-time{color:#a9bbd2;}
@@ -5872,14 +5926,16 @@ html[data-theme="dark"] .tag-holiday{
     color:#fff4f6;
 }
 html[data-theme="dark"] .tag-overtime{
-    background:linear-gradient(180deg,rgba(251,146,60,.12),rgba(154,52,18,.44));
-    border-color:rgba(251,146,60,.18);
+    background:linear-gradient(135deg,#f97316,#c2410c);
+    border-color:#fdba74;
     color:#fff7ed;
+    box-shadow:0 3px 9px rgba(249,115,22,.38), inset 0 1px 0 rgba(255,255,255,.22);
 }
 html[data-theme="dark"] .tag-extra{
-    background:linear-gradient(180deg,rgba(96,165,250,.12),rgba(30,64,175,.42));
-    border-color:rgba(96,165,250,.18);
-    color:#f3f8ff;
+    background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+    border-color:#93c5fd;
+    color:#eff6ff;
+    box-shadow:0 3px 9px rgba(59,130,246,.38), inset 0 1px 0 rgba(255,255,255,.22);
 }
 html[data-theme="dark"] .calendar-day.workday-work{
     background:
@@ -5893,13 +5949,15 @@ html[data-theme="dark"] .calendar-day.workday-holiday{
 }
 html[data-theme="dark"] .calendar-day.workday-overtime{
     background:
-        radial-gradient(circle at top left, rgba(251,146,60,.1), transparent 46%),
-        linear-gradient(180deg, rgba(154,52,18,.23), rgba(18,26,42,.1) 34%, #121a2a 100%) !important;
+        radial-gradient(circle at top left, rgba(251,146,60,.2), transparent 50%),
+        linear-gradient(180deg, rgba(154,52,18,.34), rgba(18,26,42,.1) 38%, #121a2a 100%) !important;
+    box-shadow:inset 0 4px 0 #fb923c;
 }
 html[data-theme="dark"] .calendar-day.workday-extra{
     background:
-        radial-gradient(circle at top left, rgba(96,165,250,.1), transparent 46%),
-        linear-gradient(180deg, rgba(30,64,175,.23), rgba(18,26,42,.1) 34%, #121a2a 100%) !important;
+        radial-gradient(circle at top left, rgba(96,165,250,.2), transparent 50%),
+        linear-gradient(180deg, rgba(30,64,175,.34), rgba(18,26,42,.1) 38%, #121a2a 100%) !important;
+    box-shadow:inset 0 4px 0 #60a5fa;
 }
 html[data-theme="dark"] .calendar-day[style*="background: white"],
 html[data-theme="dark"] .calendar-day[style*="background:white"]{background:#121a2a !important;}
@@ -6100,6 +6158,8 @@ html[data-theme="dark"] .req-table th:first-child,
 html[data-theme="dark"] .req-table td:first-child,
 html[data-theme="dark"] .req-muted{color:#8ea3bd;}
 html[data-theme="dark"] .req-table td.req-shortage{color:#f87171 !important;font-weight:800;}
+html[data-theme="dark"] .req-capacity-stock-status.shortage{color:#fda4af;background:rgba(190,24,93,.18);}
+html[data-theme="dark"] .req-capacity-stock-status.sufficient{color:#86efac;background:rgba(22,163,74,.16);}
 html[data-theme="dark"] .req-capacity-card,
 html[data-theme="dark"] .req-capacity-panel,
 html[data-theme="dark"] .req-capacity-summary-card,
@@ -7210,12 +7270,12 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                             class="calendar-action-btn export-mini-btn export-daily-toggle-btn"
                             data-target="exportDailyRows{{ export.id }}"
                             data-hint-target="exportDailyHint{{ export.id }}"
-                            data-label-more="전체 보기"
-                            data-label-less="최근 5일만 보기"
+                            data-label-more="{{ export.daily_actuals|length - 5 }}건 더 보기"
+                            data-label-less="접기"
                             data-hint-more="최근 5일자 생산건만 표시 중입니다."
                             data-hint-less="생산건 전체 보기 중입니다."
                             onclick="toggleExportDailyRows(this)">
-                            전체 보기
+                            {{ export.daily_actuals|length - 5 }}건 더 보기
                         </button>
                         {% endif %}
                     </div>
@@ -7232,6 +7292,13 @@ html[data-theme="dark"] #listView tbody td:nth-child(8){
                                 <a href="{{ daily.detail_url }}" class="export-daily-date-pill">{{ daily.date }}</a>
                                 {% else %}
                                 <span class="export-daily-date-pill">{{ daily.date }}</span>
+                                {% endif %}
+                                {% if daily.container_labels %}
+                                <span class="export-daily-container-list" aria-label="해당 생산량 컨테이너">
+                                    {% for container_label in daily.container_labels %}
+                                    <span class="export-daily-container-badge{% if container_label in daily.completed_container_labels %} is-completed{% endif %}">{{ container_label }}</span>
+                                    {% endfor %}
+                                </span>
                                 {% endif %}
                                 {% if daily.work_times %}
                                 <div class="export-daily-work-time">작업 시간 {{ daily.work_times | join(' / ') }}시간</div>
@@ -11741,7 +11808,16 @@ function calculateReqCapacity(silent = false) {
     const rowsHtml = reqCapacityBomItems.map((item) => {
         const currentStock = Number(item.stock || 0);
         const requiredQty = Number(item.per_box_qty || 0) * possibleBoxes;
-        const additionalNeed = currentStock - requiredQty;
+        const stockDifference = currentStock - requiredQty;
+        const hasShortage = stockDifference < -0.000001;
+        const statusQty = formatReqNumberWithUnit(
+            Math.abs(stockDifference),
+            item.unit,
+            item.group_key === 'raw',
+        );
+        const stockStatus = hasShortage
+            ? `<span class="req-capacity-stock-status shortage"><strong>추가 필요</strong><span>${statusQty}</span></span>`
+            : `<span class="req-capacity-stock-status sufficient"><strong>재고 충분</strong><span>여유 ${statusQty}</span></span>`;
         return `
             <tr>
                 <td>${escapeHtml(item.group_label || '-')}</td>
@@ -11750,7 +11826,7 @@ function calculateReqCapacity(silent = false) {
                 <td class="num">${formatReqNumberWithUnit(item.per_box_qty, item.unit, item.group_key === 'raw', 4)}</td>
                 <td class="num">${formatReqNumberWithUnit(currentStock, item.unit, item.group_key === 'raw')}</td>
                 <td class="num">${formatReqNumberWithUnit(requiredQty, item.unit, item.group_key === 'raw')}</td>
-                <td class="num ${additionalNeed < 0 ? 'req-shortage' : ''}">${formatReqNumberWithUnit(additionalNeed, item.unit, item.group_key === 'raw')}</td>
+                <td class="num">${stockStatus}</td>
             </tr>
         `;
     }).join('');
@@ -11758,7 +11834,7 @@ function calculateReqCapacity(silent = false) {
     result.innerHTML = `
         <div class="req-capacity-result-head">
             <h4>전체 BOM 필요량</h4>
-            <div class="req-capacity-result-sub">선택한 단위 수량으로 환산한 생산 가능 BOX 기준입니다. 추가 필요량은 현재고 - 필요 수량으로 계산됩니다.</div>
+            <div class="req-capacity-result-sub">선택한 단위 수량으로 환산한 생산 가능 BOX 기준입니다. 필요 수량보다 재고가 부족하면 추가 필요량, 충분하면 재고 여유를 표시합니다.</div>
         </div>
         <div class="table-container">
             <table class="req-table">
@@ -11770,7 +11846,7 @@ function calculateReqCapacity(silent = false) {
                         <th class="num-head" style="width:140px;">BOX당 소요</th>
                         <th class="num-head" style="width:140px;">현재고</th>
                         <th class="num-head" style="width:140px;">필요 수량</th>
-                        <th class="num-head" style="width:140px;">추가 필요량</th>
+                        <th class="num-head" style="width:140px;">재고 상태</th>
                     </tr>
                 </thead>
                 <tbody>${rowsHtml}</tbody>

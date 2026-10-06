@@ -1098,6 +1098,36 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
   body.printing-req-summary .reqcalc-stock-print-text,
   body.printing-req-products .reqcalc-stock-print-text{display:inline !important;font-variant-numeric:tabular-nums;color:#111827 !important;}
 }
+.integrated-calendar-shell{--integrated-calendar-zoom:1;margin-top:1rem;}
+.integrated-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;padding:.75rem .9rem;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;}
+.integrated-calendar-month{font-size:1.1rem;font-weight:900;color:#0f172a;min-width:140px;text-align:center;}
+.integrated-calendar-actions{display:flex;align-items:center;gap:.4rem;}
+.integrated-calendar-action{border:1px solid #bfdbfe;border-radius:8px;background:#fff;color:#1d4ed8;padding:.4rem .62rem;font-weight:800;cursor:pointer;text-decoration:none;}
+.integrated-calendar-view-switch{min-width:98px;text-align:center;border:2px solid #60a5fa !important;background:#e0efff !important;color:#123b82 !important;font-size:.82rem;letter-spacing:.01em;}.integrated-calendar-view-switch.is-active{border-color:#1d4ed8 !important;background:#1d4ed8 !important;color:#fff !important;box-shadow:0 3px 8px rgba(37,99,235,.34);}.integrated-calendar-view-switch:not(.is-active):hover{border-color:#2563eb !important;background:#bfdbfe !important;color:#172554 !important;}.integrated-calendar-view-switch:focus-visible{outline:3px solid #93c5fd;outline-offset:2px;}
+.integrated-calendar-action:hover,.integrated-calendar-action.is-active{background:#eff6ff;box-shadow:inset 0 0 0 1px #60a5fa;}
+.integrated-calendar-zoom-label{font-size:.8rem;font-weight:800;color:#475569;min-width:42px;text-align:center;}
+.integrated-calendar-boards{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:1rem;zoom:var(--integrated-calendar-zoom);}
+.integrated-calendar-workplace{overflow:hidden;border:1px solid #cbd5e1;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.06);}
+.integrated-calendar-workplace-head{display:flex;align-items:center;justify-content:space-between;padding:.78rem .9rem;border-left:6px solid #2563eb;background:linear-gradient(135deg,#dbeafe,#f8fafc);border-bottom:1px solid #bfdbfe;}
+.integrated-calendar-workplace-head strong{color:#172554;font-size:1.08rem;font-weight:950;letter-spacing:.015em;}.integrated-calendar-workplace-count{border-radius:999px;background:#1d4ed8;color:#eff6ff;padding:.22rem .52rem;font-size:.74rem;font-weight:900;}
+.integrated-calendar-weekdays,.integrated-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));}.integrated-calendar-weekdays span{padding:.35rem 0;text-align:center;background:#f8fafc;color:#64748b;font-size:.7rem;font-weight:900;border-bottom:1px solid #e2e8f0;}.integrated-calendar-weekdays span:first-child{color:#dc2626;}.integrated-calendar-weekdays span:last-child{color:#2563eb;}
+.integrated-calendar-shell.no-sunday-production .integrated-calendar-weekdays,.integrated-calendar-shell.no-sunday-production .integrated-calendar-grid{grid-template-columns:minmax(34px,.55fr) repeat(6,minmax(0,1fr));}
+.integrated-calendar-day{min-height:86px;padding:.28rem;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;background:#fff;overflow:hidden;}.integrated-calendar-day:nth-child(7n){border-right:0;}.integrated-calendar-day.is-empty{background:#f8fafc;}.integrated-calendar-day-number{display:block;margin-bottom:.2rem;color:#334155;font-size:.72rem;font-weight:900;}.integrated-calendar-day:nth-child(7n+1) .integrated-calendar-day-number{color:#dc2626;}.integrated-calendar-day:nth-child(7n) .integrated-calendar-day-number{color:#2563eb;}
+.integrated-calendar-legend{display:flex;align-items:center;gap:.38rem;flex-wrap:wrap;margin:0 0 .45rem;padding:.55rem .65rem;border:1px solid #dbeafe;border-radius:10px;background:#f8fbff;}.integrated-calendar-legend span{font-size:.7rem;font-weight:800;color:#475569;}.integrated-calendar-legend i{display:inline-block;width:9px;height:9px;margin-right:.16rem;border-radius:50%;vertical-align:middle;}.integrated-calendar-event{display:flex;align-items:center;gap:.22rem;overflow:hidden;margin-top:2px;padding:.16rem .26rem;border-left:3px solid #64748b;border-radius:4px;background:#f8fafc;color:#1e293b;font-size:.68rem;font-weight:800;line-height:1.25;text-decoration:none;white-space:nowrap;}.integrated-calendar-event:hover{filter:brightness(.96);text-decoration:underline;}.integrated-calendar-event-state{flex:0 0 auto;font-size:.61rem;font-weight:950;}.integrated-calendar-event-name{min-width:0;overflow:hidden;text-overflow:ellipsis;}.integrated-calendar-event-quantity{flex:0 0 auto;margin-left:auto;border-radius:4px;padding:.02rem .18rem;background:rgba(15,23,42,.12);font-size:.59rem;font-weight:950;}.integrated-calendar-event.category-table{border-color:#0ea5e9;background:#f0f9ff;}.integrated-calendar-event.category-kimbap{border-color:#8b5cf6;background:#f5f3ff;}.integrated-calendar-event.category-lunch{border-color:#e11d48;background:#fff1f2;}.integrated-calendar-event.category-whole{border-color:#14b8a6;background:#f0fdfa;}.integrated-calendar-event.category-set{border-color:#ec4899;background:#fdf2f8;}.integrated-calendar-event.category-raw{border-color:#65a30d;background:#f7fee7;}.integrated-calendar-event.category-organic{border-color:#16a34a;background:#f0fdf4;}.integrated-calendar-event.category-mutrae{border-color:#2563eb;background:#eff6ff;}.integrated-calendar-event.category-seasoned{border-color:#a16207;background:#fef3c7;}.integrated-calendar-event.category-other{border-color:#64748b;background:#f8fafc;}.legend-table i{background:#0ea5e9;}.legend-kimbap i{background:#8b5cf6;}.legend-lunch i{background:#e11d48;}.legend-whole i{background:#14b8a6;}.legend-set i{background:#ec4899;}.legend-raw i{background:#65a30d;}.legend-organic i{background:#16a34a;}.legend-mutrae i{background:#2563eb;}.legend-seasoned i{background:#a16207;}
+html[data-theme="dark"] .integrated-calendar-toolbar{border-color:#314155;background:#121a2a;}html[data-theme="dark"] .integrated-calendar-month{color:#eff6ff;}html[data-theme="dark"] .integrated-calendar-action{border-color:#365b8b;background:#17253a;color:#bfdbfe;}html[data-theme="dark"] .integrated-calendar-action:hover{background:#203553;}html[data-theme="dark"] .integrated-calendar-zoom-label{color:#a9bbd2;}html[data-theme="dark"] .integrated-calendar-workplace{border-color:#314155;background:#101827;box-shadow:none;}html[data-theme="dark"] .integrated-calendar-workplace-head{background:linear-gradient(135deg,#17253a,#121a2a);border-color:#314155;}html[data-theme="dark"] .integrated-calendar-workplace-head strong{color:#bfdbfe;}html[data-theme="dark"] .integrated-calendar-workplace-count{background:#17365f;color:#7dd3fc;}html[data-theme="dark"] .integrated-calendar-weekdays span{background:#121a2a;border-color:#263244;color:#8ea3bd;}html[data-theme="dark"] .integrated-calendar-day{background:#101827;border-color:#263244;}html[data-theme="dark"] .integrated-calendar-day.is-empty{background:#0d1523;}html[data-theme="dark"] .integrated-calendar-day-number{color:#dbe7f5;}html[data-theme="dark"] .integrated-calendar-legend{background:#121a2a;border-color:#314155;}.integrated-calendar-legend span{color:#a9bbd2;}html[data-theme="dark"] .integrated-calendar-event{color:#e2e8f0;background:#172033;}html[data-theme="dark"] .integrated-calendar-event.category-table{border-color:#38bdf8;background:#102b3d;}html[data-theme="dark"] .integrated-calendar-event.category-kimbap{border-color:#a78bfa;background:#281b46;}html[data-theme="dark"] .integrated-calendar-event.category-lunch{border-color:#fb7185;background:#4c1020;}html[data-theme="dark"] .integrated-calendar-event.category-whole{border-color:#2dd4bf;background:#103631;}html[data-theme="dark"] .integrated-calendar-event.category-set{border-color:#f472b6;background:#43172f;}html[data-theme="dark"] .integrated-calendar-event.category-raw{border-color:#a3e635;background:#26370d;}html[data-theme="dark"] .integrated-calendar-event.category-organic{border-color:#4ade80;background:#14351e;}html[data-theme="dark"] .integrated-calendar-event.category-seasoned{border-color:#facc15;background:#3e3310;}
+html[data-theme="dark"] .integrated-calendar-action.is-active{background:#203553;box-shadow:inset 0 0 0 1px #60a5fa;}
+.integrated-calendar-event{gap:.18rem;}.integrated-calendar-event-state{display:inline-flex;align-items:center;justify-content:center;flex:0 0 11px;font-size:.66rem;font-weight:950;}.integrated-calendar-event.is-completed .integrated-calendar-event-state{color:#16a34a;}.integrated-calendar-event:not(.is-completed) .integrated-calendar-event-state{color:#64748b;}html[data-theme="dark"] .integrated-calendar-event.is-completed .integrated-calendar-event-state{color:#86efac;}html[data-theme="dark"] .integrated-calendar-event:not(.is-completed) .integrated-calendar-event-state{color:#cbd5e1;}
+.integrated-calendar-combined .integrated-calendar-day{min-height:118px;}.integrated-calendar-workplace-group{margin-top:.28rem;padding-top:.24rem;border-top:1px dashed rgba(100,116,139,.28);}.integrated-calendar-workplace-group:first-of-type{margin-top:0;padding-top:0;border-top:0;}.integrated-calendar-day-workplace{display:inline-flex;max-width:100%;margin-bottom:.12rem;padding:.1rem .34rem;border-radius:999px;color:#fff;font-size:.6rem;font-weight:900;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.workplace-tone-0{background:#2563eb;}.workplace-tone-1{background:#7c3aed;}.workplace-tone-2{background:#0f766e;}.workplace-tone-3{background:#c2410c;}.workplace-tone-4{background:#be185d;}.workplace-tone-5{background:#4d7c0f;}html[data-theme="dark"] .integrated-calendar-workplace-group{border-top-color:rgba(148,163,184,.24);}.integrated-calendar-day-workplace.workplace-tone-0{background:#2563eb;}.integrated-calendar-day-workplace.workplace-tone-1{background:#7c3aed;}.integrated-calendar-day-workplace.workplace-tone-2{background:#0f766e;}.integrated-calendar-day-workplace.workplace-tone-3{background:#c2410c;}.integrated-calendar-day-workplace.workplace-tone-4{background:#be185d;}.integrated-calendar-day-workplace.workplace-tone-5{background:#4d7c0f;}
+.integrated-calendar-filter{position:relative;border:1px solid transparent;border-radius:999px;background:transparent;padding:.16rem .32rem;color:inherit;font:inherit;cursor:pointer;opacity:.9;transition:transform .14s ease,opacity .14s ease,box-shadow .14s ease,background .14s ease;}.integrated-calendar-filter:hover{opacity:1;background:rgba(37,99,235,.09);}.integrated-calendar-filter.is-selected{opacity:1;border-color:#fff !important;background:#2563eb !important;color:#fff !important;font-weight:950;transform:translateY(-1px);box-shadow:0 0 0 2px #2563eb,0 0 0 4px rgba(147,197,253,.9),0 3px 8px rgba(15,23,42,.22) !important;}.integrated-calendar-filter.is-selected::after{content:'✓';display:inline-block;margin-left:.2rem;font-size:.62rem;font-weight:950;}.integrated-calendar-filter-reset{border:1px solid #94a3b8;border-radius:7px;background:#fff;padding:.16rem .42rem;color:#475569;font-size:.68rem;font-weight:900;cursor:pointer;}html[data-theme="dark"] .integrated-calendar-filter{color:#dbe7f5;opacity:.9;}html[data-theme="dark"] .integrated-calendar-filter.is-selected{border-color:#fff !important;background:#2563eb !important;color:#fff !important;box-shadow:0 0 0 2px #60a5fa,0 0 0 4px rgba(147,197,253,.55),0 3px 8px rgba(0,0,0,.34) !important;}html[data-theme="dark"] .integrated-calendar-filter-reset{border-color:#53657d;background:#172033;color:#dbe7f5;}
+.integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-0{background:#2563eb;color:#fff;}.integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-1{background:#7c3aed;color:#fff;}.integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-2{background:#0f766e;color:#fff;}.integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-3{background:#c2410c;color:#fff;}.integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-4{background:#be185d;color:#fff;}.integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-5{background:#4d7c0f;color:#fff;}
+html[data-theme="dark"] .integrated-calendar-view-switch.is-active{border-color:#60a5fa;background:#2563eb;color:#fff;box-shadow:0 3px 10px rgba(59,130,246,.38);}html[data-theme="dark"] .integrated-calendar-view-switch:not(.is-active){background:#17253a;color:#bfdbfe;}
+html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:#60a5fa;background:#172f50;}
+.integrated-calendar-shell .integrated-calendar-event[hidden],.integrated-calendar-shell .integrated-calendar-workplace-group[hidden],.integrated-calendar-shell .integrated-calendar-workplace[hidden]{display:none !important;}
+.monthly-production-dashboard{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(210px,.7fr);gap:1rem;margin:0 0 1rem;padding:.9rem 1rem;border:1px solid #bfdbfe;border-radius:14px;background:linear-gradient(135deg,#f8fbff,#eff6ff);}.monthly-production-dashboard-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;margin-bottom:.55rem;}.monthly-production-dashboard-title{color:#1e3a8a;font-size:1rem;font-weight:950;}.monthly-production-dashboard-total{color:#1d4ed8;font-size:.82rem;font-weight:900;}.monthly-production-list{display:grid;gap:.28rem;max-height:210px;overflow:auto;padding-right:.2rem;}.monthly-production-category{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.28rem .38rem;border-radius:6px;background:rgba(255,255,255,.68);font-size:.72rem;font-weight:950;color:#334155;}.monthly-production-category-left{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.monthly-production-category-dot{display:inline-block;width:8px;height:8px;margin-right:.28rem;border-radius:50%;}.monthly-production-product{display:flex;justify-content:space-between;gap:.5rem;padding:0 .4rem .1rem 1.2rem;color:#475569;font-size:.69rem;font-weight:700;}.monthly-production-product-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.monthly-production-product-qty{flex:0 0 auto;color:#1d4ed8;font-weight:900;}.monthly-production-chart{display:flex;align-items:center;justify-content:center;min-height:190px;}.monthly-production-donut{display:flex;align-items:center;justify-content:center;width:164px;height:164px;border-radius:50%;background:#dbeafe;box-shadow:inset 0 0 0 1px rgba(30,64,175,.12);}.monthly-production-donut-center{display:flex;align-items:center;justify-content:center;width:92px;height:92px;border-radius:50%;background:#fff;text-align:center;color:#1e3a8a;font-size:.72rem;font-weight:950;line-height:1.35;box-shadow:0 1px 5px rgba(15,23,42,.12);}.monthly-production-empty{display:flex;align-items:center;justify-content:center;min-height:120px;color:#64748b;font-size:.78rem;font-weight:800;}html[data-theme="dark"] .monthly-production-dashboard{border-color:#314155;background:linear-gradient(135deg,#121a2a,#17253a);}.monthly-production-dashboard-title{color:#bfdbfe;}html[data-theme="dark"] .monthly-production-dashboard-total{color:#7dd3fc;}html[data-theme="dark"] .monthly-production-category{background:#172033;color:#dbe7f5;}html[data-theme="dark"] .monthly-production-product{color:#a9bbd2;}html[data-theme="dark"] .monthly-production-product-qty{color:#7dd3fc;}html[data-theme="dark"] .monthly-production-donut-center{background:#101827;color:#dbeafe;}.monthly-production-empty{color:#a9bbd2;}@media (max-width:700px){.monthly-production-dashboard{grid-template-columns:1fr;}.monthly-production-chart{min-height:155px;}.monthly-production-list{max-height:180px;}}
+.monthly-production-dashboard{display:block;min-height:400px;}.monthly-production-dashboard-head{align-items:center;margin-bottom:.8rem;}.monthly-production-toggle{display:inline-flex;align-items:center;gap:.5rem;border:0;border-radius:8px;background:#dbeafe;padding:.38rem .55rem;color:#1e3a8a;font:inherit;cursor:pointer;}.monthly-production-toggle:hover{background:#bfdbfe;}.monthly-production-toggle-icon{font-size:.76rem;transition:transform .18s ease;}.monthly-production-dashboard.is-collapsed{min-height:0;}.monthly-production-dashboard.is-collapsed .monthly-production-dashboard-content{display:none;}.monthly-production-dashboard.is-collapsed .monthly-production-toggle-icon{transform:rotate(-90deg);}.monthly-production-dashboard-content{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(210px,.7fr);gap:1rem;min-height:380px;}.monthly-production-list{max-height:370px;}.monthly-production-chart{position:relative;min-height:380px;flex-direction:column;gap:.6rem;}.monthly-production-section-badge{display:inline-flex;align-items:center;align-self:flex-start;border-radius:999px;background:#dbeafe;padding:.18rem .45rem;color:#1d4ed8;font-size:.66rem;font-weight:950;}.monthly-production-list-badge{margin-bottom:.42rem;}.monthly-production-chart-legend{display:flex;justify-content:center;gap:.25rem .5rem;max-width:260px;flex-wrap:wrap;}.monthly-production-chart-legend-item{display:inline-flex;align-items:center;gap:.2rem;color:#475569;font-size:.63rem;font-weight:850;}.monthly-production-chart-legend-dot{width:8px;height:8px;border-radius:50%;}.monthly-production-chart-legend-percent{color:#1d4ed8;font-weight:950;}html[data-theme="dark"] .monthly-production-toggle{background:#17365f;color:#bfdbfe;}html[data-theme="dark"] .monthly-production-toggle:hover{background:#203d68;}html[data-theme="dark"] .monthly-production-section-badge{background:#17365f;color:#7dd3fc;}html[data-theme="dark"] .monthly-production-chart-legend-item{color:#cbd5e1;}html[data-theme="dark"] .monthly-production-chart-legend-percent{color:#7dd3fc;}@media (max-width:700px){.monthly-production-dashboard{min-height:0;}.monthly-production-dashboard-content{grid-template-columns:1fr;min-height:0;}.monthly-production-chart{min-height:180px;}.monthly-production-list{max-height:260px;}}
+@media (max-width:700px){.integrated-calendar-boards{grid-template-columns:1fr;zoom:1 !important;}.integrated-calendar-day{min-height:68px;}.integrated-calendar-event{font-size:.64rem;}.integrated-calendar-month{order:-1;width:100%;}}
+.monthly-production-toggle{display:flex;justify-content:space-between;width:100%;min-height:52px;border-radius:10px;padding:.55rem .7rem;text-align:left;}.monthly-production-toggle-title{display:inline-flex;align-items:center;gap:.5rem;}.monthly-production-dashboard.is-collapsed .monthly-production-dashboard-head{margin-bottom:0;}.monthly-production-dashboard-content{grid-template-columns:minmax(0,620px) minmax(340px,440px);justify-content:space-between;gap:1.25rem;}.monthly-production-list{max-width:620px;}.monthly-production-section-badge{font-size:.76rem;padding:.22rem .52rem;}.monthly-production-category{font-size:.84rem;padding:.35rem .48rem;}.monthly-production-product{font-size:.79rem;padding:.06rem .48rem .14rem 1.35rem;}.monthly-production-product-qty{font-size:.8rem;}.monthly-production-donut{width:180px;height:180px;}.monthly-production-donut-center{width:100px;height:100px;font-size:.8rem;}.monthly-production-chart-legend{max-width:390px;gap:.34rem .65rem;}.monthly-production-chart-legend-item{font-size:.75rem;}.monthly-production-chart-legend-percent{font-size:.76rem;}.monthly-production-chart-legend-quantity{color:#1d4ed8;font-weight:950;}.monthly-production-dashboard-total{font-size:.92rem;}html[data-theme="dark"] .monthly-production-chart-legend-quantity{color:#7dd3fc;}@media (max-width:900px){.monthly-production-dashboard-content{grid-template-columns:1fr;}.monthly-production-list{max-width:none;}.monthly-production-chart{min-height:250px;}}
+.monthly-production-chart-legend-percent{display:none;}.monthly-production-chart-legend-quantity{font-size:.76rem;}@media (min-width:901px){.monthly-production-chart{transform:translateX(-113px);}}
 </style>
 {% endblock %}
 
@@ -1107,12 +1137,12 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
 
 <!-- 탭 메뉴 -->
 <div class="tabs">
+    <button class="tab-btn {% if tab == 'integrated_calendar' %}active{% endif %}" onclick="location.href='/integrated-management?tab=integrated_calendar'">🗓️ 통합 캘린더</button>
     <button class="tab-btn {% if tab == 'products' %}active{% endif %}" onclick="location.href='/integrated-management?tab=products'">📦 상품</button>
     <button class="tab-btn {% if tab == 'raw_materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=raw_materials'">🌿 원초</button>
     <button class="tab-btn {% if tab == 'materials' %}active{% endif %}" onclick="location.href='/integrated-management?tab=materials'">🧰 부자재</button>
     <button class="tab-btn {% if tab == 'productions' %}active{% endif %}" onclick="location.href='/integrated-management?tab=productions'">🏭 생산관리</button>
     <button class="tab-btn {% if tab == 'subcontract_production' %}active{% endif %}" onclick="location.href='/integrated-management?tab=subcontract_production'">📋 임가공 생산관리</button>
-    <button class="tab-btn {% if tab == 'requirements_calculator' %}active{% endif %}" onclick="location.href='/integrated-management?tab=requirements_calculator'">🧮 원부자재 계산기</button>
     <button class="tab-btn {% if tab == 'meeting_eval' %}active{% endif %}" onclick="location.href='/integrated-management?tab=meeting_eval'">📈 회의/평가 자료</button>
     <button class="tab-btn {% if tab == 'inventory_audit' %}active{% endif %}" onclick="location.href='/integrated-management?tab=inventory_audit'">📊 재고 조사</button>
     <button class="tab-btn" onclick="location.href='/imports'">📥 엑셀 임포트</button>
@@ -1120,7 +1150,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
 </div>
 
 <!-- 작업장 필터 -->
-{% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'materials'] %}
+{% if tab not in ['integrated_calendar', 'db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'materials'] %}
 <div class="subtabs">
     <button class="subtab-btn {% if wp_filter == 'all' %}active{% endif %}"
             onclick="location.href='/integrated-management?tab={{ tab }}&wp=all{% if q %}&q={{ q|urlencode }}{% endif %}{% if tab == 'materials' %}{% if selected_product_id %}&product_id={{ selected_product_id|urlencode }}{% endif %}{% if selected_material_type and selected_material_type != 'all' %}&material_type={{ selected_material_type|urlencode }}{% endif %}{% if selected_material_category %}&material_category={{ selected_material_category|urlencode }}{% endif %}{% endif %}'">전체</button>
@@ -1143,6 +1173,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
 </div>
 {% endif %}
 
+{% if tab != 'integrated_calendar' %}
 <div class="card{% if integrated_readonly %} integrated-readonly{% endif %}">
     {% if integrated_readonly %}
     <div class="integrated-readonly-banner">`test` 계정은 통합관리 읽기 전용 계정입니다. 조회와 계산, 출력만 가능하며 추가/수정/삭제는 제한됩니다.</div>
@@ -1151,11 +1182,11 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
         <div class="header-row">
         <div class="title-wrap">
             <h2 style="margin:0;">
-                {% if tab == 'products' %}전체 상품 관리
+                {% if tab == 'integrated_calendar' %}통합 캘린더
+                {% elif tab == 'products' %}전체 상품 관리
                 {% elif tab == 'raw_materials' %}전체 원초 관리
                 {% elif tab == 'materials' %}전체 부자재 관리
                 {% elif tab == 'productions' %}전체 생산 관리
-                {% elif tab == 'requirements_calculator' %}원부자재 계산기
                 {% elif tab == 'subcontract_production' %}임가공 생산관리
                 {% elif tab == 'audit_logs' %}사용자 행위 로그
                 {% elif tab == 'login_audit_logs' %}로그인 기록
@@ -1163,7 +1194,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                 {% elif tab == 'inventory_audit' %}전체 재고 조사 현황
                 {% elif tab == 'db_backups' %}전체 DB 백업 관리
                 {% endif %}
-                {% if tab not in ['requirements_calculator', 'meeting_eval', 'subcontract_production'] %}
+                {% if tab not in ['integrated_calendar', 'requirements_calculator', 'meeting_eval', 'subcontract_production'] %}
                 <span style="color:#999;font-size:0.9rem;font-weight:normal;">({{ data|length }}건)</span>
                 {% endif %}
             </h2>
@@ -1240,7 +1271,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                 {% if tab == 'db_backups' %}
                 <input type="hidden" name="keep_count" value="{{ backup_keep_count or 10 }}">
                 {% endif %}
-                {% if tab not in ['inventory_audit', 'requirements_calculator', 'meeting_eval', 'subcontract_production'] %}
+                {% if tab not in ['integrated_calendar', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'subcontract_production'] %}
                 {% if tab in ['audit_logs', 'login_audit_logs'] and hidden_audit %}
                 <div class="audit-filter-card" style="width:100%;">
                     <div class="audit-filter-head">
@@ -1391,7 +1422,7 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
                 <button type="submit" class="btn btn-small" style="background:#2563eb;">지금 백업</button>
             </form>
             {% endif %}
-            {% if tab not in ['db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions', 'subcontract_production', 'audit_logs', 'login_audit_logs'] %}
+            {% if tab not in ['integrated_calendar', 'db_backups', 'inventory_audit', 'requirements_calculator', 'meeting_eval', 'productions', 'subcontract_production', 'audit_logs', 'login_audit_logs'] %}
             <button class="btn btn-small" onclick="openAddModal()">+ 추가</button>
             {% endif %}
             </div>
@@ -1596,6 +1627,87 @@ html[data-theme="dark"] .meeting-calendar-day.selected{background:linear-gradien
         </div>
         {% endif %}
     </div>
+{% endif %}
+
+    {% if tab == 'integrated_calendar' and integrated_calendar %}
+    <div class="integrated-calendar-shell{% if not integrated_calendar.has_sunday_production %} no-sunday-production{% endif %}" id="integratedCalendarShell">
+        <div class="integrated-calendar-toolbar">
+            <div class="integrated-calendar-actions">
+                <a class="integrated-calendar-action" onclick="try{sessionStorage.setItem('integrated-calendar-keep-filters','1')}catch(_){}" href="/integrated-management?tab=integrated_calendar&calendar_month={{ integrated_calendar.prev_month }}&calendar_view={{ integrated_calendar.view }}">‹ 이전 달</a>
+                <a class="integrated-calendar-action" onclick="try{sessionStorage.setItem('integrated-calendar-keep-filters','1')}catch(_){}" href="/integrated-management?tab=integrated_calendar&calendar_month={{ integrated_calendar.next_month }}&calendar_view={{ integrated_calendar.view }}">다음 달 ›</a>
+            </div>
+            <div class="integrated-calendar-month">{{ integrated_calendar.month_label }}</div>
+            <div class="integrated-calendar-actions">
+                <form method="GET" action="/integrated-management"><input type="hidden" name="tab" value="integrated_calendar"><input type="hidden" name="calendar_view" value="{{ integrated_calendar.view }}"><input class="integrated-calendar-action" type="month" name="calendar_month" value="{{ integrated_calendar.month_value }}" onchange="try{sessionStorage.setItem('integrated-calendar-keep-filters','1')}catch(_){};this.form.submit()" aria-label="연도와 월 선택"></form>
+                <a class="integrated-calendar-action integrated-calendar-view-switch{% if integrated_calendar.view == 'combined' %} is-active{% endif %}" href="/integrated-management?tab=integrated_calendar&calendar_month={{ integrated_calendar.month_value }}&calendar_view=combined">▦ 전체보기</a>
+                <button type="button" class="integrated-calendar-action" onclick="changeIntegratedCalendarZoom(-10)">− 축소</button>
+                <span class="integrated-calendar-zoom-label" id="integratedCalendarZoomLabel">100%</span>
+                <button type="button" class="integrated-calendar-action" onclick="changeIntegratedCalendarZoom(10)">+ 확대</button>
+            </div>
+        </div>
+        <div class="integrated-calendar-legend" aria-label="상품 카테고리 필터">
+            <span>상품:</span><button type="button" class="integrated-calendar-filter legend-table" data-calendar-filter="category" data-filter-value="table"><i></i>식탁</button><button type="button" class="integrated-calendar-filter legend-kimbap" data-calendar-filter="category" data-filter-value="kimbap"><i></i>김밥</button><button type="button" class="integrated-calendar-filter legend-lunch" data-calendar-filter="category" data-filter-value="lunch"><i></i>도시락</button><button type="button" class="integrated-calendar-filter legend-whole" data-calendar-filter="category" data-filter-value="whole"><i></i>전장</button><button type="button" class="integrated-calendar-filter legend-set" data-calendar-filter="category" data-filter-value="set"><i></i>세트</button><button type="button" class="integrated-calendar-filter legend-raw" data-calendar-filter="category" data-filter-value="raw"><i></i>생김</button><button type="button" class="integrated-calendar-filter legend-organic" data-calendar-filter="category" data-filter-value="organic"><i></i>유기</button><button type="button" class="integrated-calendar-filter legend-mutrae" data-calendar-filter="category" data-filter-value="mutrae"><i></i>무트레이</button><button type="button" class="integrated-calendar-filter legend-seasoned" data-calendar-filter="category" data-filter-value="seasoned"><i></i>자반</button>
+        </div>
+        <div class="integrated-calendar-legend" aria-label="생산 상태와 작업장 필터">
+            <span>생산상태:</span><button type="button" class="integrated-calendar-filter" data-calendar-filter="status" data-filter-value="completed">✓ 생산완료</button><button type="button" class="integrated-calendar-filter" data-calendar-filter="status" data-filter-value="planned">◷ 생산예정</button><span>작업장:</span>{% for workplace in integrated_calendar.workplaces %}<button type="button" class="integrated-calendar-filter integrated-calendar-day-workplace workplace-tone-{{ workplace.badge_tone }}" data-calendar-filter="workplace" data-filter-value="{{ workplace.name }}">{{ workplace.name }}</button>{% endfor %}<button type="button" class="integrated-calendar-filter-reset" id="resetIntegratedCalendarFilters">초기화</button>
+        </div>
+        <section class="monthly-production-dashboard" aria-label="월별 생산량 대시보드">
+            <div class="monthly-production-dashboard-head"><button type="button" class="monthly-production-toggle" id="monthlyProductionToggle" aria-expanded="true"><span class="monthly-production-toggle-title"><strong class="monthly-production-dashboard-title">월별 생산량</strong><span class="monthly-production-toggle-icon">▾</span></span><span class="monthly-production-dashboard-total" id="monthlyProductionTotal">총 0 box</span></button></div>
+            <div class="monthly-production-dashboard-content" id="monthlyProductionDashboardContent">
+                <div class="monthly-production-summary">
+                    <span class="monthly-production-section-badge monthly-production-list-badge">카테고리 · 상품별 생산량</span>
+                    <div class="monthly-production-list" id="monthlyProductionList"></div>
+                </div>
+                <div class="monthly-production-chart"><span class="monthly-production-section-badge">카테고리별 생산 비중</span><div class="monthly-production-donut" id="monthlyProductionDonut"><div class="monthly-production-donut-center" id="monthlyProductionDonutCenter">필터 결과<br>0 box</div></div><div class="monthly-production-chart-legend" id="monthlyProductionChartLegend" aria-label="원형 그래프 카테고리 설명"></div></div>
+            </div>
+        </section>
+        <div class="integrated-calendar-boards" id="integratedCalendarBoards">
+            {% if integrated_calendar.view == 'workplace' %}
+            {% for workplace in integrated_calendar.workplaces %}
+            <section class="integrated-calendar-workplace">
+                <div class="integrated-calendar-workplace-head"><strong>{{ workplace.name }}</strong><span class="integrated-calendar-workplace-count">{{ workplace.count }}건</span></div>
+                <div class="integrated-calendar-weekdays"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+                <div class="integrated-calendar-grid">
+                    {% for week in integrated_calendar.weeks %}{% for day in week %}
+                    <div class="integrated-calendar-day{% if not day %} is-empty{% endif %}">
+                        {% if day %}
+                        {% set date_key = integrated_calendar.month_value ~ '-' ~ '%02d'|format(day) %}
+                        <span class="integrated-calendar-day-number">{{ day }}</span>
+                        {% for event in workplace.events if event.date == date_key %}
+                        <a class="integrated-calendar-event category-{{ event.category_key }}{% if event.is_completed %} is-completed{% endif %}" data-calendar-category="{{ event.category_key }}" data-calendar-status="{% if event.is_completed %}completed{% else %}planned{% endif %}" data-calendar-workplace="{{ event.workplace }}" href="{{ event.detail_url }}" title="{{ event.category_label }} · {{ event.name }} · {% if event.is_completed %}완료{% else %}예정{% endif %}"><span class="integrated-calendar-event-state" aria-label="{% if event.is_completed %}완료{% else %}예정{% endif %}">{% if event.is_completed %}✓{% else %}◷{% endif %}</span><span class="integrated-calendar-event-name">{{ event.name }}</span></a>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endfor %}{% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+            {% else %}
+            <section class="integrated-calendar-workplace integrated-calendar-combined" style="grid-column:1 / -1;">
+                <div class="integrated-calendar-workplace-head"><strong>전체 작업장 일정</strong><span class="integrated-calendar-workplace-count">{{ integrated_calendar.combined_events|length }}건</span></div>
+                <div class="integrated-calendar-weekdays"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+                <div class="integrated-calendar-grid">
+                    {% for week in integrated_calendar.weeks %}{% for day in week %}
+                    <div class="integrated-calendar-day{% if not day %} is-empty{% endif %}">
+                        {% if day %}{% set date_key = integrated_calendar.month_value ~ '-' ~ '%02d'|format(day) %}<span class="integrated-calendar-day-number">{{ day }}</span>
+                        {% for workplace in integrated_calendar.workplaces %}
+                        {% set workplace_events = integrated_calendar.combined_events | selectattr('date', 'equalto', date_key) | selectattr('workplace', 'equalto', workplace.name) | list %}
+                        {% if workplace_events %}
+                        <div class="integrated-calendar-workplace-group">
+                            <span class="integrated-calendar-day-workplace workplace-tone-{{ workplace.badge_tone }}">{{ workplace.name }}</span>
+                            {% for event in workplace_events %}
+                            <a class="integrated-calendar-event category-{{ event.category_key }}{% if event.is_completed %} is-completed{% endif %}" data-calendar-category="{{ event.category_key }}" data-calendar-category-label="{{ event.category_label }}" data-calendar-status="{% if event.is_completed %}completed{% else %}planned{% endif %}" data-calendar-workplace="{{ event.workplace }}" data-calendar-product="{{ event.name }}" data-calendar-boxes="{{ event.box_quantity_value }}" href="{{ event.detail_url }}" title="{{ event.category_label }} · {{ event.name }} · {{ event.box_quantity_label }} {{ event.box_quantity }} box · {% if event.is_completed %}완료{% else %}예정{% endif %}"><span class="integrated-calendar-event-state" aria-label="{% if event.is_completed %}완료{% else %}예정{% endif %}">{% if event.is_completed %}✓{% else %}◷{% endif %}</span><span class="integrated-calendar-event-name">{{ event.name }}</span><span class="integrated-calendar-event-quantity">{{ event.box_quantity }} box</span></a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}{% endfor %}{% endif %}
+                    </div>
+                    {% endfor %}{% endfor %}
+                </div>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     {% if tab == 'requirements_calculator' %}
     <div class="stats-table-wrap">
@@ -6669,5 +6781,220 @@ function confirmRestoreBackup(form) {
     }
     return confirm('선택한 백업으로 롤백할까요?\n롤백 시 이 백업 이후 저장된 데이터는 손실됩니다.');
 }
+
+function changeIntegratedCalendarZoom(delta) {
+    const shell = document.getElementById('integratedCalendarShell');
+    const label = document.getElementById('integratedCalendarZoomLabel');
+    if (!shell) return;
+    const current = Number(shell.dataset.zoom || 100);
+    const next = Math.max(70, Math.min(130, current + Number(delta || 0)));
+    shell.dataset.zoom = String(next);
+    shell.style.setProperty('--integrated-calendar-zoom', String(next / 100));
+    if (label) label.textContent = `${next}%`;
+    try { localStorage.setItem('integrated-calendar-zoom', String(next)); } catch (_) {}
+}
+
+(() => {
+    const shell = document.getElementById('integratedCalendarShell');
+    if (!shell) return;
+    let savedZoom = 100;
+    try { savedZoom = Number(localStorage.getItem('integrated-calendar-zoom') || 100); } catch (_) {}
+    const normalizedZoom = Math.max(70, Math.min(130, savedZoom || 100));
+    shell.dataset.zoom = String(normalizedZoom);
+    shell.style.setProperty('--integrated-calendar-zoom', String(normalizedZoom / 100));
+    const label = document.getElementById('integratedCalendarZoomLabel');
+    if (label) label.textContent = `${normalizedZoom}%`;
+})();
+
+(() => {
+    const shell = document.getElementById('integratedCalendarShell');
+    if (!shell) return;
+    const selected = { category: new Set(), status: new Set(), workplace: new Set() };
+    const filterStorageKey = 'integrated-calendar-selected-filters';
+    const keepFiltersStorageKey = 'integrated-calendar-keep-filters';
+    let shouldRestoreFilters = false;
+    try {
+        shouldRestoreFilters = sessionStorage.getItem(keepFiltersStorageKey) === '1';
+        sessionStorage.removeItem(keepFiltersStorageKey);
+        if (!shouldRestoreFilters) sessionStorage.removeItem(filterStorageKey);
+    } catch (_) {}
+    const filterButtons = Array.from(shell.querySelectorAll('[data-calendar-filter]'));
+    const events = Array.from(shell.querySelectorAll('.integrated-calendar-event[data-calendar-category]'));
+    const dashboard = shell.querySelector('.monthly-production-dashboard');
+    const dashboardToggle = document.getElementById('monthlyProductionToggle');
+    const dashboardStateStorageKey = 'integrated-calendar-dashboard-collapsed';
+
+    function setDashboardCollapsed(isCollapsed, persist = false) {
+        if (!dashboard) return;
+        dashboard.classList.toggle('is-collapsed', isCollapsed);
+        dashboardToggle?.setAttribute('aria-expanded', String(!isCollapsed));
+        if (persist) {
+            try { localStorage.setItem(dashboardStateStorageKey, isCollapsed ? '1' : '0'); } catch (_) {}
+        }
+    }
+
+    try { setDashboardCollapsed(localStorage.getItem(dashboardStateStorageKey) === '1'); } catch (_) {}
+    dashboardToggle?.addEventListener('click', () => {
+        setDashboardCollapsed(!dashboard?.classList.contains('is-collapsed'), true);
+    });
+
+    function saveFilters() {
+        try {
+            sessionStorage.setItem(filterStorageKey, JSON.stringify({
+                category: Array.from(selected.category),
+                status: Array.from(selected.status),
+                workplace: Array.from(selected.workplace),
+            }));
+        } catch (_) {}
+    }
+
+    function restoreFilters() {
+        if (!shouldRestoreFilters) return;
+        try {
+            const saved = JSON.parse(sessionStorage.getItem(filterStorageKey) || '{}');
+            Object.keys(selected).forEach((key) => {
+                (Array.isArray(saved[key]) ? saved[key] : []).forEach((value) => selected[key].add(value));
+            });
+        } catch (_) {}
+        filterButtons.forEach((button) => {
+            const isSelected = selected[button.dataset.calendarFilter]?.has(button.dataset.filterValue);
+            button.classList.toggle('is-selected', isSelected);
+            button.setAttribute('aria-pressed', String(!!isSelected));
+        });
+    }
+
+    function matchesFilter(event, key) {
+        return !selected[key].size || selected[key].has(event.dataset[`calendar${key[0].toUpperCase()}${key.slice(1)}`]);
+    }
+
+    function updateMonthlyProductionDashboard() {
+        const list = document.getElementById('monthlyProductionList');
+        const totalElement = document.getElementById('monthlyProductionTotal');
+        const donut = document.getElementById('monthlyProductionDonut');
+        const donutCenter = document.getElementById('monthlyProductionDonutCenter');
+        const chartLegend = document.getElementById('monthlyProductionChartLegend');
+        if (!list || !totalElement || !donut || !donutCenter || !chartLegend) return;
+        const categoryColors = {
+            table: '#0ea5e9', kimbap: '#8b5cf6', lunch: '#e11d48', whole: '#14b8a6',
+            set: '#ec4899', raw: '#65a30d', organic: '#16a34a', mutrae: '#2563eb',
+            seasoned: '#a16207', other: '#64748b',
+        };
+        const categories = new Map();
+        events.filter((event) => !event.hidden).forEach((event) => {
+            const key = event.dataset.calendarCategory || 'other';
+            const label = event.dataset.calendarCategoryLabel || key;
+            const product = event.dataset.calendarProduct || '-';
+            const boxes = Number(event.dataset.calendarBoxes || 0);
+            if (!categories.has(key)) categories.set(key, { key, label, total: 0, products: new Map() });
+            const category = categories.get(key);
+            category.total += boxes;
+            category.products.set(product, (category.products.get(product) || 0) + boxes);
+        });
+        const categoryItems = Array.from(categories.values()).sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, 'ko'));
+        const total = categoryItems.reduce((sum, category) => sum + category.total, 0);
+        const formatBoxes = (value) => Number(value).toLocaleString('ko-KR', { maximumFractionDigits: 1 });
+        totalElement.textContent = `총 ${formatBoxes(total)} box`;
+        donutCenter.innerHTML = `필터 결과<br>${formatBoxes(total)} box`;
+        list.replaceChildren();
+        chartLegend.replaceChildren();
+        if (!categoryItems.length) {
+            const empty = document.createElement('div');
+            empty.className = 'monthly-production-empty';
+            empty.textContent = '선택한 필터에 해당하는 생산량이 없습니다.';
+            list.append(empty);
+            donut.style.background = '#dbeafe';
+            return;
+        }
+        const segments = [];
+        let cursor = 0;
+        categoryItems.forEach((category) => {
+            const ratio = category.total / total * 100;
+            const color = categoryColors[category.key] || categoryColors.other;
+            segments.push(`${color} ${cursor}% ${cursor + ratio}%`);
+            cursor += ratio;
+            const categoryRow = document.createElement('div');
+            categoryRow.className = 'monthly-production-category';
+            const categoryLeft = document.createElement('span');
+            categoryLeft.className = 'monthly-production-category-left';
+            const dot = document.createElement('i');
+            dot.className = 'monthly-production-category-dot';
+            dot.style.background = color;
+            categoryLeft.append(dot, document.createTextNode(category.label));
+            const categoryQuantity = document.createElement('span');
+            categoryQuantity.textContent = `${formatBoxes(category.total)} box`;
+            categoryRow.append(categoryLeft, categoryQuantity);
+            list.append(categoryRow);
+            const legendItem = document.createElement('span');
+            legendItem.className = 'monthly-production-chart-legend-item';
+            legendItem.title = `${category.label}: ${formatBoxes(category.total)} box (${ratio.toFixed(1)}%)`;
+            const legendDot = document.createElement('i');
+            legendDot.className = 'monthly-production-chart-legend-dot';
+            legendDot.style.background = color;
+            const legendLabel = document.createElement('span');
+            legendLabel.textContent = category.label;
+            const legendPercent = document.createElement('span');
+            legendPercent.className = 'monthly-production-chart-legend-percent';
+            legendPercent.textContent = `${ratio.toFixed(1)}%`;
+            const legendQuantity = document.createElement('span');
+            legendQuantity.className = 'monthly-production-chart-legend-quantity';
+            legendQuantity.textContent = `${formatBoxes(category.total)} box`;
+            legendItem.append(legendDot, legendLabel, legendQuantity);
+            chartLegend.append(legendItem);
+            Array.from(category.products.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko')).forEach(([product, boxes]) => {
+                const productRow = document.createElement('div');
+                productRow.className = 'monthly-production-product';
+                const name = document.createElement('span');
+                name.className = 'monthly-production-product-name';
+                name.textContent = product;
+                const quantity = document.createElement('span');
+                quantity.className = 'monthly-production-product-qty';
+                quantity.textContent = `${formatBoxes(boxes)} box`;
+                productRow.append(name, quantity);
+                list.append(productRow);
+            });
+        });
+        donut.style.background = `conic-gradient(${segments.join(',')})`;
+    }
+
+    function applyFilters() {
+        const hasActiveFilters = Object.values(selected).some((values) => values.size > 0);
+        events.forEach((event) => {
+            event.hidden = !matchesFilter(event, 'category') || !matchesFilter(event, 'status') || !matchesFilter(event, 'workplace');
+        });
+        shell.querySelectorAll('.integrated-calendar-workplace-group').forEach((group) => {
+            group.hidden = !group.querySelector('.integrated-calendar-event:not([hidden])');
+        });
+        shell.querySelectorAll('.integrated-calendar-workplace:not(.integrated-calendar-combined)').forEach((board) => {
+            board.hidden = hasActiveFilters && !board.querySelector('.integrated-calendar-event:not([hidden])');
+        });
+        updateMonthlyProductionDashboard();
+    }
+
+    filterButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', 'false');
+        button.addEventListener('click', () => {
+            const key = button.dataset.calendarFilter;
+            const value = button.dataset.filterValue;
+            if (selected[key].has(value)) selected[key].delete(value);
+            else selected[key].add(value);
+            button.classList.toggle('is-selected', selected[key].has(value));
+            button.setAttribute('aria-pressed', String(selected[key].has(value)));
+            saveFilters();
+            applyFilters();
+        });
+    });
+
+    document.getElementById('resetIntegratedCalendarFilters')?.addEventListener('click', () => {
+        Object.values(selected).forEach((values) => values.clear());
+        try { sessionStorage.removeItem(filterStorageKey); } catch (_) {}
+        filterButtons.forEach((button) => {
+            button.classList.remove('is-selected');
+            button.setAttribute('aria-pressed', 'false');
+        });
+        applyFilters();
+    });
+    restoreFilters();
+    applyFilters();
+})();
 </script>
 {% endblock %}
