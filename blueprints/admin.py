@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import calendar
 from collections import defaultdict
 from pathlib import Path
 import sqlite3
@@ -3668,10 +3669,13 @@ def integrated_management():
     if not _can_access_integrated_management():
         return "??????????????源낆┰?????????곸죩", 403
 
-    tab = request.args.get('tab', 'products')  # products, raw_materials, materials, productions, subcontract_production, stats, requirements_calculator, meeting_eval, inventory_audit, db_backups
+    tab = request.args.get('tab', 'integrated_calendar')  # integrated_calendar, products, raw_materials, materials, productions, subcontract_production, stats, meeting_eval, inventory_audit, db_backups
     hidden_audit = (request.args.get('hidden_audit') or '').strip() == '1'
-    tab = (request.args.get('tab') or 'audit_logs').strip() or 'audit_logs'
-    tab = (request.args.get('tab') or 'audit_logs').strip() or 'audit_logs'
+    tab = (request.args.get('tab') or 'integrated_calendar').strip() or 'integrated_calendar'
+    if tab == 'requirements_calculator':
+        return redirect(url_for('admin.integrated_management', tab='integrated_calendar'))
+    # 통합 캘린더는 전체보기만 제공한다.
+    calendar_view = 'combined'
     if tab == 'stats':
         return redirect('/production-statistics?persist=1')
     is_hidden_audit_allowed = bool(session['user'].get('is_admin')) and ((session['user'].get('username') or '').strip().lower() == 'admin') and hidden_audit
@@ -3741,6 +3745,7 @@ def integrated_management():
     stats = None
     meeting_eval = None
     subcontract_payload = None
+    integrated_calendar = None
     audit_user_options = []
     audit_entity_options = []
     audit_action_options = []
@@ -3786,17 +3791,135 @@ def integrated_management():
                 (product_wp_filter,),
             )
         filter_products = [dict(row) for row in cursor.fetchall()]
-    elif tab == 'requirements_calculator':
+    if tab == 'integrated_calendar':
+        requested_month = (request.args.get('calendar_month') or '').strip()
+        try:
+            calendar_anchor = datetime.strptime(requested_month, '%Y-%m').date() if requested_month else now_local().date()
+        except ValueError:
+            calendar_anchor = now_local().date()
+        month_start = calendar_anchor.replace(day=1)
+        month_end = month_start.replace(day=calendar.monthrange(month_start.year, month_start.month)[1])
         cursor.execute(
             '''
-            SELECT id, code, name, category, workplace
-            FROM products
-            ORDER BY workplace, category, name
-            '''
+            SELECT
+                ps.id AS schedule_id,
+                ps.scheduled_date AS scheduled_date,
+                COALESCE(NULLIF(TRIM(ps.workplace), ''), NULLIF(TRIM(p.workplace), ''), '미지정') AS workplace,
+                COALESCE(NULLIF(TRIM(p.name), ''), '미등록 상품') AS product_name,
+                COALESCE(NULLIF(TRIM(p.category), ''), '기타') AS product_category,
+                ps.production_id AS production_id,
+                COALESCE(ps.planned_boxes, 0) AS planned_boxes,
+                pr.actual_boxes AS actual_boxes,
+                COALESCE(pr.status, ps.status, '') AS status
+            FROM production_schedules ps
+            LEFT JOIN products p ON p.id = ps.product_id
+            LEFT JOIN productions pr ON pr.id = ps.production_id
+            WHERE ps.scheduled_date BETWEEN ? AND ?
+            ORDER BY workplace, ps.scheduled_date, ps.id
+            ''',
+            (month_start.isoformat(), month_end.isoformat()),
         )
-        calculator_products = [dict(row) for row in cursor.fetchall()]
+        calendar_events = defaultdict(list)
 
-    if tab == 'products':
+        def _format_calendar_box_quantity(value):
+            quantity = float(value or 0)
+            return f'{quantity:,.0f}' if quantity.is_integer() else f'{quantity:,.1f}'
+
+        def _calendar_category_meta(category, product_name):
+            # 상품명에 포함된 단어가 아닌 상품관리의 카테고리 값만 사용한다.
+            text = str(category or '').replace(' ', '')
+            if text == '유기':
+                return 'organic', '유기'
+            if text == '무트레이':
+                return 'mutrae', '무트레이'
+            category_map = (
+                ('식탁', 'table', '식탁'), ('김밥', 'kimbap', '김밥'), ('도시락', 'lunch', '도시락'),
+                ('전장', 'whole', '전장'), ('세트', 'set', '세트'), ('생김', 'raw', '생김'), ('자반', 'seasoned', '자반'),
+            )
+            for keyword, key, label in category_map:
+                if keyword in text:
+                    return key, label
+            return 'other', str(category or '기타').strip() or '기타'
+
+        for raw_row in cursor.fetchall():
+            row = dict(raw_row)
+            workplace_name = str(row.get('workplace') or '미지정').strip() or '미지정'
+            date_key = str(row.get('scheduled_date') or '').strip()
+            if not date_key:
+                continue
+            production_id = int(row.get('production_id') or 0)
+            status = str(row.get('status') or '').strip()
+            is_completed = '완료' in status
+            box_quantity = row.get('actual_boxes') if is_completed else row.get('planned_boxes')
+            category_key, category_label = _calendar_category_meta(row.get('product_category'), row.get('product_name'))
+            calendar_events[workplace_name].append({
+                'date': date_key,
+                'name': str(row.get('product_name') or '미등록 상품').strip() or '미등록 상품',
+                'workplace': workplace_name,
+                'category_key': category_key,
+                'category_label': category_label,
+                'detail_url': f'/production/{production_id}' if production_id > 0 else f'/schedules/{date_key}',
+                'is_completed': is_completed,
+                'box_quantity': _format_calendar_box_quantity(box_quantity),
+                'box_quantity_value': float(box_quantity or 0),
+                'box_quantity_label': '실제' if is_completed else '계획',
+            })
+        # 같은 작업장·생산일 안에서는 상품관리 카테고리 순으로 묶어 표시한다.
+        calendar_category_order = {
+            'table': 0, 'kimbap': 1, 'lunch': 2, 'whole': 3,
+            'set': 4, 'raw': 5, 'organic': 6, 'mutrae': 7, 'seasoned': 8, 'other': 99,
+        }
+        for workplace_events in calendar_events.values():
+            workplace_events.sort(
+                key=lambda event: (
+                    event['date'],
+                    calendar_category_order.get(event['category_key'], 99),
+                    event['name'],
+                )
+            )
+        workplace_names = list(WORKPLACES)
+        for workplace_name in sorted(calendar_events):
+            if workplace_name not in workplace_names:
+                workplace_names.append(workplace_name)
+        first_weekday, days_in_month = calendar.monthrange(month_start.year, month_start.month)
+        calendar_days = [None] * ((first_weekday + 1) % 7)
+        calendar_days.extend(range(1, days_in_month + 1))
+        while len(calendar_days) % 7:
+            calendar_days.append(None)
+        has_sunday_production = any(
+            datetime.strptime(event['date'], '%Y-%m-%d').weekday() == 6
+            for workplace_events in calendar_events.values()
+            for event in workplace_events
+        )
+        integrated_calendar = {
+            'month_label': f'{month_start.year}년 {month_start.month}월',
+            'month_value': month_start.strftime('%Y-%m'),
+            'prev_month': (month_start - timedelta(days=1)).strftime('%Y-%m'),
+            'next_month': (month_end + timedelta(days=1)).strftime('%Y-%m'),
+            'view': calendar_view,
+            'has_sunday_production': has_sunday_production,
+            'weeks': [calendar_days[index:index + 7] for index in range(0, len(calendar_days), 7)],
+            'workplaces': [
+                {
+                    'name': workplace_name,
+                    'events': calendar_events.get(workplace_name, []),
+                    'count': len(calendar_events.get(workplace_name, [])),
+                    'badge_tone': index % 6,
+                }
+                for index, workplace_name in enumerate(workplace_names)
+            ],
+            'combined_events': sorted(
+                [event for events in calendar_events.values() for event in events],
+                key=lambda event: (
+                    event['date'],
+                    event['workplace'],
+                    calendar_category_order.get(event['category_key'], 99),
+                    event['name'],
+                ),
+            ),
+        }
+        data = []
+    elif tab == 'products':
         # ?????獄쏅챶留????????곗뒩筌? ????⑥ル????
         query = '''
             SELECT p.*, COUNT(b.id) as bom_count
@@ -4077,8 +4200,6 @@ def integrated_management():
     elif tab == 'stats':
         data = []
         stats = _query_integrated_stats(cursor, wp_filter, stat_period, stat_anchor)
-    elif tab == 'requirements_calculator':
-        data = []
     elif tab == 'meeting_eval':
         data = []
         meeting_eval = _build_meeting_eval_payload(cursor, meeting_week_anchor, meeting_month_anchor)
@@ -4233,7 +4354,8 @@ def integrated_management():
                             stat_anchor=(stats or {}).get('anchor', stat_anchor),
                             backup_keep_count=keep_count,
                             backup_settings=backup_settings,
-                            backup_retention_days=AUTO_BACKUP_RETENTION_DAYS)
+                            backup_retention_days=AUTO_BACKUP_RETENTION_DAYS,
+                            integrated_calendar=integrated_calendar)
 
 
 @bp.route('/integrated-management/meeting-eval/save-prices', methods=['POST'])
