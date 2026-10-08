@@ -819,7 +819,7 @@
 </nav>
 {% endif %}
 
-<main>
+<main{% if request.path.startswith('/integrated-management') and tab|default('') == 'integrated_calendar' %} style="width:calc(100vw - 40px);max-width:none !important;"{% endif %}>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div style="margin-bottom:1rem;">
