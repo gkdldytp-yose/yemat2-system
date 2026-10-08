@@ -281,53 +281,85 @@ body.modal-open {
 }
 .production-stats-summary {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.9rem;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.65rem;
     margin-bottom: 1.2rem;
 }
 .production-stats-card {
     position: relative;
-    overflow: hidden;
-    border-radius: 18px;
-    padding: 1rem 1.05rem;
-    border: 1px solid rgba(148,163,184,0.18);
-    background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92));
-    color: #fff;
-    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+    min-width: 0;
+    min-height: 104px;
+    padding: 0.85rem 0.9rem 0.8rem;
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    background: var(--panel-bg);
+    color: var(--text-primary);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 .production-stats-card::after {
     content: "";
     position: absolute;
-    inset: auto -20px -26px auto;
-    width: 96px;
-    height: 96px;
+    top: 0.85rem;
+    left: 0.9rem;
+    width: 4px;
+    height: 1.35rem;
     border-radius: 999px;
-    background: rgba(255,255,255,0.08);
+    background: #64748b;
 }
 .production-stats-card:nth-child(2) {
-    background: linear-gradient(135deg, rgba(29,78,216,0.96), rgba(14,165,233,0.9));
+    background: linear-gradient(135deg, rgba(239,246,255,0.94), var(--panel-bg));
 }
 .production-stats-card:nth-child(3) {
-    background: linear-gradient(135deg, rgba(5,150,105,0.96), rgba(16,185,129,0.92));
+    background: linear-gradient(135deg, rgba(236,253,245,0.94), var(--panel-bg));
 }
 .production-stats-card:nth-child(4) {
-    background: linear-gradient(135deg, rgba(180,83,9,0.96), rgba(249,115,22,0.92));
+    background: linear-gradient(135deg, rgba(255,247,237,0.94), var(--panel-bg));
+}
+.production-stats-card:nth-child(2)::after { background: #2563eb; }
+.production-stats-card:nth-child(3)::after { background: #059669; }
+.production-stats-card:nth-child(4)::after { background: #ea580c; }
+.production-stats-card:nth-child(5)::after { background: #7c3aed; }
+.production-stats-card:nth-child(6)::after { background: #0f766e; }
+.production-stats-card--top {
+    background: linear-gradient(135deg, rgba(255,251,235,0.96), var(--panel-bg));
 }
 .production-stats-label {
+    padding-left: 0.7rem;
     font-size: 0.78rem;
-    opacity: 0.92;
+    color: var(--text-muted);
+    font-weight: 750;
 }
 .production-stats-value {
-    margin-top: 0.35rem;
-    font-size: 1.75rem;
-    font-weight: 900;
-    line-height: 1.1;
+    margin-top: 0.55rem;
+    font-size: 1.3rem;
+    font-weight: 850;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.production-stats-card--top .production-stats-value {
+    font-size: 1rem;
+    line-height: 1.25;
 }
 .production-stats-hint {
-    margin-top: 0.42rem;
-    font-size: 0.8rem;
-    opacity: 0.9;
+    margin-top: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+html[data-theme="dark"] .production-stats-card {
+    border-color: #2b3b54;
+    background: #101a2a;
+    box-shadow: none;
+}
+html[data-theme="dark"] .production-stats-card:nth-child(2) { background: linear-gradient(135deg, #12264a, #101a2a); }
+html[data-theme="dark"] .production-stats-card:nth-child(3) { background: linear-gradient(135deg, #123527, #101a2a); }
+html[data-theme="dark"] .production-stats-card:nth-child(4) { background: linear-gradient(135deg, #3a2613, #101a2a); }
+html[data-theme="dark"] .production-stats-card--top { background: linear-gradient(135deg, #382d16, #101a2a); }
 .production-stats-table-wrap {
     border-radius: 18px;
     overflow: hidden;
@@ -974,7 +1006,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
 }
 @media (max-width: 980px) {
     .production-stats-summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
     .stats-detail-filters {
         grid-template-columns: 1fr;
@@ -1010,7 +1042,7 @@ html[data-theme="dark"] .stats-detail-journal-btn {
         width: 100%;
     }
     .production-stats-summary {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .production-stats-table th,
     .production-stats-table td {
@@ -6840,6 +6872,10 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
 {%- set can_purch = _r in ['admin','purchase','logistics'] -%}
 {%- set can_raw   = _r in ['admin','rawmat'] -%}
 {%- set is_admin  = _r == 'admin' -%}
+{# Render the requested view immediately so a page reload does not briefly show
+   the calendar before JavaScript restores the selected tab. #}
+{%- set _requested_view = request.args.get('view', 'calendar')|lower -%}
+{%- set initial_view = 'stats' if _requested_view in ['stats', 'list'] else _requested_view if _requested_view in ['requirements', 'export', 'set', 'capacity'] else 'calendar' -%}
 <div style="margin-bottom: 1.5rem;">
     <h1 class="schedule-page-title">📅 생산 스케줄</h1>
     <p class="schedule-page-sub">월별 생산 계획과 완료 생산 통계를 캘린더, 통계, 수출/자재 화면에서 확인할 수 있습니다</p>
@@ -6848,14 +6884,14 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
 <!-- 툴바 -->
 <div class="schedule-toolbar">
     <div class="view-toggle">
-        <button class="active" data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
+        <button{% if initial_view == 'calendar' %} class="active"{% endif %} data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
         <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
         {% if set_finished_products or set_schedules %}
         <button data-view="set" onclick="switchView('set')">🎁 세트 일정표</button>
         {% endif %}
         <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
         <button data-view="capacity" onclick="switchView('capacity')">📦 생산 가능량 계산기</button>
-        <button data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
+        <button{% if initial_view == 'stats' %} class="active"{% endif %} data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
     </div>
     <div class="schedule-toolbar-actions">
         <a href="/production" class="schedule-production-link">생산 관리</a>
@@ -6863,7 +6899,7 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
 </div>
 
 <!-- 캘린더 뷰 -->
-<div id="calendarView" class="card calendar {% if has_sunday_schedule %}calendar-has-sunday-production{% else %}calendar-no-sunday-production{% endif %}">
+<div id="calendarView" class="card calendar {% if has_sunday_schedule %}calendar-has-sunday-production{% else %}calendar-no-sunday-production{% endif %}"{% if initial_view != 'calendar' %} style="display:none;"{% endif %}>
     <div class="calendar-header no-print">
         <div class="calendar-nav">
             <button onclick="changeMonth(-1)">◀ 이전</button>
@@ -7921,7 +7957,7 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
 </div>
 
 <!-- 생산 통계 뷰 -->
-<div id="statsView" class="card production-stats-view" style="display: none;">
+<div id="statsView" class="card production-stats-view" style="display: {% if initial_view == 'stats' %}block{% else %}none{% endif %};">
     <div class="production-stats-head">
         <div class="production-stats-title">
             <h2>{{ month_start.strftime('%Y년 %m월') }} 생산 통계</h2>
@@ -7953,6 +7989,16 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
             <div class="production-stats-hint">생산완료 등록 기준</div>
         </div>
         <div class="production-stats-card">
+            <div class="production-stats-label">총 투입속수</div>
+            <div class="production-stats-value">{{ stats_box(monthly_stats_summary.total_input_sok) }}속</div>
+            <div class="production-stats-hint">등록된 원초 실제 투입량</div>
+        </div>
+        <div class="production-stats-card">
+            <div class="production-stats-label">총 완제속수</div>
+            <div class="production-stats-value">{{ stats_box(monthly_stats_summary.total_finished_sok) }}속</div>
+            <div class="production-stats-hint">생산 기준 원초 소요량</div>
+        </div>
+        <div class="production-stats-card production-stats-card--top">
             <div class="production-stats-label">최다 생산 상품</div>
             <div class="production-stats-value">
                 {% if monthly_stats_summary.top_product_name %}
