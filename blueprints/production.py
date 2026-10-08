@@ -5230,6 +5230,14 @@ def schedules():
     export_schedules_json = json.dumps(export_rows_json, ensure_ascii=False)
     initial_calendar_html = _build_schedule_initial_calendar_html(year, month, schedules_list, work_days_data, special_notes_by_date)
     initial_mobile_calendar_html = _build_schedule_initial_mobile_html(year, month, schedules_list, work_days_data, special_notes_by_date)
+    has_sunday_schedule = False
+    for schedule in schedules_list:
+        try:
+            if datetime.strptime(str(schedule.get('scheduled_date') or ''), '%Y-%m-%d').weekday() == 6:
+                has_sunday_schedule = True
+                break
+        except (TypeError, ValueError):
+            continue
     can_manage_schedule = _has_schedule_admin_permission(workplace=workplace, user=session.get('user'))
     return render_template(
         'schedules.html',
@@ -5246,6 +5254,7 @@ def schedules():
         work_days_json=work_days_json,
         initial_calendar_html=initial_calendar_html,
         initial_mobile_calendar_html=initial_mobile_calendar_html,
+        has_sunday_schedule=has_sunday_schedule,
         export_schedules=export_rows_view,
         export_in_progress_schedules=export_in_progress_rows,
         export_active_schedules=export_active_rows,
