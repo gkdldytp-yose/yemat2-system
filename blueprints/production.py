@@ -4373,6 +4373,8 @@ def schedules():
             'product_count': 0,
             'completed_count': 0,
             'total_boxes': 0.0,
+            'total_input_sok': 0.0,
+            'total_finished_sok': 0.0,
             'top_product_name': '',
             'top_product_boxes': 0.0,
         }
@@ -4521,6 +4523,7 @@ def schedules():
             (workplace, workplace, month_start.isoformat(), month_end.isoformat()),
         )
         monthly_stats_map = {}
+        completed_production_ids = []
         for raw_row in cursor.fetchall():
             row = dict(raw_row)
             if _normalize_production_status(row.get('production_status')) != done_status:
@@ -4528,6 +4531,7 @@ def schedules():
             product_id = int(row.get('product_id') or 0)
             if product_id <= 0:
                 continue
+            completed_production_ids.append(int(row.get('production_id') or 0))
             actual_boxes = float(row.get('actual_boxes') or 0)
             schedule_planned_boxes = float(row.get('schedule_planned_boxes') or 0)
             production_planned_boxes = float(row.get('production_planned_boxes') or 0)
@@ -4557,10 +4561,31 @@ def schedules():
         for index, row in enumerate(monthly_stats_rows, start=1):
             row['rank'] = index
 
+        total_input_sok = 0.0
+        total_finished_sok = 0.0
+        completed_production_ids = [production_id for production_id in completed_production_ids if production_id > 0]
+        if completed_production_ids:
+            placeholders = ','.join('?' for _ in completed_production_ids)
+            raw_usage_totals = cursor.execute(
+                f'''
+                SELECT
+                    COALESCE(SUM(COALESCE(actual_quantity, 0)), 0) AS total_input_sok,
+                    COALESCE(SUM(COALESCE(expected_quantity, 0)), 0) AS total_finished_sok
+                FROM production_material_usage
+                WHERE production_id IN ({placeholders})
+                  AND (raw_material_id IS NOT NULL OR COALESCE(TRIM(raw_material_name), '') != '')
+                ''',
+                completed_production_ids,
+            ).fetchone()
+            total_input_sok = float(raw_usage_totals['total_input_sok'] or 0)
+            total_finished_sok = float(raw_usage_totals['total_finished_sok'] or 0)
+
         monthly_stats_summary = {
             'product_count': len(monthly_stats_rows),
             'completed_count': sum(int(row.get('completed_count') or 0) for row in monthly_stats_rows),
             'total_boxes': round(sum(float(row.get('total_production_boxes') or 0) for row in monthly_stats_rows), 1),
+            'total_input_sok': round(total_input_sok, 1),
+            'total_finished_sok': round(total_finished_sok, 1),
             'top_product_name': monthly_stats_rows[0]['product_name'] if monthly_stats_rows else '',
             'top_product_boxes': float(monthly_stats_rows[0]['total_production_boxes'] or 0) if monthly_stats_rows else 0.0,
         }
