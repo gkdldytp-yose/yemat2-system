@@ -127,13 +127,42 @@ html[data-theme="dark"] .product-variant-badge.silica{background:rgba(109,40,217
 html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,.18);color:#ccfbf1;border-color:rgba(153,246,228,.2);box-shadow:none;}
 /* 카테고리 탭: 상태는 색상선으로, 건수는 별도 칩으로 분리해 빠르게 읽힌다. */
 .cat-filters{gap:.38rem;padding:.38rem;border:1px solid #dce6f4;border-radius:14px;background:rgba(226,232,240,.48);}.cat-btn{--cat-accent:#64748b;min-width:102px;min-height:42px;justify-content:space-between;gap:.6rem;padding:.48rem .62rem;border-radius:10px;border-color:transparent;background:#fff;color:#334155;box-shadow:inset 0 0 0 1px #d6e0ed,0 1px 2px rgba(15,23,42,.03);font-size:.78rem;}.cat-btn::before{width:.42rem;height:.42rem;box-shadow:none;background:var(--cat-accent);}.cat-btn:hover{transform:translateY(-1px);border-color:var(--cat-accent);background:#f8fbff;box-shadow:inset 0 0 0 1px var(--cat-accent),0 8px 16px rgba(15,23,42,.08);}.cat-btn:focus-visible{outline:3px solid rgba(59,130,246,.3);outline-offset:2px;}.cat-btn-count{min-width:1.5rem;height:1.5rem;padding:0 .36rem;border-radius:6px;background:#edf2f9;color:#475569;font-size:.68rem;}.cat-btn.active{border-color:var(--cat-accent);background:#f8fbff;color:#0f172a;box-shadow:inset 3px 0 0 var(--cat-accent),inset 0 0 0 1px var(--cat-accent),0 6px 14px rgba(15,23,42,.08);}.cat-btn.active::before{background:var(--cat-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--cat-accent) 18%,transparent);}.cat-btn.active .cat-btn-count{background:var(--cat-accent);color:#fff;}.cat-btn[data-cat="전체"]{--cat-accent:#4f46e5;}.cat-btn[data-cat="식탁"]{--cat-accent:#16a34a;}.cat-btn[data-cat="김밥"]{--cat-accent:#d97706;}.cat-btn[data-cat="자반"]{--cat-accent:#ea580c;}.cat-btn[data-cat="유기"]{--cat-accent:#2563eb;}.cat-btn[data-cat="도시락"]{--cat-accent:#e11d48;}.cat-btn[data-cat="전장"]{--cat-accent:#7c3aed;}.cat-btn[data-cat="생김"]{--cat-accent:#0f766e;}.cat-btn[data-cat="세트"]{--cat-accent:#db2777;}.cat-btn[data-cat="무트레이"]{--cat-accent:#64748b;}html[data-theme="dark"] .cat-filters{border-color:#2b3a50;background:#0e1726;}html[data-theme="dark"] .cat-btn{background:#162235;color:#dbe7f5;box-shadow:inset 0 0 0 1px #2b3a50,0 1px 2px rgba(0,0,0,.16);}html[data-theme="dark"] .cat-btn:hover{background:#1a2a40;border-color:var(--cat-accent);box-shadow:inset 0 0 0 1px var(--cat-accent),0 8px 16px rgba(0,0,0,.2);}html[data-theme="dark"] .cat-btn-count{background:#24344d;color:#bfdbfe;}html[data-theme="dark"] .cat-btn.active{background:#1a2b43;color:#fff;border-color:var(--cat-accent);box-shadow:inset 3px 0 0 var(--cat-accent),inset 0 0 0 1px var(--cat-accent),0 8px 18px rgba(0,0,0,.24);}html[data-theme="dark"] .cat-btn.active .cat-btn-count{background:var(--cat-accent);color:#fff;}@media (max-width:768px){.cat-filters{padding:.3rem;}.cat-btn{min-width:92px;min-height:38px;padding:.42rem .52rem;}}
+/* 상품 목록: 분류와 관리 동작을 분명히 구분하는 고밀도 업무형 표. */
+.product-list-table{border-collapse:separate;border-spacing:0;width:100%;}
+.product-list-table thead th{padding:.78rem .72rem;background:#edf3fa;color:#284460;font-size:.8rem;font-weight:900;letter-spacing:-.02em;border-top:1px solid #d2dfec;border-bottom:1px solid #c7d6e5;}
+.product-list-table tbody td{padding:.62rem .72rem;border-bottom:1px solid #e3ebf3;color:#304a65;font-size:.82rem;font-weight:650;vertical-align:middle;}
+.product-list-table tbody tr:not(.quick-edit-row){transition:background .15s ease,box-shadow .15s ease;}
+.product-list-table tbody tr:not(.quick-edit-row):hover{background:#f7fbff;box-shadow:inset 3px 0 0 #4c91e5;}
+.product-list-table .product-name-stack>strong{font-size:.92rem!important;color:#102a4c;line-height:1.35;}
+.product-category-badge{display:inline-flex;align-items:center;justify-content:center;min-width:52px;min-height:28px;padding:.28rem .55rem;border:1px solid transparent;border-radius:999px;font-size:.72rem;font-weight:950;letter-spacing:-.02em;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 5px rgba(15,23,42,.06);}
+.product-category-badge[data-category="김밥"]{background:#fff2df!important;color:#c56608!important;border-color:#f7c77f;}
+.product-category-badge[data-category="식탁"]{background:#e8f9ef!important;color:#16824b!important;border-color:#8bdbab;}
+.product-category-badge[data-category="자반"]{background:#fff0e7!important;color:#c55516!important;border-color:#f5bc96;}
+.product-category-badge[data-category="유기"]{background:#eaf4ff!important;color:#1769bd!important;border-color:#9bc5f0;}
+.product-category-badge[data-category="전장"]{background:#f4edff!important;color:#7544ad!important;border-color:#c8ade9;}
+.product-category-badge[data-category="생김"]{background:#e6faf6!important;color:#087a67!important;border-color:#8bdccc;}
+.product-category-badge[data-category="세트"]{background:#fff0f6!important;color:#bf3773!important;border-color:#f1adca;}
+.product-category-sub-badge{margin-top:.24rem;font-size:.65rem!important;font-weight:850!important;border:1px solid rgba(59,130,246,.22);}
+.product-list-table th:last-child,.product-list-table td:last-child{width:1%;white-space:nowrap;}
+.product-action-group{display:inline-flex;width:max-content;padding:.28rem;gap:.28rem;border:1px solid #d7e4f1;border-radius:11px;background:#f5f9fd;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
+.product-delete-form{display:flex;margin:0;}
+.product-action-btn,.product-delete-btn{display:inline-flex;align-items:center;justify-content:center;min-height:31px;padding:.28rem .55rem!important;border:1px solid transparent!important;border-radius:8px!important;color:#fff!important;font-size:.7rem!important;font-weight:900!important;letter-spacing:-.02em;box-shadow:0 2px 5px rgba(15,23,42,.1)!important;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;}
+.product-action-btn:hover,.product-delete-btn:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 5px 10px rgba(15,23,42,.16)!important;}
+.product-action-btn:focus-visible,.product-delete-btn:focus-visible{outline:3px solid rgba(59,130,246,.34);outline-offset:2px;}
+.product-action-btn.action-edit{background:linear-gradient(135deg,#788ca5,#52667d)!important;border-color:#9baabd!important;}
+.product-action-btn.action-bom{background:linear-gradient(135deg,#2991ee,#1672cf)!important;border-color:#4ba9fb!important;}
+.product-action-btn.action-spec{background:linear-gradient(135deg,#4c7df2,#2957c8)!important;border-color:#759fff!important;}
+.product-action-btn.action-spec-add{background:linear-gradient(135deg,#16a5a1,#087b79)!important;border-color:#48c9c0!important;}
+.product-delete-btn{min-height:31px;background:linear-gradient(135deg,#f46055,#d83c34)!important;border-color:#fb837b!important;}
+html[data-theme="dark"] .product-list-table thead th{background:#1b2a3e;color:#dbeafe;border-color:#30445d;}html[data-theme="dark"] .product-list-table tbody td{color:#d5e3f2;border-bottom-color:#26384e;}html[data-theme="dark"] .product-list-table tbody tr:not(.quick-edit-row):hover{background:#16273b;box-shadow:inset 3px 0 0 #60a5fa;}html[data-theme="dark"] .product-list-table .product-name-stack>strong{color:#f1f6ff;}html[data-theme="dark"] .product-action-group{border-color:#314a67;background:#0d1a2b;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+@media(max-width:760px){.product-list-table tbody td{padding:.55rem .5rem;}.product-action-group{width:max-content;}.product-action-btn,.product-delete-btn{min-height:34px;font-size:.73rem!important;}}
 </style>
 {% endblock %}
 {% block content %}
 {%- set _r = user.role if (user is defined and user.role) else ('admin' if (user is defined and user.is_admin) else 'readonly') -%}
 {%- set can_prod  = _r in ['admin','production'] -%}
 
-<h1>📦 상품 관리</h1>
+<h1>상품 관리</h1>
 {% set CATS = ['식탁','김밥','자반','유기','도시락','전장','생김','세트','무트레이'] %}
 {% set active_category_label = selected_category if selected_category else '전체 상품' %}
 
@@ -223,10 +252,9 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
     </div>
     {% if products %}
     <div class="table-container">
-    <table>
+    <table class="product-list-table">
         <thead>
-            <tr><th>상품</th><th>분류</th><th>낱봉</th><th>매수</th><th>절단</th><th>1박스당 원초</th><th>소비기한</th><th>관리</th>
-            {% if can_prod %}<th>관리</th>{% endif %}</tr>
+            <tr><th>상품</th><th>분류</th><th>낱봉</th><th>매수</th><th>절단</th><th>1박스당 원초</th><th>소비기한</th><th>관리</th></tr>
         </thead>
         <tbody>
         {% for p in products %}
@@ -249,7 +277,7 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
             </td>
             <td>
                 {% if p.category %}
-                <span class="cat-badge" style="background:
+                <span class="cat-badge product-category-badge" data-category="{{ p.category }}" style="background:
                     {% if p.category=='식탁' %}#e8f5e9;color:#27ae60
                     {% elif p.category=='김밥' %}#fff3e0;color:#e67e22
                     {% elif p.category=='자반' %}#ffedd5;color:#c2410c
@@ -259,9 +287,9 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
                     {% elif p.category=='세트' %}#fce4ec;color:#c2185b
                 {% else %}#f5f5f5;color:#666{% endif %}">{{ p.category }}</span>
                 {% if p.category == '세트' and p.set_item_type == 'finished' %}
-                <span class="cat-badge" style="background:#dbeafe;color:#1d4ed8;">완제품</span>
+                <span class="cat-badge product-category-sub-badge" style="background:#dbeafe;color:#1d4ed8;">완제품</span>
                 {% elif p.category == '세트' and p.set_item_type == 'semi' %}
-                <span class="cat-badge" style="background:#ecfccb;color:#3f6212;">반제품</span>
+                <span class="cat-badge product-category-sub-badge" style="background:#ecfccb;color:#3f6212;">반제품</span>
                 {% endif %}
                 {% else %}-{% endif %}
             </td>
@@ -281,28 +309,26 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
             <td>
                 <div class="product-action-group">
                     {% if can_prod %}
-                    <button type="button" class="btn btn-small btn-secondary" onclick="toggleQuickEdit({{ p.id }})">기본정보 수정</button>
+                    <button type="button" class="btn btn-small btn-secondary product-action-btn action-edit" onclick="toggleQuickEdit({{ p.id }})">기본정보 수정</button>
                     {% endif %}
-                    <a href="{{ url_for('products.product_bom', product_id=p.id, return_to=current_list_url) }}" class="btn btn-small">BOM</a>
+                    <a href="{{ url_for('products.product_bom', product_id=p.id, return_to=current_list_url) }}" class="btn btn-small product-action-btn action-bom">BOM</a>
                     {% if p.spec_sheet_stored_name %}
-                    <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small btn-secondary">사양서 보기</a>
+                    <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small btn-secondary product-action-btn action-spec">사양서 보기</a>
                     {% elif can_prod %}
-                    <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small" style="background:#0f766e;">사양서 등록</a>
+                    <a href="/products/{{ p.id }}/spec-sheet/manage" target="_blank" rel="noopener" class="btn btn-small product-action-btn action-spec action-spec-add" style="background:#0f766e;">사양서 등록</a>
+                    {% endif %}
+                    {% if can_prod %}
+                    <form method="POST" action="/products/{{ p.id }}/delete" class="product-delete-form"
+                          onsubmit="return confirm('{{ p.name }} 삭제?')">
+                        <button type="submit" class="btn btn-small product-delete-btn">삭제</button>
+                    </form>
                     {% endif %}
                 </div>
             </td>
-            {% if can_prod %}
-            <td>
-                <form method="POST" action="/products/{{ p.id }}/delete" style="display:inline;"
-                      onsubmit="return confirm('{{ p.name }} 삭제?')">
-                    <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
-                </form>
-            </td>
-            {% endif %}
         </tr>
         {% if can_prod %}
         <tr id="quick_edit_{{ p.id }}" class="quick-edit-row">
-            <td colspan="9" class="quick-edit-cell">
+            <td colspan="8" class="quick-edit-cell">
                 <div class="quick-edit-panel">
                     <div class="quick-edit-title">{{ p.name }} 기본정보 빠른 수정</div>
                     {% set is_finished_set_row = (p.category == '세트' and p.set_item_type == 'finished') %}

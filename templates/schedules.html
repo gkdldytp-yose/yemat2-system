@@ -1623,7 +1623,8 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     .schedule-toolbar .view-toggle button,
     .schedule-toolbar > .btn {
         width: 100%;
-    }
+    }
+
     #listView {
         overflow: hidden;
     }
@@ -4023,6 +4024,32 @@ html[data-theme="dark"] .stats-detail-journal-btn {
     font-weight:750;
     letter-spacing:0;
 }
+/* 기본 모드 수출 일정: 정보 위계와 숫자 가독성을 높인다. */
+html[data-theme="light"] #exportView{color:#24364d;}
+html[data-theme="light"] #exportView .export-section{border:1px solid #d7e2ef;border-radius:15px;background:#fff;box-shadow:0 7px 20px rgba(30,64,105,.06);overflow:hidden;}
+html[data-theme="light"] #exportView .export-section-head{padding:.9rem 1rem;border-bottom:1px solid #dbe6f2;background:linear-gradient(135deg,#f8fbff 0%,#eef5ff 100%);}
+html[data-theme="light"] #exportView .export-section-head h3{color:#102a4c;font-size:1.03rem;font-weight:950;letter-spacing:-.02em;}
+html[data-theme="light"] #exportView .export-schedule-table th{background:#eef4fa;color:#29425f;font-size:.92rem;font-weight:900;letter-spacing:-.01em;border-bottom:1px solid #cbd9e8;}
+html[data-theme="light"] #exportView .export-schedule-table td{color:#344b66;font-weight:650;border-top-color:#dbe6f1;}
+html[data-theme="light"] #exportView .export-schedule-table .export-schedule-product-name{color:#08783e !important;font-size:.98rem;font-weight:900;}
+html[data-theme="light"] #exportView .export-schedule-table .export-schedule-period-cell strong,
+html[data-theme="light"] #exportView .export-schedule-table .export-schedule-total,
+html[data-theme="light"] #exportView .export-schedule-progress > div:first-child{color:#083d75;font-size:.98rem;font-weight:900;}
+html[data-theme="light"] #exportView .export-schedule-meta{color:#5b7089;font-weight:750;}
+html[data-theme="light"] #exportView .export-schedule-unit-box .export-container-box-quantity{color:#45617f;font-weight:800;}
+html[data-theme="light"] #exportView .export-active-card:not(.set-schedule-card){border-color:#c8d8e9;background:linear-gradient(145deg,#fff 0%,#f7fbff 100%);box-shadow:0 10px 24px rgba(30,64,105,.09);}
+html[data-theme="light"] #exportView .export-detail-title{color:#102a4c;font-size:1.12rem;font-weight:950;}
+html[data-theme="light"] #exportView .export-detail-period,
+html[data-theme="light"] #exportView .export-detail-title-block .req-muted{color:#55708d;font-weight:750;}
+html[data-theme="light"] #exportView .export-active-card:not(.set-schedule-card) .export-active-pane{border-color:#cad9e9;background:#fff;box-shadow:0 3px 10px rgba(30,64,105,.035);}
+html[data-theme="light"] #exportView .export-active-card:not(.set-schedule-card) .export-active-pane h4{color:#0b437e;font-size:1.04rem;font-weight:950;}
+html[data-theme="light"] #exportView .export-container-progress-copy{color:#145ac0 !important;font-weight:900 !important;}
+html[data-theme="light"] #exportView .export-container-po,
+html[data-theme="light"] #exportView .export-daily-work-time,
+html[data-theme="light"] #exportView .export-daily-expiry{color:#55708d;font-weight:750;}
+html[data-theme="light"] #exportView .export-daily-record{border-color:#d7e4f1;background:linear-gradient(135deg,#fbfdff,#fff);}
+html[data-theme="light"] #exportView .export-daily-date-pill{font-weight:900;}
+html[data-theme="light"] #exportView .export-daily-qty{font-weight:950;}
 html[data-theme="dark"] #exportView .export-schedule-table th { color:#dce8f8; }
 html[data-theme="dark"] #exportView .export-schedule-meta,
 html[data-theme="dark"] #exportView .export-schedule-progress .req-muted { color:#b5c7dc; opacity:1; }
@@ -5736,7 +5763,8 @@ html[data-theme="dark"] .set-finished-plan-summary strong {color:#5eead4;}
         margin-left:1rem;
         margin-right:1rem;
     }
-}html[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
+}
+html[data-theme="dark"] .schedule-page-title{color:#f8fbff;}
 html[data-theme="dark"] .schedule-page-sub{color:#8ea3bd;}
 html[data-theme="dark"] .modal-content{background:linear-gradient(180deg,#121a2a,#0f1726);border:1px solid #263244;box-shadow:0 30px 70px rgba(2,6,23,.52);}
 html[data-theme="dark"] .modal-content h2,
@@ -6265,7 +6293,8 @@ html[data-theme="dark"] .schedule-add-form input[type="number"]:focus,
 html[data-theme="dark"] .schedule-add-form textarea:focus {
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
-}
+}
+
 html[data-theme="dark"] .search-icon,
 html[data-theme="dark"] .schedule-date-count,
 html[data-theme="dark"] .schedule-helper-text,
@@ -6863,6 +6892,138 @@ html[data-theme="light"] #calendarView .calendar-day.workday-extra{background:li
 html[data-theme="dark"] .view-toggle{border-color:#405775;background:#0a1423;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 22px rgba(0,0,0,.24);}html[data-theme="dark"] .view-toggle button{border-color:#2f4663;background:#15243a;color:#c8daf0;box-shadow:inset 0 1px 0 rgba(255,255,255,.045);}html[data-theme="dark"] .view-toggle button:hover{border-color:#5f86b7;background:#1d3451;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 5px 12px rgba(0,0,0,.24);}html[data-theme="dark"] .view-toggle button.active{border-color:#71b5ff;background:#1d559b;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 14px rgba(10,78,160,.38);}html[data-theme="dark"] .view-toggle button.active::after{background:#b9dcff;}html[data-theme="dark"] .calendar-nav{border-color:#405775;background:#0a1423;}html[data-theme="dark"] .calendar-nav button{border-color:#566b85;background:#27364a;color:#f4f8ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 2px 5px rgba(0,0,0,.18);}html[data-theme="dark"] .calendar-nav button:hover{border-color:#8bbcf4;background:#34506f;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 6px 13px rgba(0,0,0,.26);}html[data-theme="dark"] .calendar-header-actions{border-color:#405775;background:#0a1423;}html[data-theme="dark"] .calendar-action-btn,html[data-theme="dark"] .calendar-header a.calendar-action-btn{border-color:#516882 !important;background:#202f44 !important;color:#f0f6ff !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 5px rgba(0,0,0,.18);}html[data-theme="dark"] .calendar-action-btn:hover,html[data-theme="dark"] .calendar-header a.calendar-action-btn:hover{border-color:#8bbcf4 !important;background:#304a68 !important;color:#fff !important;}html[data-theme="dark"] .calendar-special-btn,html[data-theme="dark"] .calendar-header-actions .calendar-special-btn{border-color:#79b8ff !important;background:#1768cc !important;box-shadow:inset 3px 0 0 #b6dcff,inset 0 1px 0 rgba(255,255,255,.2),0 7px 15px rgba(14,90,190,.34) !important;}html[data-theme="dark"] .calendar-special-btn:hover,html[data-theme="dark"] .calendar-header-actions .calendar-special-btn:hover{border-color:#c8e4ff !important;background:#2379e1 !important;box-shadow:inset 3px 0 0 #d6ecff,0 10px 19px rgba(14,90,190,.42) !important;}html[data-theme="dark"] .calendar-header-actions .calendar-schedule-add-btn{border-color:#66e2d3 !important;background:#087f78 !important;box-shadow:inset 3px 0 0 #b7fff4,inset 0 1px 0 rgba(255,255,255,.2),0 7px 15px rgba(3,112,104,.34) !important;}html[data-theme="dark"] .calendar-header-actions .calendar-schedule-add-btn:hover{border-color:#c2fff6 !important;background:#0b9a91 !important;box-shadow:inset 3px 0 0 #d5fff9,0 10px 19px rgba(3,112,104,.42) !important;}html[data-theme="dark"] .schedule-production-link{border-color:#5ad7c9;background:#087b75;color:#f2fffd;box-shadow:inset 3px 0 0 #c4fff6,inset 0 1px 0 rgba(255,255,255,.18),0 5px 13px rgba(3,112,104,.28);}html[data-theme="dark"] .schedule-production-link:hover{border-color:#c2fff6;background:#0b958c;color:#fff;box-shadow:inset 3px 0 0 #e0fffb,0 8px 17px rgba(3,112,104,.38);}
 /* Keep export-only actions independent from the calendar header control palette. */
 html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:rgba(96,165,250,.58) !important;background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%) !important;color:#eff6ff !important;box-shadow:0 12px 24px rgba(29,78,216,.34),inset 0 1px 0 rgba(255,255,255,.12) !important;}html[data-theme="dark"] #exportView .export-actions .set-edit-btn:hover{border-color:rgba(191,219,254,.88) !important;background:linear-gradient(135deg,#60a5fa 0%,#2563eb 100%) !important;color:#fff !important;}html[data-theme="dark"] #exportView .export-actions .set-delete-btn{border-color:rgba(248,113,113,.58) !important;background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%) !important;color:#fff5f5 !important;box-shadow:0 12px 24px rgba(185,28,28,.34),inset 0 1px 0 rgba(255,255,255,.12) !important;}html[data-theme="dark"] #exportView .export-actions .set-delete-btn:hover{border-color:rgba(254,202,202,.88) !important;background:linear-gradient(135deg,#f87171 0%,#dc2626 100%) !important;color:#fff !important;}html[data-theme="dark"] #exportView .export-daily-toggle-btn{border-color:rgba(96,165,250,.72) !important;background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%) !important;color:#eff6ff !important;box-shadow:0 10px 20px rgba(37,99,235,.32),inset 0 1px 0 rgba(255,255,255,.1) !important;}html[data-theme="dark"] #exportView .export-daily-toggle-btn:hover{border-color:rgba(191,219,254,.9) !important;background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%) !important;color:#fff !important;box-shadow:0 14px 24px rgba(37,99,235,.4),inset 0 1px 0 rgba(255,255,255,.14) !important;}
+/* 생산 스케줄 탭: 아이콘 없이 빠르게 훑고 선택하는 텍스트 중심 내비게이션 */
+.schedule-toolbar .view-toggle{gap:.48rem;padding:.5rem;border-color:#c8daee;border-radius:17px;background:linear-gradient(135deg,#eef5ff,#e5eef9);box-shadow:0 9px 20px rgba(30,64,105,.09);}.schedule-toolbar .view-toggle button{min-height:48px;padding:.55rem .96rem;border:1px solid #d2dfed;background:rgba(255,255,255,.88);border-radius:11px;color:#3d5876;font-size:.85rem;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 5px rgba(30,64,105,.045);}.schedule-toolbar .view-toggle button::after{right:.72rem;bottom:.28rem;left:.72rem;height:3px;}.schedule-toolbar .view-toggle button:hover{border-color:#8bb9e8;background:#fff;color:#154d91;box-shadow:0 5px 12px rgba(30,64,105,.11);}.schedule-toolbar .view-toggle button.active{transform:translateY(-1px);border:2px solid #174fb5;background:linear-gradient(135deg,#2871e8 0%,#174bb5 100%);color:#fff;box-shadow:0 8px 18px rgba(23,75,181,.3),inset 0 1px 0 rgba(255,255,255,.22);}.schedule-toolbar .view-toggle button.active::after{background:#fff;}.schedule-toolbar .view-toggle button:focus-visible{outline-color:rgba(37,99,235,.5);}
+html[data-theme="dark"] .schedule-toolbar .view-toggle{border-color:#385777;background:linear-gradient(135deg,#0d1929,#13263e);box-shadow:0 11px 24px rgba(2,6,23,.32);}html[data-theme="dark"] .schedule-toolbar .view-toggle button{border-color:#36516f;background:#172941;color:#c4d3e5;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 5px rgba(0,0,0,.18);}html[data-theme="dark"] .schedule-toolbar .view-toggle button:hover{border-color:#6c9ed1;background:#203b5b;color:#fff;box-shadow:0 5px 12px rgba(0,0,0,.28);}html[data-theme="dark"] .schedule-toolbar .view-toggle button.active{border-color:#9acbff;background:linear-gradient(135deg,#2875d0,#1b4fba);color:#fff;box-shadow:0 9px 20px rgba(2,6,23,.4),inset 0 1px 0 rgba(255,255,255,.22);}html[data-theme="dark"] .schedule-toolbar .view-toggle button.active::after{background:#e5f1ff;}
+@media(max-width:768px){.schedule-toolbar .view-toggle{gap:.32rem;}.schedule-toolbar .view-toggle button{min-height:42px;padding:.48rem .76rem;font-size:.8rem;}}
+/* 기본 모드의 캘린더 헤더는 페이지 표면과 같은 밝은 톤으로 통일한다. */
+html[data-theme="light"] #calendarView .calendar-header{background:linear-gradient(135deg,#fbfdff 0%,#edf5ff 100%);border-bottom-color:#c8d9ea;}
+html[data-theme="light"] #calendarView .calendar-nav,html[data-theme="light"] #calendarView .calendar-header-actions{border-color:#cbdceb;background:rgba(255,255,255,.9);box-shadow:0 4px 10px rgba(30,64,105,.055);}
+html[data-theme="light"] #calendarView .calendar-nav button{border-color:#bed1e5;background:#fff;color:#173b65;box-shadow:inset 0 1px 0 #fff,0 2px 5px rgba(30,64,105,.06);}
+html[data-theme="light"] #calendarView .calendar-nav button:hover{border-color:#6aa5e7;background:#eff6ff;color:#1d4ed8;box-shadow:0 5px 12px rgba(30,64,105,.12);}
+html[data-theme="light"] #calendarView .calendar-month{color:#102a4c;}
+html[data-theme="light"] #calendarView .calendar-action-btn,html[data-theme="light"] #calendarView .calendar-header a.calendar-action-btn{border-color:#c3d5e8 !important;background:#fff !important;color:#264a6e !important;box-shadow:inset 0 1px 0 #fff,0 2px 5px rgba(30,64,105,.06) !important;}
+html[data-theme="light"] #calendarView .calendar-action-btn:hover,html[data-theme="light"] #calendarView .calendar-header a.calendar-action-btn:hover{border-color:#6aa5e7 !important;background:#eff6ff !important;color:#174ea6 !important;box-shadow:0 5px 12px rgba(30,64,105,.12) !important;}
+html[data-theme="light"] #calendarView .calendar-special-btn,html[data-theme="light"] #calendarView .calendar-header-actions .calendar-special-btn{border-color:#93c5fd !important;background:linear-gradient(135deg,#eaf3ff,#dbeafe) !important;color:#174ea6 !important;box-shadow:inset 3px 0 0 #3b82f6,0 4px 10px rgba(37,99,235,.12) !important;}
+html[data-theme="light"] #calendarView .calendar-special-btn:hover,html[data-theme="light"] #calendarView .calendar-header-actions .calendar-special-btn:hover{border-color:#60a5fa !important;background:linear-gradient(135deg,#dbeafe,#cfe3ff) !important;box-shadow:inset 3px 0 0 #2563eb,0 7px 15px rgba(37,99,235,.18) !important;}
+html[data-theme="light"] #calendarView .calendar-special-btn .special-btn-icon{background:#cfe3ff;color:#1d4ed8;}
+html[data-theme="light"] #calendarView .calendar-special-btn .special-btn-title{color:#174ea6;}
+html[data-theme="light"] #calendarView .calendar-special-btn .special-btn-sub{color:#52779f;}
+html[data-theme="light"] #calendarView .calendar-header-actions .calendar-schedule-add-btn{border-color:#86dfc2 !important;background:linear-gradient(135deg,#ecfdf5,#dcfce7) !important;color:#087443 !important;box-shadow:inset 3px 0 0 #22c55e,0 4px 10px rgba(22,163,74,.12) !important;}
+html[data-theme="light"] #calendarView .calendar-header-actions .calendar-schedule-add-btn:hover{border-color:#4fc98d !important;background:linear-gradient(135deg,#dcfce7,#ccf5dc) !important;box-shadow:inset 3px 0 0 #16a34a,0 7px 15px rgba(22,163,74,.18) !important;}
+html[data-theme="light"] #calendarView .calendar-header-actions .calendar-schedule-add-btn .special-btn-icon{background:#c8f3d8;color:#087443;}
+html[data-theme="light"] #calendarView .calendar-header-actions .calendar-schedule-add-btn .special-btn-title{color:#087443;}
+html[data-theme="light"] #calendarView .calendar-header-actions .calendar-schedule-add-btn .special-btn-sub{color:#4a8566;}
+/* 수출·세트 일정 상단: 전체 현황과 현재 선택한 상태를 한눈에 읽는다. */
+#exportView .export-summary-grid,#setView .export-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:.72rem;padding:1rem 0 .78rem;}
+#exportView .export-summary-card,#setView .export-summary-card{position:relative;min-height:94px;padding:1rem 1.05rem .9rem;overflow:hidden;border:1px solid #d7e4f1;border-radius:14px;background:linear-gradient(135deg,#fff 0%,#f8fbff 100%);box-shadow:0 5px 14px rgba(30,64,105,.06);}
+#exportView .export-summary-card::before,#setView .export-summary-card::before{content:"";position:absolute;top:0;bottom:0;left:0;width:4px;background:#5b8fd6;}
+#exportView .export-summary-card.summary-active::before,#setView .export-summary-card.summary-active::before{background:#2b7eea;}
+#exportView .export-summary-card.summary-completed::before,#setView .export-summary-card.summary-completed::before{background:#1ca56a;}
+#exportView .export-summary-label,#setView .export-summary-label{display:flex;align-items:center;justify-content:space-between;gap:.45rem;margin:0;color:#49627f;font-size:.84rem;font-weight:850;}
+#exportView .export-summary-label small,#setView .export-summary-label small{padding:.16rem .42rem;border-radius:999px;background:#edf3fa;color:#66809d;font-size:.66rem;font-weight:850;line-height:1;}
+#exportView .summary-active .export-summary-label small,#setView .summary-active .export-summary-label small{background:#e3f0ff;color:#1765c1;}
+#exportView .summary-completed .export-summary-label small,#setView .summary-completed .export-summary-label small{background:#e1f7ec;color:#118255;}
+#exportView .export-summary-value,#setView .export-summary-value{margin-top:.2rem;color:#102a4c;font-size:2rem;font-weight:950;line-height:1.05;letter-spacing:-.045em;}
+#exportView .export-tabs,#setView .export-tabs{display:inline-flex;align-items:center;gap:.32rem;margin:0 0 1rem;padding:.34rem;border:1px solid #d4e1ee;border-radius:14px;background:#eef4fa;box-shadow:inset 0 1px 0 rgba(255,255,255,.88),0 5px 12px rgba(30,64,105,.055);}
+#exportView .export-tab-btn,#setView .export-tab-btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;min-width:128px;min-height:43px;margin:0;padding:.48rem .85rem;border:1px solid transparent;border-radius:10px;background:transparent;color:#526b87;font-size:.88rem;font-weight:900;box-shadow:none;}
+#exportView .export-tab-btn strong,#setView .export-tab-btn strong{display:inline-flex;align-items:center;justify-content:center;min-width:1.45rem;height:1.45rem;padding:0 .3rem;border-radius:999px;background:#dfeaf5;color:#4c6681;font-size:.72rem;font-weight:950;line-height:1;}
+#exportView .export-tab-btn:hover,#setView .export-tab-btn:hover{border-color:#bdd4eb;background:#fff;color:#1c5caf;transform:translateY(-1px);box-shadow:0 4px 10px rgba(30,64,105,.09);}
+#exportView .export-tab-btn.active,#setView .export-tab-btn.active{border-color:#2563d9;background:linear-gradient(135deg,#2c73e4,#1d56c4);color:#fff;transform:none;box-shadow:0 6px 15px rgba(37,99,235,.25),inset 0 1px 0 rgba(255,255,255,.2);}
+#exportView .export-tab-btn.active strong,#setView .export-tab-btn.active strong{background:rgba(255,255,255,.2);color:#fff;}
+#exportView .export-tab-btn:focus-visible,#setView .export-tab-btn:focus-visible{outline:3px solid rgba(59,130,246,.32);outline-offset:2px;}
+html[data-theme="dark"] #exportView .export-summary-card,html[data-theme="dark"] #setView .export-summary-card{border-color:#2d4762;background:linear-gradient(135deg,#15243a,#101c2d);box-shadow:0 7px 16px rgba(0,0,0,.2);}
+html[data-theme="dark"] #exportView .export-summary-label,html[data-theme="dark"] #setView .export-summary-label{color:#aec2da;}
+html[data-theme="dark"] #exportView .export-summary-label small,html[data-theme="dark"] #setView .export-summary-label small{background:#263c55;color:#a9c2de;}
+html[data-theme="dark"] #exportView .summary-active .export-summary-label small,html[data-theme="dark"] #setView .summary-active .export-summary-label small{background:#173d69;color:#9ed0ff;}
+html[data-theme="dark"] #exportView .summary-completed .export-summary-label small,html[data-theme="dark"] #setView .summary-completed .export-summary-label small{background:#173f34;color:#9ee7bf;}
+html[data-theme="dark"] #exportView .export-summary-value,html[data-theme="dark"] #setView .export-summary-value{color:#f2f7ff;}
+html[data-theme="dark"] #exportView .export-tabs,html[data-theme="dark"] #setView .export-tabs{border-color:#36526f;background:#0d1929;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 6px 14px rgba(0,0,0,.2);}
+html[data-theme="dark"] #exportView .export-tab-btn,html[data-theme="dark"] #setView .export-tab-btn{color:#aec1d7;}
+html[data-theme="dark"] #exportView .export-tab-btn strong,html[data-theme="dark"] #setView .export-tab-btn strong{background:#263d57;color:#b9d0e9;}
+html[data-theme="dark"] #exportView .export-tab-btn:hover,html[data-theme="dark"] #setView .export-tab-btn:hover{border-color:#547da9;background:#172b44;color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.25);}
+html[data-theme="dark"] #exportView .export-tab-btn.active,html[data-theme="dark"] #setView .export-tab-btn.active{border-color:#80b8ff;background:linear-gradient(135deg,#2a75d2,#1d52b5);color:#fff;box-shadow:0 6px 15px rgba(11,74,165,.35),inset 0 1px 0 rgba(255,255,255,.2);}
+@media(max-width:640px){ #exportView .export-summary-grid,#setView .export-summary-grid{grid-template-columns:1fr;gap:.5rem;}#exportView .export-summary-card,#setView .export-summary-card{min-height:76px;padding:.75rem .9rem;}#exportView .export-tabs,#setView .export-tabs{display:flex;width:100%;}#exportView .export-tab-btn,#setView .export-tab-btn{flex:1;min-width:0;}}
+/* 생산 스케줄 주요 탭: 기능별 색을 사용해 빠르게 구분한다. */
+.schedule-toolbar .view-toggle {
+    gap: .58rem;
+    padding: .58rem;
+    border-radius: 18px;
+}
+.schedule-toolbar .view-toggle button {
+    min-height: 54px;
+    padding: .68rem 1.06rem;
+    border-width: 1px;
+    font-size: .92rem;
+    font-weight: 950;
+    letter-spacing: -.025em;
+}
+.schedule-toolbar .view-toggle button[data-view="calendar"] { border-color: #9dbff0; background: #eef5ff; color: #1450a8; }
+.schedule-toolbar .view-toggle button[data-view="export"] { border-color: #f2c780; background: #fff6e6; color: #a65508; }
+.schedule-toolbar .view-toggle button[data-view="set"] { border-color: #c9afea; background: #f7f0ff; color: #7242ab; }
+.schedule-toolbar .view-toggle button[data-view="requirements"] { border-color: #82d9c3; background: #eafbf5; color: #087760; }
+.schedule-toolbar .view-toggle button[data-view="capacity"] { border-color: #a9b7ef; background: #f0f3ff; color: #4056ae; }
+.schedule-toolbar .view-toggle button[data-view="stats"] { border-color: #8db9ea; background: #edf7ff; color: #106297; }
+.schedule-toolbar .view-toggle button[data-view="calendar"]:hover { background: #deecff; border-color: #5b93de; }
+.schedule-toolbar .view-toggle button[data-view="export"]:hover { background: #ffeed1; border-color: #dc9b43; }
+.schedule-toolbar .view-toggle button[data-view="set"]:hover { background: #efddff; border-color: #a77ad5; }
+.schedule-toolbar .view-toggle button[data-view="requirements"]:hover { background: #d9f7ec; border-color: #3eaf91; }
+.schedule-toolbar .view-toggle button[data-view="capacity"]:hover { background: #e2e8ff; border-color: #7489d6; }
+.schedule-toolbar .view-toggle button[data-view="stats"]:hover { background: #dcefff; border-color: #5897cf; }
+.schedule-toolbar .view-toggle button.active {
+    border-width: 2px;
+    color: #fff;
+}
+.schedule-toolbar .view-toggle button[data-view="calendar"].active { border-color: #8fc2ff; background: linear-gradient(135deg, #2875e5, #174bb5); box-shadow: 0 9px 19px rgba(23, 75, 181, .32), inset 0 1px 0 rgba(255,255,255,.24); }
+.schedule-toolbar .view-toggle button[data-view="export"].active { border-color: #ffd18b; background: linear-gradient(135deg, #e78413, #b8510a); box-shadow: 0 9px 19px rgba(194, 91, 12, .28), inset 0 1px 0 rgba(255,255,255,.22); }
+.schedule-toolbar .view-toggle button[data-view="set"].active { border-color: #dfc3ff; background: linear-gradient(135deg, #9357d5, #6633a1); box-shadow: 0 9px 19px rgba(105, 54, 164, .3), inset 0 1px 0 rgba(255,255,255,.22); }
+.schedule-toolbar .view-toggle button[data-view="requirements"].active { border-color: #8ce7d0; background: linear-gradient(135deg, #109878, #08725e); box-shadow: 0 9px 19px rgba(7, 118, 96, .28), inset 0 1px 0 rgba(255,255,255,.22); }
+.schedule-toolbar .view-toggle button[data-view="capacity"].active { border-color: #b9c8ff; background: linear-gradient(135deg, #6478d8, #4054ab); box-shadow: 0 9px 19px rgba(62, 79, 169, .28), inset 0 1px 0 rgba(255,255,255,.22); }
+.schedule-toolbar .view-toggle button[data-view="stats"].active { border-color: #9dd5ff; background: linear-gradient(135deg, #168bc6, #12609c); box-shadow: 0 9px 19px rgba(15, 101, 163, .28), inset 0 1px 0 rgba(255,255,255,.22); }
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="calendar"] { border-color: #305d96; background: #162b47; color: #b8d9ff; }
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="export"] { border-color: #78562f; background: #392a1a; color: #ffd69a; }
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="set"] { border-color: #604483; background: #2b203d; color: #dfc7ff; }
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="requirements"] { border-color: #286957; background: #14382f; color: #a7ebd4; }
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="capacity"] { border-color: #485895; background: #202951; color: #c2ccff; }
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="stats"] { border-color: #2e6686; background: #153446; color: #afe1ff; }
+html[data-theme="dark"] .schedule-toolbar .view-toggle button.active { color: #fff; }
+@media (max-width: 768px) {
+    .schedule-toolbar .view-toggle { gap: .4rem; padding: .42rem; }
+    .schedule-toolbar .view-toggle button { min-height: 48px; padding: .58rem .9rem; font-size: .86rem; }
+}
+/* 한 톤 UI: 모든 메뉴를 밝은 블루 표면으로 통일하고 선택 상태만 강조한다. */
+.schedule-toolbar .view-toggle button[data-view] {
+    border-color: #b7d3f4;
+    background: linear-gradient(180deg, #ffffff 0%, #edf6ff 100%);
+    color: #21598f;
+}
+.schedule-toolbar .view-toggle button[data-view]:hover {
+    border-color: #72aae3;
+    background: linear-gradient(180deg, #f7fbff 0%, #dceeff 100%);
+    color: #154f91;
+}
+.schedule-toolbar .view-toggle button[data-view].active {
+    border-color: #78b6f5;
+    background: linear-gradient(135deg, #3d8cf0 0%, #2165cc 100%);
+    color: #ffffff;
+    box-shadow: 0 9px 19px rgba(33, 101, 204, .3), inset 0 1px 0 rgba(255,255,255,.25);
+}
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view] {
+    border-color: #365a81;
+    background: linear-gradient(180deg, #162b43 0%, #13243a 100%);
+    color: #b9d9fa;
+}
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view]:hover {
+    border-color: #6198cf;
+    background: #1b3858;
+    color: #ffffff;
+}
+html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active {
+    border-color: #94c8ff;
+    background: linear-gradient(135deg, #3583df 0%, #205ab4 100%);
+    color: #ffffff;
+    box-shadow: 0 9px 19px rgba(13, 74, 161, .38), inset 0 1px 0 rgba(255,255,255,.22);
+}
 </style>
 {% endblock %}
 
@@ -6877,21 +7038,21 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
 {%- set _requested_view = request.args.get('view', 'calendar')|lower -%}
 {%- set initial_view = 'stats' if _requested_view in ['stats', 'list'] else _requested_view if _requested_view in ['requirements', 'export', 'set', 'capacity'] else 'calendar' -%}
 <div style="margin-bottom: 1.5rem;">
-    <h1 class="schedule-page-title">📅 생산 스케줄</h1>
+    <h1 class="schedule-page-title">생산 스케줄</h1>
     <p class="schedule-page-sub">월별 생산 계획과 완료 생산 통계를 캘린더, 통계, 수출/자재 화면에서 확인할 수 있습니다</p>
 </div>
 
 <!-- 툴바 -->
 <div class="schedule-toolbar">
-    <div class="view-toggle">
-        <button{% if initial_view == 'calendar' %} class="active"{% endif %} data-view="calendar" onclick="switchView('calendar')">📅 캘린더</button>
-        <button data-view="export" onclick="switchView('export')">🚢 수출 일정표</button>
+    <div class="view-toggle" role="tablist" aria-label="생산 스케줄 메뉴">
+        <button{% if initial_view == 'calendar' %} class="active"{% endif %} data-view="calendar" role="tab" aria-selected="{{ 'true' if initial_view == 'calendar' else 'false' }}" onclick="switchView('calendar')">캘린더</button>
+        <button data-view="export" role="tab" aria-selected="false" onclick="switchView('export')">수출 일정표</button>
         {% if set_finished_products or set_schedules %}
-        <button data-view="set" onclick="switchView('set')">🎁 세트 일정표</button>
+        <button data-view="set" role="tab" aria-selected="false" onclick="switchView('set')">세트 일정표</button>
         {% endif %}
-        <button data-view="requirements" onclick="switchView('requirements')">🧮 필요 원,부자재 체크</button>
-        <button data-view="capacity" onclick="switchView('capacity')">📦 생산 가능량 계산기</button>
-        <button{% if initial_view == 'stats' %} class="active"{% endif %} data-view="stats" onclick="switchView('stats')">📊 생산통계</button>
+        <button data-view="requirements" role="tab" aria-selected="false" onclick="switchView('requirements')">필요 원·부자재 체크</button>
+        <button data-view="capacity" role="tab" aria-selected="false" onclick="switchView('capacity')">생산 가능량 계산기</button>
+        <button{% if initial_view == 'stats' %} class="active"{% endif %} data-view="stats" role="tab" aria-selected="{{ 'true' if initial_view == 'stats' else 'false' }}" onclick="switchView('stats')">생산통계</button>
     </div>
     <div class="schedule-toolbar-actions">
         <a href="/production" class="schedule-production-link">생산 관리</a>
@@ -7405,7 +7566,8 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
     <div class="export-empty">{{ empty_message }}</div>
     {% endif %}
 {%- endmacro %}
-<div id="exportView" class="card" style="display: none;">
+
+<div id="exportView" class="card" style="display: none;">
     <div class="export-topbar">
         <div>
             <h2 style="margin:0;">수출 일정표</h2>
@@ -7417,23 +7579,23 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
     </div>
 
     <div class="export-summary-grid">
-        <div class="export-summary-card">
-            <div class="export-summary-label">등록 일정</div>
+        <div class="export-summary-card summary-total">
+            <div class="export-summary-label"><span>등록 일정</span><small>전체</small></div>
             <div class="export-summary-value">{{ export_schedules|length }}</div>
         </div>
-        <div class="export-summary-card">
-            <div class="export-summary-label">생산중 일정</div>
+        <div class="export-summary-card summary-active">
+            <div class="export-summary-label"><span>생산중 일정</span><small>진행</small></div>
             <div class="export-summary-value">{{ export_active_schedules|length }}</div>
         </div>
-        <div class="export-summary-card">
-            <div class="export-summary-label">완료 일정</div>
+        <div class="export-summary-card summary-completed">
+            <div class="export-summary-label"><span>완료 일정</span><small>완료</small></div>
             <div class="export-summary-value">{{ export_completed_schedules|length }}</div>
         </div>
     </div>
 
-    <div class="export-tabs">
-        <button type="button" class="export-tab-btn active" data-export-tab="active" onclick="switchExportScheduleTab('active')">생산중</button>
-        <button type="button" class="export-tab-btn" data-export-tab="completed" onclick="switchExportScheduleTab('completed')">완료</button>
+    <div class="export-tabs" role="tablist" aria-label="수출 일정 상태">
+        <button type="button" class="export-tab-btn active" data-export-tab="active" role="tab" aria-selected="true" onclick="switchExportScheduleTab('active')"><span>생산중</span><strong>{{ export_active_schedules|length }}</strong></button>
+        <button type="button" class="export-tab-btn" data-export-tab="completed" role="tab" aria-selected="false" onclick="switchExportScheduleTab('completed')"><span>완료</span><strong>{{ export_completed_schedules|length }}</strong></button>
     </div>
 
     <div id="exportTabActivePane">
@@ -7851,23 +8013,23 @@ html[data-theme="dark"] #exportView .export-actions .set-edit-btn{border-color:r
     </div>
 
     <div class="export-summary-grid">
-        <div class="export-summary-card">
-            <div class="export-summary-label">등록 일정</div>
+        <div class="export-summary-card summary-total">
+            <div class="export-summary-label"><span>등록 일정</span><small>전체</small></div>
             <div class="export-summary-value">{{ set_schedules|length }}</div>
         </div>
-        <div class="export-summary-card">
-            <div class="export-summary-label">생산중 일정</div>
+        <div class="export-summary-card summary-active">
+            <div class="export-summary-label"><span>생산중 일정</span><small>진행</small></div>
             <div class="export-summary-value">{{ set_active_schedules|length }}</div>
         </div>
-        <div class="export-summary-card">
-            <div class="export-summary-label">완료 일정</div>
+        <div class="export-summary-card summary-completed">
+            <div class="export-summary-label"><span>완료 일정</span><small>완료</small></div>
             <div class="export-summary-value">{{ set_completed_schedules|length }}</div>
         </div>
     </div>
 
-    <div class="export-tabs">
-        <button type="button" class="export-tab-btn active" data-set-tab="active" onclick="switchSetScheduleTab('active')">생산중</button>
-        <button type="button" class="export-tab-btn" data-set-tab="completed" onclick="switchSetScheduleTab('completed')">완료</button>
+    <div class="export-tabs" role="tablist" aria-label="세트 일정 상태">
+        <button type="button" class="export-tab-btn active" data-set-tab="active" role="tab" aria-selected="true" onclick="switchSetScheduleTab('active')"><span>생산중</span><strong>{{ set_active_schedules|length }}</strong></button>
+        <button type="button" class="export-tab-btn" data-set-tab="completed" role="tab" aria-selected="false" onclick="switchSetScheduleTab('completed')"><span>완료</span><strong>{{ set_completed_schedules|length }}</strong></button>
     </div>
 
     <div id="setTabActivePane">
@@ -8724,7 +8886,8 @@ const SPECIAL_NOTE_COLOR_META = {
 function getActiveView() {
     const params = new URLSearchParams(window.location.search);
     const view = (params.get('view') || 'calendar').toLowerCase();
-    if (view === 'list' || view === 'stats') return 'stats';
+    if (view === 'list' || view === 'stats') return 'stats';
+
     if (view === 'requirements') return 'requirements';
     if (view === 'export') return 'export';
     if (view === 'set') return 'set';
@@ -9359,6 +9522,7 @@ function switchExportScheduleTab(tab) {
     if (completedPane) completedPane.style.display = currentExportScheduleTab === 'completed' ? '' : 'none';
     document.querySelectorAll('.export-tab-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.exportTab === currentExportScheduleTab);
+        btn.setAttribute('aria-selected', String(btn.dataset.exportTab === currentExportScheduleTab));
     });
     if (currentExportScheduleTab === 'completed') {
         renderExportCompletedCalendar();
@@ -9657,6 +9821,7 @@ function switchSetScheduleTab(tab) {
     if (completedPane) completedPane.style.display = currentSetScheduleTab === 'completed' ? '' : 'none';
     document.querySelectorAll('[data-set-tab]').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.setTab === currentSetScheduleTab);
+        btn.setAttribute('aria-selected', String(btn.dataset.setTab === currentSetScheduleTab));
     });
     if (currentSetScheduleTab === 'completed') {
         renderSetCompletedCalendar();
@@ -10548,9 +10713,16 @@ function switchView(view) {
     const setView = document.getElementById('setView');
     const capacityView = document.getElementById('capacityView');
     const buttons = document.querySelectorAll('.view-toggle button[data-view]');
-    const normalizedView = view === 'list' ? 'stats' : view;
+    const requestedView = view === 'list' ? 'stats' : view;
+    const availableViews = new Set(['calendar', 'stats', 'requirements', 'export', 'set', 'capacity']);
+    // URL·저장 상태값이 잘못되어도 전체 화면이 숨겨지지 않도록 캘린더를 기본값으로 사용한다.
+    const normalizedView = availableViews.has(requestedView) ? requestedView : 'calendar';
 
-    buttons.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === normalizedView));
+    buttons.forEach((btn) => {
+        const isActive = btn.dataset.view === normalizedView;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
 
     calendarView.style.display = 'none';
     if (statsView) statsView.style.display = 'none';
@@ -10562,7 +10734,8 @@ function switchView(view) {
     if (normalizedView === 'calendar') {
         calendarView.style.display = 'block';
     } else if (normalizedView === 'stats') {
-        if (statsView) statsView.style.display = 'block';
+        if (statsView) statsView.style.display = 'block';
+
     } else if (normalizedView === 'requirements') {
         if (requirementsView) requirementsView.style.display = 'block';
         loadRequirementsData();

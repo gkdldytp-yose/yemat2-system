@@ -25,6 +25,9 @@
 .journals-filter-actions{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;}
 .journals-inline-notice{margin-bottom:1rem;padding:.85rem 1rem;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;color:#64748b;}
 .journals-hero > .tab-btn{display:none;}
+.journals-primary-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.38rem;margin:0 0 1rem;padding:.42rem;border:1px solid #dbe5f4;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%,#edf3ff 100%);box-shadow:0 10px 24px rgba(37,99,235,.08);}
+.journals-primary-tab{position:relative;display:flex;align-items:center;justify-content:center;gap:.42rem;min-height:44px;padding:.6rem .9rem;border:1px solid transparent;border-radius:11px;background:transparent;color:#52627a;font-size:.88rem;font-weight:850;letter-spacing:-.015em;cursor:pointer;transition:transform .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease,border-color .16s ease;white-space:nowrap;}
+.journals-primary-tab::before{content:'';width:7px;height:7px;border-radius:50%;background:#9aa9bd;box-shadow:0 0 0 3px rgba(148,163,184,.14);transition:inherit;}.journals-primary-tab:hover{transform:translateY(-1px);background:rgba(255,255,255,.76);color:#1e3a5f;}.journals-primary-tab:focus-visible{z-index:1;outline:3px solid rgba(59,130,246,.32);outline-offset:2px;}.journals-primary-tab.active{transform:translateY(-1px);border-color:#2563eb;background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);color:#fff;box-shadow:0 8px 18px rgba(29,78,216,.27),inset 0 1px 0 rgba(255,255,255,.2);}.journals-primary-tab.active::before{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.2);}
 .journals-calendar{margin-bottom:1rem;padding:1rem 1.05rem;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%, #f8fafc 100%);}
 .journals-calendar-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;}
 .journals-calendar-title{font-size:.95rem;font-weight:800;color:#0f172a;}
@@ -56,6 +59,7 @@
 .journals-link:hover{text-decoration:underline;}
 html[data-theme="dark"] .journals-hero p,
 html[data-theme="dark"] .journals-help{color:var(--text-muted);}
+html[data-theme="dark"] .journals-primary-tabs{border-color:#2b3d59;background:linear-gradient(135deg,#101a2a 0%,#17243a 100%);box-shadow:0 14px 30px rgba(2,6,23,.32);}html[data-theme="dark"] .journals-primary-tab{color:#9fb2ca;}html[data-theme="dark"] .journals-primary-tab::before{background:#64748b;box-shadow:0 0 0 3px rgba(100,116,139,.18);}html[data-theme="dark"] .journals-primary-tab:hover{background:rgba(96,165,250,.1);color:#e5eefc;}html[data-theme="dark"] .journals-primary-tab.active{border-color:#60a5fa;background:linear-gradient(135deg,#2563b8 0%,#1d4ed8 100%);color:#fff;box-shadow:0 9px 20px rgba(2,6,23,.38),inset 0 1px 0 rgba(255,255,255,.18);}html[data-theme="dark"] .journals-primary-tab.active::before{background:#dbeafe;box-shadow:0 0 0 3px rgba(219,234,254,.18);}
 html[data-theme="dark"] .journals-panel{background:var(--panel-bg);border-color:var(--panel-border);box-shadow:0 12px 32px rgba(2,6,23,0.45);}
 html[data-theme="dark"] .journals-actions input[type="date"],
 html[data-theme="dark"] .journals-filter-select,
@@ -91,6 +95,8 @@ html[data-theme="dark"] .journals-link{color:#93c5fd;}
   .journals-filter-select{min-width:0;flex:1 1 140px;}
   .journals-filter-input{min-width:0;flex:1 1 100%;}
   .journals-material-scope-btn{flex:1 1 160px;justify-content:center;}
+  .journals-primary-tabs{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .journals-primary-tab{flex:1 0 132px;}
   .journals-calendar{padding:.9rem;}
   .journals-calendar-nav{width:100%;justify-content:flex-start;}
   .journals-calendar-picker-panel{left:0;right:0;transform:none;min-width:0;}
@@ -107,11 +113,11 @@ html[data-theme="dark"] .journals-link{color:#93c5fd;}
     <button type="button" class="tab-btn {% if selected_tab == 'packaging' %}active{% endif %}" id="journalTabPackagingHero" onclick="switchJournalTab('packaging')">포장재 점검표</button>
 </div>
 
-<div class="tabs" style="margin-bottom:1rem;">
-    <button type="button" class="tab-btn {% if selected_tab == 'production' %}active{% endif %}" id="journalTabProduction" onclick="switchJournalTab('production')">생산일지</button>
-    <button type="button" class="tab-btn {% if selected_tab == 'raw' %}active{% endif %}" id="journalTabRaw" onclick="switchJournalTab('raw')">원재료 점검표</button>
-    <button type="button" class="tab-btn {% if selected_tab == 'material' %}active{% endif %}" id="journalTabMaterial" onclick="switchJournalTab('material')">부재료 점검표</button>
-    <button type="button" class="tab-btn {% if selected_tab == 'packaging' %}active{% endif %}" id="journalTabPackaging" onclick="switchJournalTab('packaging')">포장재 점검표</button>
+<div class="journals-primary-tabs" role="tablist" aria-label="일지 종류 선택">
+    <button type="button" class="journals-primary-tab {% if selected_tab == 'production' %}active{% endif %}" id="journalTabProduction" role="tab" aria-selected="{{ 'true' if selected_tab == 'production' else 'false' }}" onclick="switchJournalTab('production')">생산일지</button>
+    <button type="button" class="journals-primary-tab {% if selected_tab == 'raw' %}active{% endif %}" id="journalTabRaw" role="tab" aria-selected="{{ 'true' if selected_tab == 'raw' else 'false' }}" onclick="switchJournalTab('raw')">원재료 점검표</button>
+    <button type="button" class="journals-primary-tab {% if selected_tab == 'material' %}active{% endif %}" id="journalTabMaterial" role="tab" aria-selected="{{ 'true' if selected_tab == 'material' else 'false' }}" onclick="switchJournalTab('material')">부재료 점검표</button>
+    <button type="button" class="journals-primary-tab {% if selected_tab == 'packaging' %}active{% endif %}" id="journalTabPackaging" role="tab" aria-selected="{{ 'true' if selected_tab == 'packaging' else 'false' }}" onclick="switchJournalTab('packaging')">포장재 점검표</button>
 </div>
 
 <div class="journals-panel">
@@ -647,7 +653,7 @@ function switchJournalTab(tab){
     tabs.forEach((name) => {
         const btn = document.getElementById(`journalTab${name.charAt(0).toUpperCase() + name.slice(1)}`);
         const section = document.getElementById(`journalSection${name.charAt(0).toUpperCase() + name.slice(1)}`);
-        if(btn) btn.classList.toggle('active', name === tab);
+        if(btn) { btn.classList.toggle('active', name === tab); btn.setAttribute('aria-selected', name === tab ? 'true' : 'false'); }
         if(section) section.classList.toggle('active', name === tab);
     });
     const url = new URL(window.location.href);
