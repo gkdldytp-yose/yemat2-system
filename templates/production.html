@@ -2,6 +2,8 @@
 {% block title %}생산 관리{% endblock %}
 {% block extra_css %}
 <style>
+.production-page-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;padding:1rem 1.1rem;border:1px solid #dbe7f5;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#f4f8ff 100%);box-shadow:0 8px 20px rgba(30,64,105,.06);}
+.production-page-heading{min-width:0;}.production-page-kicker{display:block;margin-bottom:.18rem;color:#2563eb;font-size:.68rem;font-weight:950;letter-spacing:.1em;}.production-page-heading h1{margin:0;color:#102a4c;font-size:1.45rem;font-weight:950;letter-spacing:-.035em;}.production-page-heading p{margin:.18rem 0 0;color:#627993;font-size:.78rem;font-weight:700;}.production-page-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;}.production-page-actions .btn{min-height:34px;font-weight:850;}
 .month-nav{
     display:flex;
     align-items:center;
@@ -226,20 +228,22 @@
 .production-groups{
     display:flex;
     flex-direction:column;
-    gap:1rem;
-    margin-top:1rem;
+    gap:0.95rem;
+    margin-top:0.8rem;
 }
+.production-content-card{margin-top:0;border:1px solid #dbe6f2;border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);box-shadow:0 12px 28px rgba(30,64,105,.065);}
+.production-content-heading{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin:-.05rem -.05rem .85rem;padding:0 0 .82rem;border-bottom:1px solid #dbe6f2;}.production-content-kicker{display:block;margin-bottom:.18rem;color:#2563eb;font-size:.66rem;font-weight:950;letter-spacing:.1em;}.production-content-heading h2{margin:0;color:#102a4c;font-size:1.16rem;font-weight:950;letter-spacing:-.025em;}.production-content-status{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .52rem;border:1px solid #c9dbf1;border-radius:999px;background:#f1f6fd;color:#476482;font-size:.73rem;font-weight:850;}.production-content-status::before{content:'';width:7px;height:7px;border-radius:50%;background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.13);}.production-content-status.is-done::before{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.13);}
 .production-day-card{
-    border:1px solid #e2e8f0;
-    border-radius:18px;
+    border:1px solid #bfd4eb;
+    border-radius:16px;
     overflow:hidden;
-    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
-    box-shadow:0 12px 28px rgba(15,23,42,0.06);
+    background:#ffffff;
+    box-shadow:0 9px 20px rgba(30,64,105,0.09);
     transition:border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .production-day-card:hover{
-    border-color:#bfdbfe;
-    box-shadow:0 16px 34px rgba(37,99,235,0.10);
+    border-color:#82b6ec;
+    box-shadow:0 13px 26px rgba(37,99,235,0.14);
 }
 .production-day-card.prod-date-focus{
     border-color:#60a5fa;
@@ -251,15 +255,20 @@
 }
 .production-day-head{
     display:flex;
-    align-items:flex-start;
+    align-items:center;
     justify-content:space-between;
-    gap:1rem;
-    padding:1rem 1.15rem 0.95rem;
-    background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);
-    color:#eff6ff;
+    gap:0.85rem;
+    min-height:52px;
+    padding:0.62rem 0.9rem;
+    border-left:6px solid #2563eb;
+    border-bottom:1px solid #cbdff4;
+    background:linear-gradient(135deg,#edf5ff 0%,#e4effd 100%);
+    color:#102a4c;
 }
 .production-day-card.is-completed .production-day-head{
-    background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 52%,#a7f3d0 100%);
+    border-left-color:#16a34a;
+    border-bottom-color:#b7e7ce;
+    background:linear-gradient(135deg,#ecfbf3 0%,#ddf5e8 100%);
     color:#14532d;
 }
 .production-day-card.is-completed .production-day-subtitle{
@@ -275,41 +284,47 @@
 }
 .production-day-title{
     display:flex;
-    flex-direction:column;
-    gap:0.18rem;
+    align-items:baseline;
+    gap:0.55rem;
+    min-width:0;
 }
 .production-day-date{
-    font-size:1.2rem;
+    flex:0 0 auto;
+    font-size:1.05rem;
     font-weight:900;
     letter-spacing:-0.03em;
 }
 .production-day-subtitle{
-    font-size:0.82rem;
-    color:#cbd5f5;
-    font-weight:700;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:0.78rem;
+    color:#526b86;
+    font-weight:800;
 }
 .production-day-summary{
     display:flex;
     align-items:center;
-    gap:0.55rem;
+    gap:0.35rem;
     flex-wrap:wrap;
     justify-content:flex-end;
 }
 .production-day-chip{
     display:inline-flex;
     align-items:center;
-    gap:0.38rem;
-    padding:0.42rem 0.72rem;
+    gap:0.28rem;
+    padding:0.26rem 0.52rem;
     border-radius:999px;
-    background:rgba(255,255,255,0.12);
-    border:1px solid rgba(255,255,255,0.14);
-    font-size:0.8rem;
+    background:#fff;
+    border:1px solid #cdddf0;
+    color:#55708d;
+    font-size:0.73rem;
     font-weight:800;
     white-space:nowrap;
 }
 .production-day-chip strong{
-    font-size:0.82rem;
-    color:#fff;
+    font-size:0.76rem;
+    color:#123f72;
 }
 .production-day-list{
     display:flex;
@@ -317,17 +332,20 @@
 }
 .production-day-item{
     display:grid;
-    grid-template-columns:minmax(0,2.2fr) minmax(280px,1.35fr) auto auto;
-    gap:1rem;
+    grid-template-columns:minmax(0,2.2fr) minmax(235px,1.2fr) auto auto;
+    gap:0.75rem;
     align-items:center;
-    padding:0.95rem 1.15rem;
+    padding:0.72rem 0.9rem;
     border-top:1px solid #e5edf6;
+    cursor:pointer;
+    transition:background .16s ease,box-shadow .16s ease;
 }
 .production-day-item:first-child{
     border-top:none;
 }
 .production-day-item:hover{
     background:#f8fbff;
+    box-shadow:inset 3px 0 0 #60a5fa;
 }
 .production-item-main{
     min-width:0;
@@ -335,12 +353,12 @@
 .production-item-top{
     display:flex;
     align-items:center;
-    gap:0.55rem;
+    gap:0.42rem;
     flex-wrap:wrap;
-    margin-bottom:0.42rem;
+    margin-bottom:0.3rem;
 }
 .production-item-name{
-    font-size:1rem;
+    font-size:0.96rem;
     font-weight:900;
     color:#0f172a;
     letter-spacing:-0.02em;
@@ -359,10 +377,10 @@
 .production-item-meta{
     display:flex;
     align-items:center;
-    gap:0.45rem;
+    gap:0.38rem;
     flex-wrap:wrap;
     color:#64748b;
-    font-size:0.82rem;
+    font-size:0.78rem;
     font-weight:700;
 }
 .production-item-lines{
@@ -371,27 +389,29 @@
     gap:0.4rem;
     flex-wrap:wrap;
 }
+.production-line-badge{display:inline-flex;align-items:center;gap:.28rem;min-height:24px;padding:.18rem .46rem;border:1px solid #b9d7fb;border-radius:999px;background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#1d4ed8;font-size:.72rem;font-weight:900;line-height:1;box-shadow:inset 0 1px 0 rgba(255,255,255,.75);}.production-line-badge::before{content:'L';display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#2563eb;color:#fff;font-size:.58rem;font-weight:950;}
+.production-item-detail-meta{display:flex;align-items:center;gap:.32rem;flex-wrap:wrap;margin-top:.34rem;}.production-detail-chip{display:inline-flex;align-items:center;gap:.26rem;max-width:100%;padding:.18rem .42rem;border:1px solid #d9e5f1;border-radius:7px;background:#f8fbff;color:#536f8e;font-size:.71rem;font-weight:750;line-height:1.25;}.production-detail-chip b{color:#28527e;font-size:.68rem;font-weight:900;}.production-detail-chip.raw{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.production-detail-chip.yield{border-color:#a7e6c3;background:#effcf5;color:#087443;}.production-detail-chip.yield b{color:#087443;}
 .production-item-stats{
     display:grid;
     grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:0.6rem;
+    gap:0.42rem;
 }
 .production-stat{
-    padding:0.55rem 0.7rem;
-    border-radius:14px;
+    padding:0.42rem 0.55rem;
+    border-radius:10px;
     background:#f8fafc;
     border:1px solid #e2e8f0;
 }
 .production-stat-label{
     display:block;
-    font-size:0.72rem;
+    font-size:0.68rem;
     font-weight:800;
     color:#64748b;
-    margin-bottom:0.22rem;
+    margin-bottom:0.12rem;
 }
 .production-stat-value{
     display:block;
-    font-size:1rem;
+    font-size:0.94rem;
     font-weight:900;
     color:#0f172a;
     letter-spacing:-0.02em;
@@ -407,11 +427,11 @@
     justify-content:flex-end;
     white-space:nowrap;
 }
-.status-tabs{display:flex;gap:0.6rem;margin-top:1.35rem;margin-bottom:1rem;}
-.status-tab{flex:1;padding:0.8rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:white;cursor:pointer;font-weight:700;font-size:0.9rem;text-align:center;transition:all 0.2s;text-decoration:none;color:#374151;box-shadow:0 6px 14px rgba(15,23,42,0.06);}
-.status-tab:hover{border-color:#c7d2fe;background:#f8fafc;}
-.status-tab.active{background:linear-gradient(135deg,#0f172a,#2563eb);color:white;border-color:#1e3a8a;box-shadow:0 10px 24px rgba(30,64,175,0.25);}
-.status-tab .count{display:block;font-size:1.4rem;margin-bottom:0.2rem;font-weight:800;}
+.status-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem;margin:1.1rem 0 .9rem;padding:.38rem;border:1px solid #dbe6f2;border-radius:15px;background:linear-gradient(135deg,#f8fbff,#eef4fb);box-shadow:0 8px 18px rgba(30,64,105,.055);}
+.status-tab{display:flex;align-items:center;justify-content:space-between;gap:.7rem;min-height:58px;padding:.65rem .8rem .65rem .9rem;border:1px solid transparent;border-radius:11px;background:transparent;cursor:pointer;text-decoration:none;color:#526b86;transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease;}
+.status-tab-copy{display:flex;align-items:flex-start;flex-direction:column;gap:.1rem;min-width:0;}.status-tab-label{display:flex;align-items:center;gap:.38rem;color:inherit;font-size:.91rem;font-weight:900;letter-spacing:-.015em;}.status-tab-label::before{content:'';width:7px;height:7px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.15);}.status-tab-help{font-size:.7rem;font-weight:750;color:#7890a8;}.status-tab .count{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 .48rem;border-radius:9px;background:#e7eef7;color:#1e3a5f;font-size:1rem;font-weight:950;letter-spacing:-.02em;}
+.status-tab:hover{transform:translateY(-1px);background:rgba(255,255,255,.78);border-color:#c9d9eb;color:#1e3a5f;}
+.status-tab.active{border-color:#2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 7px 16px rgba(29,78,216,.24);}.status-tab.active .status-tab-label::before{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.2);}.status-tab.active .status-tab-help{color:#dbeafe;}.status-tab.active .count{background:rgba(255,255,255,.18);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18);}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:1rem;}
 .modal-box{background:white;border-radius:16px;padding:1.5rem;width:100%;max-width:960px;max-height:90vh;overflow-y:auto;box-shadow:0 16px 40px rgba(0,0,0,0.25);}
 .search-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;}
@@ -436,6 +456,7 @@
 html[data-theme="dark"] .month-nav-shell,
 html[data-theme="dark"] .production-month-calendar,
 html[data-theme="dark"] .modal-box{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 18px 40px rgba(2,6,23,.34);}
+html[data-theme="dark"] .production-page-header{border-color:transparent;background:transparent;box-shadow:none;}html[data-theme="dark"] .production-page-kicker,html[data-theme="dark"] .production-content-kicker{color:#60a5fa;}html[data-theme="dark"] .production-page-heading h1,html[data-theme="dark"] .production-content-heading h2{color:#eff6ff;}html[data-theme="dark"] .production-page-heading p{color:#9fb3cc;}html[data-theme="dark"] .production-content-card{border-color:#263b55;background:linear-gradient(180deg,#121d2e 0%,#101827 100%);box-shadow:0 18px 36px rgba(2,6,23,.28);}html[data-theme="dark"] .production-content-heading{border-bottom-color:#263b55;}html[data-theme="dark"] .production-content-status{border-color:#385574;background:#172b43;color:#b8c9dc;}html[data-theme="dark"] .production-content-status::before{background:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.14);}html[data-theme="dark"] .production-content-status.is-done::before{background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.14);}
 html[data-theme="dark"] .display-year-month,
 html[data-theme="dark"] .production-calendar-title{color:#eff6ff;}
 html[data-theme="dark"] .display-eng,
@@ -462,6 +483,18 @@ html[data-theme="dark"] .production-day-card.is-completed{
 html[data-theme="dark"] .production-day-card:hover{
     border-color:#3b82f6;
 }
+html[data-theme="dark"] .production-day-head{
+    border-left-color:#60a5fa;
+    background:linear-gradient(135deg,#17263d 0%,#122035 100%);
+    color:#eff6ff;
+}
+html[data-theme="dark"] .production-day-subtitle{color:#a9bbd2;}
+html[data-theme="dark"] .production-day-chip{
+    background:#1d3049;
+    border-color:#365273;
+    color:#b8c9dc;
+}
+html[data-theme="dark"] .production-day-chip strong{color:#f1f7ff;}
 html[data-theme="dark"] .production-day-card.is-completed:hover{
     border-color:#34d399;
 }
@@ -485,6 +518,7 @@ html[data-theme="dark"] .production-day-item{
 }
 html[data-theme="dark"] .production-day-item:hover{
     background:#162133;
+    box-shadow:inset 3px 0 0 #60a5fa;
 }
 html[data-theme="dark"] .production-item-name,
 html[data-theme="dark"] .production-stat-value{color:#eff6ff;}
@@ -495,12 +529,12 @@ html[data-theme="dark"] .production-item-id{
 }
 html[data-theme="dark"] .production-item-meta,
 html[data-theme="dark"] .production-stat-label{color:#8ea3bd;}
+html[data-theme="dark"] .production-line-badge{border-color:#315b91;background:linear-gradient(135deg,#15385f,#172d4a);color:#bfdbfe;box-shadow:none;}html[data-theme="dark"] .production-line-badge::before{background:#60a5fa;color:#10223c;}html[data-theme="dark"] .production-detail-chip{border-color:#30435d;background:#15243a;color:#afc1d5;}html[data-theme="dark"] .production-detail-chip b{color:#d5e5f8;}html[data-theme="dark"] .production-detail-chip.yield{border-color:#287657;background:#123828;color:#a7f3d0;}html[data-theme="dark"] .production-detail-chip.yield b{color:#a7f3d0;}
 html[data-theme="dark"] .production-stat{
     background:#152033;
     border-color:#2b3648;
 }
-html[data-theme="dark"] .status-tab{background:#152033;border-color:#2b3648;color:#dbe7f5;}
-html[data-theme="dark"] .status-tab:hover{background:#1a2436;border-color:#3b82f6;}
+html[data-theme="dark"] .status-tabs{border-color:#2b3d55;background:linear-gradient(135deg,#101a2a,#152238);box-shadow:0 12px 24px rgba(2,6,23,.25);}html[data-theme="dark"] .status-tab{color:#b8c9dc;}html[data-theme="dark"] .status-tab-help{color:#7f96af;}html[data-theme="dark"] .status-tab .count{background:#1d3049;color:#dbeafe;}html[data-theme="dark"] .status-tab:hover{background:#1a2a40;border-color:#3b82f6;color:#eff6ff;}html[data-theme="dark"] .status-tab.active{border-color:#60a5fa;background:linear-gradient(135deg,#2563b8,#1d4ed8);color:#fff;box-shadow:0 8px 18px rgba(2,6,23,.35);}
 html[data-theme="dark"] .search-results{border-top-color:#263244;}
 html[data-theme="dark"] .search-empty{color:#8ea3bd;}
 html[data-theme="dark"] .search-head-copy p,
@@ -511,6 +545,7 @@ html[data-theme="dark"] .search-result-product{color:#eff6ff;}
 html[data-theme="dark"] .search-result-code,html[data-theme="dark"] .search-result-materials{color:#8ea3bd;}
 html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);color:#bfdbfe;}
 @media (max-width: 768px) {
+    .production-page-header{align-items:flex-start;flex-direction:column;padding:.85rem .9rem;}.production-page-actions{width:100%;justify-content:flex-start;}.production-page-heading h1{font-size:1.3rem;}
     .month-nav-shell{
         width:100%;
         min-width:0;
@@ -525,9 +560,8 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
     .month-picker-btn,.month-today-btn{height:34px;padding:0 0.7rem;font-size:0.78rem;}
     .month-today-btn{display:none;}
     .production-month-calendar{width:min(92vw,320px);right:auto;left:0;}
-    .status-tabs{flex-direction:column;}
-    .status-tab{padding:0.7rem 0.8rem;}
-    .status-tab .count{font-size:1.25rem;}
+    .status-tabs{grid-template-columns:1fr;}
+    .status-tab{min-height:54px;padding:.6rem .72rem .6rem .8rem;}
     .modal-box{padding:1rem;border-radius:12px;}
     .search-grid{grid-template-columns:1fr;}
     .search-keyword-field{grid-column:auto;}
@@ -535,7 +569,9 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
     .production-day-head{
         flex-direction:column;
         align-items:flex-start;
+        min-height:0;
     }
+    .production-day-title{flex-wrap:wrap;gap:0.22rem 0.5rem;}
     .production-day-summary{
         justify-content:flex-start;
     }
@@ -549,6 +585,7 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
     .production-item-actions{
         justify-content:flex-start;
     }
+    .production-detail-chip.raw{max-width:100%;}
 }
 </style>
 {% endblock %}
@@ -557,14 +594,16 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
 {%- set can_prod  = _r in ['admin','production'] -%}
 {%- set can_use_register_mode = (user is defined and (user.is_admin or user.can_integrated_management)) -%}
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-        <h1 style="margin:0;">🏭 생산 관리</h1>
+<div class="production-page-header">
+    <div class="production-page-heading">
+        <span class="production-page-kicker">PRODUCTION OPERATIONS</span>
+        <h1>생산 관리</h1>
+        <p>월별 생산 일정과 진행 현황을 한곳에서 관리합니다.</p>
+    </div>
+    <div class="production-page-actions">
         {% if can_use_register_mode %}
         <a href="{{ url_for('production.production_register_mode', next=url_for('admin.integrated_management', tab='productions', prod_tab='done')) }}" class="production-register-mode-shortcut">생산 등록 모드 사용</a>
         {% endif %}
-    </div>
-    <div style="display:flex;gap:0.5rem;">
         {% if can_prod %}
         <a href="/production/add" class="btn btn-small">+ 등록</a>
         {% endif %}
@@ -612,17 +651,20 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
 <!-- 진행/완료 탭 -->
 <div class="status-tabs">
     <a href="/production?month={{ current_month }}&tab=active" class="status-tab {% if current_tab == 'active' %}active{% endif %}">
+        <span class="status-tab-copy"><span class="status-tab-label">진행 중</span><span class="status-tab-help">현재 진행 중인 생산건</span></span>
         <span class="count">{{ active_count }}</span>
-        <span>진행 중</span>
     </a>
     <a href="/production?month={{ current_month }}&tab=done" class="status-tab {% if current_tab == 'done' %}active{% endif %}">
+        <span class="status-tab-copy"><span class="status-tab-label">완료</span><span class="status-tab-help">완료된 생산 이력</span></span>
         <span class="count">{{ done_count }}</span>
-        <span>완료</span>
     </a>
 </div>
 
-<div class="card">
-    <h2>{{ current_year }}년 {{ current_month_num }}월 생산</h2>
+<div class="card production-content-card">
+    <div class="production-content-heading">
+        <div><span class="production-content-kicker">MONTHLY PRODUCTION</span><h2>{{ current_year }}년 {{ current_month_num }}월 생산</h2></div>
+        <span class="production-content-status{% if current_tab == 'done' %} is-done{% endif %}">{% if current_tab == 'done' %}완료 생산 이력{% else %}진행 중 생산 현황{% endif %}</span>
+    </div>
     {% if productions %}
     <div class="production-groups">
         {% for date_value, day_items in productions|groupby('production_date') %}
@@ -645,7 +687,7 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
             </div>
             <div class="production-day-list">
                 {% for prod in day_items %}
-                <article class="production-day-item">
+                <article class="production-day-item" data-detail-url="/production/{{ prod.id }}" role="link" tabindex="0" aria-label="{{ prod.product_name }} 생산건 상세 보기">
                     <div class="production-item-main">
                         <div class="production-item-top">
                             <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;">
@@ -661,12 +703,17 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
                             {% if prod.display_line %}
                             <div class="production-item-lines">
                                 {% for line_num in prod.display_line.split(',') %}
-                                <span class="badge badge-info">라인 {{ line_num.strip() }}</span>
+                                <span class="production-line-badge">라인 {{ line_num.strip() }}</span>
                                 {% endfor %}
                             </div>
                             {% else %}
                             <span style="color:#94a3b8;">라인 미지정</span>
                             {% endif %}
+                        </div>
+                        <div class="production-item-detail-meta">
+                            <span class="production-detail-chip"><b>작업시간</b> {{ prod.work_time or '-' }}</span>
+                            <span class="production-detail-chip raw" title="원초 {{ prod.raw_material_names or '-' }}"><b>원초</b> {{ prod.raw_material_names or '-' }}</span>
+                            <span class="production-detail-chip yield"><b>수율</b> {% if prod.raw_yield_rate is not none %}{{ '%.1f'|format(prod.raw_yield_rate) }}%{% else %}-{% endif %}</span>
                         </div>
                     </div>
                     <div class="production-item-stats">
@@ -686,7 +733,6 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
                         {% else %}<span class="badge badge-info">{{ prod.status }}</span>{% endif %}
                     </div>
                     <div class="production-item-actions">
-                        <a href="/production/{{ prod.id }}" class="btn btn-small" style="background:#6c757d;">조회</a>
                         {% if current_tab == 'done' or prod.status == '완료' %}
                         <a href="/production/{{ prod.id }}/print" class="btn btn-small" onclick="window.open(this.href, 'production_print_{{ prod.id }}', 'width=1100,height=820,scrollbars=yes,resizable=yes'); return false;">출력</a>
                         {% endif %}
@@ -988,6 +1034,23 @@ function resetSearch() {
     document.getElementById('searchEndDate').value = '';
     document.getElementById('searchResults').innerHTML = '<p class="search-empty">검색 조건을 입력하고 검색 버튼을 눌러주세요</p>';
 }
+
+document.querySelectorAll('.production-day-item[data-detail-url]').forEach((item) => {
+    const openDetail = () => {
+        const detailUrl = item.dataset.detailUrl;
+        if (detailUrl) window.location.href = detailUrl;
+    };
+    item.addEventListener('click', (event) => {
+        if (event.target.closest('a, button, form, input, select, textarea, label')) return;
+        openDetail();
+    });
+    item.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openDetail();
+        }
+    });
+});
 </script>
 {% endblock %}
 

@@ -33,7 +33,7 @@ from core import (
     audit_log,
     rollback_db,
 )
-from blueprints.production import _delete_production_record
+from blueprints.production import _delete_production_record, _get_auto_holiday_name, _get_holiday_caption
 
 bp = Blueprint('admin', __name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -3819,7 +3819,49 @@ def integrated_management():
             ''',
             (month_start.isoformat(), month_end.isoformat()),
         )
+        schedule_rows = cursor.fetchall()
         calendar_events = defaultdict(list)
+        cursor.execute(
+            '''
+            SELECT date, type, overtime_hours, note
+            FROM work_days
+            WHERE date BETWEEN ? AND ?
+            ''',
+            (month_start.isoformat(), month_end.isoformat()),
+        )
+        registered_work_days = {
+            str(row['date']): dict(row)
+            for row in cursor.fetchall()
+        }
+        calendar_work_days = {}
+        for day_number in range(1, month_end.day + 1):
+            work_date = month_start.replace(day=day_number)
+            date_key = work_date.isoformat()
+            work_day = registered_work_days.get(date_key)
+            # 생산 캘린더와 동일하게 등록값이 없을 때 주말·법정공휴일을 휴무로 표시한다.
+            if work_day is None and _get_auto_holiday_name(work_date):
+                work_day = {'type': 'holiday', 'overtime_hours': 0, 'note': ''}
+            if not work_day or work_day.get('type') not in {'holiday', 'overtime', 'extra'}:
+                continue
+
+            work_type = work_day['type']
+            try:
+                overtime_hours = float(work_day.get('overtime_hours') or 0)
+            except (TypeError, ValueError):
+                overtime_hours = 0
+            if work_type == 'holiday':
+                label = '휴무'
+            elif work_type == 'overtime':
+                hours_text = f'{int(overtime_hours)}' if overtime_hours.is_integer() else f'{overtime_hours:g}'
+                label = f'잔업({hours_text}h)' if overtime_hours > 0 else '잔업'
+            else:
+                label = '특근'
+            calendar_work_days[date_key] = {
+                'type': work_type,
+                'label': label,
+                'holiday_caption': _get_holiday_caption(work_date, work_type),
+                'note': str(work_day.get('note') or '').strip(),
+            }
 
         def _format_calendar_box_quantity(value):
             quantity = float(value or 0)
@@ -3841,7 +3883,7 @@ def integrated_management():
                     return key, label
             return 'other', str(category or '기타').strip() or '기타'
 
-        for raw_row in cursor.fetchall():
+        for raw_row in schedule_rows:
             row = dict(raw_row)
             workplace_name = str(row.get('workplace') or '미지정').strip() or '미지정'
             date_key = str(row.get('scheduled_date') or '').strip()
@@ -3898,6 +3940,7 @@ def integrated_management():
             'next_month': (month_end + timedelta(days=1)).strftime('%Y-%m'),
             'view': calendar_view,
             'has_sunday_production': has_sunday_production,
+            'work_days': calendar_work_days,
             'weeks': [calendar_days[index:index + 7] for index in range(0, len(calendar_days), 7)],
             'workplaces': [
                 {

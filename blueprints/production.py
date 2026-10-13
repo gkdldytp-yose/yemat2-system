@@ -7870,7 +7870,24 @@ def production_list():
         SELECT
             pr.*,
             p.name as product_name,
-            COALESCE(NULLIF(pr.supply_line, ''), ps.line, '') as display_line
+            COALESCE(NULLIF(pr.supply_line, ''), ps.line, '') as display_line,
+            COALESCE((
+                SELECT GROUP_CONCAT(DISTINCT COALESCE(NULLIF(TRIM(rm.name), ''), NULLIF(TRIM(pmu.raw_material_name), '')))
+                FROM production_material_usage pmu
+                LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                WHERE pmu.production_id = pr.id
+                  AND (pmu.raw_material_id IS NOT NULL OR COALESCE(TRIM(pmu.raw_material_name), '') != '')
+            ), '') AS raw_material_names,
+            (
+                SELECT ROUND(
+                    SUM(COALESCE(pmu.expected_quantity, 0)) * 100.0 /
+                    NULLIF(SUM(COALESCE(pmu.actual_quantity, 0)), 0),
+                    1
+                )
+                FROM production_material_usage pmu
+                WHERE pmu.production_id = pr.id
+                  AND (pmu.raw_material_id IS NOT NULL OR COALESCE(TRIM(pmu.raw_material_name), '') != '')
+            ) AS raw_yield_rate
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
         LEFT JOIN production_schedules ps ON pr.schedule_id = ps.id

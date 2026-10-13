@@ -2218,6 +2218,143 @@ html[data-theme="dark"] .raw-metric{background:#162133 !important;border-color:#
 html[data-theme="dark"] .raw-code-summary .is-current{background:linear-gradient(135deg,rgba(37,99,235,.26) 0%,rgba(30,41,59,.94) 100%) !important;border-color:rgba(96,165,250,.36) !important;}
 html[data-theme="dark"] .raw-code-summary .is-current span{color:#93c5fd !important;}
 html[data-theme="dark"] .raw-code-summary .is-current strong{color:#eff6ff !important;}
+/* 보유 원초: 그룹은 요약, 로트는 한 줄 정보 행으로 압축한다. */
+.raw-code-groups{gap:.58rem;margin-top:.7rem;}
+.raw-code-card{border-radius:14px;box-shadow:0 5px 13px rgba(15,23,42,.055);}
+.raw-code-card-head{gap:.7rem;padding:.58rem .75rem;border-bottom-color:#e4ebf3;}
+.raw-code-heading{gap:.48rem;}
+.raw-code-chip{padding:.26rem .52rem;font-size:.69rem;}
+.raw-code-card-head h3{font-size:.96rem;}
+.raw-code-card-head p{font-size:.72rem;}
+.raw-code-summary{grid-template-columns:repeat(3,minmax(66px,1fr));gap:.32rem;min-width:min(100%,294px);}
+.raw-code-summary div{padding:.3rem .42rem;border-radius:9px;}
+.raw-code-summary span{font-size:.62rem;margin-bottom:.03rem;}
+.raw-code-summary strong{font-size:.79rem;}
+.raw-code-summary .is-current{box-shadow:none;}
+.raw-code-summary .is-current strong{font-size:.91rem;}
+.raw-code-items{gap:.34rem;padding:.42rem .55rem .5rem;}
+.raw-code-item{gap:.58rem;padding:.42rem .55rem;border-radius:10px;}
+.raw-code-item.stock-good,.raw-code-item.stock-warn,.raw-code-item.stock-danger{box-shadow:none;}
+.raw-code-item-main.row-layout{grid-template-columns:minmax(190px,1fr) minmax(170px,.62fr) minmax(146px,.46fr);gap:.35rem .58rem;}
+.raw-item-identity{gap:.36rem;}
+.raw-item-name{font-size:.86rem;}
+.raw-lot-badge,.raw-inline-meta{padding:.16rem .38rem;font-size:.66rem;}
+.raw-item-inline-meta{gap:.26rem;}
+.raw-current-hero{gap:.12rem;padding:.38rem .56rem;border-radius:10px;box-shadow:none;}
+.raw-current-hero.warn,.raw-current-hero.danger{box-shadow:none;}
+.raw-current-hero-label{font-size:.62rem;}
+.raw-current-hero-value{font-size:1.12rem;}
+.raw-current-hero-meta{gap:.25rem;font-size:.64rem;}
+.raw-code-metrics{grid-template-columns:repeat(2,minmax(68px,1fr));gap:.28rem;}
+.raw-metric{padding:.26rem .36rem;border-radius:8px;}
+.raw-metric span{font-size:.59rem;}
+.raw-metric strong,.raw-code-metrics-secondary .raw-metric strong{font-size:.75rem;}
+.raw-progress-row{gap:.42rem;}
+.raw-progress-row span{font-size:.67rem;}
+.raw-progress-bar{height:6px;}
+.raw-code-actions{gap:.24rem;min-width:202px;}
+.raw-code-actions .btn{min-height:27px;padding:.22rem .4rem;font-size:.66rem;}
+html[data-theme="dark"] .raw-code-card{box-shadow:0 5px 14px rgba(2,6,23,.2);}
+html[data-theme="dark"] .raw-code-card-head{border-bottom-color:rgba(148,163,184,.16);}
+@media (max-width: 980px){
+  .raw-code-item-main.row-layout{grid-template-columns:minmax(180px,1fr) minmax(160px,.65fr) minmax(135px,.48fr);}
+  .raw-code-actions{min-width:180px;}
+}
+/* 밀도 높은 목록형 레이아웃: 재고 상태를 먼저 읽고 보조 수치는 짧게 훑는다. */
+.raw-code-groups{gap:.48rem;}
+.raw-code-card{border-radius:13px;}
+.raw-code-card-head{min-height:58px;padding:.42rem .68rem;background:linear-gradient(90deg,#f8fbff,#fff);}
+.raw-code-heading{gap:.4rem;}
+.raw-code-chip{padding:.22rem .46rem;font-size:.65rem;}
+.raw-code-card-head h3{font-size:.9rem;}
+.raw-code-card-head p{font-size:.67rem;}
+.raw-code-summary{display:flex;align-items:center;gap:.18rem;min-width:0;}
+.raw-code-summary div{display:flex;align-items:baseline;gap:.22rem;padding:.28rem .36rem;border:0;border-radius:7px;background:transparent;}
+.raw-code-summary span{margin:0;font-size:.59rem;}
+.raw-code-summary strong{font-size:.72rem;}
+.raw-code-summary .is-current{border:1px solid #87bdf4;background:#eaf4ff;box-shadow:none;}
+.raw-code-summary .is-current strong{font-size:.83rem;}
+.raw-code-items{gap:.28rem;padding:.34rem .46rem .4rem;}
+.raw-code-item{padding:.32rem .46rem;gap:.46rem;border-radius:9px;}
+.raw-code-item-main.row-layout{grid-template-columns:minmax(235px,1fr) minmax(175px,.58fr) minmax(138px,.42fr);gap:.24rem .46rem;}
+.raw-code-item-top.row-layout{align-content:center;}
+.raw-item-name{font-size:.82rem;}
+.raw-lot-badge,.raw-inline-meta{padding:.13rem .32rem;font-size:.62rem;}
+.raw-current-hero{min-height:54px;padding:.3rem .48rem;gap:.06rem;border-radius:8px;}
+.raw-current-hero-label{font-size:.58rem;}
+.raw-current-hero-value{font-size:1.02rem;}
+.raw-current-hero-meta{justify-content:flex-start;gap:.34rem;font-size:.6rem;line-height:1.15;}
+.raw-code-metrics{display:flex;align-items:center;gap:.18rem;}
+.raw-metric{flex:1;min-width:0;padding:.22rem .3rem;border:0;border-left:1px solid #dbe5ef;border-radius:0;background:transparent;}
+.raw-metric:first-child{border-left:0;}
+.raw-metric span{font-size:.56rem;}
+.raw-metric strong,.raw-code-metrics-secondary .raw-metric strong{font-size:.69rem;white-space:nowrap;}
+.raw-progress-row{gap:.3rem;}
+.raw-progress-row span{font-size:.62rem;}
+.raw-progress-bar{height:5px;}
+.raw-code-actions{min-width:190px;gap:.18rem;}
+.raw-code-actions .btn{min-height:25px;padding:.16rem .33rem;font-size:.62rem;border-radius:7px;}
+html[data-theme="dark"] .raw-code-card-head{background:linear-gradient(90deg,rgba(30,41,59,.88),rgba(15,23,42,.74));}
+html[data-theme="dark"] .raw-code-summary div{background:transparent;border-color:#344c67;}
+html[data-theme="dark"] .raw-code-summary .is-current{background:#17365b;border-color:#4079bd;}
+html[data-theme="dark"] .raw-metric{background:transparent;border-color:#33465e;}
+@media (max-width: 760px){
+  .raw-code-card-head{min-height:auto;}
+  .raw-code-summary{width:100%;justify-content:flex-start;}
+  .raw-code-summary div{flex:1;justify-content:center;}
+}
+/* 압축된 레이아웃에서도 주요 수치는 즉시 읽히도록 글자 크기를 보정한다. */
+.raw-code-card-head h3{font-size:.98rem;}
+.raw-code-card-head p{font-size:.73rem;}
+.raw-code-chip{font-size:.7rem;}
+.raw-code-summary span{font-size:.66rem;}
+.raw-code-summary strong{font-size:.8rem;}
+.raw-code-summary .is-current strong{font-size:.94rem;}
+.raw-item-name{font-size:.9rem;}
+.raw-lot-badge,.raw-inline-meta{font-size:.7rem;}
+.raw-current-hero-label{font-size:.66rem;}
+.raw-current-hero-value{font-size:1.16rem;}
+.raw-current-hero-meta{font-size:.68rem;}
+.raw-metric span{font-size:.63rem;}
+.raw-metric strong,.raw-code-metrics-secondary .raw-metric strong{font-size:.78rem;}
+.raw-progress-row span{font-size:.68rem;}
+.raw-code-actions .btn{font-size:.68rem;}
+/* 로트 작업 버튼: 촘촘하지만 오인 없이 선택할 수 있는 액션 바. */
+.raw-code-actions{
+  padding:.28rem;
+  gap:.28rem;
+  border:1px solid #d7e4f1;
+  border-radius:11px;
+  background:#f5f9fd;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+}
+.raw-code-actions .btn{
+  min-height:31px;
+  padding:.28rem .5rem;
+  border:1px solid transparent;
+  border-radius:8px;
+  font-size:.7rem;
+  font-weight:900;
+  letter-spacing:-.02em;
+  box-shadow:0 2px 5px rgba(15,23,42,.1);
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+.raw-code-actions .btn:hover{transform:translateY(-1px);filter:brightness(1.04);box-shadow:0 5px 10px rgba(15,23,42,.16);}
+.raw-code-actions .btn:focus-visible{outline:3px solid rgba(59,130,246,.34);outline-offset:2px;}
+.raw-code-actions > .btn:nth-child(1){background:linear-gradient(135deg,#2991ee,#1672cf);border-color:#4ba9fb;color:#fff;}
+.raw-code-actions > .btn:nth-child(2){background:linear-gradient(135deg,#16a5a1,#087b79);border-color:#48c9c0;color:#fff;}
+.raw-code-actions > .btn:nth-child(3){background:linear-gradient(135deg,#7a8ca4,#526479);border-color:#9baabd;color:#fff;}
+.raw-code-actions > .btn:nth-child(4){background:linear-gradient(135deg,#4c7df2,#2957c8)!important;border-color:#759fff!important;color:#fff!important;}
+.raw-code-actions .raw-delete-btn{background:linear-gradient(135deg,#f46055,#d83c34)!important;border-color:#fb837b!important;color:#fff!important;}
+html[data-theme="dark"] .raw-code-actions{border-color:#314a67;background:#0d1a2b;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+html[data-theme="dark"] .raw-code-actions .btn{box-shadow:0 2px 5px rgba(0,0,0,.25);}
+html[data-theme="dark"] .raw-code-actions > .btn:nth-child(1){background:linear-gradient(135deg,#277ed3,#1658a7);border-color:#5ba9fa;}
+html[data-theme="dark"] .raw-code-actions > .btn:nth-child(2){background:linear-gradient(135deg,#118d89,#086563);border-color:#50d1c6;}
+html[data-theme="dark"] .raw-code-actions > .btn:nth-child(3){background:linear-gradient(135deg,#62768d,#405267);border-color:#91a5ba;}
+@media (max-width: 760px){
+  .raw-code-actions{width:100%;justify-content:flex-start;}
+  .raw-code-actions .btn{min-height:34px;padding:.32rem .55rem;font-size:.73rem;}
+}
 html[data-theme="dark"] #rawActivityModal .modal-content,
 html[data-theme="dark"] #rawIntegratedSearchModal .modal-content,
 html[data-theme="dark"] #rawBasicEditModal .modal-content,
