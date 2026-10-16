@@ -313,15 +313,29 @@
       }
     }
   </style>
-  {% macro fmt1(v) -%}
+  {% macro fmt_quantity(v) -%}
   {%- if v is not none and v != '' -%}
-  {{ "%.1f"|format((v or 0)|float) }}
+  {%- set number = (v or 0)|float -%}
+  {%- if number == number|int -%}
+  {{ "{:,.0f}".format(number) }}
+  {%- else -%}
+  {{ "{:,.10f}".format(number).rstrip('0').rstrip('.') }}
+  {%- endif -%}
   {%- endif -%}
   {%- endmacro %}
-  {% macro fmt0comma(v) -%}
+  {% macro fmt_quantity1(v) -%}
   {%- if v is not none and v != '' -%}
-  {{ "{:,.0f}".format((v or 0)|float) }}
+  {%- set number = ((v or 0)|float)|round(1) -%}
+  {%- if number == number|int -%}
+  {{ "{:,.0f}".format(number) }}
+  {%- else -%}
+  {{ "{:,.1f}".format(number) }}
   {%- endif -%}
+  {%- endif -%}
+  {%- endmacro %}
+  {% macro unit_text(unit) -%}
+  {%- set text = (unit or '')|string|trim -%}
+  {%- if text %} {{ text }}{% endif -%}
   {%- endmacro %}
   {% set raw_row_count = 4 %}
   {% set material_row_count = 5 %}
@@ -408,14 +422,14 @@
             {% for row in expiry_rows %}
             <tr class="input-row">
               <td>{{ row.expiry_date }}</td>
-              <td>{{ fmt0comma(row.units) if row.units != '' else '' }}</td>
-              <td>{{ fmt0comma(row.actual_boxes) if row.actual_boxes != '' else '' }}</td>
+              <td>{{ fmt_quantity(row.units) if row.units != '' else '' }}{% if row.units != '' %} 낱봉{% endif %}</td>
+              <td>{{ fmt_quantity(row.actual_boxes) if row.actual_boxes != '' else '' }}{% if row.actual_boxes != '' %} 박스{% endif %}</td>
             </tr>
             {% endfor %}
             <tr>
               <th class="sum-head">합계 수량</th>
-              <td>{{ fmt0comma((production.actual_boxes or 0) * (production.box_quantity or 0)) if production.actual_boxes and production.box_quantity else '' }}</td>
-              <td>{{ fmt0comma(production.actual_boxes) }}</td>
+              <td>{{ fmt_quantity((production.actual_boxes or 0) * (production.box_quantity or 0)) if production.actual_boxes and production.box_quantity else '' }}{% if production.actual_boxes and production.box_quantity %} 낱봉{% endif %}</td>
+              <td>{{ fmt_quantity(production.actual_boxes) }}{% if production.actual_boxes is not none and production.actual_boxes != '' %} 박스{% endif %}</td>
             </tr>
           </table>
         </td>
@@ -488,7 +502,7 @@
         <td class="left raw-name-cell">{{ r.raw_material_name or '' }}</td>
         <td>{{ r.car_number or '' }}</td>
         <td>{{ r.receiving_date or '' }}</td>
-        <td>{{ fmt0comma(r.actual_quantity) }}</td>
+        <td>{{ fmt_quantity(r.actual_quantity) }}{% if r.actual_quantity is not none and r.actual_quantity != '' %} 속{% endif %}</td>
         {% if loop.first %}
         <td class="big-note" rowspan="{{ raw_row_count }}">{{ raw_notes|join('\n') }}</td>
         {% endif %}
@@ -521,9 +535,9 @@
       </colgroup>
       <tr>
         <th>총 사용속수</th>
-        <td>{{ fmt0comma(total_used) }}</td>
-        <th>원재료총수</th>
-        <td>{{ fmt0comma(total_expected) }}</td>
+        <td>{{ fmt_quantity(total_used) }}{% if total_used %} 속{% endif %}</td>
+        <th>완제품속수</th>
+        <td>{{ fmt_quantity1(total_expected) }}{% if total_expected %} 속{% endif %}</td>
         <th>수율</th>
         <td class="yield">{% if yield_rate is not none %}{{ "%.1f"|format(yield_rate) }}%{% endif %}</td>
       </tr>
@@ -551,7 +565,7 @@
       <tr class="dotted-row">
         <td>{{ m.material_code or '' }}</td>
         <td class="left item-name-cell">{{ m.material_name or '' }}</td>
-        <td>{{ fmt1(m.lot_used_quantity if m.lot_used_quantity is not none else (m.actual_quantity if m.actual_quantity is not none else m.expected_quantity)) }}</td>
+        <td>{{ fmt_quantity(m.lot_used_quantity if m.lot_used_quantity is not none else (m.actual_quantity if m.actual_quantity is not none else m.expected_quantity)) }}{{ unit_text(m.unit) }}</td>
         <td>{{ m.lot_receiving_date or '' }}</td>
         <td>
           {% if m.lot_expiry_date %}
@@ -601,8 +615,8 @@
       <tr class="dotted-row">
         <td>{{ p.material_code or '' }}</td>
         <td class="left item-name-cell">{{ p.material_name or '' }}</td>
-        <td>{{ fmt1(p.lot_used_quantity if p.lot_used_quantity is not none else (p.actual_quantity if p.actual_quantity is not none else p.expected_quantity)) }}</td>
-        <td>{% if p.display_loss_quantity is defined and p.display_loss_quantity is not none %}{{ "%.1f"|format(p.display_loss_quantity) }}{% elif p.loss_quantity is not none %}{{ "%.1f"|format(p.loss_quantity) }}{% endif %}</td>
+        <td>{{ fmt_quantity(p.lot_used_quantity if p.lot_used_quantity is not none else (p.actual_quantity if p.actual_quantity is not none else p.expected_quantity)) }}{{ unit_text(p.unit) }}</td>
+        <td>{% if p.display_loss_quantity is defined and p.display_loss_quantity is not none %}{{ "%.1f"|format(p.display_loss_quantity) }}{{ unit_text(p.unit) }}{% elif p.loss_quantity is not none %}{{ "%.1f"|format(p.loss_quantity) }}{{ unit_text(p.unit) }}{% endif %}</td>
         <td>{{ p.print_display_date or '' }}</td>
         {% if loop.first %}
         <td rowspan="{{ packaging_row_count }}"></td>

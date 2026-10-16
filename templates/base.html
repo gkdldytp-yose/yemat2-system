@@ -74,22 +74,33 @@
         .nav-menu{display:flex;gap:0.25rem;list-style:none;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0;}
         .nav-menu a{color:white;text-decoration:none;font-weight:800;padding:0.72rem 1.08rem;border-radius:12px;transition:all 0.2s;font-size:0.98rem;white-space:nowrap;line-height:1;}
         .nav-menu a:hover{background:rgba(255,255,255,0.16);transform:translateY(-1px);}
-        .nav-menu .admin-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);}
-        .nav-user{color:white;display:flex;align-items:center;gap:0.7rem;font-size:0.95rem;position:relative;z-index:1;}
-        .nav-todo-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.72rem 1.08rem;border:none;border-radius:14px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;font-weight:900;font-size:0.98rem;cursor:pointer;box-shadow:0 10px 22px rgba(20,184,166,0.22);white-space:nowrap;line-height:1;}
-        .nav-today-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.72rem 1.08rem;border:none;border-radius:14px;background:linear-gradient(135deg,#c2410c,#f59e0b);color:#fff;font-weight:900;font-size:0.98rem;cursor:pointer;box-shadow:0 10px 22px rgba(245,158,11,0.24);white-space:nowrap;line-height:1;text-decoration:none;}
-        .nav-today-btn:hover{filter:brightness(1.06);transform:translateY(-1px);color:#fff;}
+        .nav-menu .admin-btn{display:inline-flex;align-items:center;gap:.42rem;padding:.58rem .82rem;border:1px solid rgba(147,197,253,.36);border-radius:12px;background:rgba(30,58,95,.55);color:#e0efff;box-shadow:inset 0 1px 0 rgba(255,255,255,.1);}
+        .nav-menu .admin-btn::before{content:"♙";display:inline-flex;align-items:center;justify-content:center;width:1.18rem;height:1.18rem;border-radius:999px;background:rgba(96,165,250,.18);color:#bfdbfe;font-size:.76rem;line-height:1;}
+        .nav-menu .admin-btn:hover{background:linear-gradient(135deg,rgba(37,99,235,.76),rgba(79,70,229,.72));border-color:rgba(191,219,254,.68);box-shadow:0 8px 18px rgba(2,6,23,.25);}
+        .nav-menu .admin-btn:focus-visible{outline:3px solid rgba(125,211,252,.82);outline-offset:2px;}
+        .nav-user{color:white;display:flex;align-items:center;gap:.38rem;font-size:.9rem;position:relative;z-index:1;padding:.32rem;border:1px solid rgba(148,163,184,.22);border-radius:18px;background:rgba(15,23,42,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+        .nav-todo-btn,.nav-today-btn,.nav-workplace-badge,.nav-profile-btn,.theme-toggle-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.42rem;border:1px solid rgba(148,163,184,.24);border-radius:12px;background:rgba(15,23,42,.34);color:#e8f1ff;font-weight:800;font-size:.86rem;cursor:pointer;box-shadow:none;white-space:nowrap;line-height:1;text-decoration:none;transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease;}
+        .nav-todo-btn:hover,.nav-today-btn:hover,.nav-workplace-badge:hover,.nav-profile-btn:hover,.theme-toggle-btn:hover{transform:translateY(-1px);border-color:rgba(191,219,254,.62);background:rgba(30,58,95,.72);color:#fff;box-shadow:0 8px 18px rgba(2,6,23,.22);}
+        .nav-today-btn{padding:0 .9rem;background:linear-gradient(135deg,#ea580c,#f59e0b);border-color:rgba(253,186,116,.55);color:#fff;box-shadow:0 7px 16px rgba(234,88,12,.22);}
+        .nav-today-btn::before{content:"◷";font-size:1rem;line-height:1;}
+        .nav-today-btn:hover{background:linear-gradient(135deg,#f97316,#fbbf24);color:#fff;}
+        .nav-todo-btn{padding:0 .82rem;background:rgba(13,148,136,.3);border-color:rgba(45,212,191,.32);}
+        .nav-todo-btn::before{content:"✓";font-size:.95rem;font-weight:900;}
         /* Keep all text navigation controls on one visual baseline.  The bell
            stays intentionally independent because it is an icon-only control. */
-        .nav-today-btn,.nav-todo-btn,.nav-workplace-badge,.nav-profile-btn,.theme-toggle-btn{height:48px;min-height:48px;padding:0 1.08rem;}
-        .nav-todo-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.55rem;height:1.55rem;padding:0 0.4rem;border-radius:999px;background:rgba(255,255,255,0.2);font-size:0.8rem;font-weight:900;}
-        .nav-workplace-badge{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0.75rem 1.12rem;border-radius:14px;background:linear-gradient(135deg,#7488ff,#6277f7);color:#fff;font-size:1rem;font-weight:900;white-space:nowrap;line-height:1;text-decoration:none;box-shadow:0 10px 24px rgba(99,102,241,.22);}
-        .nav-profile-btn{display:inline-flex;align-items:center;gap:0.5rem;min-height:46px;padding:0.75rem 1.02rem;border-radius:14px;font-size:0.95rem;font-weight:900;line-height:1;}
-        .nav-profile-role{display:inline-flex;align-items:center;justify-content:center;width:1.4rem;height:1.4rem;border-radius:999px;background:rgba(255,255,255,0.18);font-size:0.88rem;flex-shrink:0;}
-        .theme-toggle-btn{display:inline-flex;align-items:center;gap:.5rem;min-height:46px;padding:.75rem 1rem;border:none;border-radius:14px;background:linear-gradient(135deg,#ffffff 0%,#e0ecff 100%);color:#0f172a;font-size:.9rem;font-weight:900;cursor:pointer;box-shadow:0 10px 22px rgba(59,130,246,.18);white-space:nowrap;line-height:1;}
-        .theme-toggle-icon{display:inline-flex;align-items:center;justify-content:center;width:1.4rem;height:1.4rem;border-radius:999px;background:rgba(15,23,42,0.08);font-size:.9rem;flex-shrink:0;}
-        html[data-theme="dark"] .theme-toggle-btn{background:linear-gradient(135deg,#1e293b 0%,#334155 100%);color:#e2e8f0;box-shadow:0 10px 24px rgba(2,6,23,.35);}
-        html[data-theme="dark"] .theme-toggle-icon{background:rgba(255,255,255,0.08);}
+        .nav-today-btn,.nav-todo-btn,.nav-workplace-badge,.nav-profile-btn,.theme-toggle-btn{height:42px;min-height:42px;padding:0 .82rem;}
+        .nav-todo-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.35rem;height:1.35rem;padding:0 .32rem;border-radius:999px;background:rgba(255,255,255,.18);font-size:.73rem;font-weight:900;}
+        .nav-workplace-badge{padding:0 .88rem;background:rgba(99,102,241,.2);border-color:rgba(165,180,252,.3);font-size:.84rem;}
+        .nav-workplace-badge::before{content:"⌖";font-size:1rem;color:#bfdbfe;}
+        .nav-user .nav-profile-btn{padding:0 .76rem;border-radius:12px;border-color:rgba(148,163,184,.24);font-size:.84rem;box-shadow:none;}
+        .nav-user .nav-profile-primary{background:rgba(79,70,229,.3) !important;border-color:rgba(165,180,252,.35) !important;}
+        .nav-user .nav-logout-btn{background:rgba(15,23,42,.22) !important;color:#cbd5e1 !important;}
+        .nav-profile-role{display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:999px;background:rgba(255,255,255,.14);font-size:.8rem;flex-shrink:0;}
+        .theme-toggle-btn{padding:0 .76rem;background:rgba(30,41,59,.46);}
+        .theme-toggle-icon{display:inline-flex;align-items:center;justify-content:center;width:1.25rem;height:1.25rem;border-radius:999px;background:rgba(255,255,255,.1);font-size:.82rem;flex-shrink:0;}
+        html[data-theme="dark"] .theme-toggle-btn{background:rgba(30,41,59,.7);color:#e2e8f0;}
+        html[data-theme="dark"] .theme-toggle-icon{background:rgba(255,255,255,.08);}
+        .nav-today-btn:focus-visible,.nav-todo-btn:focus-visible,.nav-workplace-badge:focus-visible,.nav-profile-btn:focus-visible,.theme-toggle-btn:focus-visible,.nav-notify-btn:focus-visible{outline:3px solid rgba(125,211,252,.82);outline-offset:2px;}
         
         /* 모바일 메뉴 */
         @media (max-width: 768px) {
@@ -100,6 +111,7 @@
             .nav-menu a{display:block;width:100%;text-align:left;padding:0.9rem 1.05rem;font-size:0.98rem;}
             .nav-user{font-size:0.82rem;gap:0.35rem;}
             .nav-todo-btn,.nav-today-btn,.nav-workplace-badge,.nav-profile-btn,.theme-toggle-btn{height:40px;min-height:40px;padding:0 .82rem;font-size:0.84rem;border-radius:12px;}
+            .nav-notify-btn{width:40px;height:40px;border-radius:12px;}
             .nav-brand{font-size:1.05rem;}
         }
         
@@ -194,9 +206,9 @@
             .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
         }
         .nav-notify{position:relative;}
-        .nav-notify-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border:none;border-radius:16px;background:linear-gradient(135deg,#ffffff 0%,#eef4ff 100%);color:#1e3a8a;cursor:pointer;font-size:1.18rem;box-shadow:0 12px 26px rgba(37,99,235,.18);border:1px solid rgba(191,219,254,.95);}
+        .nav-notify-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;background:rgba(15,23,42,.34);color:#e8f1ff;cursor:pointer;font-size:1.05rem;box-shadow:none;border:1px solid rgba(148,163,184,.24);transition:transform .16s ease,background .16s ease,border-color .16s ease;}
         .nav-notify-btn.has-unread{animation:notifyPulse 1.8s ease-in-out infinite;}
-        .nav-notify-btn:hover{background:#e0e7ff;}
+        .nav-notify-btn:hover{transform:translateY(-1px);background:rgba(30,58,95,.72);border-color:rgba(191,219,254,.62);}
         .nav-notify-badge{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(220,38,38,.36);}
         .nav-notify-menu{display:none;position:absolute;right:0;top:56px;width:420px;max-width:calc(100vw - 1rem);background:#fff;border:1px solid #dbe5f0;border-radius:22px;box-shadow:0 22px 56px rgba(15,23,42,0.22);overflow:hidden;z-index:1200;}
         .nav-notify-menu.open{display:block;}
@@ -373,7 +385,7 @@
         html[data-theme="dark"] .alert-success{background:#0f2e22;color:#86efac;border-left-color:#22c55e;}
         html[data-theme="dark"] .alert-warning{background:#3a2508;color:#fcd34d;border-left-color:#f59e0b;}
         html[data-theme="dark"] .alert-danger{background:#3a1217;color:#fda4af;border-left-color:#ef4444;}
-        html[data-theme="dark"] .nav-notify-btn{background:linear-gradient(135deg,#162033 0%,#1f2c43 100%);color:#dbeafe;border-color:#2d3b52;box-shadow:0 14px 30px rgba(2,6,23,.35);}
+        html[data-theme="dark"] .nav-notify-btn{background:rgba(15,23,42,.62);color:#dbeafe;border-color:#2d3b52;box-shadow:none;}
         html[data-theme="dark"] .nav-notify-btn:hover{background:#22314a;}
         html[data-theme="dark"] .nav-notify-menu,
         html[data-theme="dark"] .todo-modal{background:#111827;border-color:#263244;box-shadow:0 28px 70px rgba(2,6,23,.48);}
@@ -804,7 +816,7 @@
                 </div>
             </div>
             <span style="display:none;">{{ user.name or user.username }}</span>
-            <a href="/profile" class="btn nav-profile-btn" style="background:#667eea;">
+            <a href="/profile" class="btn nav-profile-btn nav-profile-primary">
                 <span class="nav-profile-role">
                     {% if _r == 'admin' %}👑
                     {% elif _r == 'production' %}🏭
@@ -813,7 +825,7 @@
                 </span>
                 <span>내 정보</span>
             </a>
-            <a href="/logout" class="btn nav-profile-btn btn-secondary">로그아웃</a>
+            <a href="/logout" class="btn nav-profile-btn nav-logout-btn">로그아웃</a>
         </div>
     </div>
 </nav>

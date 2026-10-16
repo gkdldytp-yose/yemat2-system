@@ -4096,9 +4096,170 @@ html[data-theme="dark"] #setView .set-component-stock-name { color:#e7f0fb; }
     gap:.42rem;
     flex-wrap:wrap;
 }
+/* Registered export schedules: each schedule is a self-contained summary card,
+   rather than a visually continuous spreadsheet row. */
+#exportView .export-schedule-board {
+    overflow:visible;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+}
+#exportView .export-schedule-table {
+    display:block;
+    width:100%;
+    min-width:0;
+    border:0;
+    background:transparent;
+}
+#exportView .export-schedule-table thead { display:none; }
+#exportView .export-schedule-table tbody {
+    display:grid;
+    gap:.78rem;
+}
+#exportView .export-schedule-table tr {
+    display:grid;
+    grid-template-columns:minmax(190px,1.35fr) minmax(145px,.95fr) minmax(120px,.75fr) minmax(170px,1.08fr) minmax(155px,.95fr) minmax(94px,.62fr);
+    align-items:stretch;
+    overflow:hidden;
+    border:1px solid #cbd9e8;
+    border-left:4px solid #3b82f6;
+    border-radius:14px;
+    background:linear-gradient(135deg,#ffffff 0%,#f7fbff 100%);
+    box-shadow:0 5px 16px rgba(30,64,105,.07);
+    transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+#exportView .export-schedule-table tr:hover,
+#exportView .export-schedule-table tr:focus-visible {
+    border-color:#60a5fa;
+    box-shadow:0 10px 22px rgba(37,99,235,.13);
+    outline:none;
+    transform:translateY(-1px);
+}
+#exportView .export-schedule-table td {
+    position:relative;
+    min-width:0;
+    padding:.82rem .88rem !important;
+    border:0 !important;
+    text-align:left !important;
+}
+#exportView .export-schedule-table td + td { border-left:1px solid #e1eaf3 !important; }
+#exportView .export-schedule-table td::before {
+    display:block;
+    margin-bottom:.34rem;
+    color:#6b8198;
+    font-size:.7rem;
+    font-weight:900;
+    line-height:1;
+    letter-spacing:.02em;
+}
+#exportView .export-schedule-table td:nth-child(1)::before { content:'수출 제품'; }
+#exportView .export-schedule-table td:nth-child(2)::before { content:'생산 기간'; }
+#exportView .export-schedule-table td:nth-child(3)::before { content:'수출 계획'; }
+#exportView .export-schedule-table td:nth-child(4)::before { content:'컨테이너 · 라인'; }
+#exportView .export-schedule-table td:nth-child(5)::before { content:'진행 현황'; }
+#exportView .export-schedule-table td:nth-child(6)::before { content:'관리'; }
+#exportView .export-schedule-table .export-schedule-product-name { font-size:1rem; }
+#exportView .export-schedule-table .export-schedule-actions-cell .export-actions {
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+}
+#exportView .export-schedule-table .export-schedule-actions-cell .export-actions form,
+#exportView .export-schedule-table .export-schedule-actions-cell .export-actions button { width:100%; }
+html[data-theme="dark"] #exportView .export-schedule-table tr {
+    border-color:#334155;
+    border-left-color:#60a5fa;
+    background:linear-gradient(135deg,#131d2e 0%,#101827 100%);
+    box-shadow:0 7px 18px rgba(0,0,0,.2);
+}
+html[data-theme="dark"] #exportView .export-schedule-table tr:hover,
+html[data-theme="dark"] #exportView .export-schedule-table tr:focus-visible {
+    border-color:#4f7db4;
+    border-left-color:#60a5fa;
+    box-shadow:0 10px 24px rgba(0,0,0,.32);
+}
+html[data-theme="dark"] #exportView .export-schedule-table td + td { border-left-color:#29384d !important; }
+html[data-theme="dark"] #exportView .export-schedule-table td::before { color:#91a6c1; }
+@media (max-width:1100px) and (min-width:761px) {
+    #exportView .export-schedule-table tr { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    #exportView .export-schedule-table td:nth-child(4) { border-left:0 !important; border-top:1px solid #e1eaf3 !important; }
+    #exportView .export-schedule-table td:nth-child(5),
+    #exportView .export-schedule-table td:nth-child(6) { border-top:1px solid #e1eaf3 !important; }
+    html[data-theme="dark"] #exportView .export-schedule-table td:nth-child(4),
+    html[data-theme="dark"] #exportView .export-schedule-table td:nth-child(5),
+    html[data-theme="dark"] #exportView .export-schedule-table td:nth-child(6) { border-top-color:#29384d !important; }
+}
 @media (max-width:760px) {
     .export-schedule-table { min-width:900px; }
     .export-schedule-table th, .export-schedule-table td { padding:.72rem .55rem; }
+}
+/* Mobile schedule boards: show every table row as a labelled, vertical card
+   instead of relying on a wide desktop table that gets clipped. */
+@media (max-width:760px) {
+    #exportView .export-schedule-board,
+    #setView .table-container { overflow:visible; }
+    #exportView .export-schedule-table,
+    #setView .export-table { display:block; width:100%; min-width:0; table-layout:auto; }
+    #exportView .export-schedule-table thead,
+    #setView .export-table thead { display:none; }
+    #exportView .export-schedule-table tbody,
+    #setView .export-table tbody { display:grid; gap:.7rem; }
+    #exportView .export-schedule-table tr,
+    #setView .export-table tr { display:block; border:1px solid #cbd9e8; border-radius:14px; background:#fff; overflow:hidden; box-shadow:0 5px 14px rgba(15,23,42,.06); }
+    #exportView .export-schedule-table td,
+    #setView .export-table td { display:grid; grid-template-columns:92px minmax(0,1fr); gap:.65rem; align-items:start; width:100%; min-width:0 !important; padding:.7rem .78rem; text-align:left !important; border:0; border-top:1px solid #e5edf5; }
+    #exportView .export-schedule-table td:first-child,
+    #setView .export-table td:first-child { border-top:0; }
+    #exportView .export-schedule-table td::before,
+    #setView .export-table td::before { color:#64748b; font-size:.74rem; font-weight:900; line-height:1.45; }
+    #exportView .export-schedule-table td:nth-child(1)::before { content:'수출 상품'; }
+    #exportView .export-schedule-table td:nth-child(2)::before { content:'생산 기간'; }
+    #exportView .export-schedule-table td:nth-child(3)::before { content:'수출 계획'; }
+    #exportView .export-schedule-table td:nth-child(4)::before { content:'컨테이너 · 라인'; }
+    #exportView .export-schedule-table td:nth-child(5)::before { content:'진행 현황'; }
+    #exportView .export-schedule-table td:nth-child(6)::before { content:'관리'; }
+    #setView .export-table td:nth-child(1)::before { content:'세트 완제품'; }
+    #setView .export-table td:nth-child(2)::before { content:'기간'; }
+    #setView .export-table td:nth-child(3)::before { content:'반제품 계획'; }
+    #setView .export-table td:nth-child(4)::before { content:'자동 생성 일정'; }
+    #setView .export-table td:nth-child(5)::before { content:'진행 현황'; }
+    #setView .export-table td:nth-child(6)::before { content:'관리'; }
+    #exportView .export-schedule-table td:first-child > strong { white-space:normal; }
+    #exportView .export-schedule-status-cell .export-schedule-progress { min-width:0; }
+    #exportView .export-schedule-actions-cell .export-actions,
+    #setView .export-actions { justify-content:flex-start; }
+    #exportView .export-schedule-unit-box .export-box-summary { grid-template-columns:1fr; }
+    #exportView .export-section,
+    #setView .export-section { margin:.8rem; }
+    #exportView .export-topbar,
+    #setView .export-topbar { padding:.9rem .9rem 0; align-items:stretch; }
+    #exportView .export-topbar .req-refresh-btn,
+    #setView .export-topbar .req-refresh-btn { width:100%; }
+    #exportView .export-summary-grid,
+    #setView .export-summary-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.45rem; padding:.8rem .9rem 0; }
+    #exportView .export-summary-card,
+    #setView .export-summary-card { min-width:0; padding:.68rem .6rem; }
+    #exportView .export-summary-label,
+    #setView .export-summary-label { font-size:.72rem; }
+    #exportView .export-summary-value,
+    #setView .export-summary-value { font-size:1.3rem; }
+    #exportView .export-tabs,
+    #setView .export-tabs { padding:.8rem .9rem 0; gap:.45rem; flex-wrap:nowrap; }
+    #exportView .export-tab-btn,
+    #setView .export-tab-btn { flex:1 1 0; min-width:0; min-height:46px; padding:.56rem .45rem; font-size:.85rem; }
+    #exportView .export-detail-title,
+    #setView .set-schedule-card-head strong { overflow-wrap:anywhere; }
+    #exportView .export-active-metrics,
+    #setView .export-active-metrics { min-width:0; }
+    #exportView .export-active-metrics .export-metric,
+    #setView .export-active-metrics span { min-width:0; overflow-wrap:anywhere; }
+    html[data-theme="dark"] #exportView .export-schedule-table tr,
+    html[data-theme="dark"] #setView .export-table tr { border-color:#334155; background:#121a2a; box-shadow:0 8px 18px rgba(0,0,0,.22); }
+    html[data-theme="dark"] #exportView .export-schedule-table td,
+    html[data-theme="dark"] #setView .export-table td { border-top-color:#263244; }
+    html[data-theme="dark"] #exportView .export-schedule-table td::before,
+    html[data-theme="dark"] #setView .export-table td::before { color:#8ea3bd; }
 }
 .schedule-detail-row {
     cursor:pointer;
@@ -4391,6 +4552,71 @@ html[data-theme="dark"] #setView .set-component-stock-name { color:#e7f0fb; }
 .export-empty {
     padding:1.1rem 1rem;
     color:#64748b;
+}
+.export-product-filter {
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    margin:.9rem 0;
+    padding:.65rem .78rem;
+    border:1px solid #d7e3ef;
+    border-radius:13px;
+    background:linear-gradient(135deg,#f8fbff,#f1f6fc);
+}
+.export-product-filter-label {
+    flex:0 0 auto;
+    color:#47627f;
+    font-size:.78rem;
+    font-weight:900;
+}
+.export-product-filter-tabs {
+    display:flex;
+    flex:1;
+    flex-wrap:wrap;
+    gap:.38rem;
+}
+.export-product-filter-btn {
+    min-height:32px;
+    padding:.34rem .66rem;
+    border:1px solid #c9d8e8;
+    border-radius:999px;
+    background:#fff;
+    color:#506b88;
+    font-size:.8rem;
+    font-weight:800;
+    cursor:pointer;
+    transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease;
+}
+.export-product-filter-btn strong { margin-left:.18rem; color:inherit; font-size:.73rem; }
+.export-product-filter-btn:hover { border-color:#7aa9dd; color:#175daf; transform:translateY(-1px); }
+.export-product-filter-btn.active { border-color:#2563d9; background:#e8f1ff; color:#174ea6; box-shadow:inset 0 0 0 1px rgba(37,99,235,.08); }
+.export-product-filter-btn:focus-visible { outline:3px solid rgba(59,130,246,.28); outline-offset:2px; }
+#exportTabActivePane .export-schedule-table tr[hidden],
+#exportTabActivePane .export-active-card[hidden] { display:none !important; }
+.export-not-started {
+    display:flex;
+    flex-direction:column;
+    gap:.2rem;
+    padding:.82rem .9rem;
+    border:1px dashed #9ab9db;
+    border-radius:10px;
+    background:#f5faff;
+    color:#52708f;
+    font-size:.84rem;
+    line-height:1.45;
+}
+.export-not-started strong { color:#1d5fae; font-size:.88rem; }
+html[data-theme="dark"] .export-product-filter { border-color:#304661; background:linear-gradient(135deg,#121e30,#101a29); }
+html[data-theme="dark"] .export-product-filter-label { color:#a9bfd7; }
+html[data-theme="dark"] .export-product-filter-btn { border-color:#334b67; background:#142238; color:#afc3d9; }
+html[data-theme="dark"] .export-product-filter-btn:hover { border-color:#5c8fc2; color:#fff; }
+html[data-theme="dark"] .export-product-filter-btn.active { border-color:#67a2e8; background:#1a3b67; color:#dceeff; }
+html[data-theme="dark"] .export-not-started { border-color:#416486; background:#12233a; color:#b4c9df; }
+html[data-theme="dark"] .export-not-started strong { color:#91c4ff; }
+@media (max-width:640px) {
+    .export-product-filter { align-items:flex-start; flex-direction:column; gap:.5rem; }
+    .export-product-filter-tabs { width:100%; flex-wrap:nowrap; overflow-x:auto; padding-bottom:.12rem; }
+    .export-product-filter-btn { flex:0 0 auto; white-space:nowrap; }
 }
 .export-active-card {
     border-top:1px solid #edf2f7;
@@ -6987,6 +7213,66 @@ html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="require
 html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="capacity"] { border-color: #485895; background: #202951; color: #c2ccff; }
 html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view="stats"] { border-color: #2e6686; background: #153446; color: #afe1ff; }
 html[data-theme="dark"] .schedule-toolbar .view-toggle button.active { color: #fff; }
+/* Export schedule actions use their own high-contrast palette in every theme. */
+#exportView .export-schedule-actions-cell .set-manage-btn {
+    display:inline-flex !important;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    min-height:42px !important;
+    padding:.52rem .7rem !important;
+    border-radius:10px !important;
+    font-size:.84rem !important;
+    font-weight:900 !important;
+    letter-spacing:-.02em;
+    transition:transform .16s ease,box-shadow .16s ease,filter .16s ease !important;
+}
+#exportView .export-schedule-actions-cell .set-manage-btn .btn-copy { gap:.38rem; }
+#exportView .export-schedule-actions-cell .set-manage-btn .btn-copy::before {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:1.2rem;
+    height:1.2rem;
+    border-radius:5px;
+    background:rgba(255,255,255,.18);
+    color:inherit;
+    font-size:.78rem;
+    font-weight:950;
+    line-height:1;
+}
+#exportView .export-schedule-actions-cell .set-edit-btn {
+    border-color:#2563eb !important;
+    background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%) !important;
+    color:#fff !important;
+    box-shadow:0 7px 15px rgba(29,78,216,.25),inset 0 1px 0 rgba(255,255,255,.22) !important;
+}
+#exportView .export-schedule-actions-cell .set-edit-btn .btn-copy::before { content:'✎'; }
+#exportView .export-schedule-actions-cell .set-delete-btn {
+    border-color:#dc2626 !important;
+    background:linear-gradient(135deg,#ef4444 0%,#be123c 100%) !important;
+    color:#fff !important;
+    box-shadow:0 7px 15px rgba(190,24,93,.23),inset 0 1px 0 rgba(255,255,255,.2) !important;
+}
+#exportView .export-schedule-actions-cell .set-delete-btn .btn-copy::before { content:'×'; font-size:1rem; }
+#exportView .export-schedule-actions-cell .set-manage-btn:hover {
+    transform:translateY(-1px) !important;
+    filter:brightness(1.08);
+}
+#exportView .export-schedule-actions-cell .set-manage-btn:focus-visible {
+    outline:3px solid rgba(59,130,246,.36);
+    outline-offset:2px;
+}
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-edit-btn {
+    border-color:#72afff !important;
+    background:linear-gradient(135deg,#2672d8 0%,#173f9d 100%) !important;
+    box-shadow:0 8px 17px rgba(3,22,69,.48),inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-delete-btn {
+    border-color:#fb7b82 !important;
+    background:linear-gradient(135deg,#d9364c 0%,#941d35 100%) !important;
+    box-shadow:0 8px 17px rgba(68,8,23,.5),inset 0 1px 0 rgba(255,255,255,.16) !important;
+}
 @media (max-width: 768px) {
     .schedule-toolbar .view-toggle { gap: .4rem; padding: .42rem; }
     .schedule-toolbar .view-toggle button { min-height: 48px; padding: .58rem .9rem; font-size: .86rem; }
@@ -7284,6 +7570,7 @@ html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active 
                 <tr class="{{ item_class }} schedule-detail-row" role="button" tabindex="0" onclick="handleScheduleDetailRowClick(event, 'export', {{ export.id }})" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); scrollToScheduleDetail('export', {{ export.id }}); }"
                     data-schedule-id="{{ export.id }}"
                     data-product-name="{{ export.product_name or '' }}"
+                    data-export-product-id="{{ export.product_id or 0 }}"
                     data-po-numbers="{{ (export.po_numbers or []) | join(' ') }}"
                     data-start-date="{{ export.production_start_date or '' }}"
                     data-end-date="{{ export.production_end_date or '' }}"
@@ -7399,6 +7686,7 @@ html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active 
         <div id="exportScheduleDetail{{ export.id }}" class="export-active-card {{ item_class }}"
             data-schedule-id="{{ export.id }}"
             data-product-name="{{ export.product_name or '' }}"
+            data-export-product-id="{{ export.product_id or 0 }}"
             data-po-numbers="{{ (export.po_numbers or []) | join(' ') }}"
             data-start-date="{{ export.production_start_date or '' }}"
             data-end-date="{{ export.production_end_date or '' }}"
@@ -7556,7 +7844,14 @@ html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active 
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="req-muted">아직 실제 생산량이 없습니다.</div>
+                        {% if export.has_started %}
+                        <div class="req-muted">아직 완료된 생산 이력이 없습니다.</div>
+                        {% else %}
+                        <div class="export-not-started">
+                            <strong>생산 시작 전</strong>
+                            <span>생산이 시작되면 일자별 생산량이 이곳에 표시됩니다.</span>
+                        </div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -7584,7 +7879,7 @@ html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active 
             <div class="export-summary-value">{{ export_schedules|length }}</div>
         </div>
         <div class="export-summary-card summary-active">
-            <div class="export-summary-label"><span>생산중 일정</span><small>진행</small></div>
+            <div class="export-summary-label"><span>진행 일정</span><small>미착수 포함</small></div>
             <div class="export-summary-value">{{ export_active_schedules|length }}</div>
         </div>
         <div class="export-summary-card summary-completed">
@@ -7594,23 +7889,37 @@ html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active 
     </div>
 
     <div class="export-tabs" role="tablist" aria-label="수출 일정 상태">
-        <button type="button" class="export-tab-btn active" data-export-tab="active" role="tab" aria-selected="true" onclick="switchExportScheduleTab('active')"><span>생산중</span><strong>{{ export_active_schedules|length }}</strong></button>
+        <button type="button" class="export-tab-btn active" data-export-tab="active" role="tab" aria-selected="true" onclick="switchExportScheduleTab('active')"><span>진행</span><strong>{{ export_active_schedules|length }}</strong></button>
         <button type="button" class="export-tab-btn" data-export-tab="completed" role="tab" aria-selected="false" onclick="switchExportScheduleTab('completed')"><span>완료</span><strong>{{ export_completed_schedules|length }}</strong></button>
     </div>
 
     <div id="exportTabActivePane">
+        {% set export_active_product_ids = [] %}
+        <div class="export-product-filter" role="tablist" aria-label="수출 일정 상품 필터">
+            <span class="export-product-filter-label">상품별 보기</span>
+            <div class="export-product-filter-tabs">
+                <button type="button" class="export-product-filter-btn active" data-export-product-filter="" role="tab" aria-selected="true" onclick="switchExportProductTab('')">전체 <strong>{{ export_active_schedules|length }}</strong></button>
+                {% for export in export_active_schedules %}
+                {% set product_id = (export.product_id or 0)|string %}
+                {% if product_id not in export_active_product_ids %}
+                {% set _ = export_active_product_ids.append(product_id) %}
+                <button type="button" class="export-product-filter-btn" data-export-product-filter="{{ product_id }}" role="tab" aria-selected="false" onclick="switchExportProductTab('{{ product_id }}')">{{ export.product_name or '-' }}</button>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
         <div class="export-section">
             <div class="export-section-head">
                 <h3>등록된 수출 일정</h3>
             </div>
-            {{ render_export_table(export_in_progress_schedules, '등록된 생산중 수출 일정이 없습니다.') }}
+            {{ render_export_table(export_in_progress_schedules, '등록된 진행 수출 일정이 없습니다.') }}
         </div>
 
         <div class="export-section">
             <div class="export-section-head">
-                <h3>생산중 일정 리스트</h3>
+                <h3>진행 수출 일정 상세</h3>
             </div>
-            {{ render_export_cards(export_active_schedules, '생산중인 수출 일정이 아직 없습니다.') }}
+            {{ render_export_cards(export_active_schedules, '진행 중인 수출 일정이 아직 없습니다.') }}
         </div>
     </div>
 
@@ -9528,6 +9837,22 @@ function switchExportScheduleTab(tab) {
         renderExportCompletedCalendar();
         applyExportCompletedFilter();
     }
+}
+
+function switchExportProductTab(productId) {
+    const selectedProductId = String(productId || '');
+    const selector = [
+        '#exportTabActivePane .export-schedule-table tr[data-product-name]',
+        '#exportTabActivePane .export-active-card[data-product-name]',
+    ].join(', ');
+    document.querySelectorAll(selector).forEach((item) => {
+        item.hidden = Boolean(selectedProductId) && item.dataset.exportProductId !== selectedProductId;
+    });
+    document.querySelectorAll('.export-product-filter-btn').forEach((button) => {
+        const isSelected = (button.dataset.exportProductFilter || '') === selectedProductId;
+        button.classList.toggle('active', isSelected);
+        button.setAttribute('aria-selected', String(isSelected));
+    });
 }
 
 function toggleExportDailyRows(button) {

@@ -2059,6 +2059,7 @@ def production_print(production_id):
                 {
                     'material_id': None,
                     'category': '부재료',
+                    'unit': '박스',
                     'lot_manufacture_date': '',
                     'base_sort_key': '00_set_component',
                 }
@@ -2141,6 +2142,7 @@ def production_print(production_id):
                         'material_code': legacy.get('material_code') or '',
                         'material_name': legacy.get('material_name') or '',
                         'category': '부재료',
+                        'unit': '박스',
                         'lot_used_quantity': consumed_quantity,
                         'actual_quantity': consumed_quantity,
                         'lot_receiving_date': receiving_date,

@@ -25,12 +25,17 @@
 .account-view{display:none;}
 .account-view.active{display:block;}
 .user-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:1rem;}
-.user-card{position:relative;border:1px solid #cfdae8;border-radius:20px;padding:1rem;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);display:flex;flex-direction:column;gap:.9rem;box-shadow:0 14px 28px rgba(15,23,42,.06),0 0 0 1px rgba(255,255,255,.6) inset;}
+.user-card{position:relative;border:1px solid #cfdae8;border-radius:18px;padding:.9rem;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);display:flex;flex-direction:column;gap:.65rem;box-shadow:inset 4px 0 #94a3b8,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+.user-card[data-role="admin"]{box-shadow:inset 4px 0 #e11d48,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+.user-card[data-role="production"]{box-shadow:inset 4px 0 #16a34a,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+.user-card[data-role="rawmat"]{box-shadow:inset 4px 0 #ea580c,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+.user-card[data-role="purchase"]{box-shadow:inset 4px 0 #2563eb,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+.user-card[data-role="logistics"]{box-shadow:inset 4px 0 #0891b2,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
 .user-card.pending{border-color:#fde68a;background:linear-gradient(180deg,#fffdf3 0%,#fffaf0 100%);}
 .user-card.self{border-style:dashed;border-color:#93c5fd;}
 .user-card::after{content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.75);}
 .user-card:hover{border-color:#bfd0e5;box-shadow:0 18px 34px rgba(15,23,42,.09),0 0 0 1px rgba(255,255,255,.72) inset;transform:translateY(-1px);}
-.user-top{display:flex;justify-content:space-between;gap:.85rem;align-items:flex-start;padding-bottom:.9rem;border-bottom:1px solid #e5edf6;}
+.user-top{display:flex;justify-content:space-between;gap:.85rem;align-items:flex-start;padding-bottom:.65rem;border-bottom:1px solid #e5edf6;}
 .user-id{display:flex;gap:.8rem;align-items:center;min-width:0;}
 .avatar{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;color:#fff;box-shadow:0 8px 18px rgba(15,23,42,.12);flex:0 0 auto;}
 .user-name{font-size:1rem;font-weight:900;color:#0f172a;line-height:1.25;}
@@ -45,8 +50,8 @@
 .role-purchase{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
 .role-logistics{background:#ecfeff;border-color:#a5f3fc;color:#0f766e;}
 .role-readonly{background:#f8fafc;border-color:#dbe4f0;color:#475569;}
-.user-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;}
-.meta-item{background:linear-gradient(180deg,#f9fbff,#f5f8fc);border:1px solid #dfe7f1;border-radius:14px;padding:.75rem .85rem;box-shadow:0 1px 0 rgba(255,255,255,.75) inset;}
+.user-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;}
+.meta-item{background:linear-gradient(180deg,#f9fbff,#f5f8fc);border:1px solid #dfe7f1;border-radius:12px;padding:.55rem .65rem;box-shadow:0 1px 0 rgba(255,255,255,.75) inset;}
 .meta-label{font-size:.73rem;color:#64748b;margin-bottom:.22rem;}
 .meta-value{font-size:.88rem;color:#0f172a;font-weight:700;word-break:break-word;}
 .access-form{display:flex;flex-direction:column;gap:.9rem;padding:.15rem 0 0;}
@@ -85,31 +90,68 @@
 .soft-btn.primary:hover{background:#1d4ed8;}
 .soft-btn.danger{background:#ef4444;color:#fff;}
 .soft-btn.danger:hover{background:#dc2626;}
+.card-edit-toggle{width:100%;border:1px solid #93c5fd;border-radius:12px;background:#eff6ff;color:#1d4ed8;padding:.62rem .8rem;font-size:.82rem;font-weight:900;cursor:pointer;}
+.card-edit-toggle:hover{background:#dbeafe;border-color:#60a5fa;}
+#accountViewCard .access-form{display:none;}
+#approvedUserGrid .user-card:nth-child(6n+1){border-color:#b6c9e2;box-shadow:inset 4px 0 #3b82f6,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+#approvedUserGrid .user-card:nth-child(6n+2){border-color:#b7d9db;box-shadow:inset 4px 0 #14b8a6,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+#approvedUserGrid .user-card:nth-child(6n+3){border-color:#d4c5ec;box-shadow:inset 4px 0 #8b5cf6,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+#approvedUserGrid .user-card:nth-child(6n+4){border-color:#efd0af;box-shadow:inset 4px 0 #f59e0b,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+#approvedUserGrid .user-card:nth-child(6n+5){border-color:#b7dfc9;box-shadow:inset 4px 0 #22c55e,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
+#approvedUserGrid .user-card:nth-child(6n){border-color:#edc4cf;box-shadow:inset 4px 0 #ec4899,0 10px 22px rgba(15,23,42,.05),0 0 0 1px rgba(255,255,255,.6) inset;}
 .empty-copy{padding:1rem;border:1px dashed #dbe4f0;border-radius:16px;background:#fbfdff;color:#64748b;text-align:center;font-size:.88rem;}
 .permission-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem;}
 .permission-card{border-radius:16px;padding:1rem;border:1px solid #e2e8f0;background:#f8fafc;}
 .permission-card h4{margin:0 0 .55rem;font-size:.92rem;}
 .permission-card ul{margin:0;padding-left:1rem;color:#475569;font-size:.82rem;line-height:1.7;}
-.user-list-wrap{border:1px solid #dbe4f0;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#f8fbff,#f6f9fc);padding:.45rem;}
-.user-list-table{width:100%;border-collapse:separate;border-spacing:0 .55rem;font-size:.88rem;}
-.user-list-table thead th{background:#f8fafc;color:#475569;padding:.82rem .85rem;text-align:left;font-size:.78rem;font-weight:900;border-bottom:1px solid #e2e8f0;}
-.user-list-table tbody tr{box-shadow:0 10px 22px rgba(15,23,42,.05);}
-.user-list-table td{padding:.95rem .9rem;vertical-align:top;color:#0f172a;background:#fff;border-top:1px solid #e7eef6;border-bottom:1px solid #e7eef6;}
-.user-list-table td:first-child{border-left:1px solid #e7eef6;border-top-left-radius:16px;border-bottom-left-radius:16px;}
-.user-list-table td:last-child{border-right:1px solid #e7eef6;border-top-right-radius:16px;border-bottom-right-radius:16px;}
+.user-list-wrap{border:1px solid #dbe4f0;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#f8fbff,#f6f9fc);padding:.35rem .45rem;}
+.user-list-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0 .42rem;font-size:.86rem;}
+.user-list-table th:nth-child(1){width:23% !important;}
+.user-list-table th:nth-child(2){width:12% !important;}
+.user-list-table th:nth-child(3){width:29% !important;}
+.user-list-table th:nth-child(4){width:22% !important;}
+.user-list-table th:nth-child(5){width:14% !important;}
+.user-list-table thead th{background:transparent;color:#64748b;padding:.5rem .75rem;text-align:left;font-size:.74rem;font-weight:900;border-bottom:none;}
+.user-list-table tbody tr{box-shadow:0 7px 16px rgba(15,23,42,.045);transition:transform .16s ease,box-shadow .16s ease;}
+.user-list-table td{padding:.7rem .75rem;vertical-align:middle;color:#0f172a;background:#fff;border-top:1px solid #e7eef6;border-bottom:1px solid #e7eef6;}
+.user-list-table td:first-child{border-left:1px solid #e7eef6;border-top-left-radius:14px;border-bottom-left-radius:14px;box-shadow:inset 4px 0 #94a3b8;padding-left:1rem;}
+.user-list-table td:last-child{border-right:1px solid #e7eef6;border-top-right-radius:14px;border-bottom-right-radius:14px;}
+.user-list-table tbody tr:hover{transform:translateX(2px);box-shadow:0 10px 20px rgba(15,23,42,.09);}
 .user-list-table tbody tr:hover td{border-color:#cfdbe8;background:#fbfdff;}
-.list-user-main{display:flex;flex-direction:column;gap:.22rem;min-width:0;}
-.list-user-sub{font-size:.78rem;color:#64748b;word-break:break-word;}
-.list-access-form{display:flex;flex-direction:column;gap:.7rem;min-width:280px;padding:.15rem 0;}
+.user-list-table tbody tr[data-role="admin"] td:first-child{box-shadow:inset 4px 0 #e11d48;}
+.user-list-table tbody tr[data-role="production"] td:first-child{box-shadow:inset 4px 0 #16a34a;}
+.user-list-table tbody tr[data-role="rawmat"] td:first-child{box-shadow:inset 4px 0 #ea580c;}
+.user-list-table tbody tr[data-role="purchase"] td:first-child{box-shadow:inset 4px 0 #2563eb;}
+.user-list-table tbody tr[data-role="logistics"] td:first-child{box-shadow:inset 4px 0 #0891b2;}
+.list-user-main{display:flex;flex-direction:column;gap:.16rem;min-width:0;}
+.list-user-main strong{font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.list-user-sub{font-size:.76rem;color:#64748b;word-break:break-word;line-height:1.25;}
+.list-inline-chips{gap:.3rem;}
+.user-list-table .mini-badge{padding:.16rem .45rem;font-size:.69rem;}
+.user-list-table .role-pill{padding:.32rem .58rem;font-size:.74rem;}
+.user-list-table .assigned-chip{padding:.2rem .46rem;font-size:.7rem;line-height:1.2;}
+.list-access-form{display:flex;flex-direction:column;gap:.7rem;min-width:0;padding:.2rem 0 .1rem;}
 .list-access-form{display:none;}
 .list-access-form.open{display:flex;}
-.list-edit-toggle{border:1px solid #93c5fd;border-radius:10px;background:#eff6ff;color:#1d4ed8;padding:.52rem .72rem;font-size:.78rem;font-weight:900;cursor:pointer;}
+.list-edit-toggle{border:1px solid #93c5fd;border-radius:10px;background:#eff6ff;color:#1d4ed8;padding:.46rem .64rem;font-size:.74rem;font-weight:900;cursor:pointer;white-space:nowrap;}
 .list-edit-toggle:hover{background:#dbeafe;border-color:#60a5fa;}
 .list-access-top{display:grid;grid-template-columns:minmax(150px,190px) 1fr;gap:.55rem;align-items:start;padding:.55rem .6rem;border:1px solid #e2e8f0;border-radius:14px;background:linear-gradient(180deg,#fbfdff,#f8fafc);}
 .list-workplaces{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.45rem;}
 .list-workplaces .wp-chip{padding:.45rem .62rem;font-size:.78rem;}
+.list-access-form .list-access-top{grid-template-columns:1fr;}
+.list-access-form .workplace-role-row{grid-template-columns:minmax(0,1fr);}
 .list-actions{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;}
 .list-self{font-size:.82rem;color:#94a3b8;}
+.user-edit-modal{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:1.25rem;background:rgba(15,23,42,.56);backdrop-filter:blur(3px);}
+.user-edit-panel{width:min(560px,100%);max-height:calc(100vh - 2.5rem);overflow:auto;border:1px solid #dbe4f0;border-radius:18px;background:#fff;padding:1rem;box-shadow:0 28px 70px rgba(15,23,42,.28);}
+.user-edit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:0 .1rem .85rem;border-bottom:1px solid #e2e8f0;}
+.user-edit-title{font-size:1rem;font-weight:900;color:#0f172a;}
+.user-edit-help{margin-top:.2rem;font-size:.78rem;color:#64748b;}
+.user-edit-close{border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#475569;padding:.42rem .62rem;font-size:.76rem;font-weight:900;cursor:pointer;white-space:nowrap;}
+.user-edit-close:hover{background:#eef2f7;}
+.user-edit-modal .list-access-form.open{display:flex;margin-top:.9rem;}
+.user-edit-modal .list-access-form .list-access-top{grid-template-columns:minmax(160px,200px) 1fr;}
+.user-edit-modal .list-access-form .workplace-role-row{grid-template-columns:minmax(0,1fr) minmax(130px,160px);}
 html[data-theme="dark"] .user-page-copy p,
 html[data-theme="dark"] .summary-label,
 html[data-theme="dark"] .summary-meta,
@@ -132,6 +174,17 @@ html[data-theme="dark"] .user-card.pending{background:linear-gradient(180deg,rgb
 html[data-theme="dark"] .user-card.self{border-color:#3b82f6;}
 html[data-theme="dark"] .user-card::after{box-shadow:inset 0 1px 0 rgba(148,163,184,.08);}
 html[data-theme="dark"] .user-card:hover{border-color:#3a4b64;box-shadow:0 18px 34px rgba(2,6,23,.34);}
+html[data-theme="dark"] .user-card[data-role="admin"]:hover{box-shadow:inset 4px 0 #fb7185,0 18px 34px rgba(2,6,23,.34);}
+html[data-theme="dark"] .user-card[data-role="production"]:hover{box-shadow:inset 4px 0 #4ade80,0 18px 34px rgba(2,6,23,.34);}
+html[data-theme="dark"] .user-card[data-role="rawmat"]:hover{box-shadow:inset 4px 0 #fb923c,0 18px 34px rgba(2,6,23,.34);}
+html[data-theme="dark"] .user-card[data-role="purchase"]:hover{box-shadow:inset 4px 0 #60a5fa,0 18px 34px rgba(2,6,23,.34);}
+html[data-theme="dark"] .user-card[data-role="logistics"]:hover{box-shadow:inset 4px 0 #22d3ee,0 18px 34px rgba(2,6,23,.34);}
+html[data-theme="dark"] #approvedUserGrid .user-card:nth-child(6n+1){border-color:rgba(96,165,250,.55);box-shadow:inset 4px 0 #60a5fa,0 14px 30px rgba(2,6,23,.32);}
+html[data-theme="dark"] #approvedUserGrid .user-card:nth-child(6n+2){border-color:rgba(45,212,191,.5);box-shadow:inset 4px 0 #2dd4bf,0 14px 30px rgba(2,6,23,.32);}
+html[data-theme="dark"] #approvedUserGrid .user-card:nth-child(6n+3){border-color:rgba(167,139,250,.52);box-shadow:inset 4px 0 #a78bfa,0 14px 30px rgba(2,6,23,.32);}
+html[data-theme="dark"] #approvedUserGrid .user-card:nth-child(6n+4){border-color:rgba(251,191,36,.52);box-shadow:inset 4px 0 #fbbf24,0 14px 30px rgba(2,6,23,.32);}
+html[data-theme="dark"] #approvedUserGrid .user-card:nth-child(6n+5){border-color:rgba(74,222,128,.52);box-shadow:inset 4px 0 #4ade80,0 14px 30px rgba(2,6,23,.32);}
+html[data-theme="dark"] #approvedUserGrid .user-card:nth-child(6n){border-color:rgba(244,114,182,.52);box-shadow:inset 4px 0 #f472b6,0 14px 30px rgba(2,6,23,.32);}
 html[data-theme="dark"] .user-name,
 html[data-theme="dark"] .summary-value,
 html[data-theme="dark"] .panel-head h2,
@@ -176,8 +229,18 @@ html[data-theme="dark"] .user-list-table td{background:#121a2a;color:#dbe7f5;bor
 html[data-theme="dark"] .user-list-table td:first-child{border-left-color:#263244;}
 html[data-theme="dark"] .user-list-table td:last-child{border-right-color:#263244;}
 html[data-theme="dark"] .user-list-table tbody tr:hover td{background:#162133;border-color:#314155;}
+html[data-theme="dark"] .user-list-table tbody tr:hover{box-shadow:0 12px 24px rgba(2,6,23,.42);}
 html[data-theme="dark"] .list-edit-toggle{background:rgba(37,99,235,.16);border-color:rgba(96,165,250,.32);color:#bfdbfe;}
 html[data-theme="dark"] .list-edit-toggle:hover{background:rgba(37,99,235,.26);}
+html[data-theme="dark"] .card-edit-toggle{background:rgba(37,99,235,.16);border-color:rgba(96,165,250,.32);color:#bfdbfe;}
+html[data-theme="dark"] .card-edit-toggle:hover{background:rgba(37,99,235,.26);}
+html[data-theme="dark"] .user-edit-modal{background:rgba(2,6,23,.72);}
+html[data-theme="dark"] .user-edit-panel{background:#121a2a;border-color:#2b3648;box-shadow:0 28px 70px rgba(0,0,0,.48);}
+html[data-theme="dark"] .user-edit-head{border-bottom-color:#263244;}
+html[data-theme="dark"] .user-edit-title{color:#eff6ff;}
+html[data-theme="dark"] .user-edit-help{color:#8ea3bd;}
+html[data-theme="dark"] .user-edit-close{background:#162133;border-color:#314155;color:#c7d3e3;}
+html[data-theme="dark"] .user-edit-close:hover{background:#223046;}
 @media (max-width: 768px){
     .user-grid{grid-template-columns:1fr;}
     .user-meta{grid-template-columns:1fr;}
@@ -186,7 +249,7 @@ html[data-theme="dark"] .list-edit-toggle:hover{background:rgba(37,99,235,.26);}
     .action-buttons .soft-btn{flex:1 1 auto;}
     .list-access-top{grid-template-columns:1fr;}
     .user-list-wrap{overflow:auto;}
-    .user-list-table{min-width:980px;}
+    .user-list-table{min-width:900px;}
 }
 </style>
 {% endblock %}
@@ -495,6 +558,7 @@ html[data-theme="dark"] .list-edit-toggle:hover{background:rgba(37,99,235,.26);}
                     </div>
 
                     {% if u.id != session_user_id %}
+                    <button type="button" class="card-edit-toggle">권한·작업장 수정</button>
                     <form method="POST" action="/users/{{ u.id }}/update-access" class="access-form">
                         <div>
                             <div class="field-label">권한</div>
@@ -746,6 +810,64 @@ function setUserView(view){
     document.querySelectorAll('.account-view').forEach(panel => panel.classList.toggle('active', panel.id === `accountView${view.charAt(0).toUpperCase()}${view.slice(1)}`));
 }
 
+function openUserAccessEditor(button, form){
+    closeUserAccessEditor();
+    const row = button.closest('tr');
+    const userName = row?.querySelector('.list-user-main strong')?.textContent?.trim() || '사용자';
+    const cardName = button.closest('.user-card')?.querySelector('.user-name')?.textContent?.trim();
+    const placeholder = document.createComment('user access form location');
+    form.parentNode.insertBefore(placeholder, form);
+
+    const modal = document.createElement('div');
+    modal.id = 'userAccessEditor';
+    modal.className = 'user-edit-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', `${userName} 권한 및 작업장 수정`);
+
+    const panel = document.createElement('div');
+    panel.className = 'user-edit-panel';
+    const head = document.createElement('div');
+    head.className = 'user-edit-head';
+    const copy = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'user-edit-title';
+    title.textContent = `${userName} · 권한 및 작업장 수정`;
+    const help = document.createElement('div');
+    help.className = 'user-edit-help';
+    help.textContent = '변경할 권한과 작업장을 설정한 뒤 저장하세요.';
+    copy.append(title, help);
+    if (cardName) title.textContent = `${cardName} · 권한 및 작업장 수정`;
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'user-edit-close';
+    closeButton.textContent = '닫기';
+    closeButton.addEventListener('click', closeUserAccessEditor);
+    head.append(copy, closeButton);
+
+    panel.append(head, form);
+    modal.append(panel);
+    modal._form = form;
+    modal._placeholder = placeholder;
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeUserAccessEditor();
+    });
+    form.classList.add('open');
+    document.body.appendChild(modal);
+    closeButton.focus();
+}
+
+function closeUserAccessEditor(){
+    const modal = document.getElementById('userAccessEditor');
+    if (!modal) return;
+    const form = modal._form;
+    if (form && modal._placeholder?.parentNode) {
+        form.classList.remove('open');
+        modal._placeholder.replaceWith(form);
+    }
+    modal.remove();
+}
+
 function filterUserCards(){
     const keyword = (document.getElementById('userSearchInput')?.value || '').trim().toLowerCase();
     const role = document.getElementById('roleFilterSelect')?.value || 'all';
@@ -764,5 +886,26 @@ document.querySelectorAll('.role-select-input').forEach(select => {
 
 document.getElementById('userSearchInput')?.addEventListener('input', filterUserCards);
 document.getElementById('roleFilterSelect')?.addEventListener('change', filterUserCards);
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('.list-edit-toggle');
+    if (!button) return;
+    const form = button.nextElementSibling;
+    if (!form || !form.classList.contains('list-access-form')) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openUserAccessEditor(button, form);
+}, true);
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeUserAccessEditor();
+});
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('.card-edit-toggle');
+    if (!button) return;
+    const form = button.nextElementSibling;
+    if (!form || !form.classList.contains('access-form')) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openUserAccessEditor(button, form);
+}, true);
 </script>
 {% endblock %}
