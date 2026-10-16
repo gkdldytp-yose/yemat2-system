@@ -176,7 +176,7 @@
             <h2>선택한 날짜 일괄 등록</h2>
             <button onclick="closeBatchModal()" class="modal-close-btn" aria-label="닫기">&times;</button>
         </div>
-        <form method="POST" action="{{ url_for('production.manage_work_day') }}" id="batchForm">
+        <form method="POST" action="{{ url_for('production.manage_work_days_batch') }}" id="batchForm">
             <div class="batch-selected-dates">
                 <strong>선택된 날짜 (<span id="batchDateCount">0</span>개):</strong>
                 <div id="batchDatesList" class="batch-dates-list"></div>
@@ -868,54 +868,37 @@ function toggleBatchOvertimeInput() {
 }
 
 // 일괄 저장
-function submitBatchForm() {
+async function submitBatchForm() {
     if (selectedDates.size === 0) {
         alert('선택된 날짜가 없습니다.');
         return;
     }
     
-    const type = document.getElementById('batchType').value;
-    const overtimeHours = document.getElementById('batchOvertimeHours').value || 0;
-    const note = document.getElementById('batchNote').value;
-    
-    // 각 날짜에 대해 폼 제출
-    const dates = Array.from(selectedDates);
-    let completed = 0;
-    
-    dates.forEach((date, index) => {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{{ url_for("production.manage_work_day") }}';
-        form.style.display = 'none';
-        
-        const fields = {
-            'date': date,
-            'type': type,
-            'overtime_hours': overtimeHours,
-            'note': note
-        };
-        
-        Object.keys(fields).forEach(key => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = fields[key];
-            form.appendChild(input);
+    const form = document.getElementById('batchForm');
+    if (!form.reportValidity()) return;
+
+    const submitButton = form.querySelector('.btn-primary');
+    const formData = new FormData(form);
+    Array.from(selectedDates).sort().forEach((date) => formData.append('dates', date));
+
+    submitButton.disabled = true;
+    submitButton.textContent = '저장 중...';
+    try {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' }
         });
-        
-        document.body.appendChild(form);
-        
-        // 마지막 폼만 제출 (페이지 리로드)
-        if (index === dates.length - 1) {
-            form.submit();
-        } else {
-            // AJAX로 제출 (페이지 리로드 없이)
-            fetch('{{ url_for("production.manage_work_day") }}', {
-                method: 'POST',
-                body: new FormData(form)
-            });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.ok) {
+            throw new Error(result.message || '일괄 저장에 실패했습니다.');
         }
-    });
+        window.location.href = result.redirect_url;
+    } catch (error) {
+        alert(error.message || '일괄 저장에 실패했습니다. 다시 시도해주세요.');
+        submitButton.disabled = false;
+        submitButton.textContent = '일괄 저장';
+    }
 }
 
 // 단일 날짜 삭제

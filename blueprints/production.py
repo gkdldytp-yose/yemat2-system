@@ -4830,7 +4830,9 @@ def schedules():
                         'excluded_date_count': len(excluded_dates),
                     }
                 )
-                if export_view['has_started'] and not is_completed:
+                # Keep not-yet-started schedules in the active view as well.
+                # Their container targets are useful before the first production is recorded.
+                if not is_completed:
                     export_active_rows.append(export_view)
             except Exception:
                 logger.exception(
@@ -7795,6 +7797,74 @@ def manage_work_day():
     # ?????醫롮????怨쀬뜞嚥??귐됰뼄?????
     work_date_obj = datetime.strptime(work_date, '%Y-%m-%d').date()
     return redirect(url_for('production.work_days', year=work_date_obj.year, month=work_date_obj.month))
+
+
+@bp.route('/work-days/manage-batch', methods=['POST'])
+@admin_required
+def manage_work_days_batch():
+    """Apply one work-day setting to every selected date atomically."""
+    work_dates = sorted(set(request.form.getlist('dates')))
+    work_type = request.form.get('type')
+    overtime_hours = request.form.get('overtime_hours') or 0
+    note = request.form.get('note', '')
+
+    if not work_dates:
+        return jsonify({'ok': False, 'message': '선택된 날짜가 없습니다.'}), 400
+
+    try:
+        parsed_dates = [datetime.strptime(work_date, '%Y-%m-%d').date() for work_date in work_dates]
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'message': '날짜 형식이 올바르지 않습니다.'}), 400
+
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        for work_date in work_dates:
+            cursor.execute('SELECT id FROM work_days WHERE date = ?', (work_date,))
+            existing = cursor.fetchone()
+            if existing:
+                cursor.execute(
+                    '''
+                    UPDATE work_days
+                    SET type = ?, overtime_hours = ?, note = ?
+                    WHERE date = ?
+                    ''',
+                    (work_type, overtime_hours, note, work_date),
+                )
+                audit_action = 'update'
+            else:
+                cursor.execute(
+                    '''
+                    INSERT INTO work_days (date, type, overtime_hours, note)
+                    VALUES (?, ?, ?, ?)
+                    ''',
+                    (work_date, work_type, overtime_hours, note),
+                )
+                audit_action = 'create'
+
+            audit_log(
+                conn,
+                audit_action,
+                'work_day',
+                None,
+                {'date': work_date, 'type': work_type, 'overtime_hours': overtime_hours, 'note': note},
+            )
+            sync_result = _resync_schedules_for_work_day_change(conn, cursor, work_date)
+            audit_log(
+                conn,
+                'resync',
+                'work_day_schedule_sync',
+                None,
+                {'date': work_date, 'type': work_type, 'sync_result': sync_result},
+            )
+
+    first_date = parsed_dates[0]
+    return jsonify(
+        {
+            'ok': True,
+            'count': len(work_dates),
+            'redirect_url': url_for('production.work_days', year=first_date.year, month=first_date.month),
+        }
+    )
 
 
 @bp.route('/work-days/delete', methods=['POST'])
