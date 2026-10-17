@@ -835,6 +835,7 @@ def product_bom(product_id):
 def update_product_info(product_id):
     """?곹뭹 湲곕낯 ?뺣낫 ?낅뜲?댄듃"""
     category = (request.form.get('category') or '기타').strip() or '기타'
+    special_note = (request.form.get('special_note') or '').strip() or None
     set_item_type = _normalize_set_item_type(request.form.get('set_item_type'), category)
     raw_option_values = _parse_raw_option_values(request.form)
     first_option, second_option, third_option = raw_option_values
@@ -876,13 +877,13 @@ def update_product_info(product_id):
             SET box_quantity = ?, sheets_per_pack = ?, cuts_per_sheet = ?, category = ?,
                 sok_per_box = ?, sok_per_box_2 = ?, sok_per_box_3 = ?,
                 sheets_per_pack_2 = ?, sheets_per_pack_3 = ?, expiry_months = ?, set_item_type = ?,
-                pallet_boxes_per_unit = ?
+                pallet_boxes_per_unit = ?, special_note = ?
             WHERE id = ?
         ''', (
             box_quantity, sheets_per_pack, cuts_per_sheet, category,
             sok_per_box, sok_per_box_2, sok_per_box_3,
             sheets_per_pack_2, sheets_per_pack_3, expiry_months, set_item_type,
-            pallet_boxes_per_unit, product_id
+            pallet_boxes_per_unit, special_note, product_id
         ))
 
     return redirect(_product_bom_url(product_id, request.form.get('return_to')))

@@ -81,6 +81,19 @@
 .material-detail-tabs{display:flex;gap:0.4rem;margin-bottom:0.75rem;}
 .material-detail-tab{padding:0.46rem 0.95rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;font-weight:800;cursor:pointer;}
 .material-detail-tab.active{background:#0f172a;color:#fff;border-color:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,0.2);}
+.material-row-actions{white-space:nowrap;text-align:center;}
+.material-action-group{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem;border:1px solid #dbe5f0;border-radius:12px;background:#f8fafc;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 3px 9px rgba(15,23,42,.06);}
+.material-action-group form{display:contents;}
+.material-action-btn{display:inline-flex!important;align-items:center;justify-content:center;gap:.28rem;min-width:46px;min-height:30px;padding:.32rem .5rem!important;border:1px solid transparent!important;border-radius:8px!important;font-size:.73rem!important;font-weight:800!important;letter-spacing:-.02em;box-shadow:none!important;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease!important;}
+.material-action-btn::before{font-size:.86rem;font-weight:900;line-height:1;}
+.material-action-btn:hover{transform:translateY(-1px);filter:brightness(1.03);box-shadow:0 5px 12px rgba(15,23,42,.16)!important;}
+.material-action-btn:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px;}
+.material-action-detail{background:linear-gradient(135deg,#0f766e,#0d9488)!important;border-color:#14b8a6!important;color:#fff!important;}
+.material-action-detail::before{content:'⌕';}
+.material-action-edit{background:linear-gradient(135deg,#2563eb,#3b82f6)!important;border-color:#60a5fa!important;color:#fff!important;}
+.material-action-edit::before{content:'✎';}
+.material-action-delete{background:linear-gradient(135deg,#dc2626,#ef4444)!important;border-color:#f87171!important;color:#fff!important;}
+.material-action-delete::before{content:'×';font-size:1.05rem;}
 .material-panel{display:none;}
 .material-panel.active{display:block;}
 .material-panel table{font-size:0.88rem;background:#fff;border-radius:8px;overflow:hidden;}
@@ -666,6 +679,10 @@ html[data-theme="dark"] .issue-status-btn,
 html[data-theme="dark"] .issue-date-btn,
 html[data-theme="dark"] .issue-date-picker-btn,
 html[data-theme="dark"] .receipt-none-btn{background:#152033;border-color:#2b3648;color:#dbe7f5;}
+html[data-theme="dark"] .material-action-group{background:#101b2d;border-color:#2b3d57;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 5px 13px rgba(0,0,0,.2);}
+html[data-theme="dark"] .material-action-detail{background:linear-gradient(135deg,#0f766e,#0f9a91)!important;border-color:#2dd4bf!important;}
+html[data-theme="dark"] .material-action-edit{background:linear-gradient(135deg,#1d4ed8,#2563eb)!important;border-color:#60a5fa!important;}
+html[data-theme="dark"] .material-action-delete{background:linear-gradient(135deg,#b91c1c,#dc2626)!important;border-color:#fb7185!important;}
 html[data-theme="dark"] .cat-btn.active,
 html[data-theme="dark"] .material-detail-tab.active,
 html[data-theme="dark"] .req-tab-btn.active,
@@ -1147,6 +1164,8 @@ html[data-theme="dark"] .receipt-split-remove{
   #materialsTable tbody td:last-child .btn,
   #materialsTable tbody td:last-child form,
   #materialsTable tbody td:last-child form .btn{width:100%;}
+  #materialsTable .material-action-group{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem;}
+  #materialsTable .material-action-group form{display:block;width:100%;}
   #materialsTable .mat-name-link{font-size:.92rem!important;line-height:1.45;overflow-wrap:anywhere;}
   #materialsTable tbody td strong{white-space:normal;text-align:right;}
   .export-complete-row,.export-complete-form{flex-wrap:wrap;}
@@ -1752,12 +1771,13 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
             <td><strong style="color:{% if m.min_stock > 0 and m.workplace_stock < m.min_stock %}#e74c3c{% else %}#27ae60{% endif %}">{{ "%.1f"|format(m.workplace_stock) }} {{ m.unit or '' }}</strong></td>
             <td>{{ "%.1f"|format(m.total_stock) }} {{ m.unit or '' }}</td>
             <td>{{ "%.1f"|format(m.min_stock) }} {{ m.unit or '' }}</td>
-            <td style="white-space:nowrap;">
-            <button type="button" class="btn btn-small" style="background:#0f766e;" onclick="openMaterialDetailModal({{ m.id }});">상세</button>
+            <td class="material-row-actions">
+            <div class="material-action-group">
+            <button type="button" class="btn btn-small material-action-btn material-action-detail" onclick="openMaterialDetailModal({{ m.id }});">상세</button>
             {% if can_manage_material_master %}
             <button
                 type="button"
-                class="btn btn-small js-open-edit"
+                class="btn btn-small js-open-edit material-action-btn material-action-edit"
                 data-id="{{ m.id }}"
                 data-code="{{ m.code or '' }}"
                 data-name="{{ m.name or '' }}"
@@ -1773,11 +1793,12 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
                 data-workplace="{{ m.workplace or '' }}">
                 수정
             </button>
-            <form method="POST" action="{{ url_for('materials.delete_material', material_id=m.id) }}" style="display:inline;" 
+            <form method="POST" action="{{ url_for('materials.delete_material', material_id=m.id) }}"
                 onsubmit="return confirm('{{ m.name }}을(를) 삭제하시겠습니까?\n\n※ BOM에 사용 중이거나 생산 기록이 있으면 삭제할 수 없습니다.')">
-                <button type="submit" class="btn btn-small" style="background:#e74c3c;">삭제</button>
+                <button type="submit" class="btn btn-small material-action-btn material-action-delete">삭제</button>
             </form>
             {% endif %}
+            </div>
             </td>
         </tr>
         {% endfor %}

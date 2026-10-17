@@ -1408,6 +1408,8 @@ def _ensure_products_schema(conn):
             conn.execute(
                 "ALTER TABLE products ADD COLUMN pallet_boxes_per_unit INTEGER NOT NULL DEFAULT 0"
             )
+        if 'special_note' not in cols:
+            conn.execute("ALTER TABLE products ADD COLUMN special_note TEXT")
         conn.execute(
             "UPDATE products SET set_item_type = '' "
             "WHERE set_item_type IS NULL"

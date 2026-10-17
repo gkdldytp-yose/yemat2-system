@@ -6816,6 +6816,7 @@ def integrated_update_product():
     name = request.form.get('name')
     code = request.form.get('code')
     description = request.form.get('description')
+    special_note = (request.form.get('special_note') or '').strip() or None
     box_quantity = request.form.get('box_quantity', 1)
     category = (request.form.get('category') or '기타').strip() or '기타'
     sheets_per_pack = request.form.get('sheets_per_pack')
@@ -6839,7 +6840,8 @@ def integrated_update_product():
                 '''
                 UPDATE products
                 SET workplace = ?, name = ?, code = ?, description = ?, box_quantity = ?,
-                    category = ?, sheets_per_pack = ?, cuts_per_sheet = ?, sok_per_box = ?, expiry_months = ?
+                    category = ?, sheets_per_pack = ?, cuts_per_sheet = ?, sok_per_box = ?, expiry_months = ?,
+                    special_note = ?
                 WHERE id = ?
             ''',
                 (
@@ -6853,6 +6855,7 @@ def integrated_update_product():
                     cuts_per_sheet,
                     sok_per_box,
                     expiry_months,
+                    special_note,
                     product_id,
                 ),
             )
