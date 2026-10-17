@@ -1212,7 +1212,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                 </div>
                 <div class="raw-finished-item">
                     <div class="raw-finished-label">완제 속수</div>
-                    <div class="raw-finished-value output" id="finishedOutputSok">{{ total_raw_need_display }}속</div>
+                    <div class="raw-finished-value output" id="finishedOutputSok">{{ "{:,.1f}".format(total_raw_need_qty) if total_raw_need_qty is not none else '-' }}속</div>
                 </div>
                 <div class="raw-finished-item">
                     <div class="raw-finished-label">최종 수율</div>
@@ -2180,6 +2180,12 @@ function formatRawNumber(value){
         : num.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 }
 
+function formatFinishedSok(value){
+    const num = Number(value || 0);
+    if(!Number.isFinite(num)) return '0.0';
+    return num.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 function getRawOptionKind(option){
     return (option?.name || '기타').trim() || '기타';
 }
@@ -2632,7 +2638,7 @@ function updateTotal(){
         rem.style.color = remain <= 0 ? '#27ae60' : '#e74c3c';
     }
     if(finishedInputEl) finishedInputEl.textContent = `${formatRawNumber(effectiveTotal)}속`;
-    if(finishedOutputEl) finishedOutputEl.textContent = `${formatRawNumber(effectiveNeed)}속`;
+    if(finishedOutputEl) finishedOutputEl.textContent = `${formatFinishedSok(effectiveNeed)}속`;
 
     const yieldEl = document.getElementById('rawYield');
     if(yieldEl && effectiveTotal > 0 && effectiveNeed > 0) {

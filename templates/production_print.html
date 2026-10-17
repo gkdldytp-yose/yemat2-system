@@ -200,6 +200,7 @@
     .raw-name-cell {
       white-space: nowrap;
       font-size: 10.5px;
+      text-align: center;
     }
     .sum-table th,
     .sum-table td {
@@ -499,7 +500,7 @@
       </tr>
       {% for r in raw_usages[:raw_row_count] %}
       <tr class="dotted-row">
-        <td class="left raw-name-cell">{{ r.raw_material_name or '' }}</td>
+        <td class="raw-name-cell">{{ r.raw_material_name or '' }}</td>
         <td>{{ r.car_number or '' }}</td>
         <td>{{ r.receiving_date or '' }}</td>
         <td>{{ fmt_quantity(r.actual_quantity) }}{% if r.actual_quantity is not none and r.actual_quantity != '' %} 속{% endif %}</td>

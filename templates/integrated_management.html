@@ -2699,6 +2699,7 @@ html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:
                     {% if tab == 'products' %}
                     <th>상품명</th>
                     <th>분류</th>
+                    <th>특이사항</th>
                     <th>BOM</th>
                     {% elif tab == 'raw_materials' %}
                     <th>원초명</th>
@@ -2833,6 +2834,7 @@ html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:
                     {% if tab == 'products' %}
                     <td><strong>{{ item.name }}</strong></td>
                     <td>{{ item.category or '-' }}</td>
+                    <td style="min-width:180px;max-width:320px;white-space:pre-line;">{{ item.special_note or '-' }}</td>
                     <td>{{ item.bom_count }}</td>
                     
                     {% elif tab == 'raw_materials' %}
@@ -2910,6 +2912,7 @@ html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:
                                 data-code="{{ item.code|e }}"
                                 data-category="{{ item.category|e }}"
                                 data-description="{{ item.description|e }}"
+                                data-special_note="{{ item.special_note|e }}"
                                 data-box_quantity="{{ item.box_quantity }}"
                                  data-sheets_per_pack="{{ item.sheets_per_pack or 24 }}"
                                  data-cuts_per_sheet="{% if item.cuts_per_sheet is not none %}{{ item.cuts_per_sheet|int }}{% else %}9{% endif %}"
@@ -3134,14 +3137,10 @@ html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:
             <div class="form-group">
                 <label>분류</label>
                 <select name="category" id="edit_product_category">
-                    <option value="식탁">식탁</option>
-                    <option value="김밥">김밥</option>
-                    <option value="유기">유기</option>
-                    <option value="도시락">도시락</option>
-                    <option value="전장">전장</option>
-                    <option value="생김">생김</option>
-                    <option value="세트">세트</option>
-                    <option value="기타">기타</option>
+                    {% set PRODUCT_CATEGORIES = ['식탁', '김밥', '자반', '유기', '도시락', '전장', '생김', '세트', '무트레이'] %}
+                    {% for category in PRODUCT_CATEGORIES %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="form-group"><label>박스당 수량</label><input type="number" name="box_quantity" id="edit_product_box_quantity" value="1"></div>
@@ -3165,6 +3164,7 @@ html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:
                 </select>
             </div>
             <div class="form-group"><label>설명</label><textarea name="description" id="edit_product_description" rows="2"></textarea></div>
+            <div class="form-group" style="grid-column:1 / -1;"><label>상품 특이사항</label><textarea name="special_note" id="edit_product_special_note" rows="4" placeholder="예: 생산 시 별도 부자재 사용, 포장 유의사항"></textarea></div>
             </div>
             <div style="text-align:right;margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
                 <button type="button" class="btn btn-secondary btn-small" onclick="closeEditModal()">취소</button>
@@ -3714,6 +3714,7 @@ function openEditModal(btn){
         document.getElementById('edit_product_code').value = btn.dataset.code || '';
         document.getElementById('edit_product_category').value = btn.dataset.category || '기타';
         document.getElementById('edit_product_description').value = btn.dataset.description || '';
+        document.getElementById('edit_product_special_note').value = btn.dataset.special_note || '';
         document.getElementById('edit_product_box_quantity').value = btn.dataset.box_quantity || 1;
         document.getElementById('edit_product_sheets_per_pack').value = btn.dataset.sheets_per_pack || 24;
         document.getElementById('edit_product_cuts_per_sheet').value = btn.dataset.cuts_per_sheet || '9';

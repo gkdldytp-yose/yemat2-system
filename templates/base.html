@@ -1307,12 +1307,14 @@ function applyTodoListFilter() {
         const isOverdue = row.dataset.overdue === '1';
         const isAnnouncement = row.dataset.announcement === '1';
         const isPrivate = row.dataset.private === '1';
-        let visible = true;
+        // Private memos belong exclusively to the "나만보기" tab. They must
+        // not appear in the all/status/announcement views.
+        let visible = !isPrivate;
 
         if (currentTodoListFilter === 'processing' || currentTodoListFilter === 'info_needed' || currentTodoListFilter === 'completed') {
-            visible = status === currentTodoListFilter;
+            visible = !isPrivate && status === currentTodoListFilter;
         } else if (currentTodoListFilter === 'announcement') {
-            visible = isAnnouncement;
+            visible = !isPrivate && isAnnouncement;
         } else if (currentTodoListFilter === 'private') {
             visible = isPrivate;
         }

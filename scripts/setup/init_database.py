@@ -66,6 +66,7 @@ def create_tables(conn):
         name TEXT UNIQUE NOT NULL,
         code TEXT UNIQUE,
         description TEXT,
+        special_note TEXT,
         box_quantity INTEGER DEFAULT 1,
         sheets_per_pack INTEGER DEFAULT 24,
         cuts_per_sheet INTEGER DEFAULT 9,

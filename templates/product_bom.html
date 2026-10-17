@@ -63,14 +63,18 @@
 .product-info-label{font-size:0.78rem;font-weight:800;color:#64748b;letter-spacing:-0.01em;}
 .product-info-value{font-size:1.08rem;font-weight:800;color:#0f172a;line-height:1.3;word-break:keep-all;}
 .product-info-value.muted{font-size:0.92rem;font-weight:700;color:#334155;}
-.product-edit-panel{display:none;padding:1rem;border:1px solid #ffe0b2;border-radius:18px;background:linear-gradient(180deg,#fffaf0 0%,#fff6e2 100%);}
-.product-edit-title{margin:0 0 0.9rem;font-size:1rem;font-weight:800;color:#0f172a;}
+.product-edit-panel{display:none;padding:1rem;border:1px solid #e8eef8;border-radius:18px;background:linear-gradient(180deg,#fcfdff 0%,#f6f9ff 100%);}
 .product-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.8rem 0.9rem;}
 .product-edit-grid .form-group{margin:0;}
 .product-edit-grid .form-group input,
-.product-edit-grid .form-group select{height:42px;border:1px solid #d8e0ec;border-radius:10px;padding:0 0.8rem;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.03);font-size:0.95rem;}
+.product-edit-grid .form-group select,
+.product-edit-grid .form-group textarea{border:1px solid #d8e0ec;border-radius:10px;padding:0 0.8rem;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.03);font-size:0.95rem;}
+.product-edit-grid .form-group input,
+.product-edit-grid .form-group select{height:42px;}
+.product-edit-grid .form-group textarea{width:100%;min-height:92px;padding:0.65rem 0.8rem;resize:vertical;font-family:inherit;line-height:1.5;}
 .product-edit-grid .form-group input:focus,
-.product-edit-grid .form-group select:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,0.12);}
+.product-edit-grid .form-group select:focus,
+.product-edit-grid .form-group textarea:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,0.12);}
 .product-edit-grid .form-group label{font-size:0.76rem;font-weight:800;color:#475569;margin-bottom:0.3rem;display:block;}
 .product-edit-grid .form-hint{margin-top:.28rem;color:#64748b;font-size:.72rem;font-weight:650;line-height:1.35;}
 .product-edit-wide{grid-column:1 / -1;}
@@ -151,6 +155,7 @@ html[data-theme="dark"] .quantity-input-box input,
 html[data-theme="dark"] .selected-item-row .qty-input,
 html[data-theme="dark"] .product-edit-grid .form-group input,
 html[data-theme="dark"] .product-edit-grid .form-group select,
+html[data-theme="dark"] .product-edit-grid .form-group textarea,
 html[data-theme="dark"] .bom-inline-edit select,
 html[data-theme="dark"] .bom-inline-edit input{
     background:#0f172a;
@@ -172,7 +177,6 @@ html[data-theme="dark"] .raw-list-helper{background:#162133;border-bottom-color:
 html[data-theme="dark"] .selection-panel-title,
 html[data-theme="dark"] .selection-name,
 html[data-theme="dark"] .product-info-value,
-html[data-theme="dark"] .product-edit-title,
 html[data-theme="dark"] .bom-table-wrap td strong,
 html[data-theme="dark"] h1,
 html[data-theme="dark"] h2,
@@ -203,7 +207,7 @@ html[data-theme="dark"] .raw-list-helper{color:#d7e3f4;}
 html[data-theme="dark"] .raw-list-helper strong{color:#f8fbff;}
 html[data-theme="dark"] .raw-list-helper span:last-child{color:#c3d4ea;}
 html[data-theme="dark"] .product-info-item{background:#162133;border-color:#263244;box-shadow:none;}
-html[data-theme="dark"] .product-edit-panel{background:linear-gradient(180deg,#162133,#121a2a);border-color:#314155;}
+html[data-theme="dark"] .product-edit-panel{background:linear-gradient(180deg,#162133,#121a2a);border-color:#263244;}
 html[data-theme="dark"] .sok-multi-tag{background:rgba(79,70,229,.18);color:#c7d2fe;}
 html[data-theme="dark"] .bom-table-wrap{background:#121a2a;}
 html[data-theme="dark"] .bom-table-wrap thead th{background:#1a2436;color:#c7d3e3;border-bottom-color:#263244;}
@@ -258,7 +262,7 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
     <div class="product-info-head">
         <h3 style="margin:0;">상품 정보</h3>
         {% if can_prod %}
-        <button class="btn btn-small" onclick="document.getElementById('editProductInfo').style.display='block'">수정</button>
+        <button id="editProductInfoButton" class="btn btn-small" type="button" onclick="openProductInfoEdit()">수정</button>
         {% endif %}
     </div>
         <div class="product-info-summary">
@@ -309,11 +313,14 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
             <div class="product-info-value muted" style="color:#e74c3c;">미설정</div>
             {% endif %}
         </div>
+        <div class="product-info-item" style="grid-column:1 / -1;">
+            <div class="product-info-label">상품 특이사항</div>
+            <div class="product-info-value muted" style="white-space:pre-line;">{{ product.special_note or '등록된 특이사항이 없습니다.' }}</div>
+        </div>
     </div>
     
     {% if can_prod %}
     <div id="editProductInfo" class="product-edit-panel">
-        <h4 class="product-edit-title">상품 정보 수정</h4>
         <form method="POST" action="/products/{{ product.id }}/update-info">
             <input type="hidden" name="return_to" value="{{ return_to }}">
             <div class="product-edit-grid">
@@ -410,9 +417,13 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                     <button type="button" class="btn btn-small sok-multi-add" id="addSokValueBtn" onclick="addSokPerBoxField()">+ 추가</button>
                     {% endif %}
                 </div>
+                <div class="form-group product-edit-wide">
+                    <label>상품 특이사항</label>
+                    <textarea name="special_note" rows="4" placeholder="예: 생산 시 별도 부자재 사용, 포장 유의사항 등을 기록하세요.">{{ product.special_note or '' }}</textarea>
+                </div>
             </div>
             <div class="product-edit-actions">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('editProductInfo').style.display='none'">취소</button>
+                <button type="button" class="btn btn-secondary" onclick="closeProductInfoEdit()">취소</button>
                 <button type="submit" class="btn">저장</button>
             </div>
         </form>
@@ -554,7 +565,7 @@ html[data-theme="dark"] .silica-choice-form select{border-color:#4c1d95;box-shad
                 ✅ 원초 1박스당 사용량(속)은 <strong>상품 정보</strong>에서 설정합니다.<br>
                 현재 설정값: <strong>{% if product.sok_per_box or product.sok_per_box == 0 %}{{ "%.4f"|format(product.sok_per_box) }}속{% else %}미설정{% endif %}</strong>
                 {% if not product.sok_per_box or product.sok_per_box == 0 %}
-                — <a href="#" onclick="document.getElementById('editProductInfo').style.display='block';document.getElementById('addForm').style.display='none';" style="color:#e67e22;">상품 정보에서 먼저 설정하세요</a>
+                — <a href="#" onclick="openProductInfoEdit();document.getElementById('addForm').style.display='none';return false;" style="color:#e67e22;">상품 정보에서 먼저 설정하세요</a>
                 {% endif %}
             </div>
             <input type="hidden" name="raw_quantity" id="rawQty" value="{{ product.sok_per_box or 0 }}">
@@ -1171,6 +1182,24 @@ function closeForm(){
 
 {% block extra_js %}
 <script>
+function openProductInfoEdit() {
+    const summary = document.querySelector('.product-info-summary');
+    const editor = document.getElementById('editProductInfo');
+    const button = document.getElementById('editProductInfoButton');
+    if (summary) summary.style.display = 'none';
+    if (editor) editor.style.display = 'block';
+    if (button) button.style.display = 'none';
+}
+
+function closeProductInfoEdit() {
+    const summary = document.querySelector('.product-info-summary');
+    const editor = document.getElementById('editProductInfo');
+    const button = document.getElementById('editProductInfoButton');
+    if (editor) editor.style.display = 'none';
+    if (summary) summary.style.display = 'grid';
+    if (button) button.style.display = '';
+}
+
 function addSokPerBoxField() {
     const wrap = document.getElementById('sokPerBoxFields');
     const btn = document.getElementById('addSokValueBtn');
