@@ -1225,11 +1225,22 @@ function lastRawDefault(row) {
     const rawId = String(row.raw_material_id || '');
     const rawCode = String(row.raw_material_code || '').trim();
     const rawName = String(row.raw_material_name || '').trim();
-    return (rawId && byId[rawId]) || (rawCode && byCode[rawCode]) || (rawName && byName[rawName]) || {};
+    const defaultValue = (rawId && byId[rawId]) || (rawCode && byCode[rawCode]) || (rawName && byName[rawName]) || {};
+    const productionDate = String(document.getElementById('productionDate')?.value || '').trim();
+    // A past production record must never inherit a lot, quantity, or yield
+    // from a production recorded later. This is especially important when
+    // registering historical journals.
+    return !productionDate || !defaultValue.production_date || defaultValue.production_date <= productionDate
+        ? defaultValue
+        : {};
 }
 function lastMaterialDefault(row) {
     const bucket = lastMaterialDefaults[selectedProductIdKey()] || {};
-    return bucket[String(row.material_id || '')] || {};
+    const defaultValue = bucket[String(row.material_id || '')] || {};
+    const productionDate = String(document.getElementById('productionDate')?.value || '').trim();
+    return !productionDate || !defaultValue.production_date || defaultValue.production_date <= productionDate
+        ? defaultValue
+        : {};
 }
 function formatSignedQty(value) {
     const numeric = toNumber(value);
@@ -1329,6 +1340,22 @@ function updateRawLotGroup(groupEl) {
         const input = card.querySelector('input[name="raw_actual_quantity[]"]');
         return sum + toNumber(input ? input.value : 0);
     }, 0);
+    // A raw-material requirement belongs to the whole raw lot group, not to
+    // the first card.  Reallocate it by each entered lot's actual quantity so
+    // adding a second lot cannot leave it with an expected value of zero (or
+    // duplicate the full requirement on every lot).
+    cards.forEach((card, index) => {
+        const actualInput = card.querySelector('input[name="raw_actual_quantity[]"]');
+        const actual = toNumber(actualInput ? actualInput.value : 0);
+        const expected = totalActual > 0
+            ? (totalNeed * actual / totalActual)
+            : (index === 0 ? totalNeed : 0);
+        card.dataset.need = String(expected);
+        const expectedInput = card.querySelector('input[name="raw_expected_quantity[]"]');
+        const expectedDisplay = card.querySelector('.js-need-value');
+        if (expectedInput) expectedInput.value = expected.toFixed(4).replace(/\.?0+$/, '');
+        if (expectedDisplay) expectedDisplay.innerHTML = `${formatQty(expected)}<span class="calc-unit">속</span>`;
+    });
     const loss = totalActual - totalNeed;
     const yieldRate = totalActual > 0 && totalNeed > 0 ? (totalNeed / totalActual * 100) : 0;
     const actualEl = groupEl.querySelector('.js-raw-total-actual');
@@ -1989,6 +2016,9 @@ document.getElementById('registerModeForm').addEventListener('keydown', (event) 
 document.getElementById('productionDate')?.addEventListener('change', (event) => {
     storeRegisterModeProductionDate(event.target.value || '');
     syncExpiryInputs();
+    // Reset auto-filled usage values after a date change so a future record's
+    // raw-material lot cannot remain on a historical registration.
+    if (selectedProduct) renderUsageRows();
 });
 document.getElementById('productSearch')?.addEventListener('keydown', (event) => {
     if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) return;

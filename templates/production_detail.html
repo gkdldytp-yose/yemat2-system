@@ -931,7 +931,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 </div>
 {% endif %}
 
-<form method="POST" action="/production/{{ production.id }}/update-usage" id="productionUsageForm" onsubmit="return validateProductionUsageForm();">
+<form method="POST" action="/production/{{ production.id }}/update-usage" id="productionUsageForm" onsubmit="return validateProductionUsageForm(event);">
 <input type="hidden" name="return_edit" value="{{ '1' if edit_completed else '' }}">
 
 <div class="sec">
@@ -1227,7 +1227,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 
     <div id="rawCardsWrap">
     {% for rm in bom_raw_items %}
-    {% set raw_saved = raw_saved_map.get(rm.rm_id, {}) %}
+    {% set raw_saved = raw_saved_map.get(rm.usage_id or rm.rm_id, {}) %}
     {% set saved_raw_qty = raw_saved.get('qty') %}
     {% set saved_raw_note = raw_saved.get('note', '') %}
     {% set saved_raw_car = raw_saved.get('car_number', '') or rm.register_default_car_number or rm.car_number or '' %}
@@ -1269,7 +1269,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                        id="ri_{{ rm.rm_id }}" step="1" min="0"{% if production.entry_mode != 'register' or production.register_raw_stock_enabled %} max="{{ rm.current_stock|int }}"{% endif %}
                        value="{{ saved_raw_qty if saved_raw_qty is not none else '' }}" placeholder="0" style="width:100px;padding:0.4rem;border:2px solid #27ae60;border-radius:6px;"
                        oninput="checkRawOver({{ rm.rm_id }}, {{ rm.current_stock|int }}); updateTotal()">
-                <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.rm_id }}" class="js-raw-id-input">
+                <input type="hidden" name="raw_rm_id_{{ loop.index0 }}" value="{{ rm.source_rm_id or rm.rm_id }}" class="js-raw-id-input">
                 <span id="rw_{{ rm.rm_id }}" style="font-size:0.8rem;color:#e74c3c;display:none;">⚠️ 재고 초과입니다.</span>
                 <button type="button" id="raw_note_btn_{{ rm.rm_id }}" class="raw-note-toggle {% if saved_raw_note %}active{% endif %}" onclick="toggleRawNote({{ rm.rm_id }}); event.stopPropagation();">비고 입력</button>
             </div>
@@ -1616,7 +1616,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     <div style="text-align:right;display:flex;gap:1rem;justify-content:flex-end;">
         <a href="/production" class="btn btn-secondary">취소</a>
         {% if not edit_completed %}
-        <button type="submit" class="btn btn-secondary" name="save_action" value="temp">임시저장</button>
+        <button type="submit" class="btn btn-secondary" name="save_action" value="temp" formnovalidate>임시저장</button>
         {% endif %}
         <button type="submit" class="btn" name="save_action" value="complete" onclick="return confirm('{{ '완료건을 수정 저장하시겠습니까?' if edit_completed else ('등록모드로 저장할까요? 재고는 차감되지 않습니다.' if production.entry_mode == 'register' else '저장하고 생산을 완료 처리하시겠습니까?') }}')">{{ '💾 수정 저장' if edit_completed else ('💾 등록 저장' if production.entry_mode == 'register' else '💾 저장 및 완료') }}</button>
     </div>
@@ -1681,7 +1681,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
                     {% endfor %}
                     <input type="hidden" name="save_action" value="temp">
                     <input type="hidden" name="move_to_materials" value="1">
-                    <button type="submit" class="btn">임시 저장 후 부자재 관리로 이동</button>
+                    <button type="submit" class="btn" formnovalidate>임시 저장 후 부자재 관리로 이동</button>
                 </form>
                 {% endif %}
                 <button type="button" class="btn btn-secondary" onclick="closeMaterialShortageModal()">닫기</button>
@@ -1908,9 +1908,14 @@ function syncExpiryRows(){
     recalcAll();
 }
 
-function validateProductionUsageForm(){
-    const activeSubmitter = document.activeElement;
-    if(activeSubmitter && activeSubmitter.name === 'apply_usage_id'){
+function validateProductionUsageForm(event){
+    const activeSubmitter = (event && event.submitter) || document.activeElement;
+    // 임시저장은 작성 중인 내용을 보관하는 기능이므로 필수 입력 검사를 하지 않는다.
+    // 서버에서는 날짜/숫자 형식만 계속 확인한다.
+    if(activeSubmitter && (
+        activeSubmitter.name === 'apply_usage_id' ||
+        (activeSubmitter.name === 'save_action' && activeSubmitter.value === 'temp')
+    )){
         return true;
     }
     const firstBoxInput = document.getElementById('expiryBoxes1');

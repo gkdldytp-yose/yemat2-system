@@ -236,6 +236,10 @@
         .nav-notify-delete{padding:.45rem .55rem !important;min-width:unset;}
         .modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);}
         .modal-content,.modal-box{background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 24px 56px rgba(15,23,42,.22);}
+        /* 페이지별 .modal-box 폭 규칙에 영향을 받지 않는 공용 생산 검색창 */
+        #globalProductionSearchModal > .modal-box{width:min(1120px,calc(100vw - 2rem))!important;max-width:none!important;box-sizing:border-box;}
+        #globalProductionSearchModal .table-container{overflow-x:auto;}
+        #globalProductionSearchModal table{min-width:900px;}
         .todo-modal-bg{display:none;position:fixed;inset:0;padding:1rem;background:rgba(15,23,42,.52);align-items:center;justify-content:center;z-index:1400;}
         .todo-modal{width:min(1000px,100%);max-height:calc(100vh - 2rem);overflow:auto;border-radius:24px;background:#fff;box-shadow:0 28px 70px rgba(15,23,42,.25);padding:1.1rem;}
         .todo-modal-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:0.9rem;}
@@ -416,6 +420,10 @@
         html[data-theme="dark"] .modal-box input,
         html[data-theme="dark"] .modal-box select,
         html[data-theme="dark"] .modal-box textarea{background:#0f172a;color:#e5eefc;border-color:#314155;}
+        html[data-theme="dark"] #globalProductionSearchModal .global-production-search-filter{background:#152033 !important;border-color:#2b3b51 !important;}
+        html[data-theme="dark"] #globalProductionSearchModal .global-production-search-filter label{color:#dbe7f5 !important;}
+        html[data-theme="dark"] #globalProductionSearchModal .global-production-search-hint{color:#8ea3bd !important;}
+        html[data-theme="dark"] #globalProductionSearchResults{border-top-color:#263244 !important;}
         html[data-theme="dark"] .nav-notify-head{background:linear-gradient(135deg,#111827,#172131);border-bottom-color:#263244;}
         html[data-theme="dark"] .nav-notify-head strong,
         html[data-theme="dark"] .nav-notify-title,
@@ -843,6 +851,33 @@
     {% endwith %}
     {% block content %}{% endblock %}
 </main>
+
+<!-- 어느 화면에서나 단축키로 열 수 있는 완료 생산 통합 검색 -->
+<div id="globalProductionSearchModal" class="modal-bg" style="display:none;position:fixed;inset:0;z-index:1600;align-items:center;justify-content:center;padding:1rem;background:rgba(15,23,42,.62);">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="globalProductionSearchTitle" style="width:min(960px,100%);max-height:90vh;overflow-y:auto;padding:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;">
+            <div>
+                <h3 id="globalProductionSearchTitle" style="margin:0;">🔍 완료 생산 통합 검색</h3>
+                <p style="margin:.3rem 0 0;color:#64748b;font-size:.83rem;line-height:1.45;">상품명·상품코드·생산번호·원초·부자재·생산 메모를 한 번에 찾습니다.</p>
+            </div>
+            <button type="button" onclick="closeGlobalProductionSearch()" class="btn btn-ghost btn-small">닫기</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin-bottom:1rem;">
+            <div class="form-group"><label for="globalProductionSearchStart">시작일</label><input type="date" id="globalProductionSearchStart"></div>
+            <div class="form-group"><label for="globalProductionSearchEnd">종료일</label><input type="date" id="globalProductionSearchEnd"></div>
+            <div class="form-group" style="grid-column:1 / -1;"><label for="globalProductionSearchKeyword">통합 키워드</label><input type="search" id="globalProductionSearchKeyword" placeholder="예: 유기, 김밥김, A11, PROD-360, 원초명 또는 부자재명" style="width:100%;box-sizing:border-box;"></div>
+        </div>
+        <div class="global-production-search-filter" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;padding:.65rem .75rem;border:1px solid #dbe7f5;border-radius:12px;background:#f8fbff;">
+            <label style="display:inline-flex;align-items:center;gap:.45rem;color:#334155;font-size:.82rem;font-weight:750;cursor:pointer;"><input type="checkbox" id="globalProductionSearchApplyDate" style="width:16px;height:16px;accent-color:#2563eb;"> 입력한 기간 안에서만 검색</label>
+            <span class="global-production-search-hint" style="color:#64748b;font-size:.78rem;">키워드 검색은 기본적으로 전체 기간을 조회합니다.</span>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="resetGlobalProductionSearch()">초기화</button>
+            <button type="button" class="btn btn-small" onclick="runGlobalProductionSearch()">검색</button>
+        </div>
+        <div id="globalProductionSearchResults" style="margin-top:1rem;border-top:1px solid #e5e7eb;padding-top:1rem;"><p style="color:#9ca3af;text-align:center;padding:2rem;font-size:.85rem;">검색 조건을 입력하고 검색 버튼을 눌러주세요</p></div>
+    </div>
+</div>
 
 <div id="todoMessengerBg" class="todo-modal-bg" onclick="closeTodoMessenger(event)">
     <div class="todo-modal" onclick="event.stopPropagation()">
@@ -1423,6 +1458,95 @@ document.addEventListener('keydown', function(e) {
 
 document.addEventListener('click', function() {
     setTimeout(refreshModalFocus, 0);
+});
+
+function escapeGlobalProductionSearchHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function openGlobalProductionSearch() {
+    const modal = document.getElementById('globalProductionSearchModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    window.setTimeout(() => document.getElementById('globalProductionSearchKeyword')?.focus(), 0);
+}
+
+function closeGlobalProductionSearch() {
+    const modal = document.getElementById('globalProductionSearchModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function resetGlobalProductionSearch() {
+    document.getElementById('globalProductionSearchKeyword').value = '';
+    document.getElementById('globalProductionSearchStart').value = '';
+    document.getElementById('globalProductionSearchEnd').value = '';
+    document.getElementById('globalProductionSearchApplyDate').checked = false;
+    document.getElementById('globalProductionSearchResults').innerHTML = '<p style="color:#9ca3af;text-align:center;padding:2rem;font-size:.85rem;">검색 조건을 입력하고 검색 버튼을 눌러주세요</p>';
+}
+
+async function runGlobalProductionSearch() {
+    const keyword = document.getElementById('globalProductionSearchKeyword').value.trim();
+    const start = document.getElementById('globalProductionSearchStart').value;
+    const end = document.getElementById('globalProductionSearchEnd').value;
+    const applyDate = document.getElementById('globalProductionSearchApplyDate').checked;
+    const resultsEl = document.getElementById('globalProductionSearchResults');
+    const params = new URLSearchParams();
+    if (keyword) params.append('keyword', keyword);
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    if (applyDate) params.append('apply_date', '1');
+    resultsEl.innerHTML = '<p style="color:#64748b;text-align:center;padding:1rem;">검색 중...</p>';
+    try {
+        const response = await fetch(`/production/search?${params.toString()}`);
+        if (!response.ok) throw new Error('search failed');
+        const data = await response.json();
+        if (!data.results || !data.results.length) {
+            resultsEl.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:2rem;font-size:.85rem;">검색 결과 없음</p>';
+            return;
+        }
+        let html = '<div class="table-container"><table><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>작업 시간</th><th>총인원</th><th>수율</th><th>박스</th><th>관리</th></tr></thead><tbody>';
+        data.results.forEach((production) => {
+            const productName = escapeGlobalProductionSearchHtml(production.product_name || '-');
+            const productCode = escapeGlobalProductionSearchHtml(production.product_code || '');
+            const workTime = escapeGlobalProductionSearchHtml(production.work_time || '-');
+            const totalPeople = Number(production.total_people || 0);
+            const yieldRate = production.yield_rate == null ? '-' : `${Number(production.yield_rate).toFixed(1)}%`;
+            const boxes = production.actual_boxes || production.planned_boxes || 0;
+            html += `<tr><td>PROD-${escapeGlobalProductionSearchHtml(production.id)}</td><td>${escapeGlobalProductionSearchHtml(production.production_date || '-')}</td><td><strong>${productName}</strong>${productCode ? `<br><small>${productCode}</small>` : ''}</td><td>${workTime}</td><td>${escapeGlobalProductionSearchHtml(totalPeople)}명</td><td>${escapeGlobalProductionSearchHtml(yieldRate)}</td><td>${escapeGlobalProductionSearchHtml(boxes)} BOX</td><td><a href="/production/${encodeURIComponent(production.id)}" class="btn btn-small btn-secondary">조회</a></td></tr>`;
+        });
+        html += '</tbody></table></div>';
+        const scope = data.date_limited ? '기간 필터 적용' : (data.keyword ? '전체 기간 검색' : '기간 검색');
+        resultsEl.innerHTML = `${html}<p style="text-align:center;margin:.75rem 0 0;color:#64748b;font-size:.85rem;">${scope} · 총 ${data.results.length}건</p>`;
+    } catch (error) {
+        resultsEl.innerHTML = '<p style="color:#dc2626;text-align:center;padding:2rem;font-size:.85rem;">검색 중 오류가 발생했습니다.</p>';
+    }
+}
+
+const globalProductionSearchModal = document.getElementById('globalProductionSearchModal');
+globalProductionSearchModal?.addEventListener('click', function(event) {
+    if (event.target === this) closeGlobalProductionSearch();
+});
+globalProductionSearchModal?.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' && (event.target.tagName || '').toLowerCase() === 'input') {
+        event.preventDefault();
+        runGlobalProductionSearch();
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (!(event.ctrlKey && event.shiftKey && !event.altKey && event.code === 'KeyQ')) return;
+    event.preventDefault();
+    // 생산관리 화면에서는 기존 모달을 재사용하고, 나머지 화면에서는 공용 모달을 연다.
+    if (typeof window.openSearchModal === 'function' && document.getElementById('searchModal')) {
+        window.openSearchModal();
+        return;
+    }
+    openGlobalProductionSearch();
 });
 
 document.addEventListener('keydown', function(e) {
