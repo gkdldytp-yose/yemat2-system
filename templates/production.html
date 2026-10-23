@@ -451,7 +451,6 @@
 .search-table tbody td{font-size:0.85rem;}
 .search-result-product{color:#0f172a;font-weight:850;}
 .search-result-code{margin-top:.16rem;color:#64748b;font-size:.74rem;font-family:Consolas,"Courier New",monospace;}
-.search-result-materials{max-width:300px;color:#475569;font-size:.76rem;line-height:1.4;}
 .search-result-count{display:inline-flex;align-items:center;padding:.24rem .5rem;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:800;}
 html[data-theme="dark"] .month-nav-shell,
 html[data-theme="dark"] .production-month-calendar,
@@ -542,7 +541,7 @@ html[data-theme="dark"] .search-hint{color:#8ea3bd;}
 html[data-theme="dark"] .search-filter-bar{background:#152033;border-color:#2b3b51;}
 html[data-theme="dark"] .search-period-toggle{color:#dbe7f5;}
 html[data-theme="dark"] .search-result-product{color:#eff6ff;}
-html[data-theme="dark"] .search-result-code,html[data-theme="dark"] .search-result-materials{color:#8ea3bd;}
+html[data-theme="dark"] .search-result-code{color:#8ea3bd;}
 html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);color:#bfdbfe;}
 @media (max-width: 768px) {
     .production-page-header{align-items:flex-start;flex-direction:column;padding:.85rem .9rem;}.production-page-actions{width:100%;justify-content:flex-start;}.production-page-heading h1{font-size:1.3rem;}
@@ -996,17 +995,21 @@ async function doSearch() {
             resultsDiv.innerHTML = '<p class="search-empty">검색 결과 없음</p>';
             return;
         }
-        let html = '<div class="table-container"><table class="search-table"><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>연결 원·부자재</th><th>박스</th><th>관리</th></tr></thead><tbody>';
+        let html = '<div class="table-container"><table class="search-table"><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>작업 시간</th><th>총인원</th><th>수율</th><th>박스</th><th>관리</th></tr></thead><tbody>';
         data.results.forEach(p => {
             const productName = escapeSearchHtml(p.product_name || '-');
             const productCode = escapeSearchHtml(p.product_code || '');
-            const materialNames = escapeSearchHtml(p.used_material_names || '-');
             const boxCount = p.actual_boxes || p.planned_boxes || 0;
+            const workTime = escapeSearchHtml(p.work_time || '-');
+            const totalPeople = Number(p.total_people || 0);
+            const yieldRate = p.yield_rate == null ? '-' : `${Number(p.yield_rate).toFixed(1)}%`;
             html += `<tr>
                 <td><span class="search-result-count">PROD-${p.id}</span></td>
                 <td>${escapeSearchHtml(p.production_date || '-')}</td>
                 <td><div class="search-result-product">${productName}</div>${productCode ? `<div class="search-result-code">${productCode}</div>` : ''}</td>
-                <td><div class="search-result-materials">${materialNames}</div></td>
+                <td>${workTime}</td>
+                <td>${escapeSearchHtml(totalPeople)}명</td>
+                <td>${escapeSearchHtml(yieldRate)}</td>
                 <td>${escapeSearchHtml(boxCount)} BOX</td>
                 <td style="white-space:nowrap;">
                     <a href="/production/${p.id}" class="btn btn-small btn-secondary">조회</a>

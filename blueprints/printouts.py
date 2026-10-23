@@ -8,6 +8,7 @@ from core import get_db, login_required, get_workplace, SHARED_WORKPLACE, today_
 from .production import (
     _get_production_material_section,
     _get_production_material_sort_key,
+    _get_effective_production_workplace,
     _normalize_production_status,
 )
 
@@ -1884,7 +1885,10 @@ def packaging_checksheet_preview():
 @login_required
 def production_print(production_id):
     """A4 생산 관리 일지 출력"""
-    workplace = get_workplace()
+    # The detail screen can open a production record from another workplace for
+    # users who have access to it. Do not filter this lookup by the currently
+    # selected workplace, or older registered records redirect to the list.
+    viewer_workplace = get_workplace()
     conn = get_db()
     cursor = conn.cursor()
 
@@ -1894,6 +1898,7 @@ def production_print(production_id):
                COALESCE(p.category, '') AS product_category,
                COALESCE(p.set_item_type, '') AS set_item_type,
                ps.line as schedule_line,
+               ps.workplace as schedule_workplace,
                COALESCE(
                    pr.supply_line,
                    ps.line,
@@ -1909,14 +1914,20 @@ def production_print(production_id):
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
         LEFT JOIN production_schedules ps ON pr.schedule_id = ps.id
-        WHERE pr.id = ? AND pr.workplace = ?
+        WHERE pr.id = ?
         ''',
-        (production_id, workplace),
+        (production_id,),
     )
     production = cursor.fetchone()
     if not production:
         conn.close()
         return redirect(url_for('production.production_list'))
+    production = dict(production)
+    workplace = (
+        _get_effective_production_workplace(cursor, production)
+        or str(production.get('schedule_workplace') or '').strip()
+        or viewer_workplace
+    )
 
     cursor.execute(
         '''

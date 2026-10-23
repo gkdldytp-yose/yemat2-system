@@ -353,6 +353,32 @@ def _parse_iso_date(raw_value):
     return datetime.strptime(text, '%Y-%m-%d').date()
 
 
+def _normalize_expiry_date_value(raw_value):
+    """Normalize journal-style expiry dates while preserving an optional suffix.
+
+    Production journals commonly contain dates such as ``26.5.31`` or
+    ``2026/05/31A``.  The detail form is a text field, so accepting and
+    normalizing those forms prevents a secondary expiry row from failing only
+    at save time.
+    """
+    import re
+
+    text = str(raw_value or '').strip()
+    if not text:
+        return ''
+    suffix_match = re.search(r'([A-Za-z]+)$', text)
+    suffix = suffix_match.group(1).upper() if suffix_match else ''
+    date_text = text[:-len(suffix)].strip() if suffix else text
+    parts = [part for part in re.split(r'[-./\s]+', date_text) if part]
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        raise ValueError('invalid expiry date format')
+    year, month, day = (int(part) for part in parts)
+    if year < 100:
+        year += 2000
+    normalized_date = date(year, month, day)
+    return normalized_date.isoformat() + suffix
+
+
 def _parse_positive_int(raw_value, label):
     text = str(raw_value or '').strip()
     if not text:
@@ -2768,6 +2794,118 @@ def _resync_export_schedule_for_production(conn, cursor, production_id, preserve
         original_product_id=production_row['product_id'],
         preserve_schedule_ids=preserve_schedule_ids,
     )
+
+
+def _reconnect_export_schedule_for_replacement_production(conn, cursor, production_id):
+    """Reconnect a completed replacement production for a deleted export date.
+
+    Removing an export-generated day deliberately records that date in
+    ``excluded_dates``.  A subsequently registered completed production on the
+    same date used to remain an unrelated manual record, so its quantity was
+    absent from the export schedule.  Treat that exact combination of product,
+    workplace, and excluded production date as a replacement for the deleted
+    export day.
+    """
+    production_row = cursor.execute(
+        '''
+        SELECT pr.id, pr.product_id, pr.production_date, pr.workplace, pr.schedule_id,
+               pr.status AS production_status, ps.status AS schedule_status,
+               COALESCE(ps.export_schedule_id, pr.export_schedule_id, 0) AS export_schedule_id
+        FROM productions pr
+        LEFT JOIN production_schedules ps ON ps.id = pr.schedule_id
+        WHERE pr.id = ?
+        ''',
+        (production_id,),
+    ).fetchone()
+    if not production_row:
+        return None
+
+    production = dict(production_row)
+    existing_export_id = int(production.get('export_schedule_id') or 0)
+    if existing_export_id > 0:
+        return _resync_export_schedule_for_production(conn, cursor, production_id)
+
+    production_date = str(production.get('production_date') or '').strip()
+    workplace = str(production.get('workplace') or '').strip()
+    product_id = int(production.get('product_id') or 0)
+    schedule_id = int(production.get('schedule_id') or 0)
+    if not production_date or not workplace or product_id <= 0 or schedule_id <= 0:
+        return None
+
+    candidates = cursor.execute(
+        '''
+        SELECT *
+        FROM export_schedules
+        WHERE workplace = ?
+          AND product_id = ?
+          AND production_start_date <= ?
+          AND COALESCE(NULLIF(production_end_date, ''), cutoff_date) >= ?
+        ORDER BY id DESC
+        ''',
+        (workplace, product_id, production_date, production_date),
+    ).fetchall()
+    export_row = next(
+        (
+            dict(row)
+            for row in candidates
+            if production_date in set(_parse_export_excluded_dates(row['excluded_dates']))
+        ),
+        None,
+    )
+    if not export_row:
+        return None
+
+    export_schedule_id = int(export_row['id'])
+    excluded_dates = set(_parse_export_excluded_dates(export_row.get('excluded_dates')))
+    excluded_dates.discard(production_date)
+    _save_export_excluded_dates(cursor, export_schedule_id, sorted(excluded_dates))
+
+    schedule_note = _build_export_schedule_note(
+        export_schedule_id,
+        '',
+        str(export_row.get('note') or '').strip(),
+    )
+    cursor.execute(
+        '''
+        UPDATE production_schedules
+        SET schedule_source = 'export',
+            export_schedule_id = ?,
+            note = ?
+        WHERE id = ?
+        ''',
+        (export_schedule_id, schedule_note, schedule_id),
+    )
+    cursor.execute(
+        '''
+        UPDATE productions
+        SET export_schedule_id = ?, note = ?
+        WHERE id = ?
+        ''',
+        (export_schedule_id, schedule_note, production_id),
+    )
+
+    refreshed_export_row = cursor.execute(
+        'SELECT * FROM export_schedules WHERE id = ?',
+        (export_schedule_id,),
+    ).fetchone()
+    # A manual re-registration may still be a planned row. Keep that row as a
+    # fixed export day during the first re-sync; otherwise the normal cleanup
+    # would delete it before its production is started.
+    preserve_schedule_ids = []
+    if not _is_started_export_row(production):
+        preserve_schedule_ids.append(schedule_id)
+    sync_result = _sync_export_schedule_rows(
+        conn,
+        cursor,
+        dict(refreshed_export_row),
+        original_product_id=product_id,
+        preserve_schedule_ids=preserve_schedule_ids,
+    )
+    return {
+        'export_schedule_id': export_schedule_id,
+        'production_date': production_date,
+        'sync_result': sync_result,
+    }
 
 
 def _save_export_excluded_dates(cursor, export_schedule_id, excluded_dates):
@@ -6180,6 +6318,9 @@ def add_schedule():
                 )
                 production_id = cursor.lastrowid
                 cursor.execute('UPDATE production_schedules SET production_id = ? WHERE id = ?', (production_id, schedule_id))
+                export_reconnect_result = _reconnect_export_schedule_for_replacement_production(
+                    conn, cursor, production_id
+                )
                 linked_set_schedule_id = _link_manual_semi_schedule_to_set_schedule(
                     cursor, schedule_id, production_id, product_id, scheduled_date, workplace
                 )
@@ -6199,6 +6340,7 @@ def add_schedule():
                         'line_usage_disabled': line_usage_disabled,
                         'workplace': workplace,
                         'production_id': production_id,
+                        'export_reconnect_result': export_reconnect_result,
                     },
                 )
         for set_schedule_id in linked_set_schedule_ids:
@@ -8289,6 +8431,11 @@ def production_register_mode():
                 (request.form.get('expiry_date_2') or '').strip(),
                 (request.form.get('expiry_date_3') or '').strip(),
             ]
+            try:
+                expiry_dates = [_normalize_expiry_date_value(value) for value in expiry_dates]
+            except ValueError:
+                rollback_db(conn)
+                return "<script>alert('소비기한은 YYYY-MM-DD 형식으로 입력해 주세요. 예: 2026-05-31 또는 26.5.31'); window.history.back();</script>"
             expiry_box_values = [
                 (request.form.get('expiry_boxes_1') or '').strip(),
                 (request.form.get('expiry_boxes_2') or '').strip(),
@@ -8376,13 +8523,31 @@ def production_register_mode():
             raw_notes = request.form.getlist('raw_usage_note[]')
             raw_receiving_dates = request.form.getlist('raw_override_receiving_date[]')
             raw_car_numbers = request.form.getlist('raw_override_car_number[]')
-            for raw_id, raw_code, raw_name, expected_qty, actual_qty, usage_note, override_receiving_date, override_car_number in zip(raw_ids, raw_codes, raw_names, raw_expected, raw_actual, raw_notes, raw_receiving_dates, raw_car_numbers):
+            raw_lot_inputs = list(zip(
+                raw_ids, raw_codes, raw_names, raw_expected, raw_actual, raw_notes,
+                raw_receiving_dates, raw_car_numbers,
+            ))
+            # The expected quantity is for the raw-material group.  When that
+            # group has more than one lot, apportion it by actual input so the
+            # lots add up to one requirement instead of duplicating it.
+            raw_group_totals = {}
+            prepared_raw_lots = []
+            for values in raw_lot_inputs:
+                raw_id, raw_code, raw_name, expected_qty, actual_qty, usage_note, override_receiving_date, override_car_number = values
                 actual_value = round(_to_float(actual_qty, 0), 4)
                 expected_value = round(_to_float(expected_qty, actual_value), 4)
-                if actual_value <= 0 and expected_value <= 0:
+                if actual_value <= 0:
                     continue
-                if expected_value <= 0 and actual_value > 0:
-                    expected_value = actual_value
+                group_key = (str(raw_code or '').strip() or str(raw_name or '').strip() or str(raw_id or '').strip())
+                group = raw_group_totals.setdefault(group_key, {'expected': 0.0, 'actual': 0.0})
+                group['expected'] += max(expected_value, 0.0)
+                group['actual'] += actual_value
+                prepared_raw_lots.append((values, group_key, actual_value))
+            for values, group_key, actual_value in prepared_raw_lots:
+                raw_id, raw_code, raw_name, expected_qty, actual_qty, usage_note, override_receiving_date, override_car_number = values
+                group = raw_group_totals[group_key]
+                group_expected = group['expected'] if group['expected'] > 0 else group['actual']
+                expected_value = round(group_expected * actual_value / group['actual'], 4) if group['actual'] > 0 else 0.0
                 raw_code = (raw_code or '').strip()
                 raw_name = (raw_name or '').strip()
                 selected_raw_id = int(raw_id or 0) if str(raw_id or '').strip().isdigit() else 0
@@ -8469,6 +8634,9 @@ def production_register_mode():
                     ),
                 )
 
+            export_reconnect_result = _reconnect_export_schedule_for_replacement_production(
+                conn, cursor, production_id
+            )
             audit_log(
                 conn,
                 'create',
@@ -8492,6 +8660,7 @@ def production_register_mode():
                     'schedule_id': schedule_id,
                     'entry_mode': 'register',
                     'auto_work_day': auto_work_day,
+                    'export_reconnect_result': export_reconnect_result,
                 },
             )
             commit_db(conn)
@@ -8630,14 +8799,15 @@ def production_register_mode():
                 COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as receiving_date,
                 COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') as car_number,
                 COALESCE(pmu.actual_quantity, 0) as actual_quantity,
-                COALESCE(pmu.usage_note, '') as usage_note
+                COALESCE(pmu.usage_note, '') as usage_note,
+                COALESCE(pr.production_date, '') as production_date
             FROM production_material_usage pmu
             JOIN productions pr ON pr.id = pmu.production_id
             LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
             WHERE COALESCE(pr.workplace, '') = ?
               AND COALESCE(pr.entry_mode, '') = 'register'
               AND pmu.material_id IS NULL
-            ORDER BY pr.id DESC, pmu.id DESC
+            ORDER BY pr.production_date DESC, pr.id DESC, pmu.id DESC
             ''',
             (workplace,),
         )
@@ -8650,6 +8820,7 @@ def production_register_mode():
                 'car_number': row['car_number'] or '',
                 'actual_quantity': row['actual_quantity'] or 0,
                 'usage_note': row['usage_note'] or '',
+                'production_date': row['production_date'] or '',
             }
             raw_id = str(row['raw_material_id'] or '')
             raw_code = (row['raw_material_code'] or '').strip()
@@ -8669,13 +8840,14 @@ def production_register_mode():
                 COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') as receiving_date,
                 COALESCE(NULLIF(TRIM(pmu.override_expiry_date), ''), '') as expiry_date,
                 COALESCE(NULLIF(TRIM(pmu.override_manufacture_date), ''), '') as manufacture_date,
-                COALESCE(pmu.actual_quantity, 0) as actual_quantity
+                COALESCE(pmu.actual_quantity, 0) as actual_quantity,
+                COALESCE(pr.production_date, '') as production_date
             FROM production_material_usage pmu
             JOIN productions pr ON pr.id = pmu.production_id
             WHERE COALESCE(pr.workplace, '') = ?
               AND COALESCE(pr.entry_mode, '') = 'register'
               AND pmu.material_id IS NOT NULL
-            ORDER BY pr.id DESC, pmu.id DESC
+            ORDER BY pr.production_date DESC, pr.id DESC, pmu.id DESC
             ''',
             (workplace,),
         )
@@ -8692,6 +8864,7 @@ def production_register_mode():
                     'expiry_date': row['expiry_date'] or '',
                     'manufacture_date': row['manufacture_date'] or '',
                     'actual_quantity': row['actual_quantity'] or 0,
+                'production_date': row['production_date'] or '',
                 }
 
         cursor.execute(
@@ -8906,7 +9079,9 @@ def production_detail(production_id):
         # ?꾨즺椰? ??쇱젫 ??????癒?겧 疫꿸퀡以???뽯뻻 (???춭???癒?겧????已???뽯뻻)
         cursor.execute(
             '''
-            SELECT COALESCE(pmu.raw_material_id, -pmu.id) as rm_id,
+            SELECT pmu.id AS usage_id,
+                   pmu.id AS rm_id,
+                   pmu.raw_material_id AS source_rm_id,
                    pmu.actual_quantity as quantity_per_box,
                    pmu.actual_quantity as actual_quantity,
                    pmu.expected_quantity as expected_quantity,
@@ -9569,7 +9744,15 @@ def production_detail(production_id):
             and int(row.get('component_product_id') or 0) <= 0
         )
         if is_raw_usage and row['actual_quantity'] is not None:
-            raw_key = int(row['raw_material_id'] or 0) or -int(row['id'])
+            # Completed register-mode rows may use the same raw-material master
+            # record for several manually entered lots.  Keep their saved usage
+            # rows separate; otherwise every lot receives the combined quantity
+            # and the total/yield is counted more than once on reload.
+            raw_key = (
+                int(row['id'])
+                if production['status'] == done_status and _is_register_entry_mode(production.get('entry_mode'))
+                else (int(row['raw_material_id'] or 0) or -int(row['id']))
+            )
             entry = raw_saved_map.setdefault(raw_key, {'qty': 0, 'note': '', 'car_number': '', 'receiving_date': ''})
             entry['qty'] = float(entry.get('qty') or 0) + float(row['actual_quantity'] or 0)
             if row.get('usage_note'):
@@ -10244,6 +10427,7 @@ def update_production_usage(production_id):
             return redirect(url_for('production.production_detail', **kwargs))
 
         save_action = (request.form.get('save_action') or 'complete').strip().lower()
+        is_temp_save = save_action == 'temp'
         apply_usage_id = (request.form.get('apply_usage_id') or '').strip()
         actual_boxes = float(request.form.get('actual_boxes', 0) or 0)
         cursor.execute(
@@ -10299,14 +10483,16 @@ def update_production_usage(production_id):
         if skip_stock_impact and not apply_usage_id:
             requested_production_date = (request.form.get('production_date') or '').strip()
             if not requested_production_date:
-                rollback_db(conn)
-                return "<script>alert('생산일을 입력해 주세요.'); window.history.back();</script>"
-            try:
-                datetime.strptime(requested_production_date, '%Y-%m-%d')
-            except ValueError:
-                rollback_db(conn)
-                return "<script>alert('생산일 형식을 확인해 주세요.'); window.history.back();</script>"
-            effective_production_date = requested_production_date
+                if not is_temp_save:
+                    rollback_db(conn)
+                    return "<script>alert('생산일을 입력해 주세요.'); window.history.back();</script>"
+            else:
+                try:
+                    datetime.strptime(requested_production_date, '%Y-%m-%d')
+                except ValueError:
+                    rollback_db(conn)
+                    return "<script>alert('생산일 형식을 확인해 주세요.'); window.history.back();</script>"
+                effective_production_date = requested_production_date
 
         if apply_usage_id:
             cursor.execute(
@@ -10351,9 +10537,13 @@ def update_production_usage(production_id):
         work_time = (request.form.get('work_time') or '').strip()
         personnel_note = (request.form.get('personnel_note') or '').strip()
         line_usage_disabled = _is_line_usage_disabled(prod_row['line_usage_disabled'] if prod_row else 0)
-        expiry_date_input = (request.form.get('expiry_date') or '').strip()
-        expiry_date_2_input = (request.form.get('expiry_date_2') or '').strip()
-        expiry_date_3_input = (request.form.get('expiry_date_3') or '').strip()
+        try:
+            expiry_date_input = _normalize_expiry_date_value(request.form.get('expiry_date'))
+            expiry_date_2_input = _normalize_expiry_date_value(request.form.get('expiry_date_2'))
+            expiry_date_3_input = _normalize_expiry_date_value(request.form.get('expiry_date_3'))
+        except ValueError:
+            rollback_db(conn)
+            return "<script>alert('소비기한은 YYYY-MM-DD 형식으로 입력해 주세요. 예: 2026-05-31 또는 26.5.31'); window.history.back();</script>"
         requested_raw_sok_mode = (request.form.get('raw_sok_mode') or '').strip() or str(prod_row['raw_sok_mode'] or 1)
 
         production_date_str = effective_production_date
@@ -10373,7 +10563,9 @@ def update_production_usage(production_id):
         except Exception:
             pass
 
-        expiry_date = expiry_date_input or default_expiry_date
+        # 임시저장은 입력된 초안 그대로 보관한다. 완료 저장에서만 첫 소비기한을
+        # 기본 소비기한으로 자동 보완한다.
+        expiry_date = expiry_date_input if is_temp_save else (expiry_date_input or default_expiry_date)
         import re
         if expiry_date and not re.match(r'^\d{4}-\d{2}-\d{2}[A-Za-z]*$', expiry_date):
             rollback_db(conn)
@@ -10391,7 +10583,7 @@ def update_production_usage(production_id):
             except ValueError:
                 rollback_db(conn)
                 return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳 諛뺤뒪 ?섎뒗 ?レ옄濡??낅젰?댁＜?몄슂.'); window.history.back();</script>"
-            if box_value <= 0:
+            if box_value < 0 or (not is_temp_save and box_value <= 0):
                 rollback_db(conn)
                 return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳 諛뺤뒪 ?섎뒗 0蹂대떎 而ㅼ빞 ?⑸땲??'); window.history.back();</script>"
             parsed_expiry_boxes.append(box_value)
@@ -10412,7 +10604,7 @@ def update_production_usage(production_id):
             parsed_sample_boxes.append(sample_box_value if sample_box_value > 0 else None)
 
         has_secondary_expiry = bool(expiry_date_2_input or expiry_date_3_input or expiry_box_inputs[1] or expiry_box_inputs[2])
-        if parsed_expiry_boxes[0] is None:
+        if not is_temp_save and parsed_expiry_boxes[0] is None:
             rollback_db(conn)
             return "<script>alert('泥?踰덉㎏ ?뚮퉬湲고븳??諛뺤뒪 ?섎? ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
@@ -10425,7 +10617,7 @@ def update_production_usage(production_id):
         ):
             has_date = bool(expiry_input)
             has_box = box_value is not None
-            if has_date != has_box:
+            if not is_temp_save and has_date != has_box:
                 rollback_db(conn)
                 return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳? ?좎쭨? 諛뺤뒪 ?섎? ?④퍡 ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
@@ -10437,11 +10629,15 @@ def update_production_usage(production_id):
                 return f"<script>alert('{idx}踰덉㎏ ?뚮퉬湲고븳? YYYY-MM-DD ?먮뒗 YYYY-MM-DDA ?뺤떇?쇰줈 ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
 
         computed_actual_boxes = sum(float(box or 0) for box in parsed_expiry_boxes if box is not None)
-        if computed_actual_boxes <= 0:
+        if not is_temp_save and computed_actual_boxes <= 0:
             rollback_db(conn)
             return "<script>alert('?뚮퉬湲고븳蹂?諛뺤뒪 ?섎? 1媛??댁긽 ?낅젰?댁＜?몄슂.'); window.history.back();</script>"
-        actual_boxes = computed_actual_boxes
+        # 박스 수를 아직 하나도 입력하지 않은 초안은 기존 실제 수량을 보존한다.
+        if computed_actual_boxes > 0 or not is_temp_save:
+            actual_boxes = computed_actual_boxes
         for idx, sample_box_value in enumerate(parsed_sample_boxes, start=1):
+            if is_temp_save:
+                continue
             if sample_box_value is None:
                 continue
             expiry_box_value = parsed_expiry_boxes[idx - 1]
@@ -10471,7 +10667,7 @@ def update_production_usage(production_id):
             missing.append('?紐낅７???紐꾩뜚')
         if not work_time:
             missing.append('?臾믩씜??볦퍢')
-        if missing:
+        if missing and not is_temp_save:
             rollback_db(conn)
             return f"<script>alert('?紐꾩뜚?욜뵳??袁⑸땾 ??낆젾: {', '.join(missing)}'); window.history.back();</script>"
 
@@ -11379,7 +11575,11 @@ def update_production_usage(production_id):
                     conn, cursor, dict(set_schedule_row), allow_unallocated_remaining=True
                 )
 
-        _resync_export_schedule_for_production(conn, cursor, production_id)
+        export_reconnect_result = _reconnect_export_schedule_for_replacement_production(
+            conn, cursor, production_id
+        )
+        if export_reconnect_result is None:
+            _resync_export_schedule_for_production(conn, cursor, production_id)
         commit_db(conn)
 
     except ValueError as e:
@@ -11612,14 +11812,25 @@ def production_search():
             pr.*,
             COALESCE(p.name, '') AS product_name,
             COALESCE(p.code, '') AS product_code,
-            COALESCE((
-                SELECT GROUP_CONCAT(DISTINCT TRIM(COALESCE(rm.name, pmu.raw_material_name, m.name, '')))
+            COALESCE(pr.work_time, '') AS work_time,
+            (
+                COALESCE(pr.supply_people, 0)
+                + COALESCE(pr.packing_people, 0)
+                + COALESCE(pr.outer_packing_people, 0)
+            ) AS total_people,
+            (
+                SELECT ROUND(
+                    SUM(COALESCE(pmu.expected_quantity, 0)) * 100.0
+                    / NULLIF(SUM(COALESCE(pmu.actual_quantity, 0)), 0),
+                    1
+                )
                 FROM production_material_usage pmu
-                LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
-                LEFT JOIN materials m ON m.id = pmu.material_id
                 WHERE pmu.production_id = pr.id
-                  AND TRIM(COALESCE(rm.name, pmu.raw_material_name, m.name, '')) <> ''
-            ), '') AS used_material_names
+                  AND (
+                    pmu.raw_material_id IS NOT NULL
+                    OR COALESCE(TRIM(pmu.raw_material_name), '') != ''
+                  )
+            ) AS raw_yield_rate
         FROM productions pr
         LEFT JOIN products p ON pr.product_id = p.id
         WHERE pr.workplace = ?
@@ -11680,9 +11891,11 @@ def production_search():
             'production_date': r['production_date'],
             'product_name': r['product_name'],
             'product_code': r['product_code'],
-            'used_material_names': r['used_material_names'],
             'planned_boxes': r['planned_boxes'],
             'actual_boxes': r['actual_boxes'],
+            'work_time': r['work_time'],
+            'total_people': r['total_people'],
+            'yield_rate': r['raw_yield_rate'],
         }
         for r in results
     ]
