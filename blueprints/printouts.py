@@ -499,13 +499,65 @@ def journals():
                 or _raw_lot_key(row) in raw_register_lot_dates
             )
         ]
+        # 등록모드의 과거 생산은 현재 원초 마스터에 해당 로트가 남아 있지 않을 수 있다.
+        # 이력 입력값(자호·입고일·사용량)을 별도 행으로 보완해 원초 일지에서도
+        # 확인할 수 있게 한다. 재고 로트가 이미 완료 목록에 있으면 중복 표시는 피한다.
+        done_lot_keys = {_raw_lot_key(row) for row in raw_done_items}
+        cursor.execute(
+            '''
+            SELECT
+                COALESCE(NULLIF(TRIM(pmu.raw_material_code_snapshot), ''), '') AS code,
+                COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), '원초') AS name,
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') AS receiving_date,
+                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') AS car_number,
+                MAX(SUBSTR(COALESCE(p.production_date, ''), 1, 10)) AS journal_date,
+                SUM(COALESCE(pmu.actual_quantity, 0)) AS used_quantity
+            FROM production_material_usage pmu
+            JOIN productions p ON p.id = pmu.production_id
+            WHERE COALESCE(p.workplace, '') = ?
+              AND LOWER(COALESCE(p.entry_mode, '')) = 'register'
+              AND COALESCE(p.status, '') = '완료'
+              AND pmu.material_id IS NULL
+              AND pmu.component_product_id IS NULL
+              AND COALESCE(pmu.actual_quantity, 0) > 0
+              AND (
+                  pmu.raw_material_id IS NULL
+                  OR COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), '') <> ''
+                  OR COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '') <> ''
+              )
+            GROUP BY
+                COALESCE(NULLIF(TRIM(pmu.raw_material_code_snapshot), ''), ''),
+                COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), '원초'),
+                COALESCE(NULLIF(TRIM(pmu.override_receiving_date), ''), ''),
+                COALESCE(NULLIF(TRIM(pmu.override_car_number), ''), '')
+            ''',
+            (workplace,),
+        )
+        for usage_row in cursor.fetchall():
+            usage = dict(usage_row)
+            lot_key = ((usage.get('receiving_date') or '').strip(), (usage.get('car_number') or '').strip())
+            if not lot_key[0] or not lot_key[1] or lot_key in done_lot_keys:
+                continue
+            raw_done_items.append({
+                'id': None,
+                'code': usage.get('code') or '',
+                'name': usage.get('name') or '원초',
+                'receiving_date': lot_key[0],
+                'car_number': lot_key[1],
+                'current_stock': 0,
+                'used_quantity': float(usage.get('used_quantity') or 0),
+                'journal_date': (usage.get('journal_date') or '').strip(),
+                'is_register_snapshot': True,
+            })
+            done_lot_keys.add(lot_key)
         for row in raw_active_items:
             row['journal_date'] = (row.get('receiving_date') or '').strip()
         for row in raw_done_items:
-            row['journal_date'] = (
-                raw_register_lot_dates.get(_raw_lot_key(row))
-                or raw_last_log_dates.get(int(row.get('id') or 0), '')
-            )
+            if not row.get('journal_date'):
+                row['journal_date'] = (
+                    raw_register_lot_dates.get(_raw_lot_key(row))
+                    or raw_last_log_dates.get(int(row.get('id') or 0), '')
+                )
         raw_active_available_dates = sorted(
             {row['journal_date'] for row in raw_active_items if row.get('journal_date')},
             reverse=True,

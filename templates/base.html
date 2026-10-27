@@ -685,6 +685,27 @@
             }
         }
          
+        /* To-Do 필터: 큰 색상 카드 대신 상태 점과 선택선으로 구분한다. */
+        .todo-quick-stats{display:flex;align-items:stretch;gap:.38rem;margin:0 0 .85rem;padding:.36rem;border:1px solid #d7e2ee;border-radius:13px;background:#f7fafc;box-shadow:none;overflow-x:auto;}
+        .todo-stat.todo-filter-stat{position:relative;display:flex;align-items:center;min-height:38px;flex:1 0 118px;padding:.45rem .66rem;border:1px solid #d5dfeb;border-radius:9px;background:#fff !important;color:#40546d;text-align:left;box-shadow:none;overflow:visible;}
+        .todo-filter-stat::before{display:none;}
+        .todo-filter-stat:hover{transform:none;filter:none;border-color:#9bb8d5;background:#f5f9fd !important;box-shadow:none;}
+        .todo-filter-stat.active{border-color:#4d82bb;background:#edf5ff !important;color:#174d85;box-shadow:inset 0 -2px 0 #3478b9 !important;}
+        .todo-stat-label{display:flex;align-items:center;gap:.42rem;font-size:.8rem;font-weight:850;line-height:1.2;opacity:1;}
+        .todo-stat-label::before{content:'';width:7px;height:7px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px rgba(100,116,139,.12);flex:0 0 auto;}
+        .todo-filter-stat.all .todo-stat-label::before{background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+        .todo-filter-stat.processing .todo-stat-label::before{background:#0f90b8;box-shadow:0 0 0 3px rgba(15,144,184,.12);}
+        .todo-filter-stat.info-needed .todo-stat-label::before{background:#c07814;box-shadow:0 0 0 3px rgba(192,120,20,.12);}
+        .todo-filter-stat.announcement .todo-stat-label::before{background:#c85a2b;box-shadow:0 0 0 3px rgba(200,90,43,.12);}
+        .todo-filter-stat.private .todo-stat-label::before{background:#8054b6;box-shadow:0 0 0 3px rgba(128,84,182,.12);}
+        .todo-stat-help{display:none;}
+        html[data-theme="dark"] .todo-quick-stats{border-color:#2c4059;background:#0e1828;box-shadow:none;}
+        html[data-theme="dark"] .todo-stat.todo-filter-stat{border-color:#304963;background:#152338 !important;color:#c7d9ec;box-shadow:none;}
+        html[data-theme="dark"] .todo-stat.todo-filter-stat::before{display:none;}
+        html[data-theme="dark"] .todo-filter-stat:hover{border-color:#52779d;background:#1a2d45 !important;color:#eef6ff;box-shadow:none;}
+        html[data-theme="dark"] .todo-filter-stat.active{border-color:#5d91c4;background:#1b3450 !important;color:#f2f8ff;box-shadow:inset 0 -2px 0 #69a9e8 !important;}
+        html[data-theme="dark"] .todo-stat-label{color:inherit;text-shadow:none;}
+        @media(max-width:640px){.todo-quick-stats{gap:.32rem;padding:.32rem;}.todo-stat.todo-filter-stat{flex:0 0 auto;min-height:36px;padding:.42rem .58rem;}.todo-stat-label{font-size:.76rem;}}
         {% block extra_css %}{% endblock %}
     </style>
 </head>

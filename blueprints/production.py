@@ -250,7 +250,20 @@ def _format_work_hours(value):
 
 def _sync_register_mode_work_day(cursor, production_date, work_time, production_id=None):
     work_date = _parse_iso_date(production_date)
-    worked_hours = _parse_work_time_hours(work_time)
+    # 같은 날짜의 등록모드 생산건은 가장 긴 작업시간 한 건을 기준으로 본다.
+    # 저장 순서에 따라 잔업 시간이 달라지지 않도록 DB의 당일 이력을 다시 읽는다.
+    cursor.execute(
+        '''
+        SELECT work_time
+        FROM productions
+        WHERE production_date = ?
+          AND LOWER(COALESCE(entry_mode, '')) = 'register'
+        ''',
+        (work_date.isoformat(),),
+    )
+    registered_hours = [_parse_work_time_hours(row['work_time']) for row in cursor.fetchall()]
+    registered_hours.append(_parse_work_time_hours(work_time))
+    worked_hours = max(registered_hours or [0.0])
     if worked_hours <= 0:
         return None
 
@@ -265,15 +278,25 @@ def _sync_register_mode_work_day(cursor, production_date, work_time, production_
         existing_overtime = 0.0
 
     is_holiday = existing_type == 'holiday' or bool(_get_auto_holiday_name(work_date))
-    overtime_hours = max(round(worked_hours - 8, 2), 0.0)
+    overtime_over_base = max(round(worked_hours - 8, 2), 0.0)
+    # 8시간을 넘기면 1~2시간 초과도 기본 2시간 잔업으로 기록한다.
+    # 2시간을 초과한 경우에는 실제 초과 시간을 그대로 사용한다.
+    overtime_hours = 2.0 if 0 < overtime_over_base <= 2 else overtime_over_base
+    is_auto_register_day = '등록모드 생산건 자동' in existing_note
     if is_holiday:
         next_type = 'extra'
-        next_overtime = overtime_hours
+        # 특근은 기존처럼 실제 초과 시간만 기록한다. 기본 2시간 규칙은 평일 잔업에만 적용한다.
+        next_overtime = overtime_over_base
         auto_note = f'등록모드 생산건 자동 특근 등록'
     elif overtime_hours > 0:
         next_type = 'overtime'
-        next_overtime = max(existing_overtime, overtime_hours)
-        auto_note = f'등록모드 생산건 자동 잔업 등록 ({_format_work_hours(overtime_hours)}h)'
+        # 기존 자동등록 값은 당일 최대 작업시간 기준으로 다시 계산한다.
+        # 수동으로 입력된 잔업값은 의도치 않게 줄이지 않도록 보존한다.
+        next_overtime = overtime_hours if is_auto_register_day else max(existing_overtime, overtime_hours)
+        auto_note = (
+            f'등록모드 생산건 자동 잔업 등록 '
+            f'(작업시간 {_format_work_hours(worked_hours)}h / 잔업 {_format_work_hours(overtime_hours)}h)'
+        )
     else:
         return None
 
@@ -555,16 +578,16 @@ def _build_schedule_initial_calendar_html(year, month, schedules_list, work_days
                 if str(schedule.get('source') or '') == 'export':
                     label = str(schedule.get('export_container_label') or '').strip()
                     badge_text = f'수출 {label}' if label else '수출'
-                    html_parts.append(f'<span class="done-badge" style="background:#dbeafe;color:#1d4ed8;">{escape(badge_text)}</span>')
+                    html_parts.append(f'<span class="export-container-badge">{escape(badge_text)}</span>')
                 elif str(schedule.get('source') or '') == 'set_assembly':
                     html_parts.append('<span class="done-badge" style="background:#dcfce7;color:#166534;">세트 조립</span>')
                 if is_completed:
                     html_parts.append('<span class="done-badge">완료</span>')
                 html_parts.append('<div class="schedule-info">')
                 if is_completed:
-                    html_parts.append(f'<span style="color:#3b82f6">실제 {_format_schedule_quantity(schedule.get("actual_boxes"))}{escape(str(schedule.get("quantity_unit") or "박스"))}</span>')
+                    html_parts.append(f'<span class="schedule-quantity actual-quantity">{_format_schedule_quantity(schedule.get("actual_boxes"))}{escape(str(schedule.get("quantity_unit") or "박스"))}</span>')
                 else:
-                    html_parts.append(f'<span style="color:#3b82f6">계획 {_format_schedule_quantity(schedule.get("planned_boxes"))}{escape(str(schedule.get("quantity_unit") or "박스"))}</span>')
+                    html_parts.append(f'<span class="schedule-quantity planned-quantity">{_format_schedule_quantity(schedule.get("planned_boxes"))}{escape(str(schedule.get("quantity_unit") or "박스"))}</span>')
                 if line_text:
                     html_parts.append('<div class="line-container">')
                     for line_value in [item.strip() for item in line_text.split(',') if item.strip()]:
@@ -8523,10 +8546,16 @@ def production_register_mode():
             raw_notes = request.form.getlist('raw_usage_note[]')
             raw_receiving_dates = request.form.getlist('raw_override_receiving_date[]')
             raw_car_numbers = request.form.getlist('raw_override_car_number[]')
-            raw_lot_inputs = list(zip(
+            # 로트를 추가한 경우에도 한 필드가 비어 있다는 이유로 zip()이 뒤쪽
+            # 로트를 조용히 버리지 않도록, 모든 원초 입력 배열의 길이를 맞춘다.
+            raw_input_columns = [
                 raw_ids, raw_codes, raw_names, raw_expected, raw_actual, raw_notes,
                 raw_receiving_dates, raw_car_numbers,
-            ))
+            ]
+            raw_input_count = max((len(values) for values in raw_input_columns), default=0)
+            for values in raw_input_columns:
+                values.extend([''] * (raw_input_count - len(values)))
+            raw_lot_inputs = list(zip(*raw_input_columns))
             # The expected quantity is for the raw-material group.  When that
             # group has more than one lot, apportion it by actual input so the
             # lots add up to one requirement instead of duplicating it.
@@ -8551,6 +8580,49 @@ def production_register_mode():
                 raw_code = (raw_code or '').strip()
                 raw_name = (raw_name or '').strip()
                 selected_raw_id = int(raw_id or 0) if str(raw_id or '').strip().isdigit() else 0
+
+                # 등록모드는 BOM에 연결된 기본 원초 ID를 카드의 초기값으로 사용한다.
+                # 하지만 사용자가 자호/입고일을 입력해 로트를 지정한 경우에는 그 입력값이
+                # 우선이다. 기존에는 여기서 기본 ID를 그대로 저장해 전혀 다른 로트로
+                # 기록되는 문제가 있었다.
+                lot_receiving_date = (override_receiving_date or '').strip()
+                lot_car_number = (override_car_number or '').strip()
+                if lot_receiving_date or lot_car_number:
+                    if not lot_receiving_date or not lot_car_number:
+                        rollback_db(conn)
+                        return (
+                            "<script>alert('원초 로트는 자호와 입고일을 함께 입력해 주세요.'); "
+                            "window.history.back();</script>"
+                        )
+                    cursor.execute(
+                        '''
+                        SELECT id, name, code
+                        FROM raw_materials
+                        WHERE workplace = ?
+                          AND COALESCE(receiving_date, '') = ?
+                          AND COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), ''), '') = ?
+                        ORDER BY id DESC
+                        LIMIT 2
+                        ''',
+                        (target_workplace, lot_receiving_date, lot_car_number),
+                    )
+                    matching_lots = cursor.fetchall()
+                    if len(matching_lots) > 1:
+                        rollback_db(conn)
+                        return (
+                            "<script>alert('입력한 자호와 입고일에 같은 원초 로트가 여러 개 있습니다. "
+                            "원초 관리에서 로트를 정리한 후 다시 등록해 주세요.'); window.history.back();</script>"
+                        )
+                    if matching_lots:
+                        matched_lot = matching_lots[0]
+                        selected_raw_id = int(matched_lot['id'])
+                        raw_name = (matched_lot['name'] or '').strip() or raw_name
+                        raw_code = (matched_lot['code'] or '').strip() or raw_code
+                    else:
+                        # 과거 생산 이력처럼 원초 마스터에 더 이상 남아 있지 않은
+                        # 로트도 있다. 이 경우 BOM 기본 로트로 바꾸지 않고, 사용자가
+                        # 입력한 자호/입고일을 스냅샷으로 보존한다.
+                        selected_raw_id = 0
                 if not raw_name and selected_raw_id > 0:
                     cursor.execute('SELECT name, code FROM raw_materials WHERE id = ?', (selected_raw_id,))
                     raw_row = cursor.fetchone()
@@ -8954,7 +9026,7 @@ def production_detail(production_id):
     # ??밴텦 ?類ｋ궖
     cursor.execute(
         '''
-        SELECT pr.*, p.name as product_name, p.category as product_category, COALESCE(p.set_item_type, '') as product_set_item_type,
+        SELECT pr.*, p.name as product_name, p.code as product_code, p.category as product_category, COALESCE(p.set_item_type, '') as product_set_item_type,
                p.box_quantity, p.sheets_per_pack, p.sheets_per_pack_2, p.sheets_per_pack_3,
                p.sok_per_box, p.sok_per_box_2, p.sok_per_box_3, p.expiry_months,
                p.spec_sheet_file_name, p.spec_sheet_stored_name, p.spec_sheet_uploaded_at
@@ -9766,9 +9838,28 @@ def production_detail(production_id):
         sum(float(item.get('qty') or 0) for item in raw_saved_map.values()),
         4,
     )
-    total_raw_need_qty = round(
-        float(production.get('active_sok_per_box') or 0) * float(production.get('actual_boxes') or production.get('planned_boxes') or 0),
+    # A finished production record is an historical record.  Its requirement
+    # must therefore come from the usage rows saved at completion, not from
+    # the product's current sok-per-box setting (which may later be changed or
+    # removed).  This also keeps the total aligned with the saved raw lots.
+    saved_raw_need_qty = round(
+        sum(
+            _coerce_float(row.get('expected_quantity'))
+            for row in material_usage
+            if int(row.get('material_id') or 0) <= 0
+            and int(row.get('component_product_id') or 0) <= 0
+        ),
         4,
+    )
+    calculated_raw_need_qty = round(
+        float(production.get('active_sok_per_box') or 0)
+        * float(production.get('actual_boxes') or production.get('planned_boxes') or 0),
+        4,
+    )
+    total_raw_need_qty = (
+        saved_raw_need_qty
+        if production['status'] == done_status and saved_raw_need_qty > 0
+        else calculated_raw_need_qty
     )
     total_raw_remain_qty = round(total_raw_need_qty - total_raw_selected_qty, 4)
     total_raw_yield_rate = (
@@ -9777,7 +9868,7 @@ def production_detail(production_id):
         else None
     )
     total_raw_selected_display = _format_display_quantity(total_raw_selected_qty)
-    total_raw_need_display = _format_display_quantity(total_raw_need_qty)
+    total_raw_need_display = f'{total_raw_need_qty:,.1f}'
 
     cursor.execute(
         '''
