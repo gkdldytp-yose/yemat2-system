@@ -2594,5 +2594,79 @@ html[data-theme="dark"] #exportModal input[style*="#fff3e0"]{background:rgba(249
   #rawLotTableBody td:last-child form .btn{width:100%;}
   .lot-code{font-size:0.84rem;word-break:break-all;}
 }
+
+/* 원초 행의 작업은 단일 블루 톤으로 정리해 정보와 조작 영역을 분리한다. */
+.raw-code-actions{
+  padding:.28rem;
+  border:1px solid #d8e4f0;
+  border-radius:10px;
+  background:#f6f9fc;
+  gap:.24rem;
+}
+.raw-code-actions .btn,
+.raw-code-actions .btn.btn-secondary,
+.raw-code-actions .raw-delete-btn{
+  border:1px solid #b8cfe7 !important;
+  background:#eef5fc !important;
+  color:#245b92 !important;
+  font-weight:800;
+  box-shadow:none !important;
+}
+.raw-code-actions .btn:hover,
+.raw-code-actions .btn.btn-secondary:hover,
+.raw-code-actions .raw-delete-btn:hover{
+  border-color:#3478b9 !important;
+  background:#2f6fae !important;
+  color:#fff !important;
+  box-shadow:0 4px 10px rgba(30,92,148,.18) !important;
+}
+.raw-code-actions .btn:focus-visible{outline:3px solid rgba(59,130,246,.28);outline-offset:2px;}
+html[data-theme="dark"] .raw-code-actions{
+  border-color:#2d4b68;
+  background:#101d2f;
+}
+html[data-theme="dark"] .raw-code-actions .btn,
+html[data-theme="dark"] .raw-code-actions .btn.btn-secondary,
+html[data-theme="dark"] .raw-code-actions .raw-delete-btn{
+  border-color:#365b7e !important;
+  background:#172b43 !important;
+  color:#bdd9f5 !important;
+}
+html[data-theme="dark"] .raw-code-actions .btn:hover,
+html[data-theme="dark"] .raw-code-actions .btn.btn-secondary:hover,
+html[data-theme="dark"] .raw-code-actions .raw-delete-btn:hover{
+  border-color:#6798c6 !important;
+  background:#28557f !important;
+  color:#fff !important;
+  box-shadow:0 4px 10px rgba(0,0,0,.22) !important;
+}
+/* 점검표도 관리 액션의 공통 블루그레이 톤을 사용한다.
+   기존 인라인 파랑과 4번째 버튼 규칙보다 우선한다. */
+.raw-code-actions > .btn.raw-checksheet-btn-enhanced,
+.raw-code-actions > .btn.raw-checksheet-btn{
+  border-color:#b8cfe7 !important;
+  background:#eef5fc !important;
+  color:#245b92 !important;
+  box-shadow:none !important;
+}
+.raw-code-actions > .btn.raw-checksheet-btn-enhanced:hover,
+.raw-code-actions > .btn.raw-checksheet-btn:hover{
+  border-color:#3478b9 !important;
+  background:#2f6fae !important;
+  color:#fff !important;
+  box-shadow:0 4px 10px rgba(30,92,148,.18) !important;
+}
+html[data-theme="dark"] .raw-code-actions > .btn.raw-checksheet-btn-enhanced,
+html[data-theme="dark"] .raw-code-actions > .btn.raw-checksheet-btn{
+  border-color:#365b7e !important;
+  background:#172b43 !important;
+  color:#bdd9f5 !important;
+}
+html[data-theme="dark"] .raw-code-actions > .btn.raw-checksheet-btn-enhanced:hover,
+html[data-theme="dark"] .raw-code-actions > .btn.raw-checksheet-btn:hover{
+  border-color:#6798c6 !important;
+  background:#28557f !important;
+  color:#fff !important;
+}
 </style>
 {% endblock %}

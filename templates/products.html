@@ -134,15 +134,31 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
 .product-list-table tbody tr:not(.quick-edit-row){transition:background .15s ease,box-shadow .15s ease;}
 .product-list-table tbody tr:not(.quick-edit-row):hover{background:#f7fbff;box-shadow:inset 3px 0 0 #4c91e5;}
 .product-list-table .product-name-stack>strong{font-size:.92rem!important;color:#102a4c;line-height:1.35;}
-.product-category-badge{display:inline-flex;align-items:center;justify-content:center;min-width:52px;min-height:28px;padding:.28rem .55rem;border:1px solid transparent;border-radius:999px;font-size:.72rem;font-weight:950;letter-spacing:-.02em;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 5px rgba(15,23,42,.06);}
-.product-category-badge[data-category="김밥"]{background:#fff2df!important;color:#c56608!important;border-color:#f7c77f;}
-.product-category-badge[data-category="식탁"]{background:#e8f9ef!important;color:#16824b!important;border-color:#8bdbab;}
-.product-category-badge[data-category="자반"]{background:#fff0e7!important;color:#c55516!important;border-color:#f5bc96;}
-.product-category-badge[data-category="유기"]{background:#eaf4ff!important;color:#1769bd!important;border-color:#9bc5f0;}
-.product-category-badge[data-category="전장"]{background:#f4edff!important;color:#7544ad!important;border-color:#c8ade9;}
-.product-category-badge[data-category="생김"]{background:#e6faf6!important;color:#087a67!important;border-color:#8bdccc;}
-.product-category-badge[data-category="세트"]{background:#fff0f6!important;color:#bf3773!important;border-color:#f1adca;}
-.product-category-sub-badge{margin-top:.24rem;font-size:.65rem!important;font-weight:850!important;border:1px solid rgba(59,130,246,.22);}
+.product-bom-link{color:#102a4c !important;text-decoration:none;cursor:pointer;border-radius:5px;transition:color .15s ease,background-color .15s ease;}
+.product-bom-link:hover{color:#1d4ed8;background:#eff6ff;text-decoration:underline;text-underline-offset:3px;}
+.product-bom-link:focus-visible{outline:3px solid rgba(59,130,246,.3);outline-offset:3px;}
+.product-category-badge{--category-accent:#64748b;display:inline-flex;align-items:center;justify-content:center;gap:.34rem;min-width:0;min-height:26px;padding:.22rem .5rem;border:1px solid #d7e1ec;border-radius:7px;background:#f8fafc!important;color:#40546b!important;font-size:.72rem;font-weight:850;letter-spacing:-.02em;box-shadow:none;}
+.product-category-badge::before{content:"";width:.38rem;height:.38rem;border-radius:50%;background:var(--category-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--category-accent) 12%,transparent);}
+.product-category-badge[data-category="김밥"]{--category-accent:#c47b23;}
+.product-category-badge[data-category="식탁"]{--category-accent:#3c9a68;}
+.product-category-badge[data-category="자반"]{--category-accent:#bc7046;}
+.product-category-badge[data-category="유기"]{--category-accent:#4d82b7;}
+.product-category-badge[data-category="도시락"]{--category-accent:#c45f69;}
+.product-category-badge[data-category="전장"]{--category-accent:#8062a8;}
+.product-category-badge[data-category="생김"]{--category-accent:#388d80;}
+.product-category-badge[data-category="세트"]{--category-accent:#ad6689;}
+.product-category-badge[data-category="무트레이"]{--category-accent:#6b7d91;}
+html[data-theme="dark"] .product-category-badge{background:#172437!important;border-color:#344961;color:#c6d3e2!important;}
+html[data-theme="dark"] .product-category-badge::before{box-shadow:0 0 0 3px color-mix(in srgb,var(--category-accent) 18%,transparent);}
+.product-category-sub-badge{display:inline-flex;align-items:center;justify-content:center;min-height:23px;margin-top:.26rem;padding:.18rem .45rem!important;border:1px solid #d4dfeb!important;border-radius:6px!important;background:#f6f9fc!important;color:#53677d!important;font-size:.65rem!important;font-weight:850!important;box-shadow:none!important;}
+.product-category-sub-badge::before{content:"";width:.32rem;height:.32rem;margin-right:.28rem;border-radius:50%;background:#6c8198;}
+.product-category-sub-badge.set-finished{border-color:#bdd3e8!important;background:#f1f6fb!important;color:#426887!important;}
+.product-category-sub-badge.set-finished::before{background:#4d83b5;}
+.product-category-sub-badge.set-semi{border-color:#c6dccd!important;background:#f3f8f4!important;color:#4d7860!important;}
+.product-category-sub-badge.set-semi::before{background:#57906c;}
+html[data-theme="dark"] .product-category-sub-badge{border-color:#344a62!important;background:#172437!important;color:#b8c6d5!important;}
+html[data-theme="dark"] .product-category-sub-badge.set-finished{border-color:#385777!important;background:#172b42!important;color:#afd0ee!important;}
+html[data-theme="dark"] .product-category-sub-badge.set-semi{border-color:#3c614d!important;background:#172c24!important;color:#b3d9c0!important;}
 .product-list-table th:last-child,.product-list-table td:last-child{width:1%;white-space:nowrap;}
 .product-action-group{display:inline-flex;width:max-content;padding:.28rem;gap:.28rem;border:1px solid #d7e4f1;border-radius:11px;background:#f5f9fd;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
 .product-delete-form{display:flex;margin:0;}
@@ -154,7 +170,12 @@ html[data-theme="dark"] .product-variant-badge.pouch{background:rgba(13,148,136,
 .product-action-btn.action-spec{background:linear-gradient(135deg,#4c7df2,#2957c8)!important;border-color:#759fff!important;}
 .product-action-btn.action-spec-add{background:linear-gradient(135deg,#16a5a1,#087b79)!important;border-color:#48c9c0!important;}
 .product-delete-btn{min-height:31px;background:linear-gradient(135deg,#f46055,#d83c34)!important;border-color:#fb837b!important;}
-html[data-theme="dark"] .product-list-table thead th{background:#1b2a3e;color:#dbeafe;border-color:#30445d;}html[data-theme="dark"] .product-list-table tbody td{color:#d5e3f2;border-bottom-color:#26384e;}html[data-theme="dark"] .product-list-table tbody tr:not(.quick-edit-row):hover{background:#16273b;box-shadow:inset 3px 0 0 #60a5fa;}html[data-theme="dark"] .product-list-table .product-name-stack>strong{color:#f1f6ff;}html[data-theme="dark"] .product-action-group{border-color:#314a67;background:#0d1a2b;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+html[data-theme="dark"] .product-list-table thead th{background:#1b2a3e;color:#dbeafe;border-color:#30445d;}html[data-theme="dark"] .product-list-table tbody td{color:#d5e3f2;border-bottom-color:#26384e;}html[data-theme="dark"] .product-list-table tbody tr:not(.quick-edit-row):hover{background:#16273b;box-shadow:inset 3px 0 0 #60a5fa;}html[data-theme="dark"] .product-list-table .product-name-stack>strong{color:#f1f6ff;}html[data-theme="dark"] .product-bom-link{color:#f1f6ff !important;}html[data-theme="dark"] .product-bom-link:hover{color:#93c5fd !important;background:#162d4a;}html[data-theme="dark"] .product-action-group{border-color:#314a67;background:#0d1a2b;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+/* 관리 버튼은 의미별 색 대신 동일한 차분한 블루 톤으로 묶는다. */
+.product-action-btn,.product-action-btn.action-edit,.product-action-btn.action-bom,.product-action-btn.action-spec,.product-action-btn.action-spec-add,.product-delete-btn{border-color:#b8cfe7!important;background:#eef5fc!important;color:#245b92!important;box-shadow:none!important;}
+.product-action-btn:hover,.product-delete-btn:hover{border-color:#3478b9!important;background:#2f6fae!important;color:#fff!important;box-shadow:0 4px 10px rgba(30,92,148,.18)!important;filter:none;}
+html[data-theme="dark"] .product-action-btn,html[data-theme="dark"] .product-action-btn.action-edit,html[data-theme="dark"] .product-action-btn.action-bom,html[data-theme="dark"] .product-action-btn.action-spec,html[data-theme="dark"] .product-action-btn.action-spec-add,html[data-theme="dark"] .product-delete-btn{border-color:#365b7e!important;background:#172b43!important;color:#bdd9f5!important;}
+html[data-theme="dark"] .product-action-btn:hover,html[data-theme="dark"] .product-delete-btn:hover{border-color:#6798c6!important;background:#28557f!important;color:#fff!important;box-shadow:0 4px 10px rgba(0,0,0,.22)!important;}
 @media(max-width:760px){.product-list-table tbody td{padding:.55rem .5rem;}.product-action-group{width:max-content;}.product-action-btn,.product-delete-btn{min-height:34px;font-size:.73rem!important;}}
 </style>
 {% endblock %}
@@ -261,7 +282,7 @@ html[data-theme="dark"] .product-list-table thead th{background:#1b2a3e;color:#d
         <tr>
             <td>
                 <div class="product-name-stack">
-                    <strong style="font-size:0.85rem;">{{ p.name }}</strong>
+                    <strong style="font-size:0.85rem;"><a class="product-bom-link" href="{{ url_for('products.product_bom', product_id=p.id, return_to=current_list_url) }}" title="{{ p.name }} BOM 보기">{{ p.name }}</a></strong>
                     {% if p.variant_badges %}
                     <div class="product-variant-badges">
                         {% for badge in p.variant_badges %}
@@ -287,9 +308,9 @@ html[data-theme="dark"] .product-list-table thead th{background:#1b2a3e;color:#d
                     {% elif p.category=='세트' %}#fce4ec;color:#c2185b
                 {% else %}#f5f5f5;color:#666{% endif %}">{{ p.category }}</span>
                 {% if p.category == '세트' and p.set_item_type == 'finished' %}
-                <span class="cat-badge product-category-sub-badge" style="background:#dbeafe;color:#1d4ed8;">완제품</span>
+                <span class="cat-badge product-category-sub-badge set-finished">완제품</span>
                 {% elif p.category == '세트' and p.set_item_type == 'semi' %}
-                <span class="cat-badge product-category-sub-badge" style="background:#ecfccb;color:#3f6212;">반제품</span>
+                <span class="cat-badge product-category-sub-badge set-semi">반제품</span>
                 {% endif %}
                 {% else %}-{% endif %}
             </td>

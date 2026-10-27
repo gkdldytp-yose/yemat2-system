@@ -82,8 +82,11 @@
             <div class="calendar-day {% if day.type %}day-{{ day.type }}{% endif %} {% if not day.current_month %}other-month{% endif %}"
                  data-date="{{ day.date }}"
                  data-current-month="{{ 'true' if day.current_month else 'false' }}"
-                 onclick="handleDayClick('{{ day.date }}', {{ 'true' if day.current_month else 'false' }}, '{{ day.type or '' }}', {{ day.overtime_hours or 0 }}, '{{ day.note or '' }}')"
-                 style="cursor: pointer;">
+                 data-type="{{ day.type or '' }}"
+                 data-overtime-hours="{{ day.overtime_hours or 0 }}"
+                 data-note="{{ day.note or '' }}"
+                 role="button"
+                 tabindex="{{ '0' if day.current_month else '-1' }}">
                 <div class="day-number">{{ day.day }}</div>
                 {% if day.type %}
                 <div class="day-badge">
@@ -306,7 +309,13 @@
     border: 2px solid #e9ecef;
     border-radius: 8px;
     background: white;
+    cursor: pointer;
     transition: all 0.2s;
+}
+
+.calendar-day[data-current-month="true"]:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.55);
+    outline-offset: 2px;
 }
 
 .calendar-day:hover {
@@ -755,6 +764,31 @@ function handleDayClick(date, isCurrentMonth, type, overtimeHours, note) {
         openSingleModal(date, type, overtimeHours, note);
     }
 }
+
+// 이벤트를 날짜 셀에 직접 연결한다. 인라인 onclick은 메모의 따옴표 등으로
+// 일부 날짜에서 깨질 수 있어, 모든 날짜와 상태 카드가 같은 경로를 사용한다.
+function bindWorkDayCalendarInteractions() {
+    document.querySelectorAll('.calendar-day[data-date]').forEach((dayElement) => {
+        const triggerDayModal = () => {
+            handleDayClick(
+                dayElement.dataset.date || '',
+                dayElement.dataset.currentMonth === 'true',
+                dayElement.dataset.type || '',
+                Number(dayElement.dataset.overtimeHours || 0),
+                dayElement.dataset.note || ''
+            );
+        };
+        dayElement.addEventListener('click', triggerDayModal);
+        dayElement.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                triggerDayModal();
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', bindWorkDayCalendarInteractions);
 
 // 날짜 선택/해제
 function toggleDateSelection(date) {

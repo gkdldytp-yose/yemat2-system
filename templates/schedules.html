@@ -7310,6 +7310,297 @@ html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active 
     color: #ffffff;
     box-shadow: 0 9px 19px rgba(13, 74, 161, .38), inset 0 1px 0 rgba(255,255,255,.22);
 }
+/* Keep the export daily-history toggle visually primary in basic mode. */
+#exportView .export-daily-toggle-btn{
+    border-color:#2563eb !important;
+    background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%) !important;
+    color:#fff !important;
+    box-shadow:0 8px 18px rgba(37,99,235,.24) !important;
+}
+#exportView .export-daily-toggle-btn:hover{
+    border-color:#1d4ed8 !important;
+    background:linear-gradient(135deg,#1e40af 0%,#1d4ed8 100%) !important;
+    color:#fff !important;
+    box-shadow:0 11px 22px rgba(37,99,235,.3) !important;
+}
+
+/* Keep export schedule actions calm and consistent with the inventory action tone. */
+#exportView .export-schedule-actions-cell .export-actions{
+    padding:.35rem;
+    border:1px solid #d8e4f0;
+    border-radius:11px;
+    background:#f6f9fc;
+    gap:.35rem;
+}
+#exportView .export-schedule-actions-cell .set-manage-btn,
+#exportView .export-schedule-actions-cell .set-edit-btn,
+#exportView .export-schedule-actions-cell .set-delete-btn{
+    border-color:#b8cfe7 !important;
+    background:#eef5fc !important;
+    color:#245b92 !important;
+    box-shadow:none !important;
+}
+#exportView .export-schedule-actions-cell .set-manage-btn:hover,
+#exportView .export-schedule-actions-cell .set-edit-btn:hover,
+#exportView .export-schedule-actions-cell .set-delete-btn:hover{
+    border-color:#3478b9 !important;
+    background:#2f6fae !important;
+    color:#fff !important;
+    box-shadow:0 4px 10px rgba(30,92,148,.18) !important;
+}
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .export-actions{border-color:#2d4b68;background:#101d2f;}
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-manage-btn,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-edit-btn,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-delete-btn{border-color:#365b7e !important;background:#172b43 !important;color:#bdd9f5 !important;}
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-manage-btn:hover,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-edit-btn:hover,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-delete-btn:hover{border-color:#6798c6 !important;background:#28557f !important;color:#fff !important;box-shadow:0 4px 10px rgba(0,0,0,.22) !important;}
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-manage-btn,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-edit-btn,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-delete-btn{
+    filter:none !important;
+    text-shadow:none !important;
+    box-shadow:none !important;
+}
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-manage-btn .btn-copy::before,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-edit-btn .btn-copy::before,
+html[data-theme="dark"] #exportView .export-schedule-actions-cell .set-delete-btn .btn-copy::before{
+    background:rgba(96,165,250,.16) !important;
+    color:#b9d9f5 !important;
+}
+
+/* 완료는 보조 상태로만 표시하고, 상품·수출·실제 생산량을 먼저 읽게 한다. */
+#calendarView .schedule-item.done{
+    border-left-color:#78a992;
+    border-color:#c7ddd2;
+    background:linear-gradient(135deg,#ffffff 0%,#f5faf7 100%);
+}
+#calendarView .schedule-item.done .schedule-info .schedule-quantity{
+    background:#e9f2ed;
+    color:#356a52 !important;
+}
+#calendarView .schedule-item.done > .done-badge:not([style]){
+    background:#dcebe2;
+    color:#416b55;
+    box-shadow:none;
+}
+html[data-theme="light"] #calendarView .schedule-item.done{
+    border-left-color:#78a992 !important;
+    border-color:#c7ddd2 !important;
+    background:linear-gradient(135deg,#ffffff 0%,#f5faf7 100%) !important;
+}
+html[data-theme="light"] #calendarView .schedule-item.done .schedule-info .schedule-quantity{
+    background:#e9f2ed !important;
+    color:#356a52 !important;
+}
+html[data-theme="light"] #calendarView .schedule-item.done > .done-badge:not([style]){
+    background:#dcebe2 !important;
+    color:#416b55 !important;
+    box-shadow:none !important;
+}
+html[data-theme="dark"] #calendarView .schedule-item.done{
+    border-left-color:#496f63;
+    border-color:#304b48;
+    background:linear-gradient(135deg,#15242a 0%,#111c2d 100%);
+    box-shadow:0 4px 10px rgba(0,0,0,.2);
+}
+html[data-theme="dark"] #calendarView .schedule-item.done .schedule-info .schedule-quantity{
+    background:#1b3540;
+    color:#b9d8e7 !important;
+}
+html[data-theme="dark"] #calendarView .schedule-item.done > .done-badge:not([style]){
+    border:1px solid #31564d;
+    background:#1a3934;
+    color:#b7d6c4;
+    box-shadow:none;
+}
+/* 생산량은 상태색과 분리하고, 예정 카드는 완료 카드보다 선명하게 구분한다. */
+#calendarView .schedule-item:not(.done){
+    border-color:#78a8d9;
+    border-left-color:#337fc7;
+    background:linear-gradient(135deg,#ffffff 0%,#edf5ff 100%);
+    box-shadow:0 0 0 1px rgba(96,165,250,.08),0 6px 14px rgba(30,83,140,.14);
+}
+#calendarView .schedule-item:not(.done) .schedule-quantity{
+    border-radius:4px;
+    background:#e0edfb;
+    color:#1c5d9f !important;
+    font-weight:900;
+}
+html[data-theme="light"] #calendarView .schedule-item:not(.done){
+    border-color:#78a8d9 !important;
+    border-left-color:#337fc7 !important;
+    background:linear-gradient(135deg,#ffffff 0%,#edf5ff 100%) !important;
+    box-shadow:0 0 0 1px rgba(96,165,250,.08),0 6px 14px rgba(30,83,140,.14) !important;
+}
+html[data-theme="light"] #calendarView .schedule-item:not(.done) .schedule-quantity{
+    background:#e0edfb !important;
+    color:#1c5d9f !important;
+    font-weight:900;
+}
+#calendarView .schedule-item.done .schedule-quantity{
+    color:#945b12 !important;
+    font-weight:900;
+}
+html[data-theme="dark"] #calendarView .schedule-item:not(.done){
+    border-color:#3b5874;
+    border-left-color:#5f87ae;
+    background:linear-gradient(135deg,#1a2b40 0%,#142337 100%);
+    box-shadow:inset 0 1px 0 rgba(174,215,255,.05),0 5px 11px rgba(0,0,0,.22);
+}
+html[data-theme="dark"] #calendarView .schedule-item:not(.done) .schedule-quantity{
+    background:#244563;
+    color:#d4e5f5 !important;
+    font-weight:900;
+}
+html[data-theme="dark"] #calendarView .schedule-item.done .schedule-quantity{
+    color:#f3cb88 !important;
+    font-weight:900;
+}
+#calendarView .schedule-info .schedule-quantity.actual-quantity{
+    color:#945b12 !important;
+    font-weight:900;
+}
+html[data-theme="dark"] #calendarView .schedule-info .schedule-quantity.actual-quantity{
+    color:#f3cb88 !important;
+    font-weight:900;
+}
+/* 여러 라인은 카드 하단에서 2열로 정리해 세로로 길게 늘어나는 것을 막는다. */
+#calendarView .schedule-info{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:end;
+    gap:.38rem;
+}
+#calendarView .schedule-info .line-container{
+    display:grid;
+    grid-template-columns:repeat(3,auto);
+    justify-content:end;
+    align-items:end;
+    gap:3px;
+    margin:0;
+    width:max-content;
+    max-width:100%;
+}
+#calendarView .schedule-info .line-tag{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:1.5rem;
+}
+/* 카드 우측 삭제 버튼은 제목 영역에서만 공간을 차지하게 하고,
+   하단의 생산수량·라인 정보는 카드 전체 폭을 사용한다. */
+#calendarView .schedule-item{
+    padding:.52rem .58rem .5rem .62rem !important;
+}
+#calendarView .schedule-name{
+    padding-right:1.55rem;
+}
+#calendarView .calendar-delete-btn{
+    top:.48rem !important;
+    right:.42rem !important;
+    width:1.18rem !important;
+    height:1.18rem !important;
+    font-size:.68rem !important;
+}
+#calendarView .schedule-info{
+    grid-template-columns:minmax(0,1fr) max-content;
+    column-gap:.3rem;
+    min-width:0;
+}
+#calendarView .schedule-info .schedule-quantity{
+    min-width:0;
+}
+#calendarView .schedule-info .line-container{
+    grid-template-columns:repeat(3, minmax(1.35rem, auto));
+    justify-self:end;
+}
+/* 수출 컨테이너는 일정의 보조 식별자이므로 완료·수량보다 낮은 위계로 표시한다. */
+#calendarView .schedule-item .export-container-badge{
+    align-self:flex-start;
+    display:inline-flex;
+    align-items:center;
+    width:max-content;
+    max-width:100%;
+    margin-top:2px;
+    padding:1px 5px;
+    border:1px solid #cbd5e1;
+    border-radius:4px;
+    background:#f1f5f9;
+    color:#526273;
+    font-size:.65rem;
+    font-weight:800;
+    line-height:1.25;
+}
+html[data-theme="dark"] #calendarView .schedule-item .export-container-badge{
+    border-color:#3b5068;
+    background:#19283a;
+    color:#aab9ca;
+}
+
+/* Desktop quick navigation: keep schedule tools within reach while browsing long views. */
+/* 충분한 사이드 레일이 있을 때만 본문 옆에 고정한다.
+   확대된 화면에서는 상단 탭으로 돌아가 카드 영역을 침범하지 않는다. */
+@media (min-width: 1840px) {
+    .schedule-toolbar {
+        position: relative;
+        justify-content: flex-end;
+        height: 0;
+        min-height: 0;
+        margin: 0;
+        z-index: 2;
+    }
+    .schedule-toolbar-actions {
+        position: absolute;
+        right: 0;
+        bottom: .7rem;
+        margin: 0;
+    }
+    .schedule-toolbar .view-toggle {
+        position: fixed; top: 50%; right: max(1rem, calc((100vw - 1400px) / 2 - 220px)); left: auto; z-index: 850;
+        display: flex; flex-direction: column; align-items: stretch; width: 196px;
+        max-height: calc(100vh - 2rem); overflow-y: auto; padding: .62rem; gap: .42rem;
+        transform: translateY(-50%); border: 1px solid #c7d9ed; border-radius: 16px;
+        background: rgba(250, 253, 255, .97); box-shadow: 0 16px 36px rgba(36, 77, 119, .22);
+        backdrop-filter: blur(14px);
+    }
+    .schedule-toolbar .view-toggle::before {
+        content: '\26A1 \BE60 \B978 \BA54 \B274'; display: block; padding: .18rem .42rem .5rem;
+        border-bottom: 1px solid #d7e5f3; color: #3d6085; font-size: .75rem; font-weight: 900; letter-spacing: .04em;
+    }
+    .schedule-toolbar .view-toggle button[data-view] {
+        display: flex; justify-content: flex-start; width: 100%; min-height: 46px;
+        padding: .62rem .72rem; white-space: normal; text-align: left; line-height: 1.25;
+    }
+    .schedule-toolbar .view-toggle button[data-view]::before {
+        content: '\203A'; display: inline-flex; align-items: center; justify-content: center;
+        width: 1.3rem; height: 1.3rem; margin-right: .45rem; flex: 0 0 auto;
+        border-radius: 7px; background: rgba(37, 99, 235, .1); color: #2563eb; font-size: 1.15rem; font-weight: 900;
+    }
+    .schedule-toolbar .view-toggle button[data-view].active::before {
+        background: rgba(255, 255, 255, .22); color: #fff;
+    }
+    #calendarView, #requirementsView, #capacityView, #exportView, #setView, #statsView { margin: 0 0 1rem; }
+    html[data-theme="dark"] .schedule-toolbar .view-toggle {
+        border-color: #385b7b; background: rgba(10, 24, 41, .98); box-shadow: 0 16px 34px rgba(0, 0, 0, .4);
+    }
+    html[data-theme="dark"] .schedule-toolbar .view-toggle::before { border-bottom-color: #294662; color: #b3d4f1; }
+    html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view]::before { background: rgba(96, 165, 250, .14); color: #9ecbff; }
+    html[data-theme="dark"] .schedule-toolbar .view-toggle button[data-view].active::before { background: rgba(255, 255, 255, .2); color: #fff; }
+}
+
+/* On touch and narrow screens, preserve the familiar horizontal tab strip. */
+@media (max-width: 1839px) {
+    .schedule-toolbar .view-toggle { position: static; transform: none; width: 100%; max-height: none; overflow-x: auto; flex-wrap: nowrap; }
+    .schedule-toolbar .view-toggle::before { display: none; }
+    .schedule-toolbar .view-toggle button[data-view] { flex: 0 0 auto; }
+}
+/* 상단 탭 모드에서는 생산 관리 동작을 같은 줄의 우측 끝에 유지한다. */
+@media (min-width: 769px) and (max-width: 1839px) {
+    .schedule-toolbar { flex-wrap: nowrap; align-items: center; }
+    .schedule-toolbar .view-toggle { flex: 1 1 auto; min-width: 0; width: auto; }
+    .schedule-toolbar-actions { flex: 0 0 auto; margin-left: auto; }
+}
 </style>
 {% endblock %}
 
@@ -10599,9 +10890,7 @@ function renderCalendar() {
     scheduleItem.appendChild(nameDiv);
     if (schedule.source === 'export') {
         const exportBadge = document.createElement('span');
-        exportBadge.className = 'done-badge';
-        exportBadge.style.background = '#dbeafe';
-        exportBadge.style.color = '#1d4ed8';
+        exportBadge.className = 'export-container-badge';
         exportBadge.textContent = schedule.export_container_label ? `수출 ${schedule.export_container_label}` : '수출';
         scheduleItem.appendChild(exportBadge);
     }
@@ -10618,13 +10907,13 @@ function renderCalendar() {
     
     // 박스 수
     const boxesSpan = document.createElement('span');
-    boxesSpan.className = 'schedule-quantity';
-    boxesSpan.style.color = '#3b82f6';
+    boxesSpan.className = schedule.is_completed ? 'schedule-quantity actual-quantity' : 'schedule-quantity';
     const quantityUnit = getScheduleQuantityUnit(schedule);
     if (schedule.is_completed) {
-        boxesSpan.textContent = `실제 ${schedule.actual_boxes || 0}${quantityUnit}`;
+        boxesSpan.textContent = `${schedule.actual_boxes || 0}${quantityUnit}`;
+        boxesSpan.style.setProperty('color', document.documentElement.dataset.theme === 'dark' ? '#f3cb88' : '#945b12', 'important');
     } else {
-        boxesSpan.textContent = `계획 ${schedule.planned_boxes}${quantityUnit}`;
+        boxesSpan.textContent = `${schedule.planned_boxes}${quantityUnit}`;
     }
     infoDiv.appendChild(boxesSpan);
 
@@ -10922,9 +11211,7 @@ function renderCalendar() {
 
                 if (schedule.source === 'export') {
                     const exportBadge = document.createElement('span');
-                    exportBadge.className = 'done-badge';
-                    exportBadge.style.background = '#dbeafe';
-                    exportBadge.style.color = '#1d4ed8';
+                    exportBadge.className = 'export-container-badge';
                     exportBadge.textContent = schedule.export_container_label ? `수출 ${schedule.export_container_label}` : '수출';
                     scheduleItem.appendChild(exportBadge);
                 }
@@ -10938,12 +11225,14 @@ function renderCalendar() {
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'schedule-info';
                 const boxesSpan = document.createElement('span');
-                boxesSpan.className = 'schedule-quantity';
-                boxesSpan.style.color = '#3b82f6';
+                boxesSpan.className = isCompleted ? 'schedule-quantity actual-quantity' : 'schedule-quantity';
                 const quantityUnit = getScheduleQuantityUnit(schedule);
                 boxesSpan.textContent = isCompleted
-                    ? `실제 ${formatQuantity(schedule.actual_boxes)}${quantityUnit}`
-                    : `계획 ${formatQuantity(schedule.planned_boxes)}${quantityUnit}`;
+                    ? `${formatQuantity(schedule.actual_boxes)}${quantityUnit}`
+                    : `${formatQuantity(schedule.planned_boxes)}${quantityUnit}`;
+                if (isCompleted) {
+                    boxesSpan.style.setProperty('color', document.documentElement.dataset.theme === 'dark' ? '#f3cb88' : '#945b12', 'important');
+                }
                 infoDiv.appendChild(boxesSpan);
 
                 if (lineText) {

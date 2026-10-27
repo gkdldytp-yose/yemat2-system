@@ -2,9 +2,35 @@
 {% block title %}생산 상세{% endblock %}
 {% block extra_css %}
 <style>
-.sec{background:white;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.sec{background:white;border:1px solid #e2e8f0;border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;box-shadow:0 1px 3px rgba(15,23,42,.05);}
 .sec h3{font-size:1.1rem;color:#2c3e50;border-bottom:2px solid #667eea;padding-bottom:0.5rem;margin-bottom:1rem;}
 .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.production-info-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.42fr);gap:1rem 2rem;grid-column:1 / -1;padding:1.2rem 1.35rem 1.1rem;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(135deg,#f8fbff 0%,#eef6ff 100%);}
+.production-info-id{position:absolute;right:1.2rem;top:.75rem;font-size:.72rem;font-weight:800;color:#64748b;letter-spacing:.04em;}
+.production-info-id strong{margin-left:.3rem;color:#334155;font-size:.82rem;}
+.production-info-product .lbl,.production-info-date .lbl{font-size:.8rem;font-weight:800;color:#52657d;margin-bottom:.42rem;}
+.production-info-label-row{display:flex;align-items:center;gap:.55rem;margin-bottom:.42rem;}
+.production-info-label-row .lbl{margin:0;}
+.production-product-code{display:inline-flex;align-items:center;padding:.16rem .48rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#475569;font-size:.69rem;font-weight:850;letter-spacing:.02em;line-height:1.2;}
+.production-info-product .val{font-size:1.45rem;font-weight:900;color:#172554;line-height:1.25;}
+.production-info-date{padding-top:1.55rem;}
+.production-info-date .val{font-size:1.28rem;font-weight:900;color:#1d4ed8;}
+.production-info-date input{font-size:1.04rem;font-weight:800;}
+.production-core-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-column:1 / -1;gap:.65rem;align-items:stretch;}
+.production-core-metrics .info-item{min-width:0;}
+.production-core-metrics .info-item:not(.production-qty-card){display:flex;flex-direction:column;justify-content:center;padding:.62rem .85rem;border:1px solid #e2e8f0;border-radius:13px;background:#fafcff;}
+.production-core-metrics .info-item:not(.production-qty-card) .lbl{margin-bottom:.12rem;}
+.production-core-metrics .info-item:not(.production-qty-card) .val{font-size:1rem;font-weight:850;color:#1e3a5f;}
+.production-core-metrics .production-qty-card{min-height:0;padding:.58rem .85rem .62rem;border-radius:13px;}
+.production-core-metrics .production-qty-head{align-items:center;flex-wrap:nowrap;}
+.production-core-metrics .production-qty-card .lbl{margin-bottom:.1rem;}
+.production-core-metrics .production-qty-card .val{font-size:1.05rem;line-height:1.22;}
+.production-core-metrics .production-qty-card .production-qty-badge{padding:.16rem .48rem;font-size:.61rem;white-space:nowrap;}
+.production-core-metrics .production-qty-note{margin-top:.18rem;font-size:.66rem;line-height:1.3;}
+.production-core-metrics .production-qty-card.actual-emphasis,
+.production-core-metrics .production-qty-card.actual-box-emphasis{box-shadow:0 4px 14px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.65);}
+.production-core-metrics .production-qty-card.actual-emphasis::before,
+.production-core-metrics .production-qty-card.actual-box-emphasis::before{display:none;}
 .info-item.production-qty-card{position:relative;overflow:hidden;border:1px solid transparent;border-radius:24px;padding:.9rem 1rem .85rem;backdrop-filter:blur(10px);}
 .info-item .lbl{font-size:0.78rem;color:#999;margin-bottom:0.2rem;}
 .info-item .val{font-weight:600;font-size:0.95rem;white-space:normal;word-break:break-word;line-height:1.35;}
@@ -123,8 +149,8 @@ html[data-theme="dark"] .product-spec-btn.schedule-link:hover{background:rgba(79
 .raw-input-row textarea:not([readonly]),
 .expiry-split-field input:not([readonly]),
 .expiry-split-sample-field input:not([readonly]){
-    border-color:rgba(248,113,113,.72) !important;
-    box-shadow:0 0 0 1px rgba(248,113,113,.16), 0 0 14px rgba(248,113,113,.12);
+    border-color:#cbd5e1 !important;
+    box-shadow:none;
     transition:border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 .ainput:focus,
@@ -136,8 +162,8 @@ html[data-theme="dark"] .product-spec-btn.schedule-link:hover{background:rgba(79
 .expiry-split-field input:not([readonly]):focus,
 .expiry-split-sample-field input:not([readonly]):focus{
     outline:none;
-    border-color:rgba(239,68,68,.95) !important;
-    box-shadow:0 0 0 3px rgba(248,113,113,.18), 0 0 18px rgba(248,113,113,.18);
+    border-color:#2563eb !important;
+    box-shadow:0 0 0 3px rgba(59,130,246,.15);
 }
 .note-textarea[readonly]{background:#f8fafc;color:#475569;}
 .note-textarea.auto-grow{min-height:42px;height:42px;max-height:112px;resize:none;overflow-y:auto;}
@@ -148,14 +174,31 @@ html[data-theme="dark"] .product-spec-btn.schedule-link:hover{background:rgba(79
 .note-suggestion-remove{position:absolute;top:50%;right:5px;transform:translateY(-50%);width:24px;height:24px;border:none;border-radius:6px;background:#fff1f2;color:#dc2626;font-size:0.95rem;font-weight:900;cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
 .note-suggestion-remove:hover{background:#ffe4e6;border-color:#fda4af;}
 .personnel-input-highlight{
-    border:2px solid rgba(248,113,113,.88) !important;
-    box-shadow:0 0 0 1px rgba(248,113,113,.2), 0 0 18px rgba(248,113,113,.16) !important;
+    border:1px solid #cbd5e1 !important;
+    box-shadow:none !important;
     background:#ffffff !important;
     color:#0f172a !important;
     }
+.production-save-bar{position:fixed;z-index:1100;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.75rem max(1.25rem,calc((100vw - 1360px) / 2));border-top:1px solid #dbe4f0;background:rgba(255,255,255,.96);box-shadow:0 -8px 24px rgba(15,23,42,.1);backdrop-filter:blur(12px);}
+.production-save-copy{display:flex;align-items:center;gap:.55rem;min-width:0;color:#475569;font-size:.82rem;font-weight:700;}
+.production-save-copy strong{color:#1e3a5f;}
+.production-input-status{display:inline-flex;align-items:center;padding:.22rem .55rem;border:1px solid #f5c76a;border-radius:999px;background:#fffbeb;color:#a16207;font-size:.72rem;font-weight:900;white-space:nowrap;}
+.production-input-status.complete{border-color:#86efac;background:#f0fdf4;color:#15803d;}
+.needs-input{border-color:#f0b44d !important;background:#fffdf5 !important;box-shadow:0 0 0 3px rgba(245,158,11,.1) !important;}
+.production-save-actions{display:flex;align-items:center;justify-content:flex-end;gap:.38rem;flex-wrap:wrap;padding:.3rem;border:1px solid #dbe4f0;border-radius:14px;background:#f8fafc;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
+.production-save-actions .production-save-btn{display:inline-flex;align-items:center;justify-content:center;gap:.38rem;min-height:40px;padding:.55rem .85rem!important;border:1px solid transparent!important;border-radius:10px!important;font-size:.82rem!important;font-weight:900!important;line-height:1;letter-spacing:-.01em;box-shadow:none!important;transition:transform .15s ease,background .15s ease,border-color .15s ease,box-shadow .15s ease;}
+.production-save-actions .production-save-btn:hover{transform:translateY(-1px);}
+.production-save-actions .save-cancel{border-color:#cbd5e1!important;background:#fff!important;color:#475569!important;}
+.production-save-actions .save-cancel:hover{border-color:#94a3b8!important;background:#f1f5f9!important;color:#334155!important;}
+.production-save-actions .save-temp{border-color:#bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;}
+.production-save-actions .save-temp:hover{border-color:#60a5fa!important;background:#dbeafe!important;color:#1e40af!important;}
+.production-save-actions .save-complete{min-width:132px;border-color:#2563eb!important;background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;color:#fff!important;box-shadow:0 5px 12px rgba(37,99,235,.25)!important;}
+.production-save-actions .save-complete:hover{background:linear-gradient(135deg,#1d4ed8,#1e40af)!important;box-shadow:0 8px 16px rgba(37,99,235,.32)!important;}
+.save-action-icon{font-size:.92rem;line-height:1;}
+#productionUsageForm{padding-bottom:5.5rem;}
 .personnel-input-highlight:focus{
-    border-color:rgba(239,68,68,.98) !important;
-    box-shadow:0 0 0 3px rgba(248,113,113,.22), 0 0 22px rgba(248,113,113,.2) !important;
+    border-color:#2563eb !important;
+    box-shadow:0 0 0 3px rgba(59,130,246,.15) !important;
     background:#ffffff !important;
     color:#0f172a !important;
 }
@@ -180,6 +223,8 @@ html[data-theme="dark"] .product-spec-btn.schedule-link:hover{background:rgba(79
     color:#94a3b8 !important;
     opacity:1;
 }
+.personnel-management .personnel-grid{padding:.85rem 1rem;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;}
+.personnel-management .personnel-grid .info-item .lbl{font-weight:800;color:#475569;}
 .personnel-disabled-note{
     margin-top:0.65rem;
     padding:0.7rem 0.9rem;
@@ -298,8 +343,15 @@ html[data-theme="dark"] .product-spec-btn.schedule-link:hover{background:rgba(79
 .export-box-summary{display:flex;flex-direction:column;gap:.28rem;}
 .export-box-summary .summary-main{font-size:1.15rem;font-weight:900;color:#166534;line-height:1.15;}
 .export-box-summary .summary-sub{font-size:.78rem;color:#64748b;}
-.expiry-split-readonly-row{grid-template-columns:minmax(180px,2fr) minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr);}
-.expiry-split-readonly-row.no-sample{grid-template-columns:minmax(180px,2fr) minmax(120px,1fr);}
+.expiry-split-readonly-row{grid-template-columns:minmax(180px,2fr) minmax(150px,1.25fr) minmax(110px,.85fr) minmax(120px,1fr) minmax(120px,1fr);}
+.expiry-split-readonly-row.no-sample{grid-template-columns:minmax(180px,2fr) minmax(150px,1.25fr) minmax(110px,.85fr);}
+.expiry-readonly-columns{display:grid;grid-template-columns:minmax(180px,2fr) minmax(150px,1.25fr) minmax(110px,.85fr) minmax(120px,1fr) minmax(120px,1fr);gap:.7rem;padding:0 .95rem .38rem;color:#64748b;font-size:.72rem;font-weight:800;letter-spacing:.02em;}
+.expiry-readonly-columns.no-sample{grid-template-columns:minmax(180px,2fr) minmax(150px,1.25fr) minmax(110px,.85fr);}
+.expiry-split-readonly-row{padding:.72rem .95rem;align-items:center;background:#fbfdff;}
+.expiry-split-readonly-row .expiry-split-field label{display:none;}
+.expiry-split-readonly-row .expiry-split-field .val{min-height:0;font-size:1rem;font-weight:800;color:#1e293b;}
+.expiry-readonly-date{display:flex;align-items:center;gap:.55rem;}
+.expiry-readonly-step{display:inline-flex;align-items:center;justify-content:center;min-width:2rem;padding:.2rem .38rem;border-radius:999px;background:#e8f0ff;color:#3159a8;font-size:.7rem;font-weight:900;}
 .expiry-split-remove{display:inline-flex;align-items:center;justify-content:center;align-self:end;width:56px;height:32px;padding:0;border:1px solid #d7deea;border-radius:8px;background:#f8fafc;color:#64748b;font-size:.7rem;font-weight:700;cursor:pointer;line-height:1;white-space:nowrap;box-shadow:none;transition:all .15s ease;}
 .expiry-split-remove:hover{background:#eef2f7;border-color:#a8b4c7;color:#334155;}
 .expiry-split-summary{font-size:.76rem;color:#64748b;}
@@ -436,7 +488,7 @@ html[data-theme="dark"] .material-management-mode-card{background:linear-gradien
 html[data-theme="dark"] .material-management-mode-card [style*="color:#334155"],
 html[data-theme="dark"] .material-management-mode-card [style*="color:#9a3412"]{color:#e2e8f0 !important;}
 html[data-theme="dark"] .material-management-mode-card [style*="color:#64748b"]{color:#94a3b8 !important;}
-html[data-theme="dark"] .sec{background:linear-gradient(180deg,#121a2a,#101827);box-shadow:0 16px 36px rgba(2,6,23,.3);}
+html[data-theme="dark"] .sec{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;box-shadow:0 10px 24px rgba(2,6,23,.2);}
 html[data-theme="dark"] .sec h3{color:#eff6ff;border-bottom-color:#3b82f6;}
 html[data-theme="dark"] .info-item .lbl,
 html[data-theme="dark"] .raw-meta .ml,
@@ -446,6 +498,17 @@ html[data-theme="dark"] .plan-edit-field label{color:#8ea3bd;}
 html[data-theme="dark"] .info-item .val,
 html[data-theme="dark"] .raw-meta .mv,
 html[data-theme="dark"] .plan-edit-title{color:#eff6ff;}
+html[data-theme="dark"] .production-info-hero{border-color:#284362;background:linear-gradient(135deg,#122037 0%,#101d31 100%);}
+html[data-theme="dark"] .production-info-id{color:#8ea3bd;}
+html[data-theme="dark"] .production-info-id strong{color:#dbeafe;}
+html[data-theme="dark"] .production-info-product .lbl,html[data-theme="dark"] .production-info-date .lbl{color:#9fb5d1;}
+html[data-theme="dark"] .production-info-product .val{color:#f1f5f9;}
+html[data-theme="dark"] .production-product-code{border-color:#38516f;background:#16263d;color:#bfdbfe;}
+html[data-theme="dark"] .production-info-date .val{color:#93c5fd;}
+html[data-theme="dark"] .production-core-metrics .info-item:not(.production-qty-card){border-color:#263d59;background:#111d30;}
+html[data-theme="dark"] .production-core-metrics .info-item:not(.production-qty-card) .val{color:#dbeafe;}
+html[data-theme="dark"] .production-core-metrics .production-qty-card.actual-emphasis,
+html[data-theme="dark"] .production-core-metrics .production-qty-card.actual-box-emphasis{box-shadow:0 4px 16px rgba(2,6,23,.24),inset 0 1px 0 rgba(255,255,255,.06);}
 html[data-theme="dark"] .production-qty-badge{background:linear-gradient(180deg,rgba(14,116,144,.34) 0%,rgba(12,74,110,.44) 100%);color:#cffafe;border:1px solid rgba(103,232,249,.34);box-shadow:0 0 16px rgba(34,211,238,.14), inset 0 1px 0 rgba(255,255,255,.05);}
 html[data-theme="dark"] .production-qty-badge.actual-box-badge{background:linear-gradient(180deg,rgba(154,52,18,.34) 0%,rgba(124,45,18,.42) 100%);color:#ffedd5;border-color:rgba(251,146,60,.32);box-shadow:0 0 16px rgba(249,115,22,.14), inset 0 1px 0 rgba(255,255,255,.04);}
 html[data-theme="dark"] .production-qty-card.actual-emphasis{
@@ -503,7 +566,8 @@ html[data-theme="dark"] .raw-input-row input:not([type="hidden"]):not([readonly]
 html[data-theme="dark"] .raw-input-row textarea:not([readonly]),
 html[data-theme="dark"] .expiry-split-field input:not([readonly]),
 html[data-theme="dark"] .expiry-split-sample-field input:not([readonly]){
-    box-shadow:0 0 0 1px rgba(248,113,113,.2), 0 0 16px rgba(248,113,113,.16);
+    border-color:#3b4a61 !important;
+    box-shadow:none;
 }
 html[data-theme="dark"] .ainput:focus,
 html[data-theme="dark"] .note-textarea:not([readonly]):focus,
@@ -513,19 +577,34 @@ html[data-theme="dark"] .raw-input-row input:not([type="hidden"]):not([readonly]
 html[data-theme="dark"] .raw-input-row textarea:not([readonly]):focus,
 html[data-theme="dark"] .expiry-split-field input:not([readonly]):focus,
 html[data-theme="dark"] .expiry-split-sample-field input:not([readonly]):focus{
-    box-shadow:0 0 0 3px rgba(248,113,113,.2), 0 0 18px rgba(248,113,113,.2);
+    border-color:#60a5fa !important;
+    box-shadow:0 0 0 3px rgba(96,165,250,.16);
 }
+html[data-theme="dark"] .production-save-bar{border-color:#263244;background:rgba(15,23,38,.96);box-shadow:0 -8px 24px rgba(2,6,23,.35);}
+html[data-theme="dark"] .production-save-copy{color:#aabbd0;}
+html[data-theme="dark"] .production-save-copy strong{color:#dbeafe;}
+html[data-theme="dark"] .production-save-actions{border-color:#2f4663;background:#111c2d;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+html[data-theme="dark"] .production-save-actions .save-cancel{border-color:#3b4f69!important;background:#19283b!important;color:#c7d7ea!important;}
+html[data-theme="dark"] .production-save-actions .save-cancel:hover{border-color:#5c7799!important;background:#20344d!important;color:#f1f5f9!important;}
+html[data-theme="dark"] .production-save-actions .save-temp{border-color:#365b8d!important;background:#162b47!important;color:#bfdbfe!important;}
+html[data-theme="dark"] .production-save-actions .save-temp:hover{border-color:#60a5fa!important;background:#1b3d66!important;color:#eff6ff!important;}
+html[data-theme="dark"] .production-save-actions .save-complete{border-color:#3b82f6!important;background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;color:#fff!important;}
+html[data-theme="dark"] .production-input-status{border-color:rgba(251,191,36,.4);background:rgba(120,53,15,.25);color:#fde68a;}
+html[data-theme="dark"] .production-input-status.complete{border-color:rgba(74,222,128,.35);background:rgba(20,83,45,.32);color:#bbf7d0;}
+.production-complete-banner{margin-bottom:1.5rem;padding:.75rem 1rem;border:2px solid #27ae60;border-radius:8px;background:#e8f5e9;color:#27ae60;text-align:center;font-weight:600;}
+html[data-theme="dark"] .production-complete-banner{border-color:#2d6b59;background:linear-gradient(135deg,#132b2a 0%,#111f2b 100%);color:#a8d8c1;box-shadow:inset 0 1px 0 rgba(180,236,209,.05);}
+html[data-theme="dark"] .needs-input{border-color:#d99d35 !important;background:#211d14 !important;box-shadow:0 0 0 3px rgba(245,158,11,.12) !important;}
 html[data-theme="dark"] .personnel-input-highlight{
-    border-color:rgba(248,113,113,.92) !important;
+    border-color:#3b4a61 !important;
     background:#111b2d !important;
     color:#f8fafc !important;
-    box-shadow:0 0 0 1px rgba(248,113,113,.24), 0 0 18px rgba(248,113,113,.2) !important;
+    box-shadow:none !important;
 }
 html[data-theme="dark"] .personnel-input-highlight:focus{
-    border-color:rgba(248,113,113,1) !important;
+    border-color:#60a5fa !important;
     background:#111b2d !important;
     color:#f8fafc !important;
-    box-shadow:0 0 0 3px rgba(248,113,113,.24), 0 0 22px rgba(248,113,113,.24) !important;
+    box-shadow:0 0 0 3px rgba(96,165,250,.16) !important;
 }
 html[data-theme="dark"] .personnel-input-muted{
     border-color:rgba(71,85,105,.9) !important;
@@ -539,6 +618,35 @@ html[data-theme="dark"] .personnel-input-muted:focus{
     color:#94a3b8 !important;
     box-shadow:none !important;
 }
+html[data-theme="dark"] .personnel-management .personnel-grid{border-color:#263d59;background:#0f1726;}
+html[data-theme="dark"] .personnel-management .personnel-grid .info-item .lbl{color:#aabbd0;}
+html[data-theme="dark"] .personnel-management .personnel-grid input.personnel-input-highlight,
+html[data-theme="dark"] .personnel-management .personnel-grid textarea.personnel-input-highlight{border-color:#3b4a61 !important;background:#111b2d !important;color:#f8fafc !important;}
+html[data-theme="dark"] .personnel-management .personnel-grid input.personnel-input-highlight::placeholder,
+html[data-theme="dark"] .personnel-management .personnel-grid textarea.personnel-input-highlight::placeholder{color:#70839e !important;}
+html[data-theme="dark"] .personnel-management .personnel-grid input.needs-input,
+html[data-theme="dark"] .personnel-management .personnel-grid textarea.needs-input{
+    border-color:#d99d35 !important;
+    background:#211d14 !important;
+    color:#fef3c7 !important;
+    box-shadow:0 0 0 3px rgba(245,158,11,.12) !important;
+}
+html[data-theme="dark"] .personnel-management .personnel-grid input.needs-input::placeholder,
+html[data-theme="dark"] .personnel-management .personnel-grid textarea.needs-input::placeholder{color:#c6a66a !important;}
+/* Use one required-input palette for expiry-box and personnel fields. */
+html[data-theme="dark"] .expiry-split-field input.needs-input,
+html[data-theme="dark"] .personnel-management .personnel-grid input.needs-input,
+html[data-theme="dark"] .personnel-management .personnel-grid textarea.needs-input{
+    border-color:#d99d35 !important;
+    background:#211d14 !important;
+    color:#fef3c7 !important;
+    box-shadow:0 0 0 3px rgba(245,158,11,.12) !important;
+}
+html[data-theme="dark"] .expiry-split-field input.needs-input::placeholder,
+html[data-theme="dark"] .personnel-management .personnel-grid input.needs-input::placeholder,
+html[data-theme="dark"] .personnel-management .personnel-grid textarea.needs-input::placeholder{color:#c6a66a !important;}
+html[data-theme="dark"] .personnel-management .note-suggestion-select{border-color:#3b4a61;background:#111b2d;color:#dbeafe;}
+html[data-theme="dark"] .personnel-management .note-suggestion-remove{background:#263244;color:#fda4af;}
 html[data-theme="dark"] .personnel-disabled-note{
     border-color:rgba(71,85,105,.5);
     background:rgba(15,23,42,.78);
@@ -549,6 +657,10 @@ html[data-theme="dark"] .display-readonly-value.success{background:linear-gradie
 html[data-theme="dark"] .display-readonly-hint{color:#94a3b8;}
 html[data-theme="dark"] .expiry-split-row{background:linear-gradient(180deg,#121a2a,#101827);border-color:#263244;}
 html[data-theme="dark"] .expiry-split-field .val{color:#eff6ff;}
+html[data-theme="dark"] .expiry-readonly-columns{color:#8ea3bd;}
+html[data-theme="dark"] .expiry-split-readonly-row{background:#111c2e;border-color:#263d59;}
+html[data-theme="dark"] .expiry-split-readonly-row .expiry-split-field .val{color:#e2e8f0;}
+html[data-theme="dark"] .expiry-readonly-step{background:#20395c;color:#bfdbfe;}
 html[data-theme="dark"] .expiry-split-sample-btn{background:#1a2436;border-color:#334155;color:#dbe7f5;}
 html[data-theme="dark"] .expiry-split-sample-btn:hover{background:#1f2d45;border-color:#60a5fa;color:#eff6ff;}
 html[data-theme="dark"] .expiry-split-sample-btn.active{background:linear-gradient(135deg,#1d4ed8,#2563eb);border-color:#2563eb;color:#fff;}
@@ -705,6 +817,16 @@ html[data-theme="dark"] [id^="rw_"]{color:#fda4af !important;}
 @media (max-width: 768px) {
     html,body{max-width:100%;overflow-x:hidden;}
     .info-grid{grid-template-columns:1fr !important;}
+    .production-save-bar{padding:.65rem 1rem;align-items:stretch;flex-direction:column;}
+    .production-save-copy{justify-content:center;text-align:center;}
+    .production-input-status{white-space:normal;text-align:center;}
+    .production-save-actions{width:100%;}
+    .production-save-actions .btn{flex:1 1 auto;}
+    #productionUsageForm{padding-bottom:9rem;}
+    .production-info-hero,.production-core-metrics{grid-template-columns:1fr;}
+    .production-info-hero{padding:1.05rem;gap:.55rem;}
+    .production-info-date{padding-top:0;}
+    .production-info-id{position:static;order:-1;}
     .sec{padding:1rem !important;max-width:100%;overflow:hidden;}
     .raw-summary-bar{align-items:stretch;}
     .raw-summary-metrics{gap:.75rem 1rem;}
@@ -744,6 +866,9 @@ html[data-theme="dark"] [id^="rw_"]{color:#fda4af !important;}
     .expiry-split-row,
     .expiry-split-readonly-row,
     .expiry-split-readonly-row.no-sample{grid-template-columns:1fr;}
+    .expiry-readonly-columns{display:none;}
+    .expiry-split-readonly-row .expiry-split-field{display:grid;grid-template-columns:7rem 1fr;align-items:center;gap:.5rem;}
+    .expiry-split-readonly-row .expiry-split-field label{display:block;margin:0;}
     .section-head{align-items:flex-start;}
     .product-title-row{align-items:flex-start;flex-direction:column;}
     .raw-change-btn{min-height:42px;}
@@ -767,6 +892,21 @@ html[data-theme="dark"] .mat-tbl td{background:transparent;color:#dbe7f5;border-
 html[data-theme="dark"] .mat-tbl td::before{color:#8ea3bd;}
 html[data-theme="dark"] .mat-tbl td:nth-child(1){background:#162133;color:#eff6ff;}
 html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
+/* Final override: every pending required field shares the same border tone. */
+html[data-theme="dark"] #productionUsageForm .expiry-split-field input.needs-input,
+html[data-theme="dark"] #productionUsageForm .personnel-management input.needs-input,
+html[data-theme="dark"] #productionUsageForm .personnel-management textarea.needs-input{
+    border-color:#6f624c !important;
+    border-width:1px !important;
+    background:#1a1b1d !important;
+    color:#e6e1d7 !important;
+    box-shadow:inset 0 0 0 1px rgba(154,132,91,.12) !important;
+}
+html[data-theme="dark"] #productionUsageForm .expiry-split-field input.needs-input::placeholder,
+html[data-theme="dark"] #productionUsageForm .personnel-management input.needs-input::placeholder,
+html[data-theme="dark"] #productionUsageForm .personnel-management textarea.needs-input::placeholder{
+    color:#9d9586 !important;
+}
 </style>
 {% endblock %}
 
@@ -872,7 +1012,7 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% endif %}
 
 {% if production.status == '완료' %}
-<div style="background:#e8f5e9;border:2px solid #27ae60;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;text-align:center;font-weight:600;color:#27ae60;">✅ 생산 완료</div>
+<div class="production-complete-banner">✅ 생산 완료</div>
 {% endif %}
 {% if production.entry_mode == 'register' %}
 <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:0.9rem 1rem;margin-bottom:1.25rem;color:#5b21b6;font-weight:700;">
@@ -937,44 +1077,56 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 <div class="sec">
     <h3>📦 생산 정보</h3>
     <div class="info-grid">
-        <div class="info-item" style="grid-column:1 / -1;">
-            <div class="lbl">제품명</div>
-            <div class="val product-title-row">
-                <span>{{ production.product_name }}</span>
-                {% if production.product_id %}
-                <div class="product-title-actions">
-                    {% if production.spec_sheet_stored_name %}
-                    <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id, view_only=1) }}" target="_blank" rel="noopener" class="product-spec-btn view">사양서 보기</a>
-                    {% elif can_prod %}
-                    <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id) }}" target="_blank" rel="noopener" class="product-spec-btn register">사양서 등록</a>
-                    {% endif %}
-                    {% if production.export_schedule_id %}
-                    <a href="{{ url_for('production.schedules', view='export', focus_type='export', focus_id=production.export_schedule_id) }}" class="product-spec-btn schedule-link">🚢 수출 일정표로 이동</a>
-                    {% endif %}
-                    {% if production.set_schedule_id %}
-                    <a href="{{ url_for('production.schedules', view='set', focus_type='set', focus_id=production.set_schedule_id) }}" class="product-spec-btn schedule-link">📦 세트 일정표로 이동</a>
+        <div class="production-info-hero">
+            <div class="production-info-id">생산번호 <strong>PROD-{{ production.id }}</strong></div>
+            <div class="production-info-product">
+                <div class="production-info-label-row">
+                    <div class="lbl">제품명</div>
+                    {% if production.product_code %}<span class="production-product-code">상품 코드 {{ production.product_code }}</span>{% endif %}
+                </div>
+                <div class="val product-title-row">
+                    <span>{{ production.product_name }}</span>
+                    {% if production.product_id %}
+                    <div class="product-title-actions">
+                        {% if production.spec_sheet_stored_name %}
+                        <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id, view_only=1) }}" target="_blank" rel="noopener" class="product-spec-btn view">사양서 보기</a>
+                        {% elif can_prod %}
+                        <a href="{{ url_for('products.manage_product_spec_sheet', product_id=production.product_id) }}" target="_blank" rel="noopener" class="product-spec-btn register">사양서 등록</a>
+                        {% endif %}
+                        {% if production.export_schedule_id %}
+                        <a href="{{ url_for('production.schedules', view='export', focus_type='export', focus_id=production.export_schedule_id) }}" class="product-spec-btn schedule-link">🚢 수출 일정표로 이동</a>
+                        {% endif %}
+                        {% if production.set_schedule_id %}
+                        <a href="{{ url_for('production.schedules', view='set', focus_type='set', focus_id=production.set_schedule_id) }}" class="product-spec-btn schedule-link">📦 세트 일정표로 이동</a>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </div>
-                {% endif %}
             </div>
-        </div>
-        <div class="info-item"><div class="lbl">생산번호</div><div class="val">PROD-{{ production.id }}</div></div>
-        <div class="info-item">
-            <div class="lbl">생산일</div>
+            <div class="production-info-date">
+                <div class="lbl">생산일</div>
             {% if can_edit and production.entry_mode == 'register' %}
             <input type="date" class="note-textarea auto-grow" name="production_date" required value="{{ production.production_date }}" style="min-height:42px;height:42px;" onchange="syncRegisterProductionExpiry(this, {{ production.expiry_months or 12 }});">
             <div class="display-readonly-hint">등록모드 생산건은 수정 저장 시 생산일도 함께 변경됩니다.</div>
             {% else %}
             <div class="val">{{ production.production_date }}</div>
             {% endif %}
+            </div>
         </div>
+        <div class="production-core-metrics">
         <div class="info-item"><div class="lbl">생산 라인</div><div class="val">{{ ('라인 ' ~ production.line.replace(',', ', 라인 ')) if production.line else '-' }}</div></div>
-        <div class="info-item"><div class="lbl">상태</div><div class="val">
-            {% if production.status == '완료' %}<span class="badge badge-success">완료</span>
-            {% elif production.status == '진행중' %}<span class="badge badge-warning">진행중</span>
-            {% else %}<span class="badge badge-info">예정</span>{% endif %}
-        </div></div>
-        <div class="info-item"><div class="lbl">계획 박스 수</div><div class="val">{{ production.planned_boxes_display }} BOX</div></div>
+        <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-emphasis{% endif %}">
+            <div class="production-qty-head">
+                <div class="lbl">생산 낱봉 수량</div>
+                {% if production.uses_actual_quantity %}
+                <span class="production-qty-badge">실제 박스 기준</span>
+                {% endif %}
+            </div>
+            <div class="val">{% if is_finished_set %}-{% else %}{{ production.production_sachet_display }}개{% endif %}</div>
+            {% if production.uses_actual_quantity and not is_finished_set %}
+            <div class="production-qty-note">{{ production.quantity_basis_boxes_display }} BOX × {{ production.box_quantity }} 낱봉 기준</div>
+            {% endif %}
+        </div>
         <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-box-emphasis{% endif %}">
             <div class="production-qty-head">
                 <div class="lbl">실제 생산 박스 수 *</div>
@@ -992,6 +1144,14 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             <div class="production-qty-note">소비기한별 박스 수 합계가 자동 반영됩니다.</div>
             {% endif %}
         </div>
+        </div>
+        {% if production.status != '완료' %}
+        <div class="info-item"><div class="lbl">상태</div><div class="val">
+            {% if production.status == '진행중' %}<span class="badge badge-warning">진행중</span>
+            {% else %}<span class="badge badge-info">예정</span>{% endif %}
+        </div></div>
+        <div class="info-item"><div class="lbl">계획 박스 수</div><div class="val">{{ production.planned_boxes_display }} BOX</div></div>
+        {% endif %}
         {% if can_edit or (production.sample_excluded_total or 0) > 0 %}
         <div class="info-item">
             <div class="lbl">실제 반영 박스 수</div>
@@ -1009,28 +1169,30 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
             {% endif %}
         </div>
         {% endif %}
-        <div class="info-item production-qty-card{% if production.uses_actual_quantity %} actual-emphasis{% endif %}">
-            <div class="production-qty-head">
-                <div class="lbl">생산 낱봉 수량</div>
-                {% if production.uses_actual_quantity %}
-                <span class="production-qty-badge">실제 박스 기준</span>
-                {% endif %}
-            </div>
-            <div class="val">{% if is_finished_set %}-{% else %}{{ production.production_sachet_display }}개{% endif %}</div>
-            {% if production.uses_actual_quantity and not is_finished_set %}
-            <div class="production-qty-note">{{ production.quantity_basis_boxes_display }} BOX × {{ production.box_quantity }} 낱봉 기준</div>
-            {% endif %}
-        </div>
         <div class="info-item" style="grid-column:1 / -1;">
             <div class="lbl">소비기한 *</div>
             {% if not can_edit %}
             <div class="expiry-split-panel">
+                {% set expiry_sample_state = namespace(has_sample=false) %}
+                {% for expiry_row in expiry_rows if expiry_row.date or expiry_row.boxes %}
+                    {% if expiry_row.sample_boxes %}{% set expiry_sample_state.has_sample = true %}{% endif %}
+                {% endfor %}
+                <div class="expiry-readonly-columns{% if not expiry_sample_state.has_sample %} no-sample{% endif %}">
+                    <span>소비기한</span>
+                    <span>생산 낱봉 수</span>
+                    <span>박스 수</span>
+                    {% if expiry_sample_state.has_sample %}<span>샘플 제외</span><span>수출 반영</span>{% endif %}
+                </div>
                 <div class="expiry-split-rows">
                     {% for row in expiry_rows if row.date or row.boxes %}
                     <div class="expiry-split-row expiry-split-readonly-row {% if not row.sample_boxes %}no-sample{% endif %}">
                         <div class="expiry-split-field">
                             <label>{{ ['첫 번째', '두 번째', '세 번째'][loop.index0] }} 소비기한</label>
-                            <div class="val">{{ row.date }}</div>
+                            <div class="val expiry-readonly-date"><span class="expiry-readonly-step">{{ loop.index }}차</span>{{ row.date }}</div>
+                        </div>
+                        <div class="expiry-split-field">
+                            <label>생산 낱봉 수</label>
+                            <div class="val">{% if is_finished_set %}-{% else %}{{ '{:,.0f}'.format((row.boxes or 0) * (production.box_quantity or 0)) }}개{% endif %}</div>
                         </div>
                         <div class="expiry-split-field">
                             <label>박스 수</label>
@@ -1122,9 +1284,9 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
     </div>
 </div>
 
-<div class="sec">
+<div class="sec personnel-management">
     <h3>👥 인원 관리</h3>
-    <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr 1.2fr 2fr;">
+    <div class="info-grid personnel-grid" style="grid-template-columns:1fr 1fr 1fr 1.2fr 2fr;">
         <div class="info-item"><div class="lbl">공급 인원 *</div>
             <input type="number" name="supply_people" min="0" value="{{ production.supply_people or '' }}" class="{% if production.line_usage_disabled %}personnel-input-muted{% else %}personnel-input-highlight{% endif %}"
                    {% if can_edit and not production.line_usage_disabled %}required{% elif can_edit and production.line_usage_disabled %}disabled{% else %}readonly{% endif %}
@@ -1609,18 +1771,20 @@ html[data-theme="dark"] .mat-tbl tr:hover td{background:transparent;}
 {% endif %}
 
 {% if can_edit %}
-<div class="sec">
-    <div style="background:{% if production.entry_mode == 'register' %}#f5f3ff{% else %}#fff3e0{% endif %};border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:{% if production.entry_mode == 'register' %}#5b21b6{% else %}inherit{% endif %};">
-        {% if material_management_disabled %}🌿 라이트 생산 모드: 원초만 관리하며 부자재·포장재 재고는 반영하지 않습니다.{% elif production.entry_mode == 'register' and production.register_raw_stock_enabled %}🌿 등록모드 원초 재고 사용: 선택한 등록 원초 로트만 차감되고, 부자재·포장재는 생산 이력으로만 기록됩니다.{% elif production.entry_mode == 'register' %}📝 등록모드 저장: 원초·부자재 재고는 차감하지 않으며, 입력한 사용량과 lot 정보는 생산 이력으로만 등록됩니다.{% else %}⚠️ 저장 시 선택한 원초 및 부자재 재고가 차감됩니다.{% endif %}
-    </div>
-    <div style="text-align:right;display:flex;gap:1rem;justify-content:flex-end;">
-        <a href="/production" class="btn btn-secondary">취소</a>
+<div class="production-save-bar">
+        <div class="production-save-copy">
+            <strong>저장 전 확인</strong>
+            <span id="productionInputGuidance" class="production-input-status" role="status">필수 입력 항목 확인 중</span>
+            <span>{% if material_management_disabled %}원초 사용량만 반영됩니다.{% elif production.entry_mode == 'register' %}입력한 사용량은 생산 이력으로 저장됩니다.{% else %}저장 시 선택한 원초 및 부자재 재고가 차감됩니다.{% endif %}</span>
+        </div>
+        <div class="production-save-actions">
+        <a href="/production" class="btn btn-secondary production-save-btn save-cancel"><span class="save-action-icon">←</span>취소</a>
         {% if not edit_completed %}
-        <button type="submit" class="btn btn-secondary" name="save_action" value="temp" formnovalidate>임시저장</button>
+        <button type="submit" class="btn btn-secondary production-save-btn save-temp" name="save_action" value="temp" formnovalidate><span class="save-action-icon">◷</span>임시저장</button>
         {% endif %}
-        <button type="submit" class="btn" name="save_action" value="complete" onclick="return confirm('{{ '완료건을 수정 저장하시겠습니까?' if edit_completed else ('등록모드로 저장할까요? 재고는 차감되지 않습니다.' if production.entry_mode == 'register' else '저장하고 생산을 완료 처리하시겠습니까?') }}')">{{ '💾 수정 저장' if edit_completed else ('💾 등록 저장' if production.entry_mode == 'register' else '💾 저장 및 완료') }}</button>
+        <button type="submit" class="btn production-save-btn save-complete" name="save_action" value="complete" onclick="return confirm('{{ '완료건을 수정 저장하시겠습니까?' if edit_completed else ('등록모드로 저장할까요? 재고는 차감되지 않습니다.' if production.entry_mode == 'register' else '저장하고 생산을 완료 처리하시겠습니까?') }}')"><span class="save-action-icon">✓</span>{{ '수정 저장' if edit_completed else ('등록 저장' if production.entry_mode == 'register' else '저장 및 완료') }}</button>
+        </div>
     </div>
-</div>
 {% elif production.status != '완료' %}
 <div class="sec"><div style="background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;font-size:0.9rem;color:#666;text-align:center;">읽기 전용입니다.</div></div>
 {% endif %}
@@ -1727,6 +1891,33 @@ let selectedRawChangeId = null;
 let rawChangeActiveTab = 'all';
 const AUTO_OPEN_PLAN_EDIT = {{ auto_open_plan_edit|tojson }};
 
+function refreshInputGuidance(){
+    const status = document.getElementById('productionInputGuidance');
+    const form = document.getElementById('productionUsageForm');
+    if(!status || !form) return;
+
+    const requiredInputs = Array.from(form.querySelectorAll('[required]'))
+        .filter(input => !input.disabled && input.getClientRects().length > 0);
+    const firstBoxInput = document.getElementById('expiryBoxes1');
+    if(firstBoxInput && !firstBoxInput.disabled && firstBoxInput.getClientRects().length > 0){
+        requiredInputs.push(firstBoxInput);
+    }
+    const missingInputs = requiredInputs.filter(input => {
+        if(input === firstBoxInput) return !(parseFloat(input.value) > 0);
+        if(input.type === 'checkbox' || input.type === 'radio') return !input.checked;
+        return !String(input.value || '').trim();
+    });
+    new Set(requiredInputs).forEach(input => {
+        const isMissing = missingInputs.includes(input);
+        input.classList.toggle('needs-input', isMissing);
+        input.setAttribute('aria-invalid', isMissing ? 'true' : 'false');
+    });
+    status.classList.toggle('complete', missingInputs.length === 0);
+    status.textContent = missingInputs.length
+        ? `필수 입력 ${missingInputs.length}개 남음`
+        : '필수 입력 완료';
+}
+
 window.onload = () => {
     initSampleBoxUi();
     syncExpiryRows();
@@ -1734,6 +1925,12 @@ window.onload = () => {
     recalcAll();
     initLotGapNoneButtons();
     initAutoGrowNotes();
+    refreshInputGuidance();
+    const usageForm = document.getElementById('productionUsageForm');
+    if(usageForm){
+        usageForm.addEventListener('input', refreshInputGuidance);
+        usageForm.addEventListener('change', refreshInputGuidance);
+    }
     if(IS_REGISTER_MODE && REGISTER_RAW_STOCK_ENABLED && !IS_COMPLETED_PRODUCTION){
         showRegisterStockRawItems();
     }
@@ -1906,6 +2103,7 @@ function syncExpiryRows(){
         addBtn.disabled = expiryVisibleCount >= rows.length;
     }
     recalcAll();
+    refreshInputGuidance();
 }
 
 function validateProductionUsageForm(event){
@@ -2116,10 +2314,17 @@ function toggleRawSokMode(){
 }
 
 function recalcAll(){
+    // 완료 화면은 저장 시점의 예상량을 이력으로 보여준다. 읽기 전용
+    // 화면에는 actualBoxes 입력값이 없으므로 편집용 재계산을 수행하면
+    // 모든 예상량이 0으로 덮어써진다.
+    if(IS_DONE){
+        updateTotal();
+        return;
+    }
     const boxes = getActualBoxes();
     const need = getCurrentPerBox() * boxes;
     const tn = document.getElementById('totalNeed');
-    if(tn) tn.textContent = `${formatRawNumber(need)}속`;
+    if(tn) tn.textContent = `${formatFinishedSok(need)}속`;
 
     document.querySelectorAll('#componentBody tr, #matBody tr, #packBody tr').forEach(row => {
         const uid = row.dataset.uid;
@@ -2639,7 +2844,7 @@ function updateTotal(){
     const finishedYieldEl = document.getElementById('finishedYieldRate');
     if(ts) ts.textContent = `${formatRawNumber(effectiveTotal)}속`;
     if(rem){
-        rem.textContent = `${formatRawNumber(remain)}속`;
+        rem.textContent = `${formatFinishedSok(remain)}속`;
         rem.style.color = remain <= 0 ? '#27ae60' : '#e74c3c';
     }
     if(finishedInputEl) finishedInputEl.textContent = `${formatRawNumber(effectiveTotal)}속`;

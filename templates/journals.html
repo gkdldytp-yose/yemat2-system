@@ -87,6 +87,51 @@ html[data-theme="dark"] .journals-material-scope-btn:hover{background:rgba(37,99
 html[data-theme="dark"] .journals-material-scope-btn .scope-badge{background:rgba(15,23,42,0.78);color:#bfdbfe;}
 html[data-theme="dark"] .journals-inline-notice{background:rgba(15,23,42,0.82);border-color:rgba(96,165,250,0.28);color:var(--text-secondary);}
 html[data-theme="dark"] .journals-link{color:#93c5fd;}
+/* 출력 동작은 일관된 블루그레이 톤으로 제공한다. */
+.journals-table td:last-child .btn{margin-right:.28rem;border-color:#b8cfe7!important;background:#eef5fc!important;color:#245b92!important;box-shadow:none!important;font-weight:800;}
+.journals-table td:last-child .btn:hover{border-color:#3478b9!important;background:#2f6fae!important;color:#fff!important;box-shadow:0 4px 10px rgba(30,92,148,.18)!important;}
+html[data-theme="dark"] .journals-table td:last-child .btn{border-color:#365b7e!important;background:#172b43!important;color:#bdd9f5!important;}
+html[data-theme="dark"] .journals-table td:last-child .btn:hover{border-color:#6798c6!important;background:#28557f!important;color:#fff!important;box-shadow:0 4px 10px rgba(0,0,0,.22)!important;}
+/* Desktop quick navigation: journal types remain available while reviewing long reports. */
+/* 고정 레일은 충분한 여백이 있는 폭에서만 사용한다. */
+@media (min-width:1840px){
+  .journals-primary-tabs{
+    position:fixed;top:50%;right:max(1rem,calc((100vw - 1400px) / 2 - 220px));z-index:850;
+    display:flex;flex-direction:column;align-items:stretch;width:196px;
+    max-height:calc(100vh - 2rem);overflow-y:auto;margin:0;padding:.62rem;gap:.42rem;
+    transform:translateY(-50%);border-color:#c7d9ed;border-radius:16px;
+    background:rgba(250,253,255,.97);box-shadow:0 16px 36px rgba(36,77,119,.22);backdrop-filter:blur(14px);
+  }
+  .journals-primary-tabs::before{
+    content:'\26A1 \BE60 \B978 \BA54 \B274';display:block;padding:.18rem .42rem .5rem;
+    border-bottom:1px solid #d7e5f3;color:#3d6085;font-size:.75rem;font-weight:900;letter-spacing:.04em;
+  }
+  .journals-primary-tab{
+    justify-content:flex-start;min-height:46px;padding:.62rem .72rem;border:1px solid #d2dfed;
+    background:rgba(255,255,255,.88);color:#3d5876;text-align:left;white-space:normal;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 5px rgba(30,64,105,.045);
+  }
+  .journals-primary-tab::before{
+    content:'\203A';display:inline-flex;align-items:center;justify-content:center;
+    width:1.3rem;height:1.3rem;margin:0 .45rem 0 0;flex:0 0 auto;
+    border-radius:7px;background:rgba(37,99,235,.1);color:#2563eb;font-size:1.15rem;font-weight:900;box-shadow:none;
+  }
+  .journals-primary-tab:hover{border-color:#8bb9e8;background:#fff;color:#154d91;box-shadow:0 5px 12px rgba(30,64,105,.11);}
+  .journals-primary-tab.active{border:2px solid #174fb5;background:linear-gradient(135deg,#2871e8 0%,#174bb5 100%);color:#fff;box-shadow:0 8px 18px rgba(23,75,181,.3),inset 0 1px 0 rgba(255,255,255,.22);}
+  .journals-primary-tab.active::before{background:rgba(255,255,255,.22);color:#fff;box-shadow:none;}
+  html[data-theme="dark"] .journals-primary-tabs{border-color:#385b7b;background:rgba(10,24,41,.98);box-shadow:0 16px 34px rgba(0,0,0,.4);}
+  html[data-theme="dark"] .journals-primary-tabs::before{border-bottom-color:#294662;color:#b3d4f1;}
+  html[data-theme="dark"] .journals-primary-tab{border-color:#36516f;background:#172941;color:#c4d3e5;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 5px rgba(0,0,0,.18);}
+  html[data-theme="dark"] .journals-primary-tab::before{background:rgba(96,165,250,.14);color:#9ecbff;box-shadow:none;}
+  html[data-theme="dark"] .journals-primary-tab:hover{border-color:#6c9ed1;background:#203b5b;color:#fff;}
+  html[data-theme="dark"] .journals-primary-tab.active{border-color:#9acbff;background:linear-gradient(135deg,#2875d0,#1b4fba);color:#fff;}
+  html[data-theme="dark"] .journals-primary-tab.active::before{background:rgba(255,255,255,.2);color:#fff;}
+}
+@media (min-width:769px) and (max-width:1839px){
+  .journals-primary-tabs{position:static;transform:none;display:flex;flex-direction:row;align-items:stretch;width:100%;max-height:none;overflow-x:auto;margin:0 0 1rem;padding:.42rem;gap:.38rem;}
+  .journals-primary-tabs::before{display:none;}
+  .journals-primary-tab{flex:1 0 142px;min-height:44px;}
+}
 @media (max-width:768px){
   .journals-table{font-size:.8rem;}
   .journals-table th,.journals-table td{padding:.55rem .45rem;}
@@ -330,8 +375,12 @@ html[data-theme="dark"] .journals-link{color:#93c5fd;}
                             <td>{{ row.receiving_date or '' }}</td>
                             <td>{{ "{:,.0f}".format((row.used_quantity or 0)|float) }}</td>
                             <td style="white-space:nowrap;">
+                                {% if row.is_register_snapshot %}
+                                <span class="journals-help">등록 이력</span>
+                                {% else %}
                                 <a href="/raw-materials/{{ row.id }}/checksheet-preview" class="btn btn-small" onclick="window.open(this.href, 'raw_checksheet_preview_{{ row.id }}', 'width=1200,height=900,scrollbars=yes,resizable=yes'); return false;">미리보기</a>
                                 <a href="/raw-materials/{{ row.id }}/checksheet-preview?autoprint=1" class="btn btn-small btn-secondary" onclick="window.open(this.href, 'raw_checksheet_print_{{ row.id }}', 'width=1200,height=900,scrollbars=yes,resizable=yes'); return false;">출력</a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% else %}
