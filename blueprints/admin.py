@@ -3,15 +3,13 @@ import calendar
 from collections import defaultdict
 from pathlib import Path
 import sqlite3
-import csv
 import io
 import json
 import re
 import zipfile
-from urllib.parse import quote
 from xml.sax.saxutils import escape as xml_escape
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, send_file, Response
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, send_file
 
 from core import (
     begin_db_transaction,
@@ -4501,28 +4499,6 @@ def integrated_inventory_audit_export():
     finally:
         conn_context.__exit__(None, None, None)
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['\uc791\uc5c5\uc7a5', '\uce74\ud14c\uace0\ub9ac', '\ucf54\ub4dc', '\ud488\uba85', '\uc790\ud638', '\uc785\uace0\uc77c', '\uc791\uc5c5\uc7a5 \uc7ac\uace0', '\ucd1d\uc7ac\uace0', '\uc2e4\uc7ac\uace0(\uc791\uc5c5\uc7a5)'])
-    for row in rows:
-        writer.writerow(
-            [
-                row['workplace'] or '',
-                row['inv_category'] or '',
-                row['code'] or '',
-                row['item_name'] or '',
-                row['car_number'] or '',
-                row['receiving_date'] or '',
-                f"{float(row['workplace_stock'] or 0):.1f}",
-                f"{float(row['total_stock'] or 0):.1f}",
-                '',
-            ]
-        )
-
-    csv_text = output.getvalue()
-    output.close()
-    csv_bytes = ('\ufeff' + csv_text).encode('utf-8')
-
     now_token = datetime.now().strftime('%Y%m%d_%H%M%S')
     scope_parts = [inventory_type]
     if selected_inventory_wps:
@@ -4530,13 +4506,95 @@ def integrated_inventory_audit_export():
     if inventory_category:
         scope_parts.append(inventory_category)
     scope = '_'.join(scope_parts)
-    filename = f"inventory_audit_{scope}_{now_token}.csv"
-    quoted = quote(filename)
+    filename = f"inventory_audit_{scope}_{now_token}.xlsx"
 
-    return Response(
-        csv_bytes,
-        mimetype='text/csv; charset=utf-8',
-        headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quoted}"},
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = '재고조사'
+    headers = ['작업장', '카테고리', '코드', '품명', '자호', '입고일', '작업장 재고', '총재고', '실재고(작업장)']
+    last_column = len(headers)
+    title_fill = PatternFill('solid', fgColor='1F4E78')
+    header_fill = PatternFill('solid', fgColor='D9EAF7')
+    audit_fill = PatternFill('solid', fgColor='FFF2CC')
+    alternate_fill = PatternFill('solid', fgColor='F7FAFC')
+    thin_border = Border(
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='thin', color='CBD5E1'),
+    )
+
+    worksheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
+    title_cell = worksheet.cell(1, 1, '재고조사 현황')
+    title_cell.font = Font(size=15, bold=True, color='FFFFFF')
+    title_cell.fill = title_fill
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    worksheet.row_dimensions[1].height = 28
+    filter_text = f"출력일시: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    if inventory_wp != 'all':
+        filter_text += f"  |  작업장: {inventory_wp}"
+    if inventory_category:
+        filter_text += f"  |  카테고리: {inventory_category}"
+    if inventory_q:
+        filter_text += f"  |  검색어: {inventory_q}"
+    worksheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_column)
+    worksheet.cell(2, 1, filter_text).font = Font(size=10, color='475569')
+    worksheet.cell(2, 1).alignment = Alignment(vertical='center')
+    worksheet.row_dimensions[2].height = 20
+
+    header_row = 4
+    for column_index, header in enumerate(headers, start=1):
+        cell = worksheet.cell(header_row, column_index, header)
+        cell.font = Font(bold=True, color='1E3A5F')
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    worksheet.row_dimensions[header_row].height = 23
+
+    for row_index, row in enumerate(rows, start=header_row + 1):
+        values = [
+            row['workplace'] or '',
+            row['inv_category'] or '',
+            row['code'] or '',
+            row['item_name'] or '',
+            row['car_number'] or '',
+            row['receiving_date'] or '',
+            float(row['workplace_stock'] or 0),
+            float(row['total_stock'] or 0),
+            '',
+        ]
+        for column_index, value in enumerate(values, start=1):
+            cell = worksheet.cell(row_index, column_index, value)
+            cell.border = thin_border
+            cell.alignment = Alignment(
+                horizontal='right' if column_index in (7, 8, 9) else ('center' if column_index in (2, 3, 5, 6) else 'left'),
+                vertical='center',
+            )
+            if row_index % 2:
+                cell.fill = alternate_fill
+            if column_index in (7, 8):
+                cell.number_format = '#,##0.0'
+            if column_index == 9:
+                cell.fill = audit_fill
+        worksheet.row_dimensions[row_index].height = 21
+
+    for column, width in {'A': 22, 'B': 13, 'C': 18, 'D': 34, 'E': 15, 'F': 15, 'G': 16, 'H': 16, 'I': 20}.items():
+        worksheet.column_dimensions[column].width = width
+    worksheet.freeze_panes = 'A5'
+    worksheet.auto_filter.ref = f"A{header_row}:I{max(header_row, header_row + len(rows))}"
+    worksheet.sheet_view.showGridLines = False
+
+    output = io.BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
 
 

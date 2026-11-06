@@ -879,14 +879,14 @@
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;">
             <div>
                 <h3 id="globalProductionSearchTitle" style="margin:0;">🔍 완료 생산 통합 검색</h3>
-                <p style="margin:.3rem 0 0;color:#64748b;font-size:.83rem;line-height:1.45;">상품명·상품코드·생산번호·원초·부자재·생산 메모를 한 번에 찾습니다.</p>
+                <p style="margin:.3rem 0 0;color:#64748b;font-size:.83rem;line-height:1.45;">상품명·상품코드·생산번호·원초·부자재·생산 메모를 한 번에 찾습니다. 쉼표(,)로 여러 키워드를 입력하면 모두 포함된 결과만 찾습니다.</p>
             </div>
             <button type="button" onclick="closeGlobalProductionSearch()" class="btn btn-ghost btn-small">닫기</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin-bottom:1rem;">
             <div class="form-group"><label for="globalProductionSearchStart">시작일</label><input type="date" id="globalProductionSearchStart"></div>
             <div class="form-group"><label for="globalProductionSearchEnd">종료일</label><input type="date" id="globalProductionSearchEnd"></div>
-            <div class="form-group" style="grid-column:1 / -1;"><label for="globalProductionSearchKeyword">통합 키워드</label><input type="search" id="globalProductionSearchKeyword" placeholder="예: 유기, 김밥김, A11, PROD-360, 원초명 또는 부자재명" style="width:100%;box-sizing:border-box;"></div>
+            <div class="form-group" style="grid-column:1 / -1;"><label for="globalProductionSearchKeyword">통합 키워드</label><input type="search" id="globalProductionSearchKeyword" placeholder="예: 유기, 김밥김 (쉼표로 구분 시 AND 검색)" style="width:100%;box-sizing:border-box;"></div>
         </div>
         <div class="global-production-search-filter" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;padding:.65rem .75rem;border:1px solid #dbe7f5;border-radius:12px;background:#f8fbff;">
             <label style="display:inline-flex;align-items:center;gap:.45rem;color:#334155;font-size:.82rem;font-weight:750;cursor:pointer;"><input type="checkbox" id="globalProductionSearchApplyDate" style="width:16px;height:16px;accent-color:#2563eb;"> 입력한 기간 안에서만 검색</label>
@@ -894,6 +894,8 @@
         </div>
         <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem;">
             <button type="button" class="btn btn-secondary btn-small" onclick="resetGlobalProductionSearch()">초기화</button>
+            <button type="button" class="btn btn-secondary btn-small" onclick="printGlobalProductionSearch()">A4 출력</button>
+            <button type="button" class="btn btn-secondary btn-small" onclick="exportGlobalProductionSearchExcel()">엑셀 출력</button>
             <button type="button" class="btn btn-small" onclick="runGlobalProductionSearch()">검색</button>
         </div>
         <div id="globalProductionSearchResults" style="margin-top:1rem;border-top:1px solid #e5e7eb;padding-top:1rem;"><p style="color:#9ca3af;text-align:center;padding:2rem;font-size:.85rem;">검색 조건을 입력하고 검색 버튼을 눌러주세요</p></div>
@@ -1508,6 +1510,51 @@ function resetGlobalProductionSearch() {
     document.getElementById('globalProductionSearchEnd').value = '';
     document.getElementById('globalProductionSearchApplyDate').checked = false;
     document.getElementById('globalProductionSearchResults').innerHTML = '<p style="color:#9ca3af;text-align:center;padding:2rem;font-size:.85rem;">검색 조건을 입력하고 검색 버튼을 눌러주세요</p>';
+    window.globalProductionSearchResults = [];
+}
+
+function getGlobalProductionSearchParams() {
+    const params = new URLSearchParams();
+    const keyword = document.getElementById('globalProductionSearchKeyword').value.trim();
+    const start = document.getElementById('globalProductionSearchStart').value;
+    const end = document.getElementById('globalProductionSearchEnd').value;
+    const applyDate = document.getElementById('globalProductionSearchApplyDate').checked;
+    if (keyword) params.append('keyword', keyword);
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    if (applyDate) params.append('apply_date', '1');
+    return params;
+}
+
+function exportGlobalProductionSearchExcel() {
+    if (!(window.globalProductionSearchResults || []).length) {
+        alert('먼저 검색 결과를 확인해주세요.');
+        return;
+    }
+    const params = getGlobalProductionSearchParams();
+    params.append('format', 'xlsx');
+    window.location.href = `/production/search?${params.toString()}`;
+}
+
+function printGlobalProductionSearch() {
+    const results = window.globalProductionSearchResults || [];
+    if (!results.length) {
+        alert('먼저 검색 결과를 확인해주세요.');
+        return;
+    }
+    const keyword = document.getElementById('globalProductionSearchKeyword').value.trim() || '전체';
+    const rows = results.map((production) => {
+        const yieldRate = production.yield_rate == null ? '-' : `${Number(production.yield_rate).toFixed(1)}%`;
+        const boxes = production.actual_boxes || production.planned_boxes || 0;
+        return `<tr><td>PROD-${escapeGlobalProductionSearchHtml(production.id)}</td><td>${escapeGlobalProductionSearchHtml(production.production_date || '-')}</td><td>${escapeGlobalProductionSearchHtml(production.product_name || '-')}</td><td>${escapeGlobalProductionSearchHtml(production.product_code || '')}</td><td>${escapeGlobalProductionSearchHtml(production.work_time || '-')}</td><td>${Number(production.total_people || 0)}명</td><td>${yieldRate}</td><td>${boxes} BOX</td></tr>`;
+    }).join('');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert('인쇄 창을 열 수 없습니다. 팝업 차단을 해제해주세요.');
+        return;
+    }
+    printWindow.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>완료 생산 통합 검색</title><style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,'Malgun Gothic',sans-serif;color:#111827;font-size:10pt}h1{margin:0 0 4px;font-size:17pt}p{margin:0 0 14px;color:#475569}table{width:100%;border-collapse:collapse}th,td{border:1px solid #94a3b8;padding:7px 6px;text-align:left}th{background:#e2e8f0;font-weight:700}td:nth-child(6),td:nth-child(7),td:nth-child(8){text-align:right}</style></head><body><h1>완료 생산 통합 검색</h1><p>검색어: ${escapeGlobalProductionSearchHtml(keyword)} · 총 ${results.length}건</p><table><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>상품코드</th><th>작업 시간</th><th>총인원</th><th>수율</th><th>박스</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print();<\/script></body></html>`);
+    printWindow.document.close();
 }
 
 async function runGlobalProductionSearch() {
@@ -1516,16 +1563,13 @@ async function runGlobalProductionSearch() {
     const end = document.getElementById('globalProductionSearchEnd').value;
     const applyDate = document.getElementById('globalProductionSearchApplyDate').checked;
     const resultsEl = document.getElementById('globalProductionSearchResults');
-    const params = new URLSearchParams();
-    if (keyword) params.append('keyword', keyword);
-    if (start) params.append('start', start);
-    if (end) params.append('end', end);
-    if (applyDate) params.append('apply_date', '1');
+    const params = getGlobalProductionSearchParams();
     resultsEl.innerHTML = '<p style="color:#64748b;text-align:center;padding:1rem;">검색 중...</p>';
     try {
         const response = await fetch(`/production/search?${params.toString()}`);
         if (!response.ok) throw new Error('search failed');
         const data = await response.json();
+        window.globalProductionSearchResults = data.results || [];
         if (!data.results || !data.results.length) {
             resultsEl.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:2rem;font-size:.85rem;">검색 결과 없음</p>';
             return;

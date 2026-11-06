@@ -4891,6 +4891,14 @@ def schedules():
                         else []
                     )
                     daily_produced_cursor += daily_actual_boxes
+                    daily_raw_actual_qty = sum(
+                        float(raw_usage.get('actual_qty') or 0)
+                        for raw_usage in value['raw_usage_map'].values()
+                    )
+                    daily_raw_expected_qty = sum(
+                        float(raw_usage.get('expected_qty') or 0)
+                        for raw_usage in value['raw_usage_map'].values()
+                    )
                     daily_actuals.append(
                         {
                             'date': key,
@@ -4912,20 +4920,19 @@ def schedules():
                                 for expiry_date, expiry_boxes in sorted(value['expiry_box_map'].items())
                                 if float(expiry_boxes or 0) > 0
                             ],
+                            # The export schedule is organized by production date, so its
+                            # yield must reflect all raw materials used that day—not each
+                            # individual raw-material lot.
+                            'daily_yield_rate': (
+                                round((daily_raw_expected_qty / daily_raw_actual_qty) * 100, 1)
+                                if daily_raw_actual_qty > 0 and daily_raw_expected_qty > 0
+                                else None
+                            ),
                             'raw_usages': [
                                 {
                                     'raw_name': raw_usage['raw_name'],
                                     'ja_ho': raw_usage['ja_ho'],
                                     'actual_qty': round(float(raw_usage['actual_qty'] or 0), 1),
-                                    'yield_rate': (
-                                        round(
-                                            (float(raw_usage['expected_qty'] or 0) / float(raw_usage['actual_qty'])) * 100,
-                                            1,
-                                        )
-                                        if float(raw_usage['actual_qty'] or 0) > 0
-                                        and float(raw_usage['expected_qty'] or 0) > 0
-                                        else None
-                                    ),
                                 }
                                 for raw_usage in sorted(
                                     value['raw_usage_map'].values(),
@@ -11891,6 +11898,7 @@ def production_search():
     start = request.args.get('start', '')
     end = request.args.get('end', '')
     keyword = (request.args.get('keyword', '') or '').strip()
+    keywords = [term.strip() for term in keyword.split(',') if term.strip()]
     apply_date = (request.args.get('apply_date', '') or '').strip() == '1'
     workplace = get_workplace()
 
@@ -11930,15 +11938,15 @@ def production_search():
 
     # A keyword is an all-history lookup by default.  Dates remain useful for
     # browsing without a keyword, or when the user explicitly limits a search.
-    if not keyword or apply_date:
+    if not keywords or apply_date:
         if start:
             query += ' AND pr.production_date >= ?'
             params.append(start)
         if end:
             query += ' AND pr.production_date <= ?'
             params.append(end)
-    if keyword:
-        like_keyword = f'%{keyword}%'
+    for keyword_term in keywords:
+        like_keyword = f'%{keyword_term}%'
         query += """
             AND (
                 CAST(pr.id AS TEXT) LIKE ?
@@ -11991,7 +11999,94 @@ def production_search():
         for r in results
     ]
 
-    return jsonify({'results': data, 'keyword': keyword, 'date_limited': bool(keyword and apply_date)})
+    if (request.args.get('format', '') or '').lower() == 'xlsx':
+        import io
+        from flask import send_file
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = '완료 생산 검색'
+        headers = ['생산번호', '일자', '상품명', '상품코드', '작업 시간', '총인원', '수율', '박스']
+        title_fill = PatternFill('solid', fgColor='1F4E78')
+        header_fill = PatternFill('solid', fgColor='D9EAF7')
+        alternate_fill = PatternFill('solid', fgColor='F7FAFC')
+        thin_border = Border(
+            left=Side(style='thin', color='CBD5E1'),
+            right=Side(style='thin', color='CBD5E1'),
+            top=Side(style='thin', color='CBD5E1'),
+            bottom=Side(style='thin', color='CBD5E1'),
+        )
+        worksheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+        title_cell = worksheet.cell(1, 1, '완료 생산 통합 검색 결과')
+        title_cell.font = Font(size=15, bold=True, color='FFFFFF')
+        title_cell.fill = title_fill
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        worksheet.row_dimensions[1].height = 28
+
+        condition_text = f"출력일시: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        if keyword:
+            condition_text += f"  |  검색어(AND): {keyword}"
+        if apply_date and (start or end):
+            condition_text += f"  |  기간: {start or '전체'} ~ {end or '전체'}"
+        elif not keyword and (start or end):
+            condition_text += f"  |  기간: {start or '전체'} ~ {end or '전체'}"
+        else:
+            condition_text += '  |  조회 범위: 전체 기간'
+        worksheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
+        worksheet.cell(2, 1, condition_text).font = Font(size=10, color='475569')
+        worksheet.cell(2, 1).alignment = Alignment(vertical='center')
+        worksheet.row_dimensions[2].height = 20
+
+        header_row = 4
+        for column_index, header in enumerate(headers, start=1):
+            cell = worksheet.cell(header_row, column_index, header)
+            cell.font = Font(bold=True, color='1E3A5F')
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+        worksheet.row_dimensions[header_row].height = 23
+
+        for row_index, row in enumerate(data, start=header_row + 1):
+            values = [
+                f"PROD-{row['id']}", row['production_date'] or '', row['product_name'] or '',
+                row['product_code'] or '', row['work_time'] or '', row['total_people'] or 0,
+                row['yield_rate'] if row['yield_rate'] is not None else None,
+                row['actual_boxes'] or row['planned_boxes'] or 0,
+            ]
+            for column_index, value in enumerate(values, start=1):
+                cell = worksheet.cell(row_index, column_index, value)
+                cell.border = thin_border
+                cell.alignment = Alignment(
+                    horizontal='right' if column_index in (6, 7, 8) else ('center' if column_index in (1, 2, 4, 5) else 'left'),
+                    vertical='center',
+                )
+                if row_index % 2:
+                    cell.fill = alternate_fill
+                if column_index == 6:
+                    cell.number_format = '#,##0"명"'
+                elif column_index == 7:
+                    cell.number_format = '#,##0.0"%"'
+                elif column_index == 8:
+                    cell.number_format = '#,##0.0" BOX"'
+            worksheet.row_dimensions[row_index].height = 21
+        for column, width in {'A': 15, 'B': 14, 'C': 34, 'D': 18, 'E': 12, 'F': 12, 'G': 12, 'H': 12}.items():
+            worksheet.column_dimensions[column].width = width
+        worksheet.freeze_panes = 'A5'
+        worksheet.auto_filter.ref = f"A{header_row}:H{max(header_row, header_row + len(data))}"
+        worksheet.sheet_view.showGridLines = False
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name='완료생산_통합검색.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    return jsonify({'results': data, 'keyword': keyword, 'date_limited': bool(keywords and apply_date)})
 
 
 

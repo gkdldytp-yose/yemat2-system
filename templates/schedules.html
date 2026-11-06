@@ -5185,6 +5185,7 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
 }
 .export-daily-date-copy {
     min-width:0;
+    flex:1;
 }
 .export-daily-date-pill {
     display:inline-flex;
@@ -5257,33 +5258,63 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
     font-size:.8rem;
     font-weight:700;
 }
+.export-daily-raw-summary {
+    margin-top:.38rem;
+}
 .export-daily-raw-list {
     display:flex;
     flex-wrap:wrap;
-    gap:.3rem .42rem;
-    margin-top:.38rem;
+    gap:.26rem .34rem;
+}
+.export-daily-raw-list.has-multiple {
+    flex-direction:column;
+    align-items:flex-start;
 }
 .export-daily-raw-item {
     display:inline-flex;
     align-items:center;
-    gap:.3rem;
-    padding:.22rem .42rem;
+    gap:.26rem;
+    padding:.2rem .36rem;
     border:1px solid #c7dced;
     border-radius:7px;
     background:#edf6ff;
     color:#1e3a5f;
-    font-size:.71rem;
+    font-size:.7rem;
     font-weight:750;
     line-height:1.2;
 }
 .export-daily-raw-item strong {
     color:#0369a1 !important;
-    font-size:.71rem !important;
+    font-size:.7rem !important;
 }
 .export-daily-raw-item .export-daily-raw-yield {
     padding-left:.3rem;
     border-left:1px solid #9ec5e5;
     color:#0f766e !important;
+}
+.export-daily-total-yield {
+    display:inline-flex;
+    align-items:center;
+    margin-top:.34rem;
+    padding:.26rem .52rem;
+    border:1px solid #6ee7b7;
+    border-radius:999px;
+    background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 3px 8px rgba(5,150,105,.1);
+    color:#047857 !important;
+}
+.export-daily-total-yield strong {
+    color:#065f46 !important;
+    font-size:.74rem !important;
+    font-weight:900 !important;
+    letter-spacing:-.02em;
+    white-space:nowrap;
+}
+.export-daily-total-yield strong span {
+    margin-right:.18rem;
+    color:#059669 !important;
+    font-size:.66rem !important;
+    font-weight:800;
 }
 .export-container-remaining,
 .export-daily-row strong {
@@ -6190,6 +6221,9 @@ html[data-theme="dark"] .export-daily-expiry{color:#a9bbd2;}
 html[data-theme="dark"] .export-daily-raw-item{border-color:#285372;background:rgba(14,62,91,.42);color:#bfdbfe;}
 html[data-theme="dark"] .export-daily-raw-item strong{color:#7dd3fc !important;}
 html[data-theme="dark"] .export-daily-raw-item .export-daily-raw-yield{border-left-color:#356984;color:#5eead4 !important;}
+html[data-theme="dark"] .export-daily-total-yield{border-color:rgba(45,212,191,.55);background:linear-gradient(135deg,rgba(6,78,59,.78),rgba(15,118,110,.46));box-shadow:inset 0 1px 0 rgba(153,246,228,.16),0 4px 10px rgba(0,0,0,.18);color:#99f6e4 !important;}
+html[data-theme="dark"] .export-daily-total-yield strong{color:#ecfdf5 !important;}
+html[data-theme="dark"] .export-daily-total-yield strong span{color:#99f6e4 !important;}
 html[data-theme="dark"] .calendar-weekdays{background:#182234;border-bottom-color:#253246;}
 html[data-theme="dark"] .calendar-days{background:#263244;}
 html[data-theme="dark"] .calendar-day{background:#121a2a;border-color:#263244;}
@@ -8115,14 +8149,18 @@ html[data-theme="dark"] #calendarView .schedule-item .export-container-badge{
                                 </div>
                                 {% endif %}
                                 {% if daily.raw_usages %}
-                                <div class="export-daily-raw-list" aria-label="사용 원초 정보">
-                                    {% for raw_usage in daily.raw_usages %}
-                                    <span class="export-daily-raw-item">
-                                        {{ raw_usage.raw_name }}{% if raw_usage.ja_ho %} · {{ raw_usage.ja_ho }}{% endif %}
-                                        <strong>{{ "{:,.1f}".format(raw_usage.actual_qty).rstrip('0').rstrip('.') }}속</strong>
-                                        <span class="export-daily-raw-yield">수율 {% if raw_usage.yield_rate is not none %}{{ "%.1f"|format(raw_usage.yield_rate) }}%{% else %}-{% endif %}</span>
+                                <div class="export-daily-raw-summary">
+                                    <div class="export-daily-raw-list{% if daily.raw_usages|length > 1 %} has-multiple{% endif %}" aria-label="사용 원초 정보">
+                                        {% for raw_usage in daily.raw_usages %}
+                                        <span class="export-daily-raw-item">
+                                            {{ raw_usage.raw_name }}{% if raw_usage.ja_ho %} · {{ raw_usage.ja_ho }}{% endif %}
+                                            <strong>{{ "{:,.1f}".format(raw_usage.actual_qty).rstrip('0').rstrip('.') }}속</strong>
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                    <span class="export-daily-total-yield" aria-label="당일 종합 수율">
+                                        <strong><span>수율</span>{% if daily.daily_yield_rate is not none %}{{ "%.1f"|format(daily.daily_yield_rate) }}%{% else %}-{% endif %}</strong>
                                     </span>
-                                    {% endfor %}
                                 </div>
                                 {% endif %}
                             </div>
