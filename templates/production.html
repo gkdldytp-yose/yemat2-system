@@ -761,7 +761,7 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
         <div class="search-head">
             <div class="search-head-copy">
                 <h3 style="margin:0;">🔍 완료 생산 통합 검색</h3>
-                <p>상품명·상품코드·생산번호·원초·부자재·생산 메모를 한 번에 찾습니다.</p>
+                <p>상품명·상품코드·생산번호·원초·부자재·생산 메모를 한 번에 찾습니다. 쉼표(,)로 여러 키워드를 입력하면 모두 포함된 결과만 찾습니다.</p>
             </div>
             <button onclick="closeSearchModal()" class="btn btn-ghost btn-small">닫기</button>
         </div>
@@ -777,7 +777,7 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
             </div>
             <div class="form-group search-keyword-field">
                 <label>통합 키워드</label>
-                <input type="search" id="searchKeyword" placeholder="예: 유기, 김밥김, A11, PROD-360, 원초명 또는 부자재명">
+                <input type="search" id="searchKeyword" placeholder="예: 유기, 김밥김 (쉼표로 구분 시 AND 검색)">
             </div>
         </div>
         <div class="search-filter-bar">
@@ -789,6 +789,8 @@ html[data-theme="dark"] .search-result-count{background:rgba(37,99,235,.18);colo
         </div>
         <div class="search-actions">
             <button class="btn btn-secondary btn-small" onclick="resetSearch()">초기화</button>
+            <button class="btn btn-secondary btn-small" onclick="printSearchResults()">A4 출력</button>
+            <button class="btn btn-secondary btn-small" onclick="exportSearchResultsExcel()">엑셀 출력</button>
             <button class="btn btn-small" onclick="doSearch()">검색</button>
         </div>
         
@@ -973,24 +975,65 @@ function escapeSearchHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function getCompletedSearchParams() {
+    const params = new URLSearchParams();
+    const keyword = document.getElementById('searchKeyword').value.trim();
+    const start = document.getElementById('searchStartDate').value;
+    const end = document.getElementById('searchEndDate').value;
+    const applyDate = document.getElementById('searchApplyDate').checked;
+    if (keyword) params.append('keyword', keyword);
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    if (applyDate) params.append('apply_date', '1');
+    return params;
+}
+
+function exportSearchResultsExcel() {
+    if (!(window.completedSearchResults || []).length) {
+        alert('먼저 검색 결과를 확인해주세요.');
+        return;
+    }
+    const params = getCompletedSearchParams();
+    params.append('format', 'xlsx');
+    window.location.href = `/production/search?${params.toString()}`;
+}
+
+function printSearchResults() {
+    const results = window.completedSearchResults || [];
+    if (!results.length) {
+        alert('먼저 검색 결과를 확인해주세요.');
+        return;
+    }
+    const keyword = document.getElementById('searchKeyword').value.trim() || '전체';
+    const rows = results.map((production) => {
+        const yieldRate = production.yield_rate == null ? '-' : `${Number(production.yield_rate).toFixed(1)}%`;
+        const boxes = production.actual_boxes || production.planned_boxes || 0;
+        return `<tr><td>PROD-${escapeSearchHtml(production.id)}</td><td>${escapeSearchHtml(production.production_date || '-')}</td><td>${escapeSearchHtml(production.product_name || '-')}</td><td>${escapeSearchHtml(production.product_code || '')}</td><td>${escapeSearchHtml(production.work_time || '-')}</td><td>${Number(production.total_people || 0)}명</td><td>${yieldRate}</td><td>${boxes} BOX</td></tr>`;
+    }).join('');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert('인쇄 창을 열 수 없습니다. 팝업 차단을 해제해주세요.');
+        return;
+    }
+    printWindow.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>완료 생산 통합 검색</title><style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,'Malgun Gothic',sans-serif;color:#111827;font-size:10pt}h1{margin:0 0 4px;font-size:17pt}p{margin:0 0 14px;color:#475569}table{width:100%;border-collapse:collapse}th,td{border:1px solid #94a3b8;padding:7px 6px;text-align:left}th{background:#e2e8f0;font-weight:700}td:nth-child(6),td:nth-child(7),td:nth-child(8){text-align:right}</style></head><body><h1>완료 생산 통합 검색</h1><p>검색어: ${escapeSearchHtml(keyword)} · 총 ${results.length}건</p><table><thead><tr><th>생산번호</th><th>일자</th><th>상품</th><th>상품코드</th><th>작업 시간</th><th>총인원</th><th>수율</th><th>박스</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print();<\/script></body></html>`);
+    printWindow.document.close();
+}
+
 async function doSearch() {
     const keyword = document.getElementById('searchKeyword').value.trim();
     const start = document.getElementById('searchStartDate').value;
     const end = document.getElementById('searchEndDate').value;
     const applyDate = document.getElementById('searchApplyDate').checked;
-    
-    const params = new URLSearchParams();
-    if (keyword) params.append('keyword', keyword);
-    if (start) params.append('start', start);
-    if (end) params.append('end', end);
-    if (applyDate) params.append('apply_date', '1');
-    
+
+    const params = getCompletedSearchParams();
+
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = '<p class="search-status">검색 중...</p>';
     try {
         const res = await fetch('/production/search?' + params.toString());
         if (!res.ok) throw new Error('검색 실패');
         const data = await res.json();
+        window.completedSearchResults = data.results || [];
         if (!data.results || data.results.length === 0) {
             resultsDiv.innerHTML = '<p class="search-empty">검색 결과 없음</p>';
             return;
@@ -1033,6 +1076,7 @@ async function doSearch() {
 function resetSearch() {
     document.getElementById('searchKeyword').value = '';
     document.getElementById('searchApplyDate').checked = false;
+    window.completedSearchResults = [];
     document.getElementById('searchStartDate').value = '';
     document.getElementById('searchEndDate').value = '';
     document.getElementById('searchResults').innerHTML = '<p class="search-empty">검색 조건을 입력하고 검색 버튼을 눌러주세요</p>';
