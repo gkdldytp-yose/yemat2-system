@@ -1512,6 +1512,7 @@ def _ensure_raw_material_schema(conn):
                 name TEXT NOT NULL,
                 code TEXT,
                 lot TEXT,
+                supplier_name TEXT,
                 sheets_per_sok REAL DEFAULT 0,
                 receiving_date TEXT,
                 ja_ho TEXT,
@@ -1531,6 +1532,8 @@ def _ensure_raw_material_schema(conn):
             conn.execute("ALTER TABLE raw_materials ADD COLUMN lot TEXT")
         if 'ja_ho' not in cols:
             conn.execute("ALTER TABLE raw_materials ADD COLUMN ja_ho TEXT")
+        if 'supplier_name' not in cols:
+            conn.execute("ALTER TABLE raw_materials ADD COLUMN supplier_name TEXT")
 
         conn.execute(
             '''

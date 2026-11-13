@@ -215,6 +215,7 @@
                 <p id="rawAddEntryGuide" class="raw-add-guide">등록할 원초 정보를 입력하세요.</p>
                 <div id="rawAddFieldsGrid" class="raw-add-fields-grid" hidden>
                     <div class="form-group"><label>{{ "\uc6d0\ucd08\uba85 *" }}</label><input type="text" id="add_name" name="name" required placeholder="{{ "\uc608: \uacf1\ucc3d\ub3cc\uae40" }}"></div>
+                    <div class="form-group"><label for="add_supplier_name">공급처명</label><input type="text" id="add_supplier_name" name="supplier_name" placeholder="공급처명 입력 (선택)"></div>
                     <div class="form-group"><label>{{ "\ucf54\ub4dc" }}</label><input type="text" id="add_code" name="code" placeholder="{{ "\uc608: RM00001" }}"></div>
                     <div class="form-group"><label>{{ "1\ubc15\uc2a4\ub2f9 \uc18d\uc218 *" }}</label><input type="number" id="add_sheets_per_sok" name="sheets_per_sok" required placeholder="{{ "\uc608: 12" }}"><small style="color:#666;">{{ "1\ubc15\uc2a4 \uc0dd\uc0b0 \uc2dc \ud544\uc694\ud55c \uc18d\uc218" }}</small></div>
                     <div class="form-group"><label>{{ "\uc785\uace0\uc77c" }}</label><input type="date" id="add_receiving_date" name="receiving_date"></div>
@@ -344,6 +345,7 @@
                             </div>
                             <div class="raw-item-inline-meta">
                                 <span class="raw-inline-meta">입고일 {{ rm.receiving_date or '-' }}</span>
+                                {% if rm.supplier_name %}<span class="raw-supplier-badge"><span>공급처</span> {{ rm.supplier_name }}</span>{% endif %}
                                 <span class="raw-inline-meta">1박스당 {{ rm.sheets_per_sok }}속</span>
                             </div>
                         </div>
@@ -370,7 +372,7 @@
                         {% if can_raw %}
                         <button class="btn btn-small" onclick="showReceive({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}','{{ rm.receiving_date or "" }}')">입고</button>
                         <button class="btn btn-small" onclick="showExport({{ rm.id }},'{{ rm.name }}',{{ rm.current_stock }},'{{ rm.car_number or "" }}')">반출</button>
-                        <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">수정</button>
+                        <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-supplier="{{ rm.supplier_name or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">수정</button>
                         <button class="btn btn-small" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">점검표</button>
                         <form method="POST" action="/raw-materials/{{ rm.id }}/delete" onsubmit="return confirm('{{ rm.name }}을(를) 삭제하시겠습니까?\n\n생산 기록이나 사용 항목이 있으면 삭제할 수 없습니다.\nBOM에 등록되어 있으면 BOM에서도 자동으로 제거됩니다.')">
                             <button type="submit" class="btn btn-small raw-delete-btn">삭제</button>
@@ -454,7 +456,7 @@
         <div id="doneCalendarGrid" class="done-calendar-grid"></div>
     </div>
     {% if done_raw_rows %}
-    <div class="table-container"><table><thead><tr><th>원초명</th><th>코드</th><th>1박스당 속수</th><th>입고일</th><th>자호</th><th>총재고</th><th>완료일</th><th>완료사유</th><th>관리</th></tr></thead>
+    <div class="table-container"><table><thead><tr><th>원초명</th><th>코드</th><th>공급처</th><th>1박스당 속수</th><th>입고일</th><th>자호</th><th>총재고</th><th>완료일</th><th>완료사유</th><th>관리</th></tr></thead>
     <tbody>{% for rm in done_raw_rows %}
     <tr style="cursor:pointer;opacity:0.7;" onclick="showLogs({{ rm.id }},'{{ rm.name|e }}')">
         <td>
@@ -463,6 +465,7 @@
             </strong>
         </td>
         <td>{{ rm.code or '-' }}</td>
+        <td>{% if rm.supplier_name %}<span class="raw-supplier-badge"><span>공급처</span> {{ rm.supplier_name }}</span>{% else %}-{% endif %}</td>
         <td>{{ rm.sheets_per_sok }}속/box</td>
         <td>{{ rm.receiving_date or '-' }}</td>
         <td>{{ rm.car_number or '-' }}</td>
@@ -478,7 +481,7 @@
         <td style="max-width:280px;white-space:normal;line-height:1.45;">{{ rm.done_note or '-' }}</td>
         <td onclick="event.stopPropagation()">
             {% if can_raw %}
-            <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">수정</button>
+            <button type="button" class="btn btn-small btn-secondary" data-raw-id="{{ rm.id }}" data-raw-name="{{ rm.name }}" data-raw-code="{{ rm.code or '' }}" data-raw-supplier="{{ rm.supplier_name or '' }}" data-raw-sheets="{{ rm.sheets_per_sok or 0 }}" data-raw-receiving="{{ rm.receiving_date or '' }}" data-raw-ja-ho="{{ rm.car_number or '' }}" data-raw-total-stock="{{ rm.total_stock or 0 }}" data-raw-current-stock="{{ rm.current_stock or 0 }}" onclick="openRawBasicEditModal(this)">수정</button>
             <button class="btn btn-small" type="button" style="background:#2563eb;" onclick="openRawChecksheet({{ rm.id }}); return false;">점검표</button>
             {% if rm.done_kind == 'export' and rm.export_log_id %}
             <form method="POST" action="/raw-materials/{{ rm.id }}/export-cancel/{{ rm.export_log_id }}" style="display:inline;" onsubmit="return confirm('이 반출 완료 건을 취소할까요?\n반출 수량은 원초 재고로 원복됩니다.');">
@@ -518,13 +521,14 @@
                     <option value="all">전체</option>
                     <option value="code">코드</option>
                     <option value="name">원초명</option>
+                    <option value="supplier_name">공급처</option>
                     <option value="ja_ho">자호</option>
                     <option value="receiving_date">입고일</option>
                 </select>
             </div>
             <div class="raw-integrated-keyword">
                 <label for="rawIntegratedSearchKeyword">키워드</label>
-                <input id="rawIntegratedSearchKeyword" type="search" placeholder="예: RM00001 / 곱창돌김 / 12가3456 / 2026-04" autocomplete="off">
+                <input id="rawIntegratedSearchKeyword" type="search" placeholder="코드, 원초명, 공급처, 자호 또는 입고일" autocomplete="off">
             </div>
             <input id="rawIntegratedSearchStatus" type="hidden" value="all">
             <div class="raw-integrated-workplace-field">
@@ -549,8 +553,8 @@
         <div class="raw-integrated-result-wrap">
         <div class="table-container">
             <table>
-                <thead><tr><th>상태</th><th>작업장</th><th>원초명</th><th>코드</th><th>입고일</th><th>자호</th><th>총재고</th><th>현재고</th><th>사용량</th><th>완료일</th><th>점검표</th></tr></thead>
-                <tbody id="rawIntegratedSearchBody"><tr><td colspan="11"><div class="raw-integrated-empty"><div class="raw-integrated-empty-icon">⌕</div><strong>원초를 통합 검색해보세요</strong><span>코드, 원초명, 자호 또는 입고일로 검색할 수 있습니다.</span></div></td></tr></tbody>
+                <thead><tr><th>상태</th><th>작업장</th><th>원초명</th><th>코드</th><th>공급처</th><th>입고일</th><th>자호</th><th>총재고</th><th>현재고</th><th>사용량</th><th>완료일</th><th>점검표</th></tr></thead>
+                <tbody id="rawIntegratedSearchBody"><tr><td colspan="12"><div class="raw-integrated-empty"><div class="raw-integrated-empty-icon">⌕</div><strong>원초를 통합 검색해보세요</strong><span>코드, 원초명, 공급처, 자호 또는 입고일로 검색할 수 있습니다.</span></div></td></tr></tbody>
             </table>
         </div>
         </div>
@@ -673,6 +677,10 @@
                 <div class="form-group">
                     <label>코드</label>
                     <input type="text" name="code" id="rawBasicEditCode">
+                </div>
+                <div class="form-group">
+                    <label for="rawBasicEditSupplier">공급처명</label>
+                    <input type="text" name="supplier_name" id="rawBasicEditSupplier" placeholder="공급처명 입력 (선택)">
                 </div>
                 <div class="form-group">
                     <label>1박스당 속수 *</label>
@@ -1122,7 +1130,7 @@ function renderRawIntegratedSearchRows(rows){
     if(!body || !summary) return;
     summary.textContent = `전체 ${Number(rows?.length || 0).toLocaleString('ko-KR')}건`;
     if(!rows || !rows.length){
-        body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:1.5rem;">조건에 맞는 원초가 없습니다.</td></tr>';
+        body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:1.5rem;">조건에 맞는 원초가 없습니다.</td></tr>';
         return;
     }
     body.innerHTML = rows.map((row) => {
@@ -1136,6 +1144,7 @@ function renderRawIntegratedSearchRows(rows){
                 <td>${escapeHtml(row.workplace || '-')}</td>
                 <td><strong>${name}</strong></td>
                 <td>${escapeHtml(row.code || '-')}</td>
+                <td>${row.supplier_name ? `<span class="raw-supplier-badge"><span>공급처</span> ${escapeHtml(row.supplier_name)}</span>` : '-'}</td>
                 <td>${escapeHtml(row.receiving_date || '-')}</td>
                 <td>${escapeHtml(row.ja_ho || '-')}</td>
                 <td>${formatRawIntegratedNumber(row.total_stock)}</td>
@@ -1200,7 +1209,7 @@ function clearRawIntegratedSearchView(){
     const allWorkplaces = document.getElementById('rawIntegratedAllWorkplaces');
     if(allWorkplaces) allWorkplaces.checked = false;
     toggleRawIntegratedWorkplaceFilter(false);
-    if(body) body.innerHTML = '<tr><td colspan="11"><div class="raw-integrated-empty"><div class="raw-integrated-empty-icon">⌕</div><strong>원초를 통합 검색해보세요</strong><span>코드, 원초명, 자호 또는 입고일로 검색할 수 있습니다.</span></div></td></tr>';
+    if(body) body.innerHTML = '<tr><td colspan="12"><div class="raw-integrated-empty"><div class="raw-integrated-empty-icon">⌕</div><strong>원초를 통합 검색해보세요</strong><span>코드, 원초명, 공급처, 자호 또는 입고일로 검색할 수 있습니다.</span></div></td></tr>';
 }
 
 function openRawIntegratedSearchModal(preserveResults = false){
@@ -1509,6 +1518,7 @@ function openRawBasicEditModal(button){
     document.getElementById('rawBasicEditId').value = id;
     document.getElementById('rawBasicEditName').value = button.dataset.rawName || '';
     document.getElementById('rawBasicEditCode').value = button.dataset.rawCode || '';
+    document.getElementById('rawBasicEditSupplier').value = button.dataset.rawSupplier || '';
     document.getElementById('rawBasicEditSheets').value = button.dataset.rawSheets || '';
     document.getElementById('rawBasicEditReceivingDate').value = button.dataset.rawReceiving || '';
     document.getElementById('rawBasicEditJaHo').value = button.dataset.rawJaHo || '';
@@ -2010,6 +2020,10 @@ tr[onclick]:hover{background:#f8f9fa;}
 .raw-item-name{font-size:.92rem;color:#0f172a;line-height:1.2;}
 .raw-item-inline-meta{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;justify-content:flex-start;}
 .raw-inline-meta{display:inline-flex;align-items:center;padding:.2rem .46rem;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:.72rem;font-weight:700;white-space:nowrap;}
+.raw-supplier-badge{display:inline-flex;align-items:center;gap:.35rem;max-width:100%;padding:.25rem .55rem;border:1px solid #a5b4fc;border-radius:8px;background:#eef2ff;color:#3730a3;font-size:.75rem;font-weight:800;overflow-wrap:anywhere}
+.raw-supplier-badge span{color:#6366f1;font-size:.68rem;white-space:nowrap}
+html[data-theme="dark"] .raw-supplier-badge{background:#252d54;border-color:#5969ac;color:#e0e7ff}
+html[data-theme="dark"] .raw-supplier-badge span{color:#a5b4fc}
 .raw-code-item-main.row-layout{display:grid;grid-template-columns:minmax(220px,.9fr) minmax(250px,1.05fr) minmax(210px,.72fr);gap:.45rem .8rem;align-items:center;}
 .raw-lot-badge{display:inline-flex;align-items:center;padding:.2rem .46rem;border-radius:999px;background:#eef2ff;color:#334155;font-size:.72rem;font-weight:700;white-space:nowrap;}
 .raw-code-meta{display:flex;flex-wrap:wrap;gap:.45rem .55rem;margin-bottom:.7rem;}
