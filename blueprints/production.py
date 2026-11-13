@@ -4123,7 +4123,7 @@ def _consume_material_fifo(cursor, production_id, usage_id, material_id, require
 
     total_available = sum(float(l['available_qty'] or 0) for l in lots)
     if total_available + 1e-9 < required:
-        raise ValueError(f'??? ??? ?????. material_id={material_id}, ??={required:.2f}, ??={total_available:.2f}')
+        raise ValueError(f'부자재 재고가 부족합니다. 자재 ID: {material_id}, 필요 수량: {required:.2f}, 사용 가능한 수량: {total_available:.2f}')
 
     remain = required
     consumed_lots = []
@@ -4875,21 +4875,25 @@ def schedules():
                 daily_produced_cursor = 0
                 for key, value in sorted(daily_actual_map.items()):
                     daily_actual_boxes = int(value['actual_boxes'] or 0)
-                    unit_start_no, unit_end_no = _get_export_unit_span(
+                    # A day's output can cross a container boundary.  Keep the
+                    # allocation here (rather than only its first/last label) so
+                    # the daily production card can show the exact box count for
+                    # each affected container.
+                    container_allocations = _allocate_export_boxes_to_containers(
                         daily_produced_cursor,
                         daily_actual_boxes,
                         container_box_quantities,
+                        total_limit=export_quantity,
                     )
-                    container_labels = (
-                        [
-                            f'{number}{_get_export_unit_suffix(unit_mode)}'
-                            for number in range(unit_start_no, unit_end_no + 1)
-                        ]
-                        if unit_start_no is not None
-                        and unit_end_no is not None
-                        and unit_start_no <= unit_end_no
-                        else []
-                    )
+                    container_breakdowns = [
+                        {
+                            'label': f"{int(allocation['container_no'])}{_get_export_unit_suffix(unit_mode)}",
+                            'boxes': int(round(float(allocation['boxes'] or 0))),
+                        }
+                        for allocation in container_allocations
+                        if float(allocation.get('boxes') or 0) > 0
+                    ]
+                    container_labels = [item['label'] for item in container_breakdowns]
                     daily_produced_cursor += daily_actual_boxes
                     daily_raw_actual_qty = sum(
                         float(raw_usage.get('actual_qty') or 0)
@@ -4904,6 +4908,7 @@ def schedules():
                             'date': key,
                             'actual_boxes': daily_actual_boxes,
                             'container_labels': container_labels,
+                            'container_breakdowns': container_breakdowns,
                             'completed_container_labels': [
                                 label for label in container_labels if label in completed_container_labels
                             ],
@@ -5413,7 +5418,12 @@ def schedules():
     # ?怨밸? ?怨쀬뵠?怨뺣즲 JSON??곗쨮 癰??(野??疫꿸퀡???
     products_list = []
     for p in products:
-        products_list.append({'id': p['id'], 'name': p['name']})
+        products_list.append({
+            'id': p['id'],
+            'name': p['name'],
+            'code': p.get('code') or '',
+            'pallet_boxes_per_unit': int(p.get('pallet_boxes_per_unit') or 0),
+        })
     products_json = json.dumps(products_list, ensure_ascii=False)
     stats_products_json = json.dumps(stats_products, ensure_ascii=False)
     set_finished_products_json = json.dumps(set_finished_products, ensure_ascii=False)
@@ -6566,12 +6576,53 @@ def delete_schedule(schedule_id):
                     (int(row['export_schedule_id']),),
                 ).fetchone()
                 if export_row:
-                    sync_result = _sync_export_schedule_rows(
-                        conn,
-                        cursor,
-                        dict(export_row),
-                        original_product_id=export_row['product_id'],
+                    # Deleting an export day records it in ``excluded_dates``.  When
+                    # every remaining work day is either excluded or already started,
+                    # there is nowhere to move the unproduced quantity.  This is still
+                    # a valid date exclusion: keep the export schedule's outstanding
+                    # quantity rather than rolling back the requested deletion.
+                    export_data = dict(export_row)
+                    start_date = _parse_iso_date(export_data.get('production_start_date'))
+                    end_date = _parse_iso_date(
+                        export_data.get('production_end_date') or export_data.get('cutoff_date')
                     )
+                    excluded_dates = set(_parse_export_excluded_dates(export_data.get('excluded_dates')))
+                    linked_rows = _load_export_linked_rows(cursor, int(export_data['id']))
+                    external_completed_rows = _load_existing_export_completed_rows(
+                        cursor,
+                        (export_data.get('workplace') or '').strip(),
+                        int(export_data.get('product_id') or 0),
+                        start_date,
+                        end_date,
+                        int(export_data['id']),
+                    )
+                    fixed_dates = {
+                        str(item.get('scheduled_date'))
+                        for item in linked_rows + external_completed_rows
+                        if item.get('scheduled_date') and _is_started_export_row(item)
+                    }
+                    available_dates = (
+                        [
+                            scheduled_date
+                            for scheduled_date in _get_business_schedule_dates(conn, cursor, start_date, end_date)
+                            if scheduled_date not in excluded_dates and scheduled_date not in fixed_dates
+                        ]
+                        if start_date and end_date
+                        else []
+                    )
+                    if available_dates:
+                        sync_result = _sync_export_schedule_rows(
+                            conn,
+                            cursor,
+                            export_data,
+                            original_product_id=export_data['product_id'],
+                        )
+                    else:
+                        sync_result = {
+                            'skipped': True,
+                            'reason': 'no_available_date_after_exclusion',
+                            'remaining_available_dates': [],
+                        }
             if set_schedule_before:
                 set_row = cursor.execute(
                     'SELECT * FROM set_schedules WHERE id = ?',
@@ -6874,7 +6925,7 @@ def _get_schedule_shared_table_workplaces(workplace):
 def _load_schedule_selectable_products(cursor, workplace, include_box_quantity=False, include_set_finished=False):
     normalized_workplace = _normalize_schedule_product_workplace(workplace)
     shared_workplaces = _get_schedule_shared_table_workplaces(normalized_workplace)
-    select_cols = "id, name, workplace, COALESCE(category, '') as category, COALESCE(code, '') as code, COALESCE(set_item_type, '') as set_item_type"
+    select_cols = "id, name, workplace, COALESCE(category, '') as category, COALESCE(code, '') as code, COALESCE(set_item_type, '') as set_item_type, COALESCE(pallet_boxes_per_unit, 0) AS pallet_boxes_per_unit"
     if include_box_quantity:
         select_cols += ', box_quantity'
     rows = cursor.execute(
@@ -6991,6 +7042,23 @@ def _parse_export_pallet_boxes_per_unit(form, unit_mode):
     return _parse_positive_int(raw_value, 'P(파렛트)당 박스 수량')
 
 
+def _ensure_export_product_pallet_standard(cursor, product_row, form):
+    """Require and persist a product's pallet standard before export scheduling."""
+    current_value = int(product_row.get('pallet_boxes_per_unit') or 0)
+    if current_value > 0:
+        return current_value
+
+    pallet_boxes_per_unit = _parse_positive_int(
+        form.get('pallet_boxes_per_unit'),
+        'P(파렛트)당 박스 수량',
+    )
+    cursor.execute(
+        'UPDATE products SET pallet_boxes_per_unit = ? WHERE id = ?',
+        (pallet_boxes_per_unit, int(product_row['id'])),
+    )
+    return pallet_boxes_per_unit
+
+
 @bp.route('/schedules/export/add', methods=['POST'])
 @role_required('production')
 def add_export_schedule():
@@ -7012,6 +7080,7 @@ def add_export_schedule():
             product_row = _is_schedule_product_selectable(cursor, workplace, product_id)
             if not product_row:
                 raise ValueError('?좏깮???섏텧 ?쒗뭹??李얠쓣 ???놁뒿?덈떎.')
+            pallet_boxes_per_unit = _ensure_export_product_pallet_standard(cursor, product_row, request.form)
 
             cursor.execute(
                 '''
@@ -7050,6 +7119,7 @@ def add_export_schedule():
                 {
                     'product_id': product_id,
                     'product_name': product_row['name'],
+                    'pallet_boxes_per_unit': pallet_boxes_per_unit,
                     'export_quantity': export_quantity,
                     'boxes_per_container': boxes_per_container,
                     'container_count': container_count,
@@ -7096,6 +7166,7 @@ def update_export_schedule(export_schedule_id):
             product_row = _is_schedule_product_selectable(cursor, workplace, product_id)
             if not product_row:
                 raise ValueError('?좏깮???섏텧 ?쒗뭹??李얠쓣 ???놁뒿?덈떎.')
+            pallet_boxes_per_unit = _ensure_export_product_pallet_standard(cursor, product_row, request.form)
 
             cursor.execute(
                 '''
@@ -7134,6 +7205,7 @@ def update_export_schedule(export_schedule_id):
                     'before': dict(before_row),
                     'after': dict(export_row),
                     'product_name': product_row['name'],
+                    'pallet_boxes_per_unit': pallet_boxes_per_unit,
                     'po_numbers': po_numbers,
                     'sync_result': sync_result,
                 },

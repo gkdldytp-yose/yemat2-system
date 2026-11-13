@@ -1463,6 +1463,25 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
   }
 }
 
+
+.completed-search-btn{margin-left:auto;border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.55rem .95rem;font-weight:800;cursor:pointer;white-space:nowrap}
+.completed-search-modal{width:min(850px,96vw)} .completed-search-filters{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:.65rem;align-items:end}
+.completed-search-filters label{display:block;font-size:.78rem;font-weight:800;color:#475569;margin-bottom:.3rem} .completed-search-filters input{box-sizing:border-box;width:100%;min-width:0;padding:.65rem;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a}
+.completed-search-reset{padding:.65rem;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#334155;cursor:pointer} .completed-search-count{margin:1rem 0 .5rem;color:#64748b;font-size:.83rem;font-weight:700}
+.completed-search-results{display:grid;gap:.5rem} .completed-search-result{width:100%;text-align:left;border:1px solid #dbe5f0;background:#fff;border-radius:12px;padding:.8rem;cursor:pointer;color:#334155} .completed-search-result:hover,.completed-search-result:focus-visible{border-color:#3b82f6;background:#eff6ff} .completed-search-result strong{display:block;color:#0f172a;margin-bottom:.3rem;overflow-wrap:anywhere} .completed-search-result span{font-size:.82rem;line-height:1.5;overflow-wrap:anywhere} .completed-search-empty{padding:2rem;text-align:center;color:#64748b}
+html[data-theme="dark"] .completed-search-btn{background:#172b4d;border-color:#365a96;color:#bfdbfe} html[data-theme="dark"] .completed-search-filters label,html[data-theme="dark"] .completed-search-count{color:#a9bbd1} html[data-theme="dark"] .completed-search-filters input,html[data-theme="dark"] .completed-search-reset,html[data-theme="dark"] .completed-search-result{background:#172235;border-color:#334155;color:#dbe7f5} html[data-theme="dark"] .completed-search-result strong{color:#f1f5f9} html[data-theme="dark"] .completed-search-result:hover,html[data-theme="dark"] .completed-search-result:focus-visible{background:#203554;border-color:#60a5fa}
+@media(max-width:700px){.completed-search-filters{grid-template-columns:1fr 1fr}.completed-search-filters .search-keyword{grid-column:1 / -1}.completed-search-reset{grid-column:1 / -1}.completed-search-btn{margin-left:0}}
+.completed-search-modal form.completed-search-filters{display:grid;flex:none;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:.8rem;padding:1rem;border:1px solid #dbe5f0;border-radius:14px;background:#f8fafc}
+.completed-search-filters input{height:42px}.completed-search-filters input:focus{outline:2px solid #60a5fa;outline-offset:1px}
+.completed-search-actions{grid-column:1 / -1;display:flex;justify-content:flex-end;gap:.5rem}
+.completed-search-submit,.completed-search-reset{min-height:40px;padding:.55rem 1.1rem;font-weight:800}
+.completed-search-submit{border:0;border-radius:10px;background:#2563eb;color:#fff;cursor:pointer}.completed-search-submit:hover{background:#1d4ed8}
+.completed-search-count{margin:1.2rem 0 .65rem}.completed-search-result{padding:1rem}.completed-search-result strong{font-size:.95rem;margin-bottom:.45rem}.completed-search-result span{color:#64748b}
+.completed-search-empty{padding:3rem 1rem;border:1px dashed #cbd5e1;border-radius:14px;line-height:1.6}
+html[data-theme="dark"] .completed-search-modal form.completed-search-filters{background:#101b2d;border-color:#334155}
+html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-theme="dark"] .completed-search-empty{border-color:#334155;color:#a9bbd1}
+@media(max-width:700px){.completed-search-modal form.completed-search-filters{grid-template-columns:1fr 1fr}.completed-search-actions{grid-column:1 / -1}.completed-search-reset{grid-column:auto}.completed-search-actions button{flex:1}}
+
 </style>
 {% endblock %}
 {% block content %}
@@ -1907,6 +1926,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
         <div class="issue-status-tabs">
             <button type="button" class="issue-status-btn" id="issueStatusPendingBtn" onclick="switchIssueStatusTab('pending')">불출 요청 중 <span class="issue-status-count">{{ issue_requests_pending|length }}</span></button>
             <button type="button" class="issue-status-btn" id="issueStatusCompletedBtn" onclick="switchIssueStatusTab('completed')">불출 완료 <span class="issue-status-count">{{ issue_requests_completed|length }}</span></button>
+            <button type="button" class="completed-search-btn" onclick="openCompletedSearch('issue', this)">⌕ 불출 완료 내역 검색</button>
         </div>
         <div id="issueStatusPendingPane" class="issue-status-pane">
         <div class="issue-status-board">
@@ -2153,6 +2173,7 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
         <div class="issue-status-tabs">
             <button type="button" class="issue-status-btn" id="exportStatusPendingBtn" onclick="switchExportStatusTab('pending')">반출 요청 중 <span class="issue-status-count">{{ export_requests_pending|length }}</span></button>
             <button type="button" class="issue-status-btn" id="exportStatusCompletedBtn" onclick="switchExportStatusTab('completed')">반출 완료 <span class="issue-status-count">{{ export_requests_completed|length }}</span></button>
+            <button type="button" class="completed-search-btn" onclick="openCompletedSearch('export', this)">⌕ 반출 완료 내역 검색</button>
         </div>
         <div id="exportStatusPendingPane" class="issue-status-pane">
         <div class="issue-status-board">
@@ -2420,6 +2441,18 @@ html[data-theme="dark"] #materialsTable tbody td:nth-child(7) strong{
     </form>
 </div>
 {% endif %}
+
+<div id="completedSearchModal" class="receipt-modal-bg">
+ <div class="receipt-modal completed-search-modal" role="dialog" aria-modal="true" aria-labelledby="completedSearchTitle" onclick="event.stopPropagation()">
+  <div class="receipt-modal-head"><div><h3 class="receipt-modal-title" id="completedSearchTitle">완료 내역 검색</h3><p class="receipt-modal-caption">전체 완료 내역에서 자재명, 코드, 작업장, 비고 등을 검색합니다.</p></div><button type="button" class="receipt-modal-close" aria-label="닫기" onclick="closeCompletedSearch()">×</button></div>
+  <div class="receipt-modal-body"><form class="completed-search-filters" onsubmit="event.preventDefault(); renderCompletedSearch()">
+   <div class="search-keyword"><label for="completedSearchKeyword">키워드</label><input id="completedSearchKeyword" type="search" placeholder="쉼표로 구분하여 모두 포함 검색" title="쉼표로 구분한 키워드가 모두 포함된 내역을 검색합니다"></div>
+   <div><label for="completedSearchFrom">완료일 시작</label><input id="completedSearchFrom" type="date"></div>
+   <div><label for="completedSearchTo">완료일 종료</label><input id="completedSearchTo" type="date"></div>
+   <div class="completed-search-actions"><button type="button" class="completed-search-reset" onclick="resetCompletedSearch()">초기화</button><button type="submit" class="completed-search-submit">검색</button></div>
+  </form><div id="completedSearchCount" class="completed-search-count" aria-live="polite"></div><div id="completedSearchResults" class="completed-search-results"></div></div>
+ </div>
+</div>
 
 <div id="receiptCompleteModal" class="receipt-modal-bg" onclick="closeReceiptCompleteModal(event)">
     <div class="receipt-modal" onclick="event.stopPropagation()">
@@ -3253,6 +3286,59 @@ function switchReqTab(tab){
     }
 }
 
+
+let completedSearchKind = 'issue';
+let completedSearchOpener = null;
+let completedSearchTarget = null;
+function openCompletedSearch(kind, opener){
+ completedSearchKind = kind; completedSearchOpener = opener; completedSearchTarget = null;
+ document.getElementById('completedSearchTitle').textContent = (kind === 'issue' ? '불출' : '반출') + ' 완료 내역 검색';
+ document.getElementById('completedSearchModal').classList.add('open'); resetCompletedSearch(); document.getElementById('completedSearchKeyword').focus();
+}
+function closeCompletedSearch(event){
+ if(event && event.target !== event.currentTarget) return;
+ document.getElementById('completedSearchModal').classList.remove('open'); completedSearchOpener?.focus();
+ if(completedSearchTarget){
+  const row = completedSearchTarget; completedSearchTarget = null;
+  row.scrollIntoView({behavior:'smooth', block:'center'}); row.classList.add('issue-request-focus'); window.setTimeout(() => row.classList.remove('issue-request-focus'), 2600);
+ }
+}
+function resetCompletedSearch(){
+ ['completedSearchKeyword','completedSearchFrom','completedSearchTo'].forEach(id => document.getElementById(id).value = '');
+ document.getElementById('completedSearchCount').textContent = '';
+ const results = document.getElementById('completedSearchResults');
+ const empty = document.createElement('div'); empty.className = 'completed-search-empty';
+ empty.textContent = '검색 조건을 입력하고 검색 버튼을 눌러주세요. 조건 없이 검색하면 전체 내역을 볼 수 있습니다.';
+ results.replaceChildren(empty);
+}
+function renderCompletedSearch(){
+ const terms = document.getElementById('completedSearchKeyword').value.toLocaleLowerCase().split(',').map(term => term.trim()).filter(Boolean);
+ const from = document.getElementById('completedSearchFrom').value, to = document.getElementById('completedSearchTo').value;
+ const results = document.getElementById('completedSearchResults'); results.replaceChildren();
+ if(from && to && from > to){
+  document.getElementById('completedSearchCount').textContent = '';
+  const empty = document.createElement('div'); empty.className = 'completed-search-empty'; empty.textContent = '완료일 시작 날짜는 종료 날짜보다 늦을 수 없습니다.'; results.appendChild(empty); return;
+ }
+ const rows = document.querySelectorAll(`#${completedSearchKind}StatusCompletedPane tr[id]`); let count = 0;
+ rows.forEach(row => {
+  const cells = row.cells, date = cells[5].querySelector('.issue-date')?.textContent.trim() || '';
+  const searchable = Array.from(cells).slice(0, completedSearchKind === 'issue' ? 7 : 8).map(cell => cell.textContent.trim()).join(' ').toLocaleLowerCase();
+  if(!terms.every(term => searchable.includes(term)) || (from && date.slice(0,10) < from) || (to && date.slice(0,10) > to) || ((from || to) && !/^\d{4}-\d{2}-\d{2}/.test(date))) return;
+  count++; const button = document.createElement('button'); button.type = 'button'; button.className = 'completed-search-result';
+  const title = document.createElement('strong'); title.textContent = `${cells[2].textContent.trim()}  ·  ${cells[1].textContent.trim()}`;
+  const detail = document.createElement('span'); detail.textContent = `완료 ${date}  ·  ${completedSearchKind === 'issue' ? '지급' : '반출'} ${cells[4].querySelector('.issue-qty-main')?.textContent.trim() || '-'}  ·  ${cells[0].querySelector('.issue-subtext')?.textContent.trim() || '-'}` + (completedSearchKind === 'export' ? `  ·  로트 ${cells[3].textContent.trim()}` : '');
+  button.append(title, detail); button.addEventListener('click', () => {
+   const index = Number(row.closest('.issue-date-pane').id.match(/(\d+)$/)[1]);
+   if(completedSearchKind === 'issue'){ switchIssueStatusTab('completed'); switchIssueCompletedDate(index); } else { switchExportStatusTab('completed'); switchExportCompletedDate(index); }
+   completedSearchTarget = row;
+   document.getElementById('completedSearchCount').textContent = '내역을 선택했습니다. 창을 닫으면 해당 내역으로 이동합니다.';
+  }); results.appendChild(button);
+ });
+ document.getElementById('completedSearchCount').textContent = `검색 결과 ${count.toLocaleString()}건`;
+ if(!count){ const empty = document.createElement('div'); empty.className = 'completed-search-empty'; empty.textContent = '조건에 맞는 완료 내역이 없습니다.'; results.appendChild(empty); }
+}
+document.addEventListener('keydown', event => { if(event.key === 'Escape' && document.getElementById('completedSearchModal').classList.contains('open')) closeCompletedSearch(); });
+
 function switchIssueStatusTab(tab){
     currentIssueStatusTab = ['pending','completed'].includes(tab) ? tab : 'pending';
     ['pending','completed'].forEach((name) => {
@@ -3646,14 +3732,14 @@ function appendIssueItemRow(materialData, defaults = {}){
     tr.id = rowId;
     const qtyInputHtml = hasUpperUnit
         ? `<div class="issue-qty-entry request-qty-box">
-                <input type="number" class="js-issue-qty-input request-qty-input" step="0.01" min="0.01" value="${defaults.displayQuantity || 1}" required oninput="syncIssueConvertedQty(this)">
-                <button type="button" class="issue-unit-toggle js-issue-unit-toggle" data-mode="upper" data-unit="${upperUnit}" data-base-unit="${unit}" data-upper-unit="${upperUnit}" data-factor="${upperUnitQty}" onclick="toggleIssueUnitMode(this)">${upperUnit}</button>
+                <input type="number" class="js-issue-qty-input request-qty-input" step="0.01" min="0.01" value="${defaults.requestedQuantity || 1}" required oninput="syncIssueConvertedQty(this)">
+                <button type="button" class="issue-unit-toggle js-issue-unit-toggle base" data-mode="base" data-base-unit="${unit}" data-upper-unit="${upperUnit}" data-factor="${upperUnitQty}" title="클릭하여 ${upperUnit} 단위로 변경" onclick="toggleIssueUnitMode(this)">${unit || '-'}</button>
            </div>
-           <input type="hidden" name="requested_quantity[]" class="js-issue-converted-value" value="${defaults.requestedQuantity || upperUnitQty}">
+           <input type="hidden" name="requested_quantity[]" class="js-issue-converted-value" value="${defaults.requestedQuantity || 1}">
            <input type="hidden" class="js-issue-upper-unit-qty" value="${upperUnitQty}">`
         : `<div class="issue-qty-entry request-qty-box"><input type="number" name="requested_quantity[]" class="request-qty-input" step="0.01" min="0.01" required value="${defaults.requestedQuantity || ''}"><span class="request-qty-unit">${unit}</span></div>`;
     const convertedQtyHtml = hasUpperUnit
-        ? `<div><strong class="js-issue-converted-label issue-converted-hint">${Number(defaults.requestedQuantity || upperUnitQty).toFixed(2)} ${unit}</strong></div>`
+        ? `<div><strong class="js-issue-converted-label issue-converted-hint">${Number(defaults.requestedQuantity || 1).toFixed(2)} ${unit}</strong></div>`
         : `<span style="color:#94a3b8;">-</span>`;
     tr.innerHTML = `
         <td>${code}<input type="hidden" name="material_id[]" value="${materialId}"></td>
@@ -3682,16 +3768,6 @@ function addIssueItemFromList(){
         upper_unit: opt.dataset.upperUnit || '',
         upper_unit_qty: opt.dataset.upperUnitQty || '',
     });
-}
-
-function formatBomDisplayQuantity(quantity, upperUnitQty){
-    const qty = Number(quantity || 0);
-    const factor = Number(upperUnitQty || 0);
-    if(!(qty > 0)) return '';
-    if(!(factor > 0)) return String(qty);
-    const display = qty / factor;
-    if(!Number.isFinite(display) || display <= 0) return String(qty);
-    return display.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
 }
 
 function addIssueBomItems(){
@@ -3724,7 +3800,6 @@ function addIssueBomItems(){
             upper_unit_qty: item.upper_unit_qty || '',
         }, {
             requestedQuantity: Number(item.quantity_per_box || 0),
-            displayQuantity: formatBomDisplayQuantity(item.quantity_per_box, item.upper_unit_qty),
         });
         added += 1;
     });
@@ -3748,7 +3823,7 @@ function syncIssueConvertedQty(inputEl){
     if(!factorInput || !label || !toggleBtn) return;
     const factor = Number(factorInput.value || 0);
     const inputQty = Number(inputEl.value || 0);
-    const mode = toggleBtn.dataset.mode || 'upper';
+    const mode = toggleBtn.dataset.mode || 'base';
     const converted = mode === 'upper'
         ? (factor > 0 && inputQty > 0 ? inputQty * factor : 0)
         : (inputQty > 0 ? inputQty : 0);
@@ -3765,22 +3840,18 @@ function toggleIssueUnitMode(btn){
     const label = row.querySelector('.js-issue-converted-label');
     const factorInput = row.querySelector('.js-issue-upper-unit-qty');
     if(!input || !label || !factorInput) return;
-    const factor = Number(factorInput.value || 0);
-    const currentMode = btn.dataset.mode || 'upper';
+    const currentMode = btn.dataset.mode || 'base';
     const upperUnit = btn.dataset.upperUnit || '';
     const baseUnit = btn.dataset.baseUnit || '';
-    const currentValue = Number(input.value || 0);
     if(currentMode === 'upper'){
-        const converted = factor > 0 ? currentValue * factor : currentValue;
-        input.value = converted > 0 ? converted.toFixed(2).replace(/\.00$/, '') : '';
         btn.dataset.mode = 'base';
         btn.textContent = baseUnit || '-';
+        btn.title = `클릭하여 ${upperUnit} 단위로 변경`;
         btn.classList.add('base');
     } else {
-        const converted = factor > 0 ? currentValue / factor : currentValue;
-        input.value = converted > 0 ? converted.toFixed(2).replace(/\.00$/, '') : '';
         btn.dataset.mode = 'upper';
         btn.textContent = upperUnit || '-';
+        btn.title = `클릭하여 ${baseUnit} 단위로 변경`;
         btn.classList.remove('base');
     }
     syncIssueConvertedQty(input);
@@ -4698,11 +4769,9 @@ if(Array.isArray(DASHBOARD_ISSUE_PREFILL) && DASHBOARD_ISSUE_PREFILL.length){
     DASHBOARD_ISSUE_PREFILL.forEach((item) => {
         const materialRow = ISSUE_MATERIAL_SOURCE.find((row) => String(row.value) === String(item.material_id));
         if(!materialRow) return;
-        const factor = Number(materialRow.upperUnitQty || 0);
         const requestedQty = Number(item.requested_quantity || 0);
         appendIssueItemRow(materialRow, {
             requestedQuantity: requestedQty > 0 ? requestedQty : '',
-            displayQuantity: factor > 0 && requestedQty > 0 ? (requestedQty / factor).toFixed(2).replace(/\.00$/, '') : '',
             note: item.note || '',
         });
     });

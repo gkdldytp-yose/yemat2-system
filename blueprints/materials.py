@@ -1980,7 +1980,7 @@ def materials():
         '''
     )
     request_materials = [dict(r) for r in cursor.fetchall()]
-    request_materials.sort(key=_material_row_sort_key)
+    request_materials.sort(key=lambda row: (not (row.get('code') or '').strip() or (row.get('code') or '').strip() == '-', _material_row_sort_key(row)))
     request_material_id_set = {
         int(row.get('id') or 0)
         for row in request_materials
@@ -2016,7 +2016,7 @@ def materials():
             (workplace, workplace, workplace, workplace),
         )
         export_request_materials = [dict(r) for r in cursor.fetchall()]
-        export_request_materials.sort(key=_material_row_sort_key)
+        export_request_materials.sort(key=lambda row: (not (row.get('code') or '').strip() or (row.get('code') or '').strip() == '-', _material_row_sort_key(row)))
     export_material_id_set = {
         int(row.get('id') or 0)
         for row in export_request_materials
@@ -3974,7 +3974,7 @@ def raw_materials_integrated_search():
     workplace = get_workplace()
     is_logistics = workplace == LOGISTICS_WORKPLACE
     search_field = (request.args.get('field') or 'all').strip()
-    if search_field not in ('all', 'code', 'name', 'ja_ho', 'receiving_date'):
+    if search_field not in ('all', 'code', 'name', 'supplier_name', 'ja_ho', 'receiving_date'):
         search_field = 'all'
     keyword = (request.args.get('keyword') or '').strip()
     status = (request.args.get('status') or 'all').strip()
@@ -4011,15 +4011,16 @@ def raw_materials_integrated_search():
         fields = {
             'code': "COALESCE(result.code, '') LIKE ?",
             'name': "COALESCE(result.name, '') LIKE ?",
+            'supplier_name': "COALESCE(result.supplier_name, '') LIKE ?",
             'ja_ho': "COALESCE(result.ja_ho, '') LIKE ?",
             'receiving_date': "COALESCE(result.receiving_date, '') LIKE ?",
         }
         if search_field == 'all':
             where_clauses.append(
                 "(COALESCE(result.code, '') LIKE ? OR COALESCE(result.name, '') LIKE ? "
-                "OR COALESCE(result.ja_ho, '') LIKE ? OR COALESCE(result.receiving_date, '') LIKE ?)"
+                "OR COALESCE(result.supplier_name, '') LIKE ? OR COALESCE(result.ja_ho, '') LIKE ? OR COALESCE(result.receiving_date, '') LIKE ?)"
             )
-            params.extend([like_keyword] * 4)
+            params.extend([like_keyword] * 5)
         else:
             where_clauses.append(fields[search_field])
             params.append(like_keyword)
@@ -4066,6 +4067,7 @@ def raw_materials_integrated_search():
                     rm.id,
                     COALESCE(rm.code, '') AS code,
                     COALESCE(rm.name, '') AS name,
+                    COALESCE(rm.supplier_name, '') AS supplier_name,
                     COALESCE(rm.workplace, '') AS workplace,
                     COALESCE(NULLIF(TRIM(rm.ja_ho), ''), NULLIF(TRIM(rm.car_number), ''), '') AS ja_ho,
                     COALESCE(rm.receiving_date, '') AS receiving_date,
@@ -4931,6 +4933,7 @@ def add_raw_material():
     workplace = get_workplace()
     code = (request.form.get('code') or '').strip()
     name = request.form.get('name')
+    supplier_name = (request.form.get('supplier_name') or '').strip()
     sheets_per_sok = request.form.get('sheets_per_sok')
     receiving_date = request.form.get('receiving_date')
     ja_ho = (request.form.get('ja_ho') or request.form.get('car_number') or '').strip()
@@ -4941,12 +4944,13 @@ def add_raw_material():
         cursor = conn.cursor()
         cursor.execute(
             '''
-            INSERT INTO raw_materials (name, code, lot, sheets_per_sok, receiving_date, ja_ho, car_number, total_stock, current_stock, used_quantity, workplace)
-            VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, 0, ?)
+            INSERT INTO raw_materials (name, code, lot, supplier_name, sheets_per_sok, receiving_date, ja_ho, car_number, total_stock, current_stock, used_quantity, workplace)
+            VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, ?, 0, ?)
         ''',
             (
                 name,
                 code,
+                supplier_name,
                 sheets_per_sok,
                 receiving_date if receiving_date else None,
                 ja_ho,
@@ -4966,6 +4970,7 @@ def add_raw_material():
             raw_id,
             {
                 'name': name,
+                'supplier_name': supplier_name,
                 'code': final_code,
                 'lot': lot,
                 'sheets_per_sok': sheets_per_sok,
@@ -5033,6 +5038,7 @@ def update_raw_material_basic():
             if not before:
                 return redirect(url_for('materials.raw_materials'))
 
+            supplier_name = (request.form.get('supplier_name') or '').strip() if 'supplier_name' in request.form else (before['supplier_name'] or '')
             previous_code = (before['code'] or '').strip()
             # A blank code has always been converted into the row's generated
             # representative code by _ensure_raw_code_and_lot().  Resolve it
@@ -5043,7 +5049,7 @@ def update_raw_material_basic():
             cursor.execute(
                 '''
                 UPDATE raw_materials
-                SET code = ?, name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?,
+                SET code = ?, name = ?, supplier_name = ?, sheets_per_sok = ?, receiving_date = ?, ja_ho = ?, car_number = ?,
                     total_stock = ?, current_stock = ?, used_quantity = ?
                 WHERE id = ?
                   AND workplace = ?
@@ -5051,6 +5057,7 @@ def update_raw_material_basic():
                 (
                     final_code,
                     name,
+                    supplier_name,
                     sheets_per_sok,
                     receiving_date,
                     ja_ho,
@@ -5149,6 +5156,7 @@ def update_raw_material_basic():
                     'before': dict(before),
                     'after': {
                         'name': name,
+                        'supplier_name': supplier_name,
                         'code': final_code,
                         'lot': lot,
                         'sheets_per_sok': sheets_per_sok,
@@ -7119,7 +7127,7 @@ def cancel_completed_issue_request(req_id):
             for row in receipt_rows:
                 lot_qty = _get_workplace_lot_quantity(cursor, req_row['requester_workplace'], int(row['material_id']), int(row['material_lot_id']))
                 if not _has_enough_quantity(lot_qty, float(row['quantity'] or 0)):
-                    return _alert_back('이미 사용되었거나 이동된 재고가 있어 완료 취소할 수 없습니다.')
+                    raise ValueError('이미 사용되었거나 이동된 재고가 있어 완료 취소할 수 없습니다.')
 
             for row in receipt_rows:
                 rollback_qty = float(row['quantity'] or 0)
@@ -7173,13 +7181,16 @@ def cancel_completed_issue_request(req_id):
                     'requester_workplace': req_row['requester_workplace'],
                 },
             )
-            _rebuild_material_fifo_for_workplace(
-                conn,
-                cursor,
-                int(req_row['material_id']),
-                req_row['requester_workplace'],
-                (req_row['processed_at'] or '')[:10],
-            )
+            try:
+                _rebuild_material_fifo_for_workplace(
+                    conn,
+                    cursor,
+                    int(req_row['material_id']),
+                    req_row['requester_workplace'],
+                    (req_row['processed_at'] or '')[:10],
+                )
+            except ValueError as exc:
+                raise ValueError(f'불출 완료 취소 후 생산 재고를 재계산할 수 없습니다. {exc}') from exc
     except ValueError as e:
         return _alert_back(str(e))
 

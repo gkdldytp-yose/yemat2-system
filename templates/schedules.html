@@ -4497,6 +4497,18 @@ html[data-theme="dark"] #exportView .export-schedule-table td::before { color:#9
 .export-excluded-wrap {
     margin-top:0.45rem;
 }
+.export-excluded-toggle {
+    border:1px solid #93c5fd;
+    background:#eff6ff;
+    color:#1d4ed8;
+    border-radius:999px;
+    padding:0.28rem 0.55rem;
+    font-size:0.76rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.export-excluded-toggle:hover {background:#dbeafe;color:#1e3a8a;}
+.export-excluded-panel {margin-top:0.38rem;}
 .export-excluded-label {
     color:#64748b;
     font-size:0.76rem;
@@ -5200,16 +5212,17 @@ html[data-theme="dark"] .export-active-card.set-schedule-card .set-schedule-card
 }
 .export-daily-date-pill:hover {background:#bae6fd;color:#075985;text-decoration:none;}
 .export-daily-container-list {
-    display:inline-flex;
-    align-items:center;
-    flex-wrap:wrap;
+    display:grid;
+    grid-template-columns:repeat(5, max-content);
     gap:.26rem;
-    margin-left:.34rem;
-    vertical-align:middle;
+    width:max-content;
+    max-width:100%;
+    margin-top:.38rem;
 }
 .export-daily-container-badge {
     display:inline-flex;
     align-items:center;
+    white-space:nowrap;
     padding:.18rem .42rem;
     border:1px solid rgba(217,119,6,.45);
     border-radius:999px;
@@ -6166,6 +6179,12 @@ html[data-theme="dark"] .export-excluded-label,
 html[data-theme="dark"] .export-excluded-chip-date{
     color:#c7d3e3;
 }
+html[data-theme="dark"] .export-excluded-toggle{
+    background:rgba(37,99,235,.2);
+    border-color:rgba(96,165,250,.5);
+    color:#bfdbfe;
+}
+html[data-theme="dark"] .export-excluded-toggle:hover{background:rgba(59,130,246,.32);color:#dbeafe;}
 html[data-theme="dark"] .export-excluded-chip-form{
     background:#162133;
     border-color:#314155;
@@ -7921,6 +7940,13 @@ html[data-theme="dark"] #calendarView .schedule-item .export-container-badge{
                         {% endif %}
                         {% if export.excluded_dates %}
                         <div class="export-excluded-wrap">
+                            <button type="button" class="export-excluded-toggle"
+                                aria-expanded="false"
+                                aria-controls="exportExcludedDates{{ export.id }}"
+                                onclick="event.stopPropagation(); toggleExportExcludedDates(this);">
+                                제외 일정 {{ export.excluded_dates|length }}건 보기
+                            </button>
+                            <div id="exportExcludedDates{{ export.id }}" class="export-excluded-panel" hidden>
                             <div class="export-excluded-label">제외된 일정</div>
                             <div class="export-excluded-list">
                                 {% for excluded_date in export.excluded_dates %}
@@ -7932,6 +7958,7 @@ html[data-theme="dark"] #calendarView .schedule-item .export-container-badge{
                                     {% endif %}
                                 </form>
                                 {% endfor %}
+                            </div>
                             </div>
                         </div>
                         {% endif %}
@@ -8076,8 +8103,9 @@ html[data-theme="dark"] #calendarView .schedule-item .export-container-badge{
                             {% else %}
                             <span class="set-remaining-quantity">
                                 남은 수량 {{ export_box(container.remaining_boxes) }} box
-                                {% if export.pallet_boxes_per_unit|int > 0 %}
-                                <span class="export-container-pallet">{{ "%.1f"|format((container.remaining_boxes|float) / (export.pallet_boxes_per_unit|float)) }}P</span>
+                                {% if container.target_boxes|float > 0 %}
+                                {% set boxes_per_pallet = export.pallet_boxes_per_unit|int if export.pallet_boxes_per_unit|int > 0 else container.target_boxes|float %}
+                                <span class="export-container-pallet">{{ "%.1f"|format((container.remaining_boxes|float) / boxes_per_pallet) }}P</span>
                                 {% endif %}
                             </span>
                             {% endif %}
@@ -8122,7 +8150,15 @@ html[data-theme="dark"] #calendarView .schedule-item .export-container-badge{
                                 {% else %}
                                 <span class="export-daily-date-pill">{{ daily.date }}</span>
                                 {% endif %}
-                                {% if daily.container_labels %}
+                                {% if daily.container_breakdowns %}
+                                <span class="export-daily-container-list" aria-label="컨테이너별 생산 수량">
+                                    {% for container in daily.container_breakdowns %}
+                                    <span class="export-daily-container-badge{% if container.label in daily.completed_container_labels %} is-completed{% endif %}">
+                                        {{ container.label }} · {{ export_box(container.boxes) }} box
+                                    </span>
+                                    {% endfor %}
+                                </span>
+                                {% elif daily.container_labels %}
                                 <span class="export-daily-container-list" aria-label="해당 생산량 컨테이너">
                                     {% for container_label in daily.container_labels %}
                                     <span class="export-daily-container-badge{% if container_label in daily.completed_container_labels %} is-completed{% endif %}">{{ container_label }}</span>
@@ -9235,6 +9271,11 @@ html[data-theme="dark"] #calendarView .schedule-item .export-container-badge{
                         <button type="button" onclick="clearExportSelection()" class="schedule-selected-product-cancel">취소</button>
                     </div>
                 </div>
+                <div id="exportPalletStandardWrap" class="form-group" style="display:none;margin-top:.75rem;">
+                    <label for="exportPalletBoxesPerUnitInput">P(파렛트)당 박스 수량 *</label>
+                    <input type="number" name="pallet_boxes_per_unit" id="exportPalletBoxesPerUnitInput" min="1" step="1" placeholder="예: 192">
+                    <div class="req-muted" style="margin-top:.35rem;">상품관리의 파렛트 기준 정보가 없습니다. 입력 후 수출 일정을 저장하면 상품 정보에도 함께 저장됩니다.</div>
+                </div>
             </div>
 
             <div class="export-form-grid">
@@ -10201,6 +10242,17 @@ function toggleExportDailyRows(button) {
     const lessHint = button.dataset.hintLess || '생산건 전체 보기 중입니다.';
     button.textContent = isOpening ? lessLabel : moreLabel;
     if (hintEl) hintEl.textContent = isOpening ? lessHint : moreHint;
+}
+
+function toggleExportExcludedDates(button) {
+    const panelId = button.getAttribute('aria-controls');
+    const panel = panelId ? document.getElementById(panelId) : null;
+    if (!panel) return;
+    const isExpanded = button.getAttribute('aria-expanded') === 'true';
+    panel.hidden = isExpanded;
+    button.setAttribute('aria-expanded', String(!isExpanded));
+    const count = panel.querySelectorAll('.export-excluded-chip-form').length;
+    button.textContent = isExpanded ? `제외 일정 ${count}건 보기` : '제외 일정 접기';
 }
 
 function toggleExportCompletedSearchPanel(forceOpen = null) {
@@ -13749,6 +13801,21 @@ function searchExportProducts() {
     renderExportProductList(allProducts.filter((product) => String(product.name || '').toLowerCase().includes(keyword)));
 }
 
+function updateExportPalletStandard(product, showAlert = false) {
+    const wrap = document.getElementById('exportPalletStandardWrap');
+    const input = document.getElementById('exportPalletBoxesPerUnitInput');
+    if (!wrap || !input) return;
+    const palletBoxes = Number(product?.pallet_boxes_per_unit || 0);
+    const isMissing = !Number.isFinite(palletBoxes) || palletBoxes <= 0;
+    wrap.style.display = isMissing ? 'block' : 'none';
+    input.required = isMissing;
+    input.value = isMissing ? '' : String(palletBoxes);
+    if (isMissing && showAlert) {
+        alert(`'${String(product?.name || '선택한 상품')}' 상품은 상품관리의 파렛트 기준 정보가 없습니다. P(파렛트)당 박스 수량을 입력해 주세요. 저장하면 상품 정보에도 함께 반영됩니다.`);
+        input.focus();
+    }
+}
+
 function selectExportProduct(id, name) {
     const target = allProducts.find((product) => Number(product.id) === Number(id)) || null;
     document.getElementById('exportProductId').value = id;
@@ -13758,6 +13825,7 @@ function selectExportProduct(id, name) {
         const codeText = String(target?.code || '').trim();
         meta.textContent = codeText ? `상품코드 ${codeText}` : `상품 ID ${id}`;
     }
+    updateExportPalletStandard(target, true);
     document.getElementById('exportSelectedProduct').style.display = 'block';
     document.getElementById('exportProductList').style.display = 'none';
     document.getElementById('exportProductSearch').value = '';
@@ -13771,6 +13839,7 @@ function clearExportSelection() {
     document.getElementById('exportSelectedProduct').style.display = 'none';
     document.getElementById('exportProductList').style.display = 'none';
     document.getElementById('exportProductSearch').value = '';
+    updateExportPalletStandard(null);
 }
 
 function isExportCustomBoxesEnabled() {
