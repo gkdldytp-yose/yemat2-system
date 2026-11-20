@@ -3911,6 +3911,19 @@ def _get_production_export_box_total(row):
 
 def _sync_material_stock_with_lots(conn, material_id=None):
     cursor = conn.cursor()
+    has_balances = cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='inv_material_lot_balances'").fetchone()
+    if has_balances:
+        cursor.execute(
+            """UPDATE materials SET current_stock = (
+                SELECT COALESCE(SUM(b.qty), 0)
+                FROM inv_material_lot_balances b
+                JOIN material_lots ml ON ml.id = b.material_lot_id
+                JOIN inv_locations loc ON loc.id = b.location_id
+                WHERE ml.material_id = materials.id AND COALESCE(ml.is_disposed, 0) = 0
+                  AND loc.loc_type = 'WORKPLACE'
+            ) WHERE (? IS NULL OR id = ?)""", (material_id, material_id)
+        )
+        return
     if material_id is not None:
         cursor.execute(
             '''
@@ -4089,6 +4102,8 @@ def _consume_material_fifo(cursor, production_id, usage_id, material_id, require
         return []
 
     workplace_location_id = _get_inventory_location_id(cursor, workplace)
+    if workplace and not workplace_location_id:
+        raise ValueError(f'\uc791\uc5c5\uc7a5 \uc7ac\uace0 \uc704\uce58\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4: {workplace}')
     if workplace_location_id:
         cursor.execute(
             '''
@@ -9069,6 +9084,16 @@ def production_register_mode():
     )
 
 
+def _hide_unused_removed_bom_usage(rows, stale_usage_ids):
+    stale_ids = set(stale_usage_ids)
+    return [
+        row for row in rows
+        if not (row.get('material_id') or row.get('component_product_id'))
+        or int(row.get('id') or 0) not in stale_ids
+        or float(row.get('actual_quantity') or 0) != 0
+    ]
+
+
 @bp.route('/production/<int:production_id>')
 @login_required
 def production_detail(production_id):
@@ -9534,7 +9559,8 @@ def production_detail(production_id):
     cursor.execute('SELECT COUNT(*) as count FROM production_material_usage WHERE production_id = ?', (production_id,))
     usage_count = cursor.fetchone()['count']
 
-    if usage_count > 0 and production['status'] != done_status:
+    active_bom_mats = []
+    if usage_count > 0:
         cursor.execute(
             '''
             SELECT b.product_id, b.material_id, b.component_product_id, b.quantity_per_box,
@@ -9583,7 +9609,8 @@ def production_detail(production_id):
                 continue
             if usage_component_product_id > 0 and usage_component_product_id not in allowed_component_product_ids:
                 stale_usage_ids.append(int(usage_row['id']))
-        if stale_usage_ids:
+        # Preserve completed usage for inventory rollback.
+        if stale_usage_ids and production['status'] != done_status:
             stale_placeholders = ','.join(['?'] * len(stale_usage_ids))
             cursor.execute(
                 f'DELETE FROM production_material_usage WHERE id IN ({stale_placeholders})',
@@ -9616,8 +9643,8 @@ def production_detail(production_id):
                 int(bom.get('component_product_id') or 0),
             ) not in existing_usage_keys
         ]
-        if missing_bom_mats:
-            planned = float(production['planned_boxes'] or 0)
+        if missing_bom_mats and (production['status'] != done_status or edit_completed):
+            planned = float((production.get('actual_boxes') if edit_completed else None) or production['planned_boxes'] or 0)
             for bom in missing_bom_mats:
                 expected_qty = math.ceil(float(bom['quantity_per_box'] or 0) * planned * 100) / 100
                 cursor.execute(
@@ -9696,6 +9723,32 @@ def production_detail(production_id):
         (production_id,),
     )
     material_usage = [dict(row) for row in cursor.fetchall()]
+    if production['status'] == done_status and usage_count > 0:
+        # A removed BOM row with no recorded use is only an obsolete estimate.
+        # Keep actual usage visible as part of the completed production history.
+        material_usage = _hide_unused_removed_bom_usage(material_usage, stale_usage_ids)
+    if edit_completed and production['status'] == done_status and active_bom_mats:
+        boxes = float(production.get('actual_boxes') or production.get('planned_boxes') or 0)
+        bom_expected = {
+            (int(bom.get('material_id') or 0), int(bom.get('component_product_id') or 0)):
+                math.ceil(float(bom.get('quantity_per_box') or 0) * boxes * 100) / 100
+            for bom in active_bom_mats
+        }
+        # Keep previously recorded actual usage intact; refresh the displayed BOM
+        # requirement for matching items. Multi-row register usages are left to
+        # their existing allocation logic.
+        usage_by_key = defaultdict(list)
+        for row in material_usage:
+            key = (int(row.get('material_id') or 0), int(row.get('component_product_id') or 0))
+            if key in bom_expected:
+                usage_by_key[key].append(row)
+        for key, rows in usage_by_key.items():
+            if len(rows) == 1:
+                rows[0]['expected_quantity'] = bom_expected[key]
+                actual = rows[0].get('actual_quantity')
+                if actual is not None:
+                    rows[0]['loss_quantity'] = round(float(actual) - bom_expected[key], 4)
+                    rows[0]['yield_rate'] = round(bom_expected[key] / float(actual) * 100, 2) if float(actual) > 0 and bom_expected[key] > 0 else None
     if _is_register_entry_mode(production.get('entry_mode')) and material_usage:
         usage_ids = [int(row['id']) for row in material_usage if row.get('id') is not None]
         register_lots_by_usage = {}

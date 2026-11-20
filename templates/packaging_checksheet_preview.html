@@ -514,10 +514,6 @@ function enhancePreviewActions() {
     tools.className = 'preview-tools';
 
     toolButtons.forEach((button) => {
-        const label = (button.textContent || '').trim();
-        if (label.includes('���')) button.textContent = '축소';
-        if (label.includes('�⺻')) button.textContent = '기본';
-        if (label.includes('Ȯ')) button.textContent = '확대';
         tools.appendChild(button);
     });
 

@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}부자재 관리{% endblock %}
 {% block extra_css %}
 <style>
@@ -1482,6 +1482,17 @@ html[data-theme="dark"] .completed-search-modal form.completed-search-filters{ba
 html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-theme="dark"] .completed-search-empty{border-color:#334155;color:#a9bbd1}
 @media(max-width:700px){.completed-search-modal form.completed-search-filters{grid-template-columns:1fr 1fr}.completed-search-actions{grid-column:1 / -1}.completed-search-reset{grid-column:auto}.completed-search-actions button{flex:1}}
 
+
+@media (min-width: 761px){
+  .material-usage-log-table{table-layout:fixed;min-width:1000px;}
+  .material-usage-log-table th:nth-child(1),.material-usage-log-table td:nth-child(1){width:11%;white-space:nowrap;}
+  .material-usage-log-table th:nth-child(2),.material-usage-log-table td:nth-child(2){width:8%;}
+  .material-usage-log-table th:nth-child(3),.material-usage-log-table td:nth-child(3){width:21%;}
+  .material-usage-log-table th:nth-child(4),.material-usage-log-table td:nth-child(4){width:31%;overflow-wrap:anywhere;}
+  .material-usage-log-table th:nth-child(5),.material-usage-log-table td:nth-child(5){width:9%;}
+  .material-usage-log-table th:nth-child(6),.material-usage-log-table td:nth-child(6){width:11%;}
+  .material-usage-log-table th:nth-child(7),.material-usage-log-table td:nth-child(7){width:9%;}
+}
 </style>
 {% endblock %}
 {% block content %}
@@ -1600,6 +1611,7 @@ html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-t
                             type="text"
                             id="previousLotSearchInput"
                             class="previous-lot-search-input"
+                            lang="ko" inputmode="text" style="ime-mode: active;"
                             placeholder="로트번호 또는 입고일 검색"
                             oninput="handlePreviousLotSearch(this.value)">
                     </label>
@@ -1648,7 +1660,7 @@ html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-t
                 </div>
             </div>
             <div class="table-container">
-                <table>
+                <table class="material-usage-log-table">
                     <thead><tr><th>사용일시</th><th>생산번호</th><th>상품명</th><th>사용 로트</th><th>사용수량</th><th>로트 잔량</th><th>사용자</th></tr></thead>
                     <tbody id="usageLogTableBody"></tbody>
                 </table>
@@ -1756,7 +1768,7 @@ html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-t
             </div>
             <div style="grid-column:span 3;display:flex;flex-direction:column;gap:0.35rem;">
                 <label for="materialSearchKeyword" style="font-size:0.82rem;color:#475569;font-weight:600;">키워드 검색</label>
-                <input id="materialSearchKeyword" type="text" name="search" class="search-input" placeholder="예: 박스,유기,P03A008 (쉼표 구분 AND 검색)" value="{{ search_keyword or '' }}">
+                <input id="materialSearchKeyword" type="text" name="search" class="search-input" lang="ko" inputmode="text" style="ime-mode: active;" placeholder="예: 박스,유기,P03A008 (쉼표 구분 AND 검색)" value="{{ search_keyword or '' }}">
             </div>
             <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:0.5rem;flex-wrap:wrap;">
                 <button type="button" class="btn btn-small {{ 'btn-secondary' if not selected_show_all_stock else '' }}" style="{{ 'background:#0f766e;' if selected_show_all_stock else '' }}" onclick="toggleMaterialShowAllStock()">{{ '현재 재고만 보기' if selected_show_all_stock else '작업장 재고 전체 보기' }}</button>
@@ -1881,7 +1893,7 @@ html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-t
                 </div>
                 <div class="form-group">
                     <label>부자재 검색</label>
-                    <input type="text" id="issueSearch" lang="ko" style="ime-mode: active;" placeholder="코드 또는 부자재명 검색, 쉼표 구분 AND 검색" onfocus="prepareKoreanInput(this)" oninput="filterIssueMaterials()">
+                    <input type="text" id="issueSearch" lang="ko" inputmode="text" style="ime-mode: active;" placeholder="코드 또는 부자재명 검색, 쉼표 구분 AND 검색" oninput="filterIssueMaterials()">
                 </div>
                 <div class="form-group">
                     <label>부자재 목록</label>
@@ -2129,7 +2141,7 @@ html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-t
                 </div>
                 <div class="form-group">
                     <label>부자재 검색</label>
-                    <input type="text" id="exportSearch" lang="ko" style="ime-mode: active;" placeholder="코드 또는 부자재명 검색, 쉼표 구분 AND 검색" onfocus="prepareKoreanInput(this)" oninput="filterExportMaterials()">
+                    <input type="text" id="exportSearch" lang="ko" inputmode="text" style="ime-mode: active;" placeholder="코드 또는 부자재명 검색, 쉼표 구분 AND 검색" oninput="filterExportMaterials()">
                 </div>
                 <div class="form-group">
                     <label>부자재 목록</label>
@@ -2446,7 +2458,7 @@ html[data-theme="dark"] .completed-search-result span{color:#bac9dc} html[data-t
  <div class="receipt-modal completed-search-modal" role="dialog" aria-modal="true" aria-labelledby="completedSearchTitle" onclick="event.stopPropagation()">
   <div class="receipt-modal-head"><div><h3 class="receipt-modal-title" id="completedSearchTitle">완료 내역 검색</h3><p class="receipt-modal-caption">전체 완료 내역에서 자재명, 코드, 작업장, 비고 등을 검색합니다.</p></div><button type="button" class="receipt-modal-close" aria-label="닫기" onclick="closeCompletedSearch()">×</button></div>
   <div class="receipt-modal-body"><form class="completed-search-filters" onsubmit="event.preventDefault(); renderCompletedSearch()">
-   <div class="search-keyword"><label for="completedSearchKeyword">키워드</label><input id="completedSearchKeyword" type="search" placeholder="쉼표로 구분하여 모두 포함 검색" title="쉼표로 구분한 키워드가 모두 포함된 내역을 검색합니다"></div>
+   <div class="search-keyword"><label for="completedSearchKeyword">키워드</label><input id="completedSearchKeyword" type="search" lang="ko" inputmode="text" style="ime-mode: active;" placeholder="쉼표로 구분하여 모두 포함 검색" title="쉼표로 구분한 키워드가 모두 포함된 내역을 검색합니다"></div>
    <div><label for="completedSearchFrom">완료일 시작</label><input id="completedSearchFrom" type="date"></div>
    <div><label for="completedSearchTo">완료일 종료</label><input id="completedSearchTo" type="date"></div>
    <div class="completed-search-actions"><button type="button" class="completed-search-reset" onclick="resetCompletedSearch()">초기화</button><button type="submit" class="completed-search-submit">검색</button></div>
@@ -3892,12 +3904,6 @@ function filterExportMaterials(){
     renderMaterialOptions(list, filtered, list.value);
 }
 
-function prepareKoreanInput(input){
-    if(!input) return;
-    input.setAttribute('lang', 'ko');
-    input.style.imeMode = 'active';
-}
-
 function syncReceiptNoneState(kind){
     const isManufacture = kind === 'manufacture';
     const input = document.getElementById(isManufacture ? 'receiptManufactureDate' : 'receiptExpiryDate');
@@ -4964,11 +4970,11 @@ function renderUsageRows(logs){
     tbody.innerHTML = logs.map(log => `
         <tr>
             <td>${formatUsageLogDateCell(log)}</td>
-            <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_no || '-'}</a>` : (log.production_no || '-')}</td>
+            <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_id}</a>` : (log.production_no || '-')}</td>
             <td>${log.product_name || '-'}</td>
             <td>${log.lot || '-'}</td>
             <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
-            <td>${Number(log.remaining_quantity || 0).toFixed(1)}</td>
+            <td>${log.remaining_quantity == null ? '-' : Number(log.remaining_quantity).toFixed(1)}</td>
             <td>${log.user_name || '-'}</td>
         </tr>
     `).join('');
@@ -4989,7 +4995,7 @@ function aggregateUsageLogs(logs){
                 ...log,
                 __index: index,
                 total_used_quantity: Number(log?.total_used_quantity || log?.used_quantity || 0),
-                remaining_quantity: 0,
+                remaining_quantity: null,
                 lot_parts: [],
             });
         }
@@ -4997,7 +5003,7 @@ function aggregateUsageLogs(logs){
         const lotName = trimMaterialCodeFromLot(log?.lot || '-');
         const usedQty = Number(log?.used_quantity || 0);
         bucket.lot_parts.push(`${lotName} (${usedQty.toFixed(1)})`);
-        bucket.remaining_quantity += Number(log?.remaining_quantity || 0);
+        if(log?.remaining_quantity != null) bucket.remaining_quantity = (bucket.remaining_quantity ?? 0) + Number(log.remaining_quantity);
     });
     return Array.from(grouped.values())
         .sort((a, b) => a.__index - b.__index)
@@ -5005,7 +5011,7 @@ function aggregateUsageLogs(logs){
             ...item,
             lot: item.lot_parts.length ? item.lot_parts.join(', ') : (item.lot || '-'),
             used_quantity: Number(item.total_used_quantity || item.used_quantity || 0),
-            remaining_quantity: Number(item.remaining_quantity || 0),
+            remaining_quantity: item.remaining_quantity,
         }));
 }
 

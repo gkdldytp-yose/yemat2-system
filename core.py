@@ -92,11 +92,58 @@ def _prepare_db_connection(conn):
     _ensure_raw_material_schema(conn)
     _ensure_material_lot_schema(conn)
     _ensure_logistics_schema(conn)
+    _ensure_material_detail_indexes(conn)
     _ensure_import_schema(conn)
     _ensure_backup_schema(conn)
     _ensure_dashboard_todo_schema(conn)
     _cleanup_old_logs(conn)
     return conn
+
+
+def _ensure_material_detail_indexes(conn):
+    """Keep material detail history lookups indexed on existing databases."""
+    indexes = (
+        ('audit_logs', 'CREATE INDEX IF NOT EXISTS idx_audit_entity_entity_id_id ON audit_logs(entity, entity_id, id DESC)'),
+        ('production_material_usage', 'CREATE INDEX IF NOT EXISTS idx_pmu_material_id ON production_material_usage(material_id)'),
+        ('production_material_usage', 'CREATE INDEX IF NOT EXISTS idx_pmu_production_id ON production_material_usage(production_id)'),
+        ('production_material_lot_usage', 'CREATE INDEX IF NOT EXISTS idx_pmlu_usage_material ON production_material_lot_usage(production_usage_id, material_id)'),
+    )
+    existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    for table, statement in indexes:
+        if table in existing_tables:
+            conn.execute(statement)
+
+
+def reconcile_material_receipts(receive_logs, cancellation_logs):
+    """Apply receipt reversals in insertion order, keeping update history separate."""
+    events = [(int(row['log_id']), False, dict(row)) for row in receive_logs]
+    events.extend((int(row['log_id']), True, dict(row)) for row in cancellation_logs)
+    active_by_lot = {}
+    for _, is_cancel, row in sorted(events, key=lambda event: event[0]):
+        lot_id = int(row.get('material_lot_id') or 0)
+        if not lot_id:
+            continue
+        active = active_by_lot.setdefault(lot_id, [])
+        if not is_cancel:
+            active.append(row)
+            continue
+        remaining = round(float(row.get('quantity') or 0), 4)
+        candidates = [item for item in reversed(active)
+                      if item.get('action') in ('issue_request_complete', 'issue_request_update')
+                      and float(item.get('received_quantity') or 0) > 0]
+        exact = next((item for item in candidates
+                      if abs(float(item['received_quantity']) - remaining) < 0.0001), None)
+        if exact is not None:
+            candidates.remove(exact)
+            candidates.insert(0, exact)
+        for item in candidates:
+            deducted = min(remaining, float(item['received_quantity']))
+            item['received_quantity'] = round(float(item['received_quantity']) - deducted, 4)
+            remaining = round(remaining - deducted, 4)
+            if remaining <= 0:
+                break
+    return [row for rows in active_by_lot.values() for row in rows
+            if float(row.get('received_quantity') or 0) > 0]
 
 
 def _create_db_connection():

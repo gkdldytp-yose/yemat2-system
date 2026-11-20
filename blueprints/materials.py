@@ -17,6 +17,7 @@ from core import (
     login_required,
     role_required,
     rollback_db,
+    reconcile_material_receipts,
     WORKPLACES,
     LOGISTICS_WORKPLACE,
     SHARED_WORKPLACE,
@@ -605,7 +606,7 @@ def _move_lot_balance_between_locations(cursor, material_lot_id, from_location_i
     ).fetchone()
     from_qty = float(from_row['qty'] or 0) if from_row else 0.0
     if from_qty < qty_value:
-        raise ValueError('?? ??? ?????.')
+        raise ValueError('출고할 로트의 재고가 부족합니다.')
 
     _upsert_material_lot_balance(cursor, from_location_id, material_lot_id, from_qty - qty_value)
 
@@ -631,7 +632,7 @@ def _transfer_logistics_stock_to_workplace(cursor, material_id, workplace, qty):
     logistics_location_id = _get_inventory_location_id(cursor, '\ubb3c\ub958\ucc3d\uace0')
     workplace_location_id = _get_inventory_location_id(cursor, workplace)
     if not logistics_location_id or not workplace_location_id:
-        raise ValueError('?? ?? ??? ?? ? ????.')
+        raise ValueError('물류창고 또는 작업장 재고 위치를 찾을 수 없습니다.')
 
     lots = cursor.execute(
         '''
@@ -649,7 +650,7 @@ def _transfer_logistics_stock_to_workplace(cursor, material_id, workplace, qty):
 
     available = sum(float(row['qty'] or 0) for row in lots)
     if available < qty_need:
-        raise ValueError('?? ?? ??? ?????.')
+        raise ValueError('물류창고 재고가 부족합니다.')
 
     moved = 0.0
     remaining = qty_need
@@ -2396,9 +2397,9 @@ def update_material():
         moq_value = float(moq or 0)
         upper_unit_qty = float(upper_unit_qty_raw or 0) if upper_unit else None
     except ValueError:
-        return "<script>alert('????? ???????? ?????????????'); history.back();</script>"
+        return "<script>alert('숫자 항목에 올바른 값을 입력해 주세요.'); history.back();</script>"
     if upper_unit and (upper_unit_qty is None or upper_unit_qty <= 0):
-        return "<script>alert('?? ?? ???? 0?? ?? ???.'); history.back();</script>"
+        return "<script>alert('상위 단위 환산값은 0보다 커야 합니다.'); history.back();</script>"
 
     workplace = get_workplace()
     try:
@@ -2471,7 +2472,7 @@ def move_material_workplace(material_id):
     next_url = (request.form.get('next') or '').strip()
     valid_targets = set(WORKPLACES) | {LOGISTICS_WORKPLACE}
     if target_workplace not in valid_targets:
-        return "<script>alert('??? ???? ?? ??? ???.'); history.back();</script>"
+        return "<script>alert('이동할 작업장을 선택해 주세요.'); history.back();</script>"
 
     try:
         with db_transaction() as conn:
@@ -2487,7 +2488,7 @@ def move_material_workplace(material_id):
             else:
                 final_workplace = SHARED_WORKPLACE if (before['category'] or '').strip() in SHARED_MATERIAL_CATEGORIES else target_workplace
             if source_workplace == final_workplace:
-                return "<script>alert('?? ?????? ??? ? ????.'); history.back();</script>"
+                return "<script>alert('현재 작업장으로는 이동할 수 없습니다.'); history.back();</script>"
 
             cursor.execute('UPDATE materials SET workplace = ? WHERE id = ?', (final_workplace, material_id))
             cursor.execute(
@@ -2586,10 +2587,9 @@ def material_detail(material_id):
                   AND COALESCE(ml.is_disposed, 0) = 0
                   AND b.location_id IN ({placeholders})
                   AND COALESCE(b.qty, 0) > 0
-                  AND COALESCE(l.name, '') <> '????'
+                  AND COALESCE(l.name, '') <> '물류창고'
                   AND COALESCE(l.loc_type, '') <> 'WAREHOUSE'
-                ORDER BY CASE WHEN l.name = '????' THEN 1 ELSE 0 END,
-                         CASE WHEN ml.receiving_date IS NULL OR TRIM(ml.receiving_date) = '' THEN 1 ELSE 0 END,
+                ORDER BY CASE WHEN ml.receiving_date IS NULL OR TRIM(ml.receiving_date) = '' THEN 1 ELSE 0 END,
                          ml.receiving_date DESC,
                          ml.lot_seq DESC,
                          ml.id DESC
@@ -2625,27 +2625,10 @@ SELECT
                 COALESCE(ml.lot, '-') as lot,
                 COALESCE(pmlu.quantity, pmu.actual_quantity, 0) as used_quantity,
                 COALESCE(pmu.actual_quantity, 0) as total_used_quantity,
-                CASE
-                    WHEN pmlu.id IS NOT NULL THEN
-                        COALESCE(ml.received_quantity, 0) - COALESCE((
-                            SELECT SUM(COALESCE(pmlu2.quantity, 0))
-                            FROM production_material_lot_usage pmlu2
-                            JOIN production_material_usage pmu2 ON pmu2.id = pmlu2.production_usage_id
-                            LEFT JOIN productions p2 ON p2.id = pmu2.production_id
-                            WHERE pmlu2.material_lot_id = pmlu.material_lot_id
-                              AND (
-                                  COALESCE(p2.production_date, substr(pmu2.created_at, 1, 10)) < COALESCE(p.production_date, substr(pmu.created_at, 1, 10))
-                                  OR (
-                                      COALESCE(p2.production_date, substr(pmu2.created_at, 1, 10)) = COALESCE(p.production_date, substr(pmu.created_at, 1, 10))
-                                      AND (
-                                          pmu2.production_id < pmu.production_id
-                                          OR (pmu2.production_id = pmu.production_id AND pmlu2.id <= pmlu.id)
-                                      )
-                                  )
-                              )
-                        ), 0)
-                    ELSE COALESCE(m.current_stock, 0)
-                END as remaining_quantity,
+                CASE WHEN pmlu.id IS NOT NULL THEN COALESCE((
+                    SELECT SUM(b.qty) FROM inv_material_lot_balances b
+                    WHERE b.material_lot_id = pmlu.material_lot_id AND b.location_id = ?
+                ), 0) ELSE NULL END as remaining_quantity,
                 COALESCE(
                     (
                         SELECT NULLIF(al.name, '')
@@ -2674,6 +2657,7 @@ SELECT
              AND pmlu.material_id = pmu.material_id
             LEFT JOIN material_lots ml ON ml.id = pmlu.material_lot_id
             WHERE pmu.material_id = ?
+              AND TRIM(COALESCE(p.workplace, '')) = ?
               AND COALESCE(pmu.actual_quantity, 0) > 0
               AND {_completed_production_status_sql('p.status')}
             ORDER BY
@@ -2682,7 +2666,7 @@ SELECT
                 COALESCE(pmlu.id, 0) DESC
             LIMIT 200
             """,
-            (material_id,),
+            (workplace_location_id, material_id, workplace_name),
         )
         usage_logs = [dict(row) for row in cursor.fetchall()]
 
@@ -2974,49 +2958,18 @@ SELECT
         receive_logs = [row for row in receive_logs if _receive_log_matches_current_workplace(row)]
         if initial_stock_log and not _receive_log_matches_current_workplace(initial_stock_log):
             initial_stock_log = None
-        effective_receive_logs = []
-        cancel_qty_by_lot = {}
-        positive_receive_logs_by_lot = {}
-        for row in receive_logs:
-            lot_id = int(row.get('material_lot_id') or 0)
-            if lot_id <= 0:
-                continue
-            positive_receive_logs_by_lot.setdefault(lot_id, []).append(dict(row))
-        cursor.execute(
+        cancellation_rows = cursor.execute(
             """
-            SELECT
-                material_lot_id,
-                COALESCE(SUM(quantity), 0) as cancel_qty
+            SELECT id AS log_id, material_lot_id, quantity, COALESCE(note, '') AS note
             FROM material_lot_logs
-            WHERE material_id = ?
-              AND COALESCE(action, '') = 'issue_request_cancel'
-              AND COALESCE(quantity, 0) > 0
-            GROUP BY material_lot_id
-            """,
-            (material_id,),
-        )
-        for row in cursor.fetchall():
-            lot_id = int(row['material_lot_id'] or 0)
-            if lot_id > 0:
-                cancel_qty_by_lot[lot_id] = _round_to_1_decimal(row['cancel_qty'] or 0)
-
-        for lot_id, rows in positive_receive_logs_by_lot.items():
-            remaining_cancel_qty = _round_to_1_decimal(cancel_qty_by_lot.get(lot_id, 0))
-            complete_rows = [row for row in rows if str(row.get('action') or '') == 'issue_request_complete']
-            other_rows = [row for row in rows if str(row.get('action') or '') != 'issue_request_complete']
-            for row in sorted(complete_rows, key=lambda item: ((item.get('received_at') or ''), int(item.get('log_id') or 0)), reverse=True):
-                row_qty = _round_to_1_decimal(row.get('received_quantity') or 0)
-                if remaining_cancel_qty > 0:
-                    if remaining_cancel_qty >= row_qty - 0.01:
-                        remaining_cancel_qty = _round_to_1_decimal(remaining_cancel_qty - row_qty)
-                        continue
-                    patched = dict(row)
-                    patched['received_quantity'] = _round_to_1_decimal(row_qty - remaining_cancel_qty)
-                    remaining_cancel_qty = 0.0
-                    effective_receive_logs.append(patched)
-                else:
-                    effective_receive_logs.append(row)
-            effective_receive_logs.extend(other_rows)
+            WHERE material_id = ? AND action = 'issue_request_cancel' AND quantity > 0
+            """, (material_id,),
+        ).fetchall()
+        cancellation_logs = [dict(row) for row in cancellation_rows
+                             if not workplace_name or str(row['note']).startswith(workplace_name)]
+        effective_receive_logs = reconcile_material_receipts(receive_logs, cancellation_logs)
+        reconciled_receive_logs = [dict(row) for row in effective_receive_logs]
+        logged_lot_ids = {int(row.get('material_lot_id') or 0) for row in receive_logs}
 
         effective_lot_ids = {
             int(row.get('material_lot_id') or 0)
@@ -3025,7 +2978,7 @@ SELECT
         }
         for lot_row in visible_material_lot_rows:
             lot_id = int(lot_row.get('id') or 0)
-            if lot_id <= 0 or lot_id in effective_lot_ids:
+            if lot_id <= 0 or lot_id in effective_lot_ids or lot_id in logged_lot_ids:
                 continue
             current_qty = _round_to_1_decimal(lot_row.get('current_quantity') or 0)
             base_received_qty = _round_to_1_decimal(lot_row.get('received_quantity') or lot_row.get('legacy_quantity') or 0)
@@ -3066,9 +3019,10 @@ SELECT
         active_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) != 1]
         disposed_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) == 1]
         receive_complete_logs = [
-            row for row in active_receive_logs
-            if str(row.get('action') or '') in {'create', 'issue_request_complete'}
+            row for row in reconciled_receive_logs
+            if int(row.get('is_disposed') or 0) != 1
         ]
+        receive_complete_logs.sort(key=lambda row: ((row.get('received_at') or ''), int(row.get('log_id') or 0)), reverse=True)
         receive_update_logs = [
             row for row in active_receive_logs
             if str(row.get('action') or '') == 'issue_request_update'
@@ -3125,7 +3079,7 @@ def add_material_lot():
             cursor.execute('SELECT id, code, name, unit, workplace FROM materials WHERE id = ?', (material_id,))
             material = cursor.fetchone()
             if not material:
-                return jsonify({'ok': False, 'message': '???? ?? ? ????.'}), 404
+                return jsonify({'ok': False, 'message': '부자재를 찾을 수 없습니다.'}), 404
 
             lot_seq = _next_lot_seq(cursor, int(material_id), receiving_date)
             lot = _build_material_lot(material['code'], receiving_date, lot_seq)
@@ -3167,7 +3121,7 @@ def add_material_lot():
             )
             return jsonify({'ok': True, 'lot': lot, 'lot_id': lot_id})
     except Exception:
-        return jsonify({'ok': False, 'message': '?? ?? ? ??? ??????.'}), 500
+        return jsonify({'ok': False, 'message': '로트 등록 중 오류가 발생했습니다.'}), 500
 
 @bp.route('/materials/material-lots/<int:lot_id>/update', methods=['POST'])
 @login_required
@@ -3734,6 +3688,7 @@ def raw_materials():
                     id,
                     COALESCE(NULLIF(TRIM(code), ''), '') as code,
                     name,
+                    supplier_name,
                     sheets_per_sok,
                     receiving_date,
                     COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as ja_ho
@@ -3756,6 +3711,9 @@ def raw_materials():
             SELECT
                 n.code,
                 n.name,
+                COALESCE((SELECT TRIM(supplier.supplier_name) FROM normalized supplier
+                          WHERE supplier.code = n.code AND TRIM(COALESCE(supplier.supplier_name, '')) <> ''
+                          ORDER BY COALESCE(supplier.receiving_date, '') DESC, supplier.id DESC LIMIT 1), '') AS supplier_name,
                 COALESCE(n.sheets_per_sok, 0) as sheets_per_sok,
                 COALESCE(up.product_names, '') as product_names
             FROM normalized n
@@ -3783,6 +3741,7 @@ def raw_materials():
                     id,
                     COALESCE(NULLIF(TRIM(code), ''), '') as code,
                     name,
+                    supplier_name,
                     sheets_per_sok,
                     receiving_date,
                     COALESCE(NULLIF(TRIM(ja_ho), ''), NULLIF(TRIM(car_number), '')) as ja_ho
@@ -3808,6 +3767,9 @@ def raw_materials():
             SELECT
                 n.code,
                 n.name,
+                COALESCE((SELECT TRIM(supplier.supplier_name) FROM normalized supplier
+                          WHERE supplier.code = n.code AND TRIM(COALESCE(supplier.supplier_name, '')) <> ''
+                          ORDER BY COALESCE(supplier.receiving_date, '') DESC, supplier.id DESC LIMIT 1), '') AS supplier_name,
                 COALESCE(n.sheets_per_sok, 0) as sheets_per_sok,
                 COALESCE(up.product_names, '') as product_names
             FROM normalized n

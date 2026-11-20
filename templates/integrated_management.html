@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}통합 관리 - 예맛 생산관리{% endblock %}
 
 {% block extra_css %}
@@ -1136,6 +1136,17 @@ html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:
 .integrated-calendar-combined .integrated-calendar-workplace-group{margin-top:.36rem;padding-top:.1rem;border-top:0;}.integrated-calendar-combined .integrated-calendar-day-workplace{display:block;width:100%;margin:0 0 .16rem;padding:.06rem 0 .14rem;border-radius:0;border-bottom:2px solid currentColor;background:transparent !important;font-size:.62rem;font-weight:950;line-height:1.2;box-shadow:none;}.integrated-calendar-combined .integrated-calendar-day-workplace.workplace-tone-0{color:#60a5fa;}.integrated-calendar-combined .integrated-calendar-day-workplace.workplace-tone-1{color:#a78bfa;}.integrated-calendar-combined .integrated-calendar-day-workplace.workplace-tone-2{color:#2dd4bf;}.integrated-calendar-combined .integrated-calendar-day-workplace.workplace-tone-3{color:#fb923c;}.integrated-calendar-combined .integrated-calendar-day-workplace.workplace-tone-4{color:#f472b6;}.integrated-calendar-combined .integrated-calendar-day-workplace.workplace-tone-5{color:#a3e635;}.integrated-calendar-combined .integrated-calendar-event{min-height:20px;margin-top:3px;padding:.2rem .32rem;border-left-width:4px;border-radius:4px;font-size:.7rem;font-weight:900;line-height:1.3;box-shadow:inset 0 0 0 1px rgba(148,163,184,.2),0 1px 2px rgba(15,23,42,.16);}.integrated-calendar-combined .integrated-calendar-event.is-completed{box-shadow:inset 0 0 0 1px rgba(74,222,128,.46),0 1px 2px rgba(15,23,42,.16);}.integrated-calendar-combined .integrated-calendar-event:not(.is-completed){box-shadow:inset 0 0 0 1px rgba(148,163,184,.32),0 1px 2px rgba(15,23,42,.16);}.integrated-calendar-combined .integrated-calendar-event-state{flex-basis:13px;font-size:.72rem;}
 /* 작업장 필터: 색상은 식별 점과 선택선에만 쓰고, 버튼 표면은 차분하게 통일한다. */
 .integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace{--workplace-color:#60a5fa;display:inline-flex;align-items:center;gap:.38rem;min-height:30px;margin:0;padding:.32rem .58rem;border:1px solid #475569 !important;border-radius:8px;background:#172033 !important;color:#e5eefc !important;font-size:.74rem;font-weight:850;line-height:1;opacity:1;box-shadow:none;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--workplace-color);box-shadow:0 0 0 2px rgba(255,255,255,.08);flex:0 0 auto;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-0{--workplace-color:#60a5fa;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-1{--workplace-color:#a78bfa;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-2{--workplace-color:#2dd4bf;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-3{--workplace-color:#fb923c;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-4{--workplace-color:#f472b6;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.workplace-tone-5{--workplace-color:#a3e635;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace:hover{border-color:var(--workplace-color) !important;background:#1e293b !important;transform:translateY(-1px);}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.is-selected{border-color:var(--workplace-color) !important;background:#24344d !important;color:#fff !important;transform:translateY(-1px);box-shadow:inset 3px 0 0 var(--workplace-color),0 3px 8px rgba(0,0,0,.22) !important;}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.is-selected::after{color:var(--workplace-color);}.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.is-selected::before{box-shadow:0 0 0 3px color-mix(in srgb,var(--workplace-color) 25%,transparent);}@supports not (color:color-mix(in srgb,red,transparent)){.integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.is-selected::before{box-shadow:0 0 0 3px rgba(255,255,255,.12);}}html[data-theme="light"] .integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace{background:#fff !important;border-color:#cbd5e1 !important;color:#334155 !important;}html[data-theme="light"] .integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace:hover{background:#f8fafc !important;}html[data-theme="light"] .integrated-calendar-legend .integrated-calendar-filter.integrated-calendar-day-workplace.is-selected{background:#f8fbff !important;color:#0f172a !important;box-shadow:inset 3px 0 0 var(--workplace-color),0 2px 6px rgba(15,23,42,.09) !important;}
+
+@media (min-width: 761px){
+  .material-usage-log-table{table-layout:fixed;min-width:1000px;}
+  .material-usage-log-table th:nth-child(1),.material-usage-log-table td:nth-child(1){width:11%;white-space:nowrap;}
+  .material-usage-log-table th:nth-child(2),.material-usage-log-table td:nth-child(2){width:8%;}
+  .material-usage-log-table th:nth-child(3),.material-usage-log-table td:nth-child(3){width:21%;}
+  .material-usage-log-table th:nth-child(4),.material-usage-log-table td:nth-child(4){width:31%;overflow-wrap:anywhere;}
+  .material-usage-log-table th:nth-child(5),.material-usage-log-table td:nth-child(5){width:9%;}
+  .material-usage-log-table th:nth-child(6),.material-usage-log-table td:nth-child(6){width:11%;}
+  .material-usage-log-table th:nth-child(7),.material-usage-log-table td:nth-child(7){width:9%;}
+}
 </style>
 {% endblock %}
 
@@ -3543,7 +3554,7 @@ html[data-theme="dark"] .integrated-calendar-event.category-mutrae{border-color:
                 </div>
             </div>
             <div class="table-container">
-                <table>
+                <table class="material-usage-log-table">
                     <thead>
                         <tr>
                             <th>사용일</th>
@@ -5298,11 +5309,11 @@ function renderUsageRows(logs){
     tbody.innerHTML = logs.map(log => `
         <tr>
             <td>${formatUsageLogDateCell(log)}</td>
-            <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_no || '-'}</a>` : (log.production_no || '-')}</td>
+            <td>${log.production_id ? `<a href="/production/${log.production_id}" style="color:#2563eb;font-weight:800;text-decoration:none;">${log.production_id}</a>` : (log.production_no || '-')}</td>
             <td>${log.product_name || '-'}</td>
             <td>${log.lot || '-'}</td>
             <td>${Number(log.used_quantity || 0).toFixed(1)}</td>
-            <td>${Number(log.remaining_quantity || 0).toFixed(1)}</td>
+            <td>${log.remaining_quantity == null ? '-' : Number(log.remaining_quantity).toFixed(1)}</td>
             <td>${log.user_name || '-'}</td>
         </tr>
     `).join('');
@@ -5323,7 +5334,7 @@ function aggregateUsageLogs(logs){
                 ...log,
                 __index: index,
                 total_used_quantity: Number(log?.total_used_quantity || log?.used_quantity || 0),
-                remaining_quantity: 0,
+                remaining_quantity: null,
                 lot_parts: [],
             });
         }
@@ -5331,7 +5342,7 @@ function aggregateUsageLogs(logs){
         const lotName = trimMaterialCodeFromLot(log?.lot || '-');
         const usedQty = Number(log?.used_quantity || 0);
         bucket.lot_parts.push(`${lotName} (${usedQty.toFixed(1)})`);
-        bucket.remaining_quantity += Number(log?.remaining_quantity || 0);
+        if(log?.remaining_quantity != null) bucket.remaining_quantity = (bucket.remaining_quantity ?? 0) + Number(log.remaining_quantity);
     });
     return Array.from(grouped.values())
         .sort((a, b) => a.__index - b.__index)
@@ -5339,7 +5350,7 @@ function aggregateUsageLogs(logs){
             ...item,
             lot: item.lot_parts.length ? item.lot_parts.join(', ') : (item.lot || '-'),
             used_quantity: Number(item.total_used_quantity || item.used_quantity || 0),
-            remaining_quantity: Number(item.remaining_quantity || 0),
+            remaining_quantity: item.remaining_quantity,
         }));
 }
 

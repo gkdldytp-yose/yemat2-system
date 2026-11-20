@@ -1054,17 +1054,19 @@ function goToExistingRawEntry(){
 function applyRawCodeProfile(code){
     const selectedCode = (code || '').trim();
     const nameEl = document.getElementById('add_name');
+    const supplierEl = document.getElementById('add_supplier_name');
     const codeEl = document.getElementById('add_code');
     const sheetsEl = document.getElementById('add_sheets_per_sok');
     const dateEl = document.getElementById('add_receiving_date');
     const jaHoEl = document.getElementById('add_ja_ho');
     const totalEl = document.getElementById('add_total_stock');
     const currentEl = document.getElementById('add_current_stock');
-    if(!codeEl || !nameEl || !sheetsEl || !dateEl || !jaHoEl || !totalEl || !currentEl) return;
+    if(!codeEl || !nameEl || !supplierEl || !sheetsEl || !dateEl || !jaHoEl || !totalEl || !currentEl) return;
 
     if(!selectedCode){
         codeEl.value = '';
         nameEl.value = '';
+        supplierEl.value = '';
         sheetsEl.value = '';
         dateEl.value = '';
         jaHoEl.value = '';
@@ -1078,6 +1080,7 @@ function applyRawCodeProfile(code){
     if(!p) return;
 
     nameEl.value = p.name || '';
+    supplierEl.value = p.supplier_name || '';
     sheetsEl.value = p.sheets_per_sok || '';
     dateEl.value = p.receiving_date || '';
     jaHoEl.value = p.ja_ho || '';
@@ -2086,6 +2089,8 @@ html[data-theme="dark"] .raw-supplier-badge span{color:#a5b4fc}
 .raw-lot-edit-btn.is-saving{background:linear-gradient(135deg,#16a34a,#059669)!important;border-color:#22c55e!important;}
 html[data-theme="dark"] .material-detail-tab{background:rgba(15,23,42,0.72);border-color:rgba(148,163,184,0.24);color:var(--text-secondary);}
 html[data-theme="dark"] .material-detail-tab.active{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:0 8px 20px rgba(37,99,235,0.24);}
+html[data-theme="dark"] #add_supplier_name:-webkit-autofill,
+html[data-theme="dark"] #add_supplier_name:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 1000px #0f172a inset;box-shadow:0 0 0 1000px #0f172a inset;-webkit-text-fill-color:#e5eefc;caret-color:#e5eefc;}
 html[data-theme="dark"] .done-calendar,
 html[data-theme="dark"] .raw-add-panel{background:linear-gradient(135deg,rgba(15,23,42,0.94) 0%,rgba(30,41,59,0.88) 100%);border-color:rgba(96,165,250,0.24);}
 html[data-theme="dark"] .done-calendar-title,
