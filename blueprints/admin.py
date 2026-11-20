@@ -30,6 +30,7 @@ from core import (
     SHARED_MATERIAL_CATEGORIES,
     audit_log,
     rollback_db,
+    reconcile_material_receipts,
 )
 from blueprints.production import _delete_production_record, _get_auto_holiday_name, _get_holiday_caption
 
@@ -1889,7 +1890,7 @@ def _build_production_statistics_export_rows(payload):
         return headers, rows
 
     if view == 'product':
-        headers = ['???', '??', '????', '???(BOX)', '???', '??', '??1', '??2', '??', '??', '??', '??', '???', '???']
+        headers = ['상품명', '일시', '생산번호', '생산량(BOX)', '원초명', '수율', '기름1', '기름2', '소금', '내포', '외포', '박스', '실리카', '트레이']
         rows = [[
             row['product_name'],
             row['production_date'],
@@ -4133,7 +4134,7 @@ def integrated_management():
         if selected_material_type == 'raw_like':
             query += " AND COALESCE(m.category, '') IN ('기름', '소금')"
         elif selected_material_type == 'material_only':
-            query += " AND COALESCE(m.category, '') NOT IN ('??', '??')"
+            query += " AND COALESCE(m.category, '') NOT IN ('기름', '소금')"
         if selected_material_category:
             query += ' AND COALESCE(m.category, "") = ?'
             params.append(selected_material_category)
@@ -6562,49 +6563,18 @@ SELECT
         if initial_stock_log and not _receive_log_matches_current_workplace(initial_stock_log):
             initial_stock_log = None
 
-        effective_receive_logs = []
-        cancel_qty_by_lot = {}
-        positive_receive_logs_by_lot = {}
-        for row in receive_logs:
-            lot_id = int(row.get('material_lot_id') or 0)
-            if lot_id <= 0:
-                continue
-            positive_receive_logs_by_lot.setdefault(lot_id, []).append(dict(row))
-        cursor.execute(
+        cancellation_rows = cursor.execute(
             """
-            SELECT
-                material_lot_id,
-                COALESCE(SUM(quantity), 0) as cancel_qty
+            SELECT id AS log_id, material_lot_id, quantity, COALESCE(note, '') AS note
             FROM material_lot_logs
-            WHERE material_id = ?
-              AND COALESCE(action, '') = 'issue_request_cancel'
-              AND COALESCE(quantity, 0) > 0
-            GROUP BY material_lot_id
-            """,
-            (material_id,),
-        )
-        for row in cursor.fetchall():
-            lot_id = int(row['material_lot_id'] or 0)
-            if lot_id > 0:
-                cancel_qty_by_lot[lot_id] = _round_to_1_decimal(row['cancel_qty'] or 0)
-
-        for lot_id, rows in positive_receive_logs_by_lot.items():
-            remaining_cancel_qty = _round_to_1_decimal(cancel_qty_by_lot.get(lot_id, 0))
-            complete_rows = [row for row in rows if str(row.get('action') or '') == 'issue_request_complete']
-            other_rows = [row for row in rows if str(row.get('action') or '') != 'issue_request_complete']
-            for row in sorted(complete_rows, key=lambda item: ((item.get('received_at') or ''), int(item.get('log_id') or 0)), reverse=True):
-                row_qty = _round_to_1_decimal(row.get('received_quantity') or 0)
-                if remaining_cancel_qty > 0:
-                    if remaining_cancel_qty >= row_qty - 0.01:
-                        remaining_cancel_qty = _round_to_1_decimal(remaining_cancel_qty - row_qty)
-                        continue
-                    patched = dict(row)
-                    patched['received_quantity'] = _round_to_1_decimal(row_qty - remaining_cancel_qty)
-                    remaining_cancel_qty = 0.0
-                    effective_receive_logs.append(patched)
-                else:
-                    effective_receive_logs.append(row)
-            effective_receive_logs.extend(other_rows)
+            WHERE material_id = ? AND action = 'issue_request_cancel' AND quantity > 0
+            """, (material_id,),
+        ).fetchall()
+        cancellation_logs = [dict(row) for row in cancellation_rows
+                             if not detail_workplace or str(row['note']).startswith(detail_workplace)]
+        effective_receive_logs = reconcile_material_receipts(receive_logs, cancellation_logs)
+        reconciled_receive_logs = [dict(row) for row in effective_receive_logs]
+        logged_lot_ids = {int(row.get('material_lot_id') or 0) for row in receive_logs}
 
         effective_lot_ids = {
             int(row.get('material_lot_id') or 0)
@@ -6613,7 +6583,7 @@ SELECT
         }
         for lot_row in visible_material_lot_rows:
             lot_id = int(lot_row.get('id') or 0)
-            if lot_id <= 0 or lot_id in effective_lot_ids:
+            if lot_id <= 0 or lot_id in effective_lot_ids or lot_id in logged_lot_ids:
                 continue
             current_qty = _round_to_1_decimal(lot_row.get('current_quantity') or 0)
             base_received_qty = _round_to_1_decimal(lot_row.get('received_quantity') or lot_row.get('legacy_quantity') or 0)
@@ -6651,9 +6621,10 @@ SELECT
         active_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) != 1]
         disposed_receive_logs = [row for row in receive_logs if int(row.get('is_disposed') or 0) == 1]
         receive_complete_logs = [
-            row for row in active_receive_logs
-            if str(row.get('action') or '') in {'create', 'issue_request_complete'}
+            row for row in reconciled_receive_logs
+            if int(row.get('is_disposed') or 0) != 1
         ]
+        receive_complete_logs.sort(key=lambda row: ((row.get('received_at') or ''), int(row.get('log_id') or 0)), reverse=True)
         receive_update_logs = [
             row for row in active_receive_logs
             if str(row.get('action') or '') == 'issue_request_update'
@@ -7042,7 +7013,7 @@ def integrated_audit_logs_export():
         conn_context.__exit__(None, None, None)
 
     if tab == 'login_audit_logs':
-        headers = ['??', '???ID', '??', '??', '?? ???', '?? ?? ???', 'IP', '????', '???', '?? ??', '???', '??']
+        headers = ['유형', '사용자 ID', '이름', '권한', '현재 작업장', '사용 가능 작업장', 'IP', '브라우저', '호스트', '접속 경로', '이전 페이지', '일시']
         rows = [
             [
                 item.get('action_label') or '',
@@ -7060,10 +7031,10 @@ def integrated_audit_logs_export():
             ]
             for item in data
         ]
-        workbook = _build_simple_xlsx('?????', headers, rows)
+        workbook = _build_simple_xlsx('로그인 기록', headers, rows)
         filename_prefix = 'login_audit_logs'
     else:
-        headers = ['??', '??', '??ID', '???ID', '????', '???', 'IP', '??', '?????']
+        headers = ['작업', '대상', '대상 ID', '사용자 ID', '이름', '작업장', 'IP', '일시', '상세 내용']
         rows = [
             [
                 item.get('action_label') or item.get('action') or '',
@@ -7078,7 +7049,7 @@ def integrated_audit_logs_export():
             ]
             for item in data
         ]
-        workbook = _build_simple_xlsx('???????', headers, rows)
+        workbook = _build_simple_xlsx('감사 기록', headers, rows)
         filename_prefix = 'audit_logs'
     now_token = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f'{filename_prefix}_{now_token}.xlsx'

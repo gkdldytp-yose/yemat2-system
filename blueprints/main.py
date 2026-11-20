@@ -198,10 +198,10 @@ def create_dashboard_todo():
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
     if not title:
-        flash('?? ??? ??????.', 'warning')
+        flash('제목을 입력해 주세요.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
     if due_date_raw and due_date is None:
-        flash('???? ?? ??? ???? ????.', 'warning')
+        flash('올바른 마감일을 입력해 주세요.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
     if is_announcement and not _is_todo_admin():
         flash('공지는 관리자만 등록할 수 있습니다.', 'warning')
@@ -257,10 +257,10 @@ def toggle_dashboard_todo(todo_id):
             (todo_id, workplace),
         ).fetchone()
         if not todo_row:
-            flash('?? ??? ?? ? ????.', 'warning')
+            flash('할 일을 찾을 수 없습니다.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
         if not _can_manage_dashboard_todo(username, dict(todo_row)):
-            flash('To-Do? ??? ???? ?? ?? ?? ??? ??? ? ? ????.', 'warning')
+            flash('이 할 일의 상태를 변경할 권한이 없습니다.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
         cursor.execute(
@@ -295,10 +295,10 @@ def update_dashboard_todo(todo_id):
     due_date = _parse_dashboard_todo_due_date(due_date_raw)
 
     if not title:
-        flash('?? ??? ??????.', 'warning')
+        flash('제목을 입력해 주세요.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
     if due_date_raw and due_date is None:
-        flash('???? ?? ??? ???? ????.', 'warning')
+        flash('올바른 마감일을 입력해 주세요.', 'warning')
         return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
     if is_announcement and not _is_todo_admin():
         flash('공지는 관리자만 등록할 수 있습니다.', 'warning')
@@ -318,10 +318,10 @@ def update_dashboard_todo(todo_id):
             (todo_id, workplace),
         ).fetchone()
         if not existing:
-            flash('??? ?? ??? ?? ? ????.', 'warning')
+            flash('할 일을 찾을 수 없습니다.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
         if not _can_manage_dashboard_todo(username, dict(existing)):
-            flash('To-Do? ??? ???? ??? ? ????.', 'warning')
+            flash('이 할 일을 수정할 권한이 없습니다.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
 
         cursor.execute(
@@ -378,10 +378,10 @@ def delete_dashboard_todo(todo_id):
             (todo_id, workplace),
         ).fetchone()
         if not existing:
-            flash('??? ?? ??? ?? ? ????.', 'warning')
+            flash('할 일을 찾을 수 없습니다.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
         if not _can_manage_dashboard_todo(username, dict(existing)):
-            flash('To-Do? ??? ???? ??? ? ????.', 'warning')
+            flash('이 할 일을 삭제할 권한이 없습니다.', 'warning')
             return redirect(request.form.get('next') or request.referrer or url_for('main.index'))
         cursor.execute(
             '''
@@ -825,7 +825,14 @@ def today_work():
             if product_id > 0 and planned_boxes > 0:
                 today_plan_by_product[product_id] = today_plan_by_product.get(product_id, 0.0) + planned_boxes
 
-        low_stock_materials = []
+        material_products = {}
+        for production in productions:
+            product_id = int(production.get('product_id') or 0)
+            if product_id:
+                material_products.setdefault(product_id, {
+                    'id': product_id, 'name': production.get('product_name') or '상품 미지정',
+                    'items': [], 'shortage_count': 0,
+                })
         if today_plan_by_product:
             product_ids = list(today_plan_by_product)
             placeholders = ','.join(['?'] * len(product_ids))
@@ -865,6 +872,7 @@ def today_work():
                 ).fetchall()
                 stock_by_material = {int(row['material_id']): float(row['qty'] or 0) for row in stock_rows}
             needs = {}
+            product_needs = {}
             for row in bom_rows:
                 material_id = int(row['material_id'] or 0)
                 if material_id <= 0:
@@ -874,19 +882,27 @@ def today_work():
                     'unit': row['unit'], 'current_stock': float(stock_by_material.get(material_id, 0)), 'required_qty': 0.0,
                 })
                 item['required_qty'] += float(row['quantity_per_box'] or 0) * today_plan_by_product[int(row['product_id'])]
-            for item in needs.values():
-                item['current_stock'] = round(item['current_stock'], 1)
-                item['required_qty'] = round(item['required_qty'], 1)
-                item['shortage_qty'] = round(item['required_qty'] - item['current_stock'], 1)
-                if item['shortage_qty'] > 0:
-                    low_stock_materials.append(item)
-            low_stock_materials.sort(key=lambda item: (-item['shortage_qty'], item['name'] or ''))
+                product_id = int(row['product_id'])
+                key = (product_id, material_id)
+                product_needs[key] = product_needs.get(key, 0.0) + float(row['quantity_per_box'] or 0) * today_plan_by_product[product_id]
+            for (product_id, material_id), required_qty in product_needs.items():
+                total = needs[material_id]
+                shortage_qty = max(0, round(total['required_qty'] - total['current_stock'], 1))
+                item = dict(total, current_stock=round(total['current_stock'], 1),
+                            required_qty=round(required_qty, 1), total_required_qty=round(total['required_qty'], 1),
+                            shortage_qty=shortage_qty)
+                material_products[product_id]['items'].append(item)
+                if shortage_qty > 0:
+                    material_products[product_id]['shortage_count'] += 1
+            for product in material_products.values():
+                product['items'].sort(key=lambda item: (-item['shortage_qty'], item['name'] or ''))
 
         # Today's planned work is also used to surface raw-material shortages,
         # not only materials that happen to have a configured minimum stock.
         planned_by_product = today_plan_by_product
         raw_shortages = []
-        if planned_by_product:
+        completed_production_ids = sorted({item['production_id'] for item in productions if item['status'] == '완료' and item['production_id']})
+        if planned_by_product or completed_production_ids:
             product_ids = list(planned_by_product)
             placeholders = ','.join(['?'] * len(product_ids))
             cursor.execute(
@@ -905,7 +921,7 @@ def today_work():
             # code. BOM rows for those records represent the same raw-material
             # requirement, so count that product/code combination only once.
             seen_product_raw_codes = set()
-            for row in cursor.execute(
+            for row in (cursor.execute(
                 f'''
                 SELECT b.product_id, b.raw_material_id, b.quantity_per_box,
                        COALESCE(p.sok_per_box, b.quantity_per_box, 0) AS qty_per_box,
@@ -917,7 +933,7 @@ def today_work():
                 WHERE b.product_id IN ({placeholders}) AND b.raw_material_id IS NOT NULL
                 ''',
                 product_ids,
-            ).fetchall():
+            ).fetchall() if product_ids else []):
                 code = row['code']
                 product_id = int(row['product_id'] or 0)
                 dedupe_key = (product_id, code)
@@ -926,14 +942,34 @@ def today_work():
                 seen_product_raw_codes.add(dedupe_key)
                 raw_needs.setdefault(code, {'name': row['name'] or code, 'required_qty': 0.0})
                 raw_needs[code]['required_qty'] += float(row['qty_per_box'] or 0) * planned_by_product[product_id]
+            if completed_production_ids:
+                usage_placeholders = ','.join(['?'] * len(completed_production_ids))
+                usage_rows = cursor.execute(
+                    f"""
+                    SELECT COALESCE(NULLIF(TRIM(rm.code), ''),
+                                    CASE WHEN rm.id IS NOT NULL THEN printf('RM%05d', rm.id)
+                                         ELSE 'name:' || COALESCE(NULLIF(TRIM(pmu.raw_material_name), ''), '원초') END) AS code,
+                           COALESCE(NULLIF(TRIM(rm.name), ''), NULLIF(TRIM(pmu.raw_material_name), ''), '원초') AS name,
+                           SUM(COALESCE(pmu.actual_quantity, 0)) AS used_qty
+                    FROM production_material_usage pmu
+                    LEFT JOIN raw_materials rm ON rm.id = pmu.raw_material_id
+                    WHERE pmu.production_id IN ({usage_placeholders})
+                      AND pmu.material_id IS NULL AND pmu.component_product_id IS NULL
+                      AND COALESCE(pmu.actual_quantity, 0) > 0
+                    GROUP BY code, name
+                    """, completed_production_ids,
+                ).fetchall()
+                for row in usage_rows:
+                    item = raw_needs.setdefault(row['code'], {'name': row['name'], 'required_qty': 0.0})
+                    item['used_qty'] = item.get('used_qty', 0.0) + float(row['used_qty'] or 0)
             for code, item in raw_needs.items():
                 current_stock = round(raw_stock_by_code.get(code, 0.0), 1)
                 required_qty = round(item['required_qty'], 1)
-                if required_qty > current_stock:
-                    raw_shortages.append({
-                        'name': item['name'], 'code': code, 'unit': '속', 'current_stock': current_stock,
-                        'min_stock': required_qty, 'shortage_qty': round(required_qty - current_stock, 1),
-                    })
+                raw_shortages.append({
+                    'name': item['name'], 'code': code, 'unit': '속', 'current_stock': current_stock,
+                    'required_qty': required_qty, 'used_qty': round(item.get('used_qty', 0), 1),
+                    'shortage_qty': max(0, round(required_qty - current_stock, 1)),
+                })
             raw_shortages.sort(key=lambda item: (-item['shortage_qty'], item['name']))
 
         cursor.execute(
@@ -1037,7 +1073,7 @@ def today_work():
         workplace=workplace,
         today=today,
         productions=productions,
-        low_stock_materials=low_stock_materials,
+        material_products=list(material_products.values()),
         raw_shortages=raw_shortages,
         pending_issues=pending_issues,
         special_notes=special_notes,
@@ -1270,7 +1306,7 @@ def change_password():
             <!DOCTYPE html>
             <html><head><meta charset="UTF-8"></head><body>
             <script>
-                alert("? ????? ???? ????.");
+                alert("새 비밀번호가 일치하지 않습니다.");
                 window.history.back();
             </script>
             </body></html>
@@ -1286,7 +1322,7 @@ def change_password():
                 <!DOCTYPE html>
                 <html><head><meta charset="UTF-8"></head><body>
                 <script>
-                    alert("?? ????? ???? ????.");
+                    alert("현재 비밀번호가 올바르지 않습니다.");
                     window.history.back();
                 </script>
                 </body></html>
